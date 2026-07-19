@@ -1,0 +1,15 @@
+# Data artifacts: everything under data/ except the directory skeleton.
+data/**
+!data/**/
+!data/**/.gitkeep
+!data/**/*.md
+
+# Secrets
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+.pytest_cache/
