@@ -11,9 +11,10 @@ point-in-time fundamentals, whether a stock will meet return criteria over
 the next year"), and turn ranked probabilities into portfolios — evaluated
 honestly (walk-forward, purged, era-sliced).
 
-Status: **v1 dataset delivered, modeling not yet started.** The upstream
-dataset (v1.0) is complete and documented; the experiment harness is the
-first thing to build. See [TODO.md](TODO.md).
+Status: **harness + baselines built (Phase 1 in progress).** The upstream
+dataset (v1.0) is complete and documented; the experiment harness, split
+application with guardrails, and the trivial baselines are implemented.
+Next: depth-limited decision trees + rule extraction. See [TODO.md](TODO.md).
 
 ## Documentation map
 
@@ -56,15 +57,30 @@ file it against `sharadar-dataset` and consume the next version.
 
 ## Usage
 
-Planned workflow (the harness is not yet implemented — see
-[TODO.md](TODO.md)):
-
-- One experiment = one config file in `experiments/`, naming the dataset
-  version, scheme/fold/horizon, label column, model, and seed.
+- One experiment = one TOML config file in `experiments/`, naming the
+  dataset version, scheme/fold(s)/horizon, label column, feature groups
+  (from the manifest), model + params, and seed.
 - The harness runs configs; code never hardcodes an experiment. Every run
-  logs dataset version + config + git SHA + seed, including abandoned runs.
-- Evaluation reports (era-sliced metrics, calibration curves, extracted tree
-  rules) are written to `reports/` and checked in.
+  appends dataset version + config hash + git SHA + seed + metrics to
+  `experiments/results.csv`, including failed/abandoned runs.
+- Evaluation reports (per-fold era-sliced metrics, `split_folds.parquet`
+  citation, effective sample sizes) are written to `reports/` and checked in.
+
+```sh
+# one experiment
+uv run vml-run experiments/baseline_b2m_rank_3y_beat_spy.toml
+
+# the full baseline grid (every horizon × label cell × baseline)
+uv run python scripts/run_baselines.py dataset_v1.0
+
+# tests (run against a hand-built miniature dataset; no real data needed)
+uv run pytest
+```
+
+The sealed `holdout` scheme and the diagnostic schemes (`entity_holdout`,
+`random_kfold`) are refused by the runner — they raise errors unless
+requested via the dedicated final-eval / registered-diagnostic entry points
+(Phase 2).
 
 Before writing or reviewing any modeling code, read
 [data/manual.md](data/manual.md) — it is the contract that keeps validation

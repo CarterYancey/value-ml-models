@@ -1,0 +1,15 @@
+# Single-factor baseline: rank by book_to_market_rank (higher = cheaper).
+name = "baseline_b2m_rank_3y_beat_spy"
+dataset_version = "dataset_v1.0"
+scheme = "walkforward"
+folds = "all"
+horizon_years = 3
+label = "label_3y_beat_spy"
+feature_groups = ["ranks"]
+feature_columns = ["book_to_market_rank"]
+seed = 7
+top_k = [20, 50]
+
+[model]
+name = "rank_factor"
+rank_column = "book_to_market_rank"

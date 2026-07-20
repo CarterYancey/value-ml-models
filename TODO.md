@@ -6,38 +6,46 @@ in [PLAN.md](PLAN.md); check items off (and add new ones) as work proceeds.
 ## 1 — Phase 1: harness + baseline trees
 
 ### Dataset loading
-- [ ] Loader for a versioned dataset directory: reads `manifest.json`,
+- [x] Loader for a versioned dataset directory: reads `manifest.json`,
       exposes column groups (`key_meta`, `features`, `ranks`,
       `sector_ranks`, `labels`, `sample_weights`) — column selection is
-      manifest-driven, never name-pattern-matched.
-- [ ] Validate on load: manifest row counts vs. parquet, required files
+      manifest-driven, never name-pattern-matched. (`src/harness/dataset.py`)
+- [x] Validate on load: manifest row counts vs. parquet, required files
       present, requested horizon exists in `horizons_years`.
-- [ ] Split application: given (scheme, fold, horizon), join
+- [x] Split application: given (scheme, fold, horizon), join
       `splits.parquet` and return train/test frames. Enforce in code:
       train = `role='train'` only; test rows come only from the tags (which
-      already restrict to median-kind, label-observable).
-- [ ] Guardrails as errors, not conventions: refuse `holdout` scheme outside
+      already restrict to median-kind, label-observable — re-verified
+      defensively on apply).
+- [x] Guardrails as errors, not conventions: refuse `holdout` scheme outside
       the dedicated final-eval script; refuse diagnostic schemes
       (`entity_holdout`, `random_kfold`) outside the registered-experiment
       runner; refuse fitting without the horizon's `sample_weight_{H}y`.
+      (`SplitAccess` in `src/harness/dataset.py`; the ordinary runner only
+      ever grants STANDARD access. The final-eval and registered-diagnostic
+      entry points themselves are Phase 2.)
 
 ### Experiment harness
-- [ ] Config schema (one file per experiment in `experiments/`): dataset
-      version, scheme/fold(s)/horizon, label column, feature-set selector
-      (by manifest group), model + params, seed.
-- [ ] Runner: executes a config, logs dataset version + config hash +
-      git SHA + seed + metrics to an append-only results store (plain
-      parquet/CSV table is fine to start). Abandoned/failed runs are logged
-      too.
-- [ ] Every report cites `split_folds.parquet` (fold boundaries + counts)
+- [x] Config schema (one TOML file per experiment in `experiments/`):
+      dataset version, scheme/fold(s)/horizon, label column, feature-set
+      selector (by manifest group), model + params, seed.
+      (`src/harness/config.py`)
+- [x] Runner: executes a config, logs dataset version + config hash +
+      git SHA + seed + metrics to an append-only results store
+      (`experiments/results.csv`). Abandoned/failed runs are logged too.
+      (`src/harness/runner.py`, `src/harness/results.py`; CLI: `vml-run`)
+- [x] Every report cites `split_folds.parquet` (fold boundaries + counts)
       and the effective sample size (Σ `sample_weight_{H}y`, cross-checked
-      against `manifest.json["effective_rows"]`).
+      against `manifest.json["effective_rows"]`). (`src/harness/report.py`)
 
 ### Baselines (before any tree is trained)
-- [ ] Majority-class baseline per (horizon, threshold) cell.
-- [ ] Single-factor rank baselines: top-K by `book_to_market_rank` and
-      `earnings_yield_rank`.
-- [ ] Random-ranking baseline (seeded).
+- [x] Majority-class baseline per (horizon, threshold) cell.
+      (`scripts/run_baselines.py` runs the full grid; exemplar configs in
+      `experiments/`. Needs a real `dataset_v1.0` locally to produce
+      reports — verified end-to-end on the test fixture.)
+- [x] Single-factor rank baselines: top-K by `book_to_market_rank` and
+      `earnings_yield_rank`. (`src/models/baselines.py`)
+- [x] Random-ranking baseline (seeded).
 
 ### Models
 - [ ] Single decision tree (sklearn), depth-limited, fitted with
@@ -48,11 +56,12 @@ in [PLAN.md](PLAN.md); check items off (and add new ones) as work proceeds.
 - [ ] Tree diagram rendering (matplotlib) into the same report.
 
 ### Tests
-- [ ] Unit tests for split application against a hand-built miniature
+- [x] Unit tests for split application against a hand-built miniature
       splits.parquet (roles, absence-means-out-of-fold, median-kind test
-      rows).
-- [ ] Test that the guardrails actually raise (holdout access, diagnostic
-      schemes, missing sample weight).
+      rows). (`tests/conftest.py` builds the fixture;
+      `tests/test_split_application.py`)
+- [x] Test that the guardrails actually raise (holdout access, diagnostic
+      schemes, missing sample weight). (`tests/test_guardrails.py`)
 
 ## 2 — Phase 2: evaluation done right
 
