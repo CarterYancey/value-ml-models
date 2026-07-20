@@ -12,6 +12,10 @@ from models.baselines import (
     RandomRankingBaseline,
     RankFactorBaseline,
 )
+from models.tree import DecisionTreeModel
+
+#: Baseline model names every reported result is compared against.
+BASELINE_MODELS = frozenset({"majority_class", "rank_factor", "random_ranking"})
 
 
 def build_model(name: str, params: dict, seed: int):
@@ -27,6 +31,23 @@ def build_model(name: str, params: dict, seed: int):
     if name == "random_ranking":
         _reject_extra(name, params, allowed=set())
         return RandomRankingBaseline(seed=seed)
+    if name == "decision_tree":
+        _reject_extra(
+            name,
+            params,
+            allowed={
+                "max_depth",
+                "min_weight_fraction_leaf",
+                "class_weight",
+                "criterion",
+            },
+        )
+        if "max_depth" not in params:
+            raise ConfigError(
+                "decision_tree requires max_depth in the config; "
+                "depth-limiting is not optional"
+            )
+        return DecisionTreeModel(seed=seed, **params)
     raise ConfigError(f"unknown model name {name!r}")
 
 

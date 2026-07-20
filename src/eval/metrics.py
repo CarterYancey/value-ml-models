@@ -75,6 +75,51 @@ def base_rate(y_true, sample_weight=None) -> float:
     return float(np.average(y, weights=np.asarray(sample_weight, dtype=float)))
 
 
+def calibration_table(y_true, probs, sample_weight=None, n_bins: int = 10):
+    """Reliability-curve bins for probabilistic scores.
+
+    Quantile bins on the predicted probability (equal weight per bin
+    rather than equal width — base rates are extreme in some cells, so
+    fixed-width bins leave most of them empty). Returns a list of dicts:
+    mean predicted vs. weighted observed rate per bin, with the bin's
+    weight mass. Downstream ranking trusts these probabilities, so this
+    table is the honest check on whether 0.7 means 70%.
+    """
+    y = np.asarray(y_true, dtype=float)
+    p = np.asarray(probs, dtype=float)
+    w = (
+        np.ones(len(y))
+        if sample_weight is None
+        else np.asarray(sample_weight, dtype=float)
+    )
+    keep = ~np.isnan(p)
+    y, p, w = y[keep], p[keep], w[keep]
+    if len(y) == 0:
+        return []
+    edges = np.unique(np.quantile(p, np.linspace(0, 1, n_bins + 1)))
+    if len(edges) < 2:  # constant predictor: a single degenerate bin
+        edges = np.array([edges[0], edges[0]])
+        idx = np.zeros(len(p), dtype=int)
+    else:
+        idx = np.clip(np.searchsorted(edges, p, side="right") - 1, 0, len(edges) - 2)
+    rows = []
+    for b in range(len(edges) - 1):
+        m = idx == b
+        if not m.any():
+            continue
+        rows.append(
+            {
+                "bin_low": float(edges[b]),
+                "bin_high": float(edges[b + 1]),
+                "mean_predicted": float(np.average(p[m], weights=w[m])),
+                "observed_rate": float(np.average(y[m], weights=w[m])),
+                "n_rows": int(m.sum()),
+                "effective_n": float(w[m].sum()),
+            }
+        )
+    return rows
+
+
 def compute_all(y_true, scores, *, sample_weight=None, top_k=(20, 50),
                 probabilistic: bool = False) -> dict[str, float]:
     """The standard per-fold metric block logged by the runner."""

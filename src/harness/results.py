@@ -101,3 +101,43 @@ class ResultsStore:
             & (df["label"] == label)
         ]
         return int(sel["config_hash"].nunique())
+
+    def model_comparison(
+        self,
+        dataset_version: str,
+        scheme: str,
+        horizon_years: int,
+        label: str,
+        model_names: set[str] | frozenset[str],
+    ) -> pd.DataFrame:
+        """Fold-averaged metrics of previously completed runs in this cell
+        for the given model names — feeds the auto-included baseline
+        comparison in every report. Latest run per experiment name."""
+        df = self.load()
+        if df.empty:
+            return pd.DataFrame()
+        sel = df[
+            (df["status"] == "completed")
+            & (df["dataset_version"] == dataset_version)
+            & (df["scheme"] == scheme)
+            & (df["horizon_years"] == str(horizon_years))
+            & (df["label"] == label)
+            & (df["model"].isin(model_names))
+        ]
+        if sel.empty:
+            return pd.DataFrame()
+        rows = []
+        for experiment, grp in sel.groupby("experiment"):
+            latest = grp[grp["run_id"] == grp.iloc[-1]["run_id"]]
+            metrics = pd.DataFrame(
+                [json.loads(m) for m in latest["metrics_json"] if m]
+            )
+            rows.append(
+                {
+                    "experiment": experiment,
+                    "model": latest.iloc[0]["model"],
+                    "folds": len(latest),
+                    **metrics.mean(numeric_only=True).to_dict(),
+                }
+            )
+        return pd.DataFrame(rows)

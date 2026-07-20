@@ -43,6 +43,11 @@ def write_report(
     dataset,
     fold_results: list[dict],
     configurations_tried: int,
+    era_df: pd.DataFrame | None = None,
+    crash_df: pd.DataFrame | None = None,
+    baseline_df: pd.DataFrame | None = None,
+    calibration_path: Path | None = None,
+    artifacts: dict | None = None,
 ) -> Path:
     """fold_results: [{fold, n_train_rows, effective_train_size,
     n_test_rows, metrics: {...}}, ...]"""
@@ -139,6 +144,88 @@ def write_report(
         metric_rows.append({"fold": fr["fold"], **fr["metrics"]})
     lines.append(_table(pd.DataFrame(metric_rows)))
     lines.append("")
+
+    if era_df is not None and not era_df.empty:
+        lines.append("## Era-sliced metrics (per test year)")
+        lines.append("")
+        lines.append(
+            "Sliced on the calendar year of each test row's "
+            "`snapshot_date`. The pooled row is context for the era rows, "
+            "never a stand-alone result."
+        )
+        lines.append("")
+        lines.append(_table(era_df))
+        lines.append("")
+
+    lines.append("## Crash-era metrics")
+    lines.append("")
+    if crash_df is not None and not crash_df.empty:
+        from eval.era import CORRELATED_PICKS_CAVEAT
+
+        lines.append(
+            "Drawdown eras broken out separately — the defensive thesis is "
+            "only testable here. " + CORRELATED_PICKS_CAVEAT
+        )
+        lines.append("")
+        lines.append(_table(crash_df))
+    else:
+        lines.append(
+            "No sampled crash era (2000–02, 2008–09, 2020, 2022) falls in "
+            "the evaluated test years; the defensive-performance claim is "
+            "untested by this run."
+        )
+    lines.append("")
+
+    if calibration_path is not None:
+        lines.append("## Calibration")
+        lines.append("")
+        lines.append(
+            "Reliability curve on pooled test predictions (each fold's "
+            "model is refit on its own expanding window). Downstream "
+            "ranking trusts these probabilities; single trees are expected "
+            "to calibrate poorly (known Phase-1 limitation, PLAN §2)."
+        )
+        lines.append("")
+        lines.append(f"![calibration curve]({Path(calibration_path).name})")
+        lines.append("")
+
+    lines.append("## Baseline comparison")
+    lines.append("")
+    if baseline_df is not None and not baseline_df.empty:
+        lines.append(
+            "Latest completed baseline runs against this same cell "
+            "(dataset, scheme, horizon, label), metrics averaged across "
+            "folds. A model that does not clear these is a negative "
+            "result, reported as such."
+        )
+        lines.append("")
+        lines.append(_table(baseline_df))
+    else:
+        lines.append(
+            "**No baseline runs recorded for this cell.** Run "
+            "`scripts/run_baselines.py` first; a result without its "
+            "baselines is not reportable."
+        )
+    lines.append("")
+
+    if artifacts:
+        lines.append("## Interpretability artifacts")
+        lines.append("")
+        if "rules" in artifacts:
+            lines.append(
+                f"- extracted rules (one tree per fold): "
+                f"[{Path(artifacts['rules']).name}]({Path(artifacts['rules']).name})"
+            )
+        if "tree_diagram" in artifacts:
+            fold_note = (
+                f" (fold {artifacts['tree_diagram_fold']}, the widest "
+                "training window)"
+                if "tree_diagram_fold" in artifacts
+                else ""
+            )
+            name = Path(artifacts["tree_diagram"]).name
+            lines.append(f"- tree diagram{fold_note}: [{name}]({name})")
+        lines.append("")
 
     path.write_text("\n".join(lines))
     return path

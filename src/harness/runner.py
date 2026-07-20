@@ -12,12 +12,18 @@ from __future__ import annotations
 import traceback
 from pathlib import Path
 
+import pandas as pd
+from sklearn.tree import DecisionTreeClassifier
+
+from eval.era import collect_predictions, crash_era_table, era_table
 from eval.metrics import compute_all
+from eval.plots import render_calibration_plot
+from explain.rules import render_tree_diagram, rules_text
 from harness.config import ExperimentConfig
 from harness.dataset import Dataset, SplitAccess
 from harness.report import write_report
 from harness.results import ResultsStore, git_sha, new_run_id
-from models.registry import build_model
+from models.registry import BASELINE_MODELS, build_model
 
 DEFAULT_DATA_ROOT = Path("data/datasets")
 DEFAULT_RESULTS = Path("experiments/results.csv")
@@ -69,6 +75,10 @@ def run_experiment(
             )
 
         fold_results: list[dict] = []
+        prediction_frames: list[pd.DataFrame] = []
+        fold_rules: list[tuple[int, str]] = []
+        last_tree: tuple[int, DecisionTreeClassifier] | None = None
+        probabilistic = False
         for fold in folds:
             split = dataset.apply_split(
                 config.scheme, fold, config.horizon_years, access=access
@@ -98,6 +108,19 @@ def run_experiment(
                 "metrics": metrics,
             }
             fold_results.append(fr)
+            probabilistic = model.probabilistic
+            test_years = split.test.loc[
+                test_fit.X.index, "snapshot_date"
+            ].dt.year.to_numpy()
+            prediction_frames.append(
+                collect_predictions(
+                    fold, test_years, test_fit.y, scores, test_fit.sample_weight
+                )
+            )
+            estimator = getattr(model, "estimator_", None)
+            if isinstance(estimator, DecisionTreeClassifier):
+                fold_rules.append((fold, rules_text(estimator, feature_cols)))
+                last_tree = (fold, estimator)
             store.append(
                 {
                     **base_row,
@@ -113,14 +136,60 @@ def run_experiment(
         configurations_tried = store.configurations_tried(
             config.dataset_version, config.scheme, config.horizon_years, config.label
         )
+
+        reports_dir = Path(reports_dir)
+        predictions = pd.concat(prediction_frames, ignore_index=True)
+        era_df = era_table(
+            predictions, top_k=config.top_k, probabilistic=probabilistic
+        )
+        crash_df = crash_era_table(
+            predictions, top_k=config.top_k, probabilistic=probabilistic
+        )
+
+        calibration_path = None
+        if probabilistic:
+            calibration_path = render_calibration_plot(
+                predictions["y_true"],
+                predictions["score"],
+                predictions["sample_weight"],
+                path=reports_dir / f"{config.name}_calibration.png",
+                title=f"{config.name} — test calibration, pooled over folds",
+            )
+
+        artifacts: dict[str, Path] = {}
+        if fold_rules:
+            artifacts["rules"] = _write_rules_file(
+                reports_dir / f"{config.name}_rules.md",
+                config, run_id, sha, dataset.version, fold_rules,
+            )
+        if last_tree is not None:
+            diagram_fold, estimator = last_tree
+            artifacts["tree_diagram"] = render_tree_diagram(
+                estimator, feature_cols, reports_dir / f"{config.name}_tree.png"
+            )
+            artifacts["tree_diagram_fold"] = diagram_fold
+
+        baseline_df = store.model_comparison(
+            config.dataset_version,
+            config.scheme,
+            config.horizon_years,
+            config.label,
+            BASELINE_MODELS,
+        )
+
         report_path = write_report(
-            path=Path(reports_dir) / f"{config.name}.md",
+            path=reports_dir / f"{config.name}.md",
             config=config,
             run_id=run_id,
             git_sha=sha,
             dataset=dataset,
             fold_results=fold_results,
             configurations_tried=configurations_tried,
+            era_df=era_df,
+            crash_df=crash_df,
+            baseline_df=baseline_df,
+            calibration_path=calibration_path,
+            artifacts=artifacts,
         )
         return {
             "run_id": run_id,
@@ -139,6 +208,35 @@ def run_experiment(
             }
         )
         raise
+
+
+def _write_rules_file(
+    path: Path,
+    config: ExperimentConfig,
+    run_id: str,
+    sha: str,
+    dataset_version: str,
+    fold_rules: list[tuple[int, str]],
+) -> Path:
+    """Checked-in rule-extraction artifact: one section per fold's tree."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    lines = [
+        f"# Extracted tree rules — {config.name}",
+        "",
+        f"- dataset version: `{dataset_version}`",
+        f"- config hash: `{config.config_hash}` — run `{run_id}`, "
+        f"git `{sha}`, seed {config.seed}",
+        f"- label: `{config.label}` ({config.horizon_years}y, "
+        f"scheme `{config.scheme}`)",
+        "",
+        "One tree per walk-forward fold (each refit on its expanding "
+        "window). P(positive) is the leaf's weighted in-sample frequency — "
+        "rank by it, don't read it as a calibrated forward probability.",
+    ]
+    for fold, text in fold_rules:
+        lines += ["", f"## Fold {fold}", "", "```", text, "```"]
+    path.write_text("\n".join(lines) + "\n")
+    return path
 
 
 def run_config_file(path: str | Path, **kwargs) -> dict:
