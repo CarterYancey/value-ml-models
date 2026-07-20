@@ -3,17 +3,6 @@
 Concrete development tasks, roughly in order. Architecture and rationale live
 in [PLAN.md](PLAN.md); check items off (and add new ones) as work proceeds.
 
-## 0 — Project scaffolding
-
-- [ ] Fill in `pyproject.toml`: real description, dependencies
-      (`pandas`, `pyarrow`, `duckdb`, `scikit-learn`, `matplotlib`;
-      `lightgbm` can wait for Phase 3), dev deps (`pytest`, `ruff`).
-- [ ] Create the source skeleton from PLAN §6 (`src/harness`, `src/models`,
-      `src/eval`, `src/explain`, `src/portfolio`, `experiments/`, `reports/`,
-      `tests/`).
-- [ ] Obtain `dataset_v1.0` from `sharadar-dataset` and place it under
-      `data/datasets/dataset_v1.0/` (git-ignored).
-
 ## 1 — Phase 1: harness + baseline trees
 
 ### Dataset loading
