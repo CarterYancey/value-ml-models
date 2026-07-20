@@ -1,7 +1,7 @@
 [project]
 name = "value-ml-models"
 version = "0.1.0"
-description = "Add your description here"
+description = "Interpretable, calibrated stock-return classifiers on top of the versioned sharadar-dataset"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = []
