@@ -109,9 +109,11 @@ def run_experiment(
             }
             fold_results.append(fr)
             probabilistic = model.probabilistic
-            test_years = split.test.loc[
-                test_fit.X.index, "snapshot_date"
-            ].dt.year.to_numpy()
+            # snapshot_date is a parquet DATE upstream (datetime.date
+            # objects after read), not a pandas datetime — normalize first
+            test_years = pd.to_datetime(
+                split.test.loc[test_fit.X.index, "snapshot_date"]
+            ).dt.year.to_numpy()
             prediction_frames.append(
                 collect_predictions(
                     fold, test_years, test_fit.y, scores, test_fit.sample_weight

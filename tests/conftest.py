@@ -253,6 +253,12 @@ def build_mini_dataset(root: Path, version: str = "dataset_v0.0-test") -> Path:
         },
     }
 
+    # upstream stores snapshot_date as a parquet DATE (date32), which
+    # pandas reads back as datetime.date objects, not datetime64 — the
+    # fixture must round-trip the same way
+    data["snapshot_date"] = data["snapshot_date"].dt.date
+    splits["snapshot_date"] = pd.to_datetime(splits["snapshot_date"]).dt.date
+
     data.to_parquet(out / "dataset.parquet")
     splits.to_parquet(out / "splits.parquet")
     split_folds.to_parquet(out / "split_folds.parquet")
