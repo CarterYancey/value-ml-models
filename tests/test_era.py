@@ -81,6 +81,20 @@ def test_wilson_interval_sanity():
     assert hi_big - lo_big < hi_small - lo_small  # more n, tighter interval
 
 
+def test_ranking_metrics_accept_nonfinite_scores():
+    # rank baselines emit -inf for NULL-rank rows ("sort last"); models
+    # can emit NaN — neither may crash the sklearn-backed metrics
+    from eval import metrics
+
+    y = np.array([1.0, 0.0, 1.0, 0.0, 1.0])
+    s = np.array([0.9, 0.5, np.nan, -np.inf, 0.7])
+    for fn in (metrics.pr_auc, metrics.roc_auc):
+        assert math.isfinite(fn(y, s))
+    # non-finite scores rank strictly below every finite score
+    order = np.argsort(-metrics._finite_scores(s), kind="stable")
+    assert list(order[-2:]) == [2, 3]
+
+
 def test_calibration_table_weighted_bins():
     rng = np.random.default_rng(3)
     p = rng.uniform(size=500)

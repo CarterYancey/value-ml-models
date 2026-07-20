@@ -55,8 +55,14 @@ def _build_dataset_frame() -> pd.DataFrame:
                         "entry_closeadj": float(rng.uniform(1, 100)),
                         "book_to_market": b2m,
                         "earnings_yield": ey,
-                        "book_to_market_rank": float(rng.uniform(0, 1)),
-                        "earnings_yield_rank": float(rng.uniform(0, 1)),
+                        # ranks are NULL under the upstream rank guard;
+                        # a realistic fixture must include unrankable rows
+                        "book_to_market_rank": (
+                            None if rng.uniform() < 0.05 else float(rng.uniform(0, 1))
+                        ),
+                        "earnings_yield_rank": (
+                            None if rng.uniform() < 0.05 else float(rng.uniform(0, 1))
+                        ),
                     }
                     for h in HORIZONS:
                         observable = _add_years(snapshot_date, h) <= LAST_DATA_DATE

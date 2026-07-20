@@ -21,6 +21,23 @@ def _order_by_score(scores: np.ndarray) -> np.ndarray:
     return np.argsort(-s, kind="stable")
 
 
+def _finite_scores(scores) -> np.ndarray:
+    """Map non-finite scores to just below the finite minimum.
+
+    Models legitimately emit non-finite scores for unrankable rows (NaN
+    inputs, the rank baselines' -inf for NULL ranks = "sort last");
+    sklearn's ranking metrics refuse anything non-finite. Clamping to
+    below the finite minimum preserves the ranking order exactly.
+    """
+    s = np.asarray(scores, dtype=float)
+    finite = np.isfinite(s)
+    if finite.all():
+        return s
+    if not finite.any():
+        return np.zeros(len(s))
+    return np.where(finite, s, s[finite].min() - 1.0)
+
+
 def precision_at_k(y_true, scores, k: int) -> float:
     y = np.asarray(y_true, dtype=float)
     scores = np.asarray(scores, dtype=float)
@@ -44,8 +61,7 @@ def pr_auc(y_true, scores, sample_weight=None) -> float:
     y = np.asarray(y_true, dtype=float)
     if len(y) == 0 or len(np.unique(y)) < 2:
         return math.nan
-    s = np.asarray(scores, dtype=float)
-    s = np.where(np.isnan(s), -np.inf, s)
+    s = _finite_scores(scores)
     return float(average_precision_score(y, s, sample_weight=sample_weight))
 
 
@@ -53,8 +69,7 @@ def roc_auc(y_true, scores, sample_weight=None) -> float:
     y = np.asarray(y_true, dtype=float)
     if len(y) == 0 or len(np.unique(y)) < 2:
         return math.nan
-    s = np.asarray(scores, dtype=float)
-    s = np.where(np.isnan(s), -np.inf, s)
+    s = _finite_scores(scores)
     return float(roc_auc_score(y, s, sample_weight=sample_weight))
 
 
@@ -92,7 +107,7 @@ def calibration_table(y_true, probs, sample_weight=None, n_bins: int = 10):
         if sample_weight is None
         else np.asarray(sample_weight, dtype=float)
     )
-    keep = ~np.isnan(p)
+    keep = np.isfinite(p)
     y, p, w = y[keep], p[keep], w[keep]
     if len(y) == 0:
         return []
