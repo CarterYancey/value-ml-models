@@ -103,6 +103,9 @@ in [PLAN.md](PLAN.md); check items off (and add new ones) as work proceeds.
       tags. (`scripts/run_final_eval.py` — the only FINAL_EVAL entry
       point; a completed eval per (phase, cell) is recorded in
       `reports/final_evals.csv` and cannot be repeated.)
+- [ ] Graph PR-AUC and ROC-AUC curves.
+- [ ] When running a new evaluation using a previously trained model, do not
+      reproduce calibration graphs as these values do not change.
 
 ### Registered diagnostics (from data/manual.md §7 — diagnostic only)
 - [ ] Leakage-gap experiment: identical model under `random_kfold`,
