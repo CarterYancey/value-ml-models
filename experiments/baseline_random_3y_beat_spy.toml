@@ -1,0 +1,13 @@
+# Random-ranking baseline (seeded) — the floor for every ranking metric.
+name = "baseline_random_3y_beat_spy"
+dataset_version = "dataset_v1.0"
+scheme = "walkforward"
+folds = "all"
+horizon_years = 3
+label = "label_3y_beat_spy"
+feature_groups = ["ranks"]
+seed = 7
+top_k = [20, 50]
+
+[model]
+name = "random_ranking"

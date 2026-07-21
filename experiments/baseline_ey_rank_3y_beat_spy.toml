@@ -1,0 +1,15 @@
+# Single-factor baseline: rank by earnings_yield_rank.
+name = "baseline_ey_rank_3y_beat_spy"
+dataset_version = "dataset_v1.0"
+scheme = "walkforward"
+folds = "all"
+horizon_years = 3
+label = "label_3y_beat_spy"
+feature_groups = ["ranks"]
+feature_columns = ["earnings_yield_rank"]
+seed = 7
+top_k = [20, 50]
+
+[model]
+name = "rank_factor"
+rank_column = "earnings_yield_rank"

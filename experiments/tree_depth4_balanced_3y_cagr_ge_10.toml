@@ -1,0 +1,19 @@
+# Depth-4 tree on a heavily imbalanced absolute-threshold cell
+# (3y CAGR >= 10%), with balanced class weighting — sklearn multiplies
+# the class weights into the mandatory sample_weight_3y uniqueness
+# weights. Expect this cell to underperform the relative label
+# out-of-time (PLAN §2).
+name = "tree_depth4_balanced_3y_cagr_ge_10"
+dataset_version = "dataset_v1.0"
+scheme = "walkforward"
+folds = "all"
+horizon_years = 3
+label = "label_3y_cagr_ge_10"
+feature_groups = ["ranks", "sector_ranks"]
+seed = 7
+top_k = [20, 50]
+
+[model]
+name = "decision_tree"
+max_depth = 4
+class_weight = "balanced"
