@@ -83,6 +83,16 @@ in [PLAN.md](PLAN.md); check items off (and add new ones) as work proceeds.
       curve. ROC-AUC may be logged, never headlined. (`src/eval/metrics.py`
       incl. `calibration_table`; reliability-curve PNG via
       `src/eval/plots.py`, embedded in every probabilistic report.)
+- [x] Graph the PR-AUC and ROC-AUC curves. (`render_pr_curve` /
+      `render_roc_curve` in `src/eval/plots.py` — pooled over folds,
+      weighted; PR drawn against the base-rate no-skill line, ROC against
+      the chance diagonal; drawn for every model, not just probabilistic
+      ones. New "Discrimination curves" report section.)
+- [x] On re-evaluation of a saved model, don't redraw score-only figures
+      (calibration, PR, ROC): the scores are unchanged, so the values are
+      identical to the training run. (`finalize_run(render_score_figures=)`
+      — `vml-eval` passes False; the eval report points back to the
+      training run's figures instead.)
 - [x] Era slicing: every metric per test year; pooled numbers are never
       presented alone. (`src/eval/era.py`; sliced on `snapshot_date` year,
       pooled row clearly marked as context only.)
@@ -103,9 +113,6 @@ in [PLAN.md](PLAN.md); check items off (and add new ones) as work proceeds.
       tags. (`scripts/run_final_eval.py` — the only FINAL_EVAL entry
       point; a completed eval per (phase, cell) is recorded in
       `reports/final_evals.csv` and cannot be repeated.)
-- [ ] Graph PR-AUC and ROC-AUC curves.
-- [ ] When running a new evaluation using a previously trained model, do not
-      reproduce calibration graphs as these values do not change.
 
 ### Registered diagnostics (from data/manual.md §7 — diagnostic only)
 - [ ] Leakage-gap experiment: identical model under `random_kfold`,

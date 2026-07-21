@@ -17,7 +17,7 @@ from sklearn.tree import DecisionTreeClassifier
 
 from eval.era import collect_predictions, crash_era_table, era_table
 from eval.metrics import compute_all
-from eval.plots import render_calibration_plot
+from eval.plots import render_calibration_plot, render_pr_curve, render_roc_curve
 from explain.rules import render_tree_diagram, rules_text
 from harness.config import ExperimentConfig
 from harness.dataset import Dataset, SplitAccess
@@ -220,10 +220,17 @@ def finalize_run(
     probabilistic: bool,
     reports_dir: str | Path,
     artifacts: dict | None = None,
+    render_score_figures: bool = True,
 ) -> tuple[Path, int]:
     """Shared tail of a training run and a bundle re-evaluation: era
-    tables, calibration plot, baseline comparison, report. Returns
-    (report_path, configurations_tried)."""
+    tables, score-only figures (calibration + PR/ROC curves), baseline
+    comparison, report. Returns (report_path, configurations_tried).
+
+    `render_score_figures=False` skips the calibration and PR/ROC curves:
+    they depend on `(y_true, score)` alone, so a re-evaluation of a saved
+    model would only redraw the training run's identical figures. The
+    report then points back to that run instead.
+    """
     configurations_tried = store.configurations_tried(
         config.dataset_version, config.scheme, config.horizon_years, config.label
     )
@@ -242,15 +249,28 @@ def finalize_run(
         probabilistic=probabilistic,
     )
 
-    calibration_path = None
-    if probabilistic:
-        calibration_path = render_calibration_plot(
-            predictions["y_true"],
-            predictions["score"],
+    calibration_path = pr_curve_path = roc_curve_path = None
+    if render_score_figures:
+        y, s, w = (
+            predictions["y_true"], predictions["score"],
             predictions["sample_weight"],
-            path=reports_dir / f"{config.name}_calibration.png",
-            title=f"{config.name} — test calibration, pooled over folds",
         )
+        pr_curve_path = render_pr_curve(
+            y, s, w,
+            path=reports_dir / f"{config.name}_pr_curve.png",
+            title=f"{config.name} — precision–recall, pooled over folds",
+        )
+        roc_curve_path = render_roc_curve(
+            y, s, w,
+            path=reports_dir / f"{config.name}_roc_curve.png",
+            title=f"{config.name} — ROC, pooled over folds",
+        )
+        if probabilistic:
+            calibration_path = render_calibration_plot(
+                y, s, w,
+                path=reports_dir / f"{config.name}_calibration.png",
+                title=f"{config.name} — test calibration, pooled over folds",
+            )
 
     baseline_df = store.model_comparison(
         config.dataset_version,
@@ -272,6 +292,9 @@ def finalize_run(
         crash_df=crash_df,
         baseline_df=baseline_df,
         calibration_path=calibration_path,
+        pr_curve_path=pr_curve_path,
+        roc_curve_path=roc_curve_path,
+        score_figures_rendered=render_score_figures,
         artifacts=artifacts,
     )
     return report_path, configurations_tried

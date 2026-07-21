@@ -156,6 +156,9 @@ def evaluate_bundle(
             probabilistic=bundle.probabilistic,
             reports_dir=reports_dir,
             artifacts={"source_bundle": Path(bundle_dir)},
+            # calibration and PR/ROC curves are score-only; the scores are
+            # identical to the training run, so we don't redraw them
+            render_score_figures=False,
         )
         return {
             "run_id": run_id,

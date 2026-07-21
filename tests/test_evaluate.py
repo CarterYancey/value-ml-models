@@ -118,6 +118,37 @@ def test_evaluate_bundle_with_new_criteria(trained):
     assert "split_folds.parquet" in report
 
 
+def test_training_run_draws_curves(trained):
+    summary, paths = trained
+    reports = paths["reports"]
+    # PR and ROC curves are always drawn; calibration too (tree is
+    # probabilistic)
+    for suffix in ("_pr_curve.png", "_roc_curve.png", "_calibration.png"):
+        assert (reports / f"test_tree_3y_beat_spy{suffix}").exists()
+    report = (reports / "test_tree_3y_beat_spy.md").read_text()
+    assert "Discrimination curves" in report
+    assert "![PR curve]" in report and "![ROC curve]" in report
+
+
+def test_reeval_does_not_redraw_score_figures(trained):
+    summary, paths = trained
+    reports = paths["reports"]
+    evaluate_bundle(
+        summary["model_bundle"],
+        EvalConfig.from_dict({"name": "thr", "score_thresholds": [0.5]}),
+        data_root=paths["data_root"],
+        results_path=paths["results"],
+        reports_dir=reports,
+    )
+    stem = "test_tree_3y_beat_spy__thr"
+    # score-only figures are the training run's; none are drawn for the eval
+    for suffix in ("_pr_curve.png", "_roc_curve.png", "_calibration.png"):
+        assert not (reports / f"{stem}{suffix}").exists()
+    report = (reports / f"{stem}.md").read_text()
+    assert "Not redrawn for this evaluation" in report
+    assert "![PR curve]" not in report and "![calibration curve]" not in report
+
+
 def test_evaluated_holdout_bundle_is_refused(trained, tmp_path):
     # a bundle whose train config points at the sealed scheme cannot be
     # re-scored here: split access stays STANDARD

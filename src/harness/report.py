@@ -47,6 +47,9 @@ def write_report(
     crash_df: pd.DataFrame | None = None,
     baseline_df: pd.DataFrame | None = None,
     calibration_path: Path | None = None,
+    pr_curve_path: Path | None = None,
+    roc_curve_path: Path | None = None,
+    score_figures_rendered: bool = True,
     artifacts: dict | None = None,
 ) -> Path:
     """fold_results: [{fold, n_train_rows, effective_train_size,
@@ -187,18 +190,52 @@ def write_report(
         )
     lines.append("")
 
-    if calibration_path is not None:
-        lines.append("## Calibration")
+    source_bundle = artifacts.get("source_bundle") if artifacts else None
+    if not score_figures_rendered:
+        lines.append("## Discrimination & calibration curves")
         lines.append("")
         lines.append(
-            "Reliability curve on pooled test predictions (each fold's "
-            "model is refit on its own expanding window). Downstream "
-            "ranking trusts these probabilities; single trees are expected "
-            "to calibrate poorly (known Phase-1 limitation, PLAN §2)."
+            "Not redrawn for this evaluation. The precision–recall, ROC, "
+            "and calibration curves depend only on the model's scores on "
+            "the test rows, which this run did not change — it re-scored "
+            "the saved model under different metric parameters. See the "
+            "training run's report"
+            + (f" (bundle `{source_bundle}`)" if source_bundle else "")
+            + " for those figures."
         )
         lines.append("")
-        lines.append(f"![calibration curve]({Path(calibration_path).name})")
-        lines.append("")
+    else:
+        if pr_curve_path is not None or roc_curve_path is not None:
+            lines.append("## Discrimination curves")
+            lines.append("")
+            lines.append(
+                "Pooled over folds. Read precision–recall against the base "
+                "rate (the no-skill line moves with prevalence, which is "
+                "extreme in some cells); ROC is logged against the chance "
+                "diagonal but never headlined (CLAUDE.md) — PR-AUC is the "
+                "metric of record."
+            )
+            lines.append("")
+            if pr_curve_path is not None:
+                lines.append(f"![PR curve]({Path(pr_curve_path).name})")
+                lines.append("")
+            if roc_curve_path is not None:
+                lines.append(f"![ROC curve]({Path(roc_curve_path).name})")
+                lines.append("")
+
+        if calibration_path is not None:
+            lines.append("## Calibration")
+            lines.append("")
+            lines.append(
+                "Reliability curve on pooled test predictions (each fold's "
+                "model is refit on its own expanding window). Downstream "
+                "ranking trusts these probabilities; single trees are "
+                "expected to calibrate poorly (known Phase-1 limitation, "
+                "PLAN §2)."
+            )
+            lines.append("")
+            lines.append(f"![calibration curve]({Path(calibration_path).name})")
+            lines.append("")
 
     lines.append("## Baseline comparison")
     lines.append("")
