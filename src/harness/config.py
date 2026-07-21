@@ -37,6 +37,9 @@ class ExperimentConfig:
     seed: int = 0
     #: K values for precision@K / recall@K
     top_k: tuple[int, ...] = (20, 50)
+    #: score thresholds for precision/recall over "score >= t" selections
+    #: (empty = don't record threshold metrics)
+    score_thresholds: tuple[float, ...] = ()
 
     @classmethod
     def from_file(cls, path: str | Path) -> "ExperimentConfig":
@@ -75,6 +78,9 @@ class ExperimentConfig:
             folds=folds,
             seed=int(raw.get("seed", 0)),
             top_k=tuple(int(k) for k in raw.get("top_k", (20, 50))),
+            score_thresholds=tuple(
+                float(t) for t in raw.get("score_thresholds", ())
+            ),
         )
 
     def canonical_json(self) -> str:
@@ -94,6 +100,10 @@ class ExperimentConfig:
             "seed": self.seed,
             "top_k": list(self.top_k),
         }
+        # Only serialized when set: the config hash is the identity in the
+        # trial ledger, and configs predating this field must keep theirs.
+        if self.score_thresholds:
+            payload["score_thresholds"] = list(self.score_thresholds)
         return json.dumps(payload, sort_keys=True, separators=(",", ":"))
 
     @property

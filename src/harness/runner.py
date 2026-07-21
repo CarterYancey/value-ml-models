@@ -98,6 +98,7 @@ def run_experiment(
                 scores,
                 sample_weight=test_fit.sample_weight,
                 top_k=config.top_k,
+                score_thresholds=config.score_thresholds,
                 probabilistic=model.probabilistic,
             )
             fr = {
@@ -142,10 +143,16 @@ def run_experiment(
         reports_dir = Path(reports_dir)
         predictions = pd.concat(prediction_frames, ignore_index=True)
         era_df = era_table(
-            predictions, top_k=config.top_k, probabilistic=probabilistic
+            predictions,
+            top_k=config.top_k,
+            score_thresholds=config.score_thresholds,
+            probabilistic=probabilistic,
         )
         crash_df = crash_era_table(
-            predictions, top_k=config.top_k, probabilistic=probabilistic
+            predictions,
+            top_k=config.top_k,
+            score_thresholds=config.score_thresholds,
+            probabilistic=probabilistic,
         )
 
         calibration_path = None
