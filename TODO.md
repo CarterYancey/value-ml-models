@@ -37,6 +37,13 @@ in [PLAN.md](PLAN.md); check items off (and add new ones) as work proceeds.
 - [x] Every report cites `split_folds.parquet` (fold boundaries + counts)
       and the effective sample size (Σ `sample_weight_{H}y`, cross-checked
       against `manifest.json["effective_rows"]`). (`src/harness/report.py`)
+- [x] Train/eval split: the runner saves fitted per-fold models as a
+      bundle (`src/harness/model_store.py`, git-ignored under
+      `experiments/models/`); `vml-eval` re-scores a saved bundle under an
+      eval config (top-K, score thresholds only — everything else stays
+      pinned by the bundle) without refitting, logging each evaluation to
+      the results store under its own config hash.
+      (`src/harness/evaluate.py`)
 
 ### Baselines (before any tree is trained)
 - [x] Majority-class baseline per (horizon, threshold) cell.

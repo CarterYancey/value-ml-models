@@ -66,9 +66,21 @@ file it against `sharadar-dataset` and consume the next version.
 - Evaluation reports (per-fold era-sliced metrics, `split_folds.parquet`
   citation, effective sample sizes) are written to `reports/` and checked in.
 
+- Training and evaluation are distinct tasks: `vml-run` saves the fitted
+  per-fold models as a bundle under `experiments/models/` (git-ignored),
+  and `vml-eval` re-scores a saved bundle under an eval config — metric
+  parameters only (`top_k`, `score_thresholds`); the dataset version,
+  scheme, folds, label, and features stay pinned by the bundle. Each
+  evaluation is logged to `experiments/results.csv` under its own config
+  hash, so trying many evaluation criteria still counts in the trial
+  ledger.
+
 ```sh
-# one experiment
+# one experiment (trains, evaluates, and saves the model bundle)
 uv run vml-run experiments/baseline_b2m_rank_3y_beat_spy.toml
+
+# re-evaluate a saved bundle with different metric parameters (no refit)
+uv run vml-eval experiments/models/<bundle_dir> experiments/eval_thresholds.toml
 
 # the full baseline grid (every horizon × label cell × baseline)
 uv run python scripts/run_baselines.py dataset_v1.0

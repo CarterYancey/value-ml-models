@@ -81,6 +81,17 @@ def write_report(
         f"(dataset, scheme, horizon, label): {configurations_tried}** "
         "(from the append-only results store; failed runs count)"
     )
+    if artifacts and "model_bundle" in artifacts:
+        lines.append(
+            f"- saved model bundle: `{artifacts['model_bundle']}` "
+            "(re-evaluate with `vml-eval`, no refitting)"
+        )
+    if artifacts and "source_bundle" in artifacts:
+        lines.append(
+            f"- **re-evaluation of saved bundle** "
+            f"`{artifacts['source_bundle']}`: models loaded, not refit — "
+            "only the metric parameters differ from the training run"
+        )
     lines.append("")
 
     lines.append("## Fold definition (cited from `split_folds.parquet`)")
@@ -208,7 +219,7 @@ def write_report(
         )
     lines.append("")
 
-    if artifacts:
+    if artifacts and ("rules" in artifacts or "tree_diagram" in artifacts):
         lines.append("## Interpretability artifacts")
         lines.append("")
         if "rules" in artifacts:

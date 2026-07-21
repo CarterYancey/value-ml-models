@@ -4,6 +4,10 @@ data/**
 !data/**/.gitkeep
 !data/**/*.md
 
+# Saved model bundles: binaries are artifacts; the provenance to
+# recreate them (config + results store + git SHA) is what's committed.
+experiments/models/
+
 # Secrets
 .env
 
