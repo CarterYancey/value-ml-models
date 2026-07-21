@@ -79,12 +79,11 @@ def evaluate_bundle(
     }
 
     try:
+        # Loaded from the directory the bundle was trained on
+        # (train_config.dataset_version is the `dataset_vX.Y` directory
+        # name); the manifest's own dataset_version field is a separate
+        # build-identity string ("X.Y") and is not expected to match it.
         dataset = Dataset(Path(data_root) / train_config.dataset_version)
-        if dataset.version != train_config.dataset_version:
-            raise DatasetValidationError(
-                f"bundle was trained on {train_config.dataset_version!r} but "
-                f"the directory manifest declares {dataset.version!r}"
-            )
         missing = sorted(
             set(bundle.feature_columns) - set(dataset.data.columns)
         )

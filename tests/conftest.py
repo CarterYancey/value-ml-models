@@ -199,9 +199,18 @@ def _build_split_folds(splits: pd.DataFrame) -> pd.DataFrame:
 
 
 def build_mini_dataset(root: Path, version: str = "dataset_v0.0-test") -> Path:
-    """Write a complete miniature dataset directory under root/version."""
+    """Write a complete miniature dataset directory under root/version.
+
+    Mirrors the upstream convention that the directory is `dataset_vX.Y`
+    while `manifest.json["dataset_version"]` is the bare build identity
+    `X.Y` — the two are deliberately *not* equal, so downstream code must
+    never assume they are (see data/manual.md).
+    """
     out = root / version
     out.mkdir(parents=True, exist_ok=True)
+    manifest_version = (
+        version[len("dataset_v"):] if version.startswith("dataset_v") else version
+    )
     data = _build_dataset_frame()
 
     tags: list[dict] = []
@@ -226,7 +235,7 @@ def build_mini_dataset(root: Path, version: str = "dataset_v0.0-test") -> Path:
         ]
         weight_cols.append(f"sample_weight_{h}y")
     manifest = {
-        "dataset_version": version,
+        "dataset_version": manifest_version,
         "created_utc": "2026-01-01T00:00:00Z",
         "horizons_years": HORIZONS,
         "params": {"rank_guard": 20, "min_industry_peers": 5},

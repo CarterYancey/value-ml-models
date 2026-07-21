@@ -144,6 +144,24 @@ def test_evaluated_holdout_bundle_is_refused(trained, tmp_path):
     assert store.iloc[0]["status"] == "failed"
 
 
+def test_evaluate_tolerates_version_naming_convention(trained):
+    # regression: the bundle pins the directory name `dataset_v0.0-test`
+    # while the manifest's dataset_version field is the bare `0.0-test`;
+    # evaluation must not treat that expected mismatch as an error
+    summary, paths = trained
+    from harness.dataset import Dataset
+
+    assert Dataset(paths["data_root"] / "dataset_v0.0-test").version == "0.0-test"
+    eval_summary = evaluate_bundle(
+        summary["model_bundle"],
+        EvalConfig.from_dict({"name": "conv"}),
+        data_root=paths["data_root"],
+        results_path=paths["results"],
+        reports_dir=paths["reports"],
+    )
+    assert eval_summary["status"] == "completed"
+
+
 def test_eval_config_rejects_pinned_fields():
     with pytest.raises(ConfigError, match="pinned by the model bundle"):
         EvalConfig.from_dict({"name": "x", "label": "label_3y_beat_spy"})

@@ -11,7 +11,9 @@ from harness.errors import DatasetValidationError
 
 def test_loads_and_exposes_column_groups(dataset_dir):
     ds = Dataset(dataset_dir)
-    assert ds.version == "dataset_v0.0-test"
+    # manifest build identity, deliberately distinct from the directory
+    # name `dataset_v0.0-test` (upstream convention)
+    assert ds.version == "0.0-test"
     assert ds.columns("features") == ["book_to_market", "earnings_yield"]
     assert ds.columns("ranks") == ["book_to_market_rank", "earnings_yield_rank"]
     assert ds.columns("sector_ranks") == []
