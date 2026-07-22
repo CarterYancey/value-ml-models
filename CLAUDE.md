@@ -93,6 +93,11 @@ invariants below are this repo's equivalents.
 - Backtest results reported without transaction costs or without the
   investability filter (there is no upstream liquidity floor; the filter is
   built here from `log_marketcap`, `dollar_volume_3m`, `amihud_12m`).
+- Deployment scores presented as performance. `vml-train-deploy` legitimately
+  refits on all labeled rows without split filtering (data/manual.md §4
+  rule 7 — it reads no split tags, so it is not a holdout violation), but
+  the resulting fit has no test set: `vml-predict` output is a ranking,
+  never an evaluation result.
 
 ## Honest-evaluation checklist for any reported result
 

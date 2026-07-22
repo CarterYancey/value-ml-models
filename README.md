@@ -89,6 +89,35 @@ uv run python scripts/run_baselines.py dataset_v1.0
 uv run pytest
 ```
 
+### Deployment: train on everything, score today's stocks
+
+Development measures with purged walk-forward splits; the model that
+*ships* is refit on **all** labeled rows — every snapshot kind, delistings
+included, no split filtering (data/manual.md §4 rule 7: the holdout/purge
+discipline constrains measurement, not what the deployed model may learn
+from). Deployment fits have no test set, so their scores are rankings,
+never performance numbers.
+
+```sh
+# refit an already-selected config's model on all labeled data
+# (the config's scheme/folds are ignored; saves a deployment bundle)
+uv run vml-train-deploy experiments/tree_depth3_3y_beat_spy.toml
+
+# score today's stocks: an inference dataset directory containing a
+# dataset.parquet with the feature columns (no labels needed)
+uv run vml-predict \
+    experiments/models/<name>_deployment_<run_id> \
+    data/datasets/inference_2026-07-22
+```
+
+`vml-predict` writes the full score-descending ranking to
+`predictions/<inference>__<bundle>.csv` (override with `--output`), writes
+a provenance sidecar `.meta.json` (bundle, git SHA, config hash, row
+count), and prints the top 50 (`--top` to change). Both deployment
+training and inference runs are logged to `experiments/results.csv` under
+their own schemes (`deployment` / `inference`), so they never mix with
+walk-forward trial accounting.
+
 The sealed `holdout` scheme and the diagnostic schemes (`entity_holdout`,
 `random_kfold`) are refused by the runner — they raise errors unless
 requested via the dedicated final-eval / registered-diagnostic entry points
