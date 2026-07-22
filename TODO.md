@@ -37,6 +37,13 @@ in [PLAN.md](PLAN.md); check items off (and add new ones) as work proceeds.
 - [x] Every report cites `split_folds.parquet` (fold boundaries + counts)
       and the effective sample size (Σ `sample_weight_{H}y`, cross-checked
       against `manifest.json["effective_rows"]`). (`src/harness/report.py`)
+- [x] Train/eval split: the runner saves fitted per-fold models as a
+      bundle (`src/harness/model_store.py`, git-ignored under
+      `experiments/models/`); `vml-eval` re-scores a saved bundle under an
+      eval config (top-K, score thresholds only — everything else stays
+      pinned by the bundle) without refitting, logging each evaluation to
+      the results store under its own config hash.
+      (`src/harness/evaluate.py`)
 
 ### Baselines (before any tree is trained)
 - [x] Majority-class baseline per (horizon, threshold) cell.
@@ -76,6 +83,16 @@ in [PLAN.md](PLAN.md); check items off (and add new ones) as work proceeds.
       curve. ROC-AUC may be logged, never headlined. (`src/eval/metrics.py`
       incl. `calibration_table`; reliability-curve PNG via
       `src/eval/plots.py`, embedded in every probabilistic report.)
+- [x] Graph the PR-AUC and ROC-AUC curves. (`render_pr_curve` /
+      `render_roc_curve` in `src/eval/plots.py` — pooled over folds,
+      weighted; PR drawn against the base-rate no-skill line, ROC against
+      the chance diagonal; drawn for every model, not just probabilistic
+      ones. New "Discrimination curves" report section.)
+- [x] On re-evaluation of a saved model, don't redraw score-only figures
+      (calibration, PR, ROC): the scores are unchanged, so the values are
+      identical to the training run. (`finalize_run(render_score_figures=)`
+      — `vml-eval` passes False; the eval report points back to the
+      training run's figures instead.)
 - [x] Era slicing: every metric per test year; pooled numbers are never
       presented alone. (`src/eval/era.py`; sliced on `snapshot_date` year,
       pooled row clearly marked as context only.)

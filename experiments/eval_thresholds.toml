@@ -1,0 +1,11 @@
+# Eval config: re-score a saved model bundle with different metric
+# parameters — no refitting, and nothing about what is evaluated
+# (dataset version, scheme, folds, label, features) can be changed here.
+#
+#   uv run vml-eval experiments/models/<bundle_dir> experiments/eval_thresholds.toml
+#
+# Each evaluation is logged to the results store under its own config
+# hash, so trying many thresholds is counted in the trial ledger.
+name = "thr_50_60_70"
+top_k = [20, 50]
+score_thresholds = [0.5, 0.6, 0.7]

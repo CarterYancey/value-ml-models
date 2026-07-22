@@ -17,10 +17,11 @@ from sklearn.tree import DecisionTreeClassifier
 
 from eval.era import collect_predictions, crash_era_table, era_table
 from eval.metrics import compute_all
-from eval.plots import render_calibration_plot
+from eval.plots import render_calibration_plot, render_pr_curve, render_roc_curve
 from explain.rules import render_tree_diagram, rules_text
 from harness.config import ExperimentConfig
 from harness.dataset import Dataset, SplitAccess
+from harness.model_store import ModelBundle
 from harness.report import write_report
 from harness.results import ResultsStore, git_sha, new_run_id
 from models.registry import BASELINE_MODELS, build_model
@@ -28,6 +29,9 @@ from models.registry import BASELINE_MODELS, build_model
 DEFAULT_DATA_ROOT = Path("data/datasets")
 DEFAULT_RESULTS = Path("experiments/results.csv")
 DEFAULT_REPORTS = Path("reports")
+#: Where the CLI saves trained model bundles (git-ignored). Library
+#: callers opt in via run_experiment(models_dir=...).
+DEFAULT_MODELS = Path("experiments/models")
 
 
 def run_experiment(
@@ -38,9 +42,11 @@ def run_experiment(
     reports_dir: str | Path = DEFAULT_REPORTS,
     config_path: str = "",
     access: SplitAccess = SplitAccess.STANDARD,
+    models_dir: str | Path | None = None,
 ) -> dict:
     """Run a config across its folds. Returns a summary dict; raises after
-    logging on failure."""
+    logging on failure. With `models_dir` set, the fitted per-fold models
+    are saved as a bundle for later re-evaluation (harness.evaluate)."""
     store = ResultsStore(results_path)
     run_id = new_run_id()
     sha = git_sha()
@@ -77,6 +83,8 @@ def run_experiment(
         fold_results: list[dict] = []
         prediction_frames: list[pd.DataFrame] = []
         fold_rules: list[tuple[int, str]] = []
+        fold_models: dict[int, object] = {}
+        fold_train_stats: dict[int, dict] = {}
         last_tree: tuple[int, DecisionTreeClassifier] | None = None
         probabilistic = False
         for fold in folds:
@@ -98,6 +106,7 @@ def run_experiment(
                 scores,
                 sample_weight=test_fit.sample_weight,
                 top_k=config.top_k,
+                score_thresholds=config.score_thresholds,
                 probabilistic=model.probabilistic,
             )
             fr = {
@@ -109,6 +118,11 @@ def run_experiment(
             }
             fold_results.append(fr)
             probabilistic = model.probabilistic
+            fold_models[fold] = model
+            fold_train_stats[fold] = {
+                "n_train_rows": len(fit.X),
+                "effective_train_size": fit.effective_size,
+            }
             # snapshot_date is a parquet DATE upstream (datetime.date
             # objects after read), not a pandas datetime — normalize first
             test_years = pd.to_datetime(
@@ -135,30 +149,8 @@ def run_experiment(
                 }
             )
 
-        configurations_tried = store.configurations_tried(
-            config.dataset_version, config.scheme, config.horizon_years, config.label
-        )
-
-        reports_dir = Path(reports_dir)
-        predictions = pd.concat(prediction_frames, ignore_index=True)
-        era_df = era_table(
-            predictions, top_k=config.top_k, probabilistic=probabilistic
-        )
-        crash_df = crash_era_table(
-            predictions, top_k=config.top_k, probabilistic=probabilistic
-        )
-
-        calibration_path = None
-        if probabilistic:
-            calibration_path = render_calibration_plot(
-                predictions["y_true"],
-                predictions["score"],
-                predictions["sample_weight"],
-                path=reports_dir / f"{config.name}_calibration.png",
-                title=f"{config.name} — test calibration, pooled over folds",
-            )
-
         artifacts: dict[str, Path] = {}
+        reports_dir = Path(reports_dir)
         if fold_rules:
             artifacts["rules"] = _write_rules_file(
                 reports_dir / f"{config.name}_rules.md",
@@ -171,26 +163,29 @@ def run_experiment(
             )
             artifacts["tree_diagram_fold"] = diagram_fold
 
-        baseline_df = store.model_comparison(
-            config.dataset_version,
-            config.scheme,
-            config.horizon_years,
-            config.label,
-            BASELINE_MODELS,
-        )
+        bundle_path = None
+        if models_dir is not None:
+            bundle_path = ModelBundle(
+                train_config=config,
+                run_id=run_id,
+                git_sha=sha,
+                probabilistic=probabilistic,
+                feature_columns=tuple(feature_cols),
+                fold_models=fold_models,
+                fold_train_stats=fold_train_stats,
+            ).save(models_dir)
+            artifacts["model_bundle"] = bundle_path
 
-        report_path = write_report(
-            path=reports_dir / f"{config.name}.md",
+        report_path, configurations_tried = finalize_run(
             config=config,
             run_id=run_id,
-            git_sha=sha,
+            sha=sha,
             dataset=dataset,
+            store=store,
             fold_results=fold_results,
-            configurations_tried=configurations_tried,
-            era_df=era_df,
-            crash_df=crash_df,
-            baseline_df=baseline_df,
-            calibration_path=calibration_path,
+            prediction_frames=prediction_frames,
+            probabilistic=probabilistic,
+            reports_dir=reports_dir,
             artifacts=artifacts,
         )
         return {
@@ -200,6 +195,7 @@ def run_experiment(
             "fold_results": fold_results,
             "configurations_tried": configurations_tried,
             "report_path": report_path,
+            "model_bundle": bundle_path,
         }
     except Exception as exc:
         store.append(
@@ -210,6 +206,98 @@ def run_experiment(
             }
         )
         raise
+
+
+def finalize_run(
+    *,
+    config: ExperimentConfig,
+    run_id: str,
+    sha: str,
+    dataset: Dataset,
+    store: ResultsStore,
+    fold_results: list[dict],
+    prediction_frames: list[pd.DataFrame],
+    probabilistic: bool,
+    reports_dir: str | Path,
+    artifacts: dict | None = None,
+    render_score_figures: bool = True,
+) -> tuple[Path, int]:
+    """Shared tail of a training run and a bundle re-evaluation: era
+    tables, score-only figures (calibration + PR/ROC curves), baseline
+    comparison, report. Returns (report_path, configurations_tried).
+
+    `render_score_figures=False` skips the calibration and PR/ROC curves:
+    they depend on `(y_true, score)` alone, so a re-evaluation of a saved
+    model would only redraw the training run's identical figures. The
+    report then points back to that run instead.
+    """
+    configurations_tried = store.configurations_tried(
+        config.dataset_version, config.scheme, config.horizon_years, config.label
+    )
+    reports_dir = Path(reports_dir)
+    predictions = pd.concat(prediction_frames, ignore_index=True)
+    era_df = era_table(
+        predictions,
+        top_k=config.top_k,
+        score_thresholds=config.score_thresholds,
+        probabilistic=probabilistic,
+    )
+    crash_df = crash_era_table(
+        predictions,
+        top_k=config.top_k,
+        score_thresholds=config.score_thresholds,
+        probabilistic=probabilistic,
+    )
+
+    calibration_path = pr_curve_path = roc_curve_path = None
+    if render_score_figures:
+        y, s, w = (
+            predictions["y_true"], predictions["score"],
+            predictions["sample_weight"],
+        )
+        pr_curve_path = render_pr_curve(
+            y, s, w,
+            path=reports_dir / f"{config.name}_pr_curve.png",
+            title=f"{config.name} — precision–recall, pooled over folds",
+        )
+        roc_curve_path = render_roc_curve(
+            y, s, w,
+            path=reports_dir / f"{config.name}_roc_curve.png",
+            title=f"{config.name} — ROC, pooled over folds",
+        )
+        if probabilistic:
+            calibration_path = render_calibration_plot(
+                y, s, w,
+                path=reports_dir / f"{config.name}_calibration.png",
+                title=f"{config.name} — test calibration, pooled over folds",
+            )
+
+    baseline_df = store.model_comparison(
+        config.dataset_version,
+        config.scheme,
+        config.horizon_years,
+        config.label,
+        BASELINE_MODELS,
+    )
+
+    report_path = write_report(
+        path=reports_dir / f"{config.name}.md",
+        config=config,
+        run_id=run_id,
+        git_sha=sha,
+        dataset=dataset,
+        fold_results=fold_results,
+        configurations_tried=configurations_tried,
+        era_df=era_df,
+        crash_df=crash_df,
+        baseline_df=baseline_df,
+        calibration_path=calibration_path,
+        pr_curve_path=pr_curve_path,
+        roc_curve_path=roc_curve_path,
+        score_figures_rendered=render_score_figures,
+        artifacts=artifacts,
+    )
+    return report_path, configurations_tried
 
 
 def _write_rules_file(
@@ -256,6 +344,13 @@ def _main(argv=None) -> int:
     parser.add_argument("--data-root", default=str(DEFAULT_DATA_ROOT))
     parser.add_argument("--results", default=str(DEFAULT_RESULTS))
     parser.add_argument("--reports-dir", default=str(DEFAULT_REPORTS))
+    parser.add_argument(
+        "--models-dir",
+        default=str(DEFAULT_MODELS),
+        help="where to save the trained model bundle for later vml-eval "
+        "(pass --no-save-models to skip)",
+    )
+    parser.add_argument("--no-save-models", action="store_true")
     args = parser.parse_args(argv)
     try:
         summary = run_config_file(
@@ -263,6 +358,7 @@ def _main(argv=None) -> int:
             data_root=args.data_root,
             results_path=args.results,
             reports_dir=args.reports_dir,
+            models_dir=None if args.no_save_models else args.models_dir,
         )
     except Exception:
         traceback.print_exc()
@@ -270,4 +366,7 @@ def _main(argv=None) -> int:
         return 1
     print(f"run {summary['run_id']} completed over folds {summary['folds']}")
     print(f"report: {summary['report_path']}")
+    if summary.get("model_bundle"):
+        print(f"model bundle: {summary['model_bundle']} "
+              "(re-evaluate with vml-eval)")
     return 0

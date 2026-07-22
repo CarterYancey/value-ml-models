@@ -2,9 +2,11 @@
 
 ROC-AUC is logged but never headlined — base rates are extreme in some
 label cells. precision@K is unweighted (a portfolio buys K names, each one
-counts once); PR-AUC and Brier accept the horizon's sample weights so
-overlapping snapshots don't overstate confidence. Brier is only computed
-when the model declares its scores are probabilities.
+counts once); the same goes for precision/recall at a score threshold (the
+rule buys every name clearing the bar, each one counts once). PR-AUC and
+Brier accept the horizon's sample weights so overlapping snapshots don't
+overstate confidence. Brier is only computed when the model declares its
+scores are probabilities.
 """
 
 from __future__ import annotations
@@ -55,6 +57,49 @@ def recall_at_k(y_true, scores, k: int) -> float:
         return math.nan
     top = _order_by_score(scores)[: min(k, len(y))]
     return float(y[top].sum() / positives)
+
+
+def _at_threshold(scores, threshold: float) -> np.ndarray:
+    """Selection mask for "score >= threshold". Non-finite scores mean
+    unrankable rows (see _finite_scores) and never clear the bar."""
+    s = np.asarray(scores, dtype=float)
+    return np.isfinite(s) & (s >= threshold)
+
+
+def threshold_tag(threshold: float) -> str:
+    """Stable metric-key suffix for a threshold (0.5 -> "0.5")."""
+    return format(float(threshold), "g")
+
+
+def precision_at_threshold(y_true, scores, threshold: float) -> float:
+    """Precision of the rule "select every name scoring >= threshold".
+
+    NaN when nothing clears the threshold: an empty selection makes no
+    claims, so its precision is undefined rather than zero. n_at_threshold
+    is recorded alongside so the empty case is visible, not silent.
+    """
+    y = np.asarray(y_true, dtype=float)
+    sel = _at_threshold(scores, threshold)
+    if len(y) == 0 or not sel.any():
+        return math.nan
+    return float(y[sel].mean())
+
+
+def recall_at_threshold(y_true, scores, threshold: float) -> float:
+    """Share of positives clearing the threshold. A threshold nothing
+    meets recalls 0.0 of the existing positives; NaN only when there are
+    no positives to recall."""
+    y = np.asarray(y_true, dtype=float)
+    positives = y.sum()
+    if len(y) == 0 or positives == 0:
+        return math.nan
+    return float(y[_at_threshold(scores, threshold)].sum() / positives)
+
+
+def n_at_threshold(scores, threshold: float) -> int:
+    """How many samples cleared the threshold — the selection size the
+    precision/recall above are computed on (0 when never met)."""
+    return int(_at_threshold(scores, threshold).sum())
 
 
 def pr_auc(y_true, scores, sample_weight=None) -> float:
@@ -136,7 +181,7 @@ def calibration_table(y_true, probs, sample_weight=None, n_bins: int = 10):
 
 
 def compute_all(y_true, scores, *, sample_weight=None, top_k=(20, 50),
-                probabilistic: bool = False) -> dict[str, float]:
+                score_thresholds=(), probabilistic: bool = False) -> dict[str, float]:
     """The standard per-fold metric block logged by the runner."""
     out: dict[str, float] = {
         "n_test": float(len(np.asarray(y_true))),
@@ -148,4 +193,9 @@ def compute_all(y_true, scores, *, sample_weight=None, top_k=(20, 50),
     for k in top_k:
         out[f"precision_at_{k}"] = precision_at_k(y_true, scores, k)
         out[f"recall_at_{k}"] = recall_at_k(y_true, scores, k)
+    for t in score_thresholds:
+        tag = threshold_tag(t)
+        out[f"precision_at_thr_{tag}"] = precision_at_threshold(y_true, scores, t)
+        out[f"recall_at_thr_{tag}"] = recall_at_threshold(y_true, scores, t)
+        out[f"n_at_thr_{tag}"] = float(n_at_threshold(scores, t))
     return out

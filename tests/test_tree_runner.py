@@ -63,7 +63,7 @@ def test_tree_run_produces_full_report_and_artifacts(data_root, tmp_path):
     rules = (reports / "test_tree_3y_beat_spy_rules.md").read_text()
     assert "## Fold 2016" in rules and "## Fold 2017" in rules
     assert "P(positive)" in rules
-    assert "dataset_v0.0-test" in rules  # reproducibility header
+    assert "0.0-test" in rules  # reproducibility header (manifest version)
     assert (reports / "test_tree_3y_beat_spy_tree.png").exists()
     assert "Interpretability artifacts" in report
 

@@ -52,7 +52,9 @@ def wilson_interval(successes: float, n: float, z: float = 1.96) -> tuple[float,
     return (max(0.0, center - half), min(1.0, center + half))
 
 
-def _metric_row(grp: pd.DataFrame, top_k, probabilistic: bool) -> dict:
+def _metric_row(
+    grp: pd.DataFrame, top_k, score_thresholds, probabilistic: bool
+) -> dict:
     y = grp["y_true"].to_numpy(dtype=float)
     s = grp["score"].to_numpy(dtype=float)
     w = grp["sample_weight"].to_numpy(dtype=float)
@@ -67,11 +69,17 @@ def _metric_row(grp: pd.DataFrame, top_k, probabilistic: bool) -> dict:
     for k in top_k:
         row[f"precision_at_{k}"] = metrics.precision_at_k(y, s, k)
         row[f"recall_at_{k}"] = metrics.recall_at_k(y, s, k)
+    for t in score_thresholds:
+        tag = metrics.threshold_tag(t)
+        row[f"precision_at_thr_{tag}"] = metrics.precision_at_threshold(y, s, t)
+        row[f"recall_at_thr_{tag}"] = metrics.recall_at_threshold(y, s, t)
+        row[f"n_at_thr_{tag}"] = metrics.n_at_threshold(s, t)
     return row
 
 
 def era_table(
-    predictions: pd.DataFrame, top_k=(20, 50), probabilistic: bool = False
+    predictions: pd.DataFrame, top_k=(20, 50), score_thresholds=(),
+    probabilistic: bool = False
 ) -> pd.DataFrame:
     """Per-test-year metrics plus a clearly-marked pooled row.
 
@@ -82,13 +90,24 @@ def era_table(
     _check_predictions(predictions)
     rows = []
     for year, grp in predictions.groupby("year", sort=True):
-        rows.append({"era": str(int(year)), **_metric_row(grp, top_k, probabilistic)})
-    rows.append({"era": "pooled", **_metric_row(predictions, top_k, probabilistic)})
+        rows.append(
+            {
+                "era": str(int(year)),
+                **_metric_row(grp, top_k, score_thresholds, probabilistic),
+            }
+        )
+    rows.append(
+        {
+            "era": "pooled",
+            **_metric_row(predictions, top_k, score_thresholds, probabilistic),
+        }
+    )
     return pd.DataFrame(rows)
 
 
 def crash_era_table(
-    predictions: pd.DataFrame, top_k=(20, 50), probabilistic: bool = False
+    predictions: pd.DataFrame, top_k=(20, 50), score_thresholds=(),
+    probabilistic: bool = False
 ) -> pd.DataFrame:
     """Metrics per crash era present in the test years, with Wilson
     intervals on precision@K (see CORRELATED_PICKS_CAVEAT)."""
@@ -98,7 +117,10 @@ def crash_era_table(
         grp = predictions[predictions["year"].between(start, end)]
         if grp.empty:
             continue
-        row = {"era": name, **_metric_row(grp, top_k, probabilistic)}
+        row = {
+            "era": name,
+            **_metric_row(grp, top_k, score_thresholds, probabilistic),
+        }
         y = grp["y_true"].to_numpy(dtype=float)
         s = grp["score"].to_numpy(dtype=float)
         for k in top_k:
