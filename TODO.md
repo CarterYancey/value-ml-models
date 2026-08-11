@@ -122,6 +122,26 @@ in [PLAN.md](PLAN.md); check items off (and add new ones) as work proceeds.
 - [ ] Restated-variant ablation (needs a restated-dimension dataset variant
       from upstream; coordinate before starting).
 
+## Deployment (cross-phase: ship whatever the current phase selected)
+
+- [x] Deployment training: refit a selected config's model on **all**
+      labeled rows (all snapshot kinds, delistings included, no split
+      filtering — data/manual.md §4 rule 7; split tags are never read) and
+      save a single-model deployment bundle. Runs are logged to the
+      results store under scheme `deployment`, apart from walk-forward
+      trial accounting. (`src/harness/deploy.py`,
+      `DeploymentBundle` in `src/harness/model_store.py`;
+      CLI: `vml-train-deploy`)
+- [x] Inference on today's stocks: score a
+      `data/datasets/inference_{date}/` dataset (feature columns, no
+      labels) with a deployment bundle; full ranking written to
+      `predictions/*.csv` with a provenance sidecar `.meta.json`, top 50
+      printed. Deployment fits have no test set — scores are rankings,
+      never reported performance. (CLI: `vml-predict`)
+- [ ] Apply the investability filter (Phase 4) to deployment rankings
+      before acting on them — microcaps dominate the universe and there is
+      no upstream liquidity floor.
+
 ## 3 — Phase 3: better models, kept interpretable
 
 - [ ] LightGBM wrapper (native NaN handling; weights passed through).

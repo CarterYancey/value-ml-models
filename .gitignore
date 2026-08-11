@@ -8,6 +8,10 @@ data/**
 # recreate them (config + results store + git SHA) is what's committed.
 experiments/models/
 
+# Inference rankings written by vml-predict (each CSV has a provenance
+# sidecar .meta.json; the run is also logged to the results store).
+predictions/
+
 # Secrets
 .env
 
