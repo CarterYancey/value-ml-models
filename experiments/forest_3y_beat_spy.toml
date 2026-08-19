@@ -1,0 +1,22 @@
+# Random forest on the primary relative-label cell — the Phase-3
+# starting point next to the Phase-1 single tree. min_samples_leaf keeps
+# leaves populated; class_weight = 0.5 makes false positives twice as
+# expensive as false negatives (precision over recall, PLAN §2).
+name = "forest_3y_beat_spy"
+dataset_version = "dataset_v1.0"
+scheme = "walkforward"
+folds = "all"
+horizon_years = 3
+label = "label_3y_beat_spy"
+feature_groups = ["ranks", "sector_ranks"]
+seed = 7
+top_k = [20, 50]
+precision_targets = [0.75, 0.9]
+
+[model]
+name = "random_forest"
+n_estimators = 300
+max_depth = 8
+min_samples_leaf = 20
+max_features = "sqrt"
+class_weight = 0.5

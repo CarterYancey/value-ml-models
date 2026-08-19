@@ -11,10 +11,12 @@ point-in-time fundamentals, whether a stock will meet return criteria over
 the next year"), and turn ranked probabilities into portfolios — evaluated
 honestly (walk-forward, purged, era-sliced).
 
-Status: **harness + baselines built (Phase 1 in progress).** The upstream
-dataset (v1.0) is complete and documented; the experiment harness, split
-application with guardrails, and the trivial baselines are implemented.
-Next: depth-limited decision trees + rule extraction. See [TODO.md](TODO.md).
+Status: **Phases 1–2 built; Phase 3 (better models) in progress.** The
+experiment harness, split application with guardrails, trivial baselines,
+depth-limited decision trees with rule extraction, era-sliced evaluation,
+and the deployment path are implemented. Phase 3 adds random forests and
+LightGBM, precision-first tuning knobs, and a sweep harness that expands
+one config into a whole grid of experiments. See [TODO.md](TODO.md).
 
 ## Documentation map
 
@@ -79,6 +81,11 @@ file it against `sharadar-dataset` and consume the next version.
 # one experiment (trains, evaluates, and saves the model bundle)
 uv run vml-run experiments/baseline_b2m_rank_3y_beat_spy.toml
 
+# a sweep: one TOML declaring ranges (label cells x param grid x feature
+# sets x seeds) expands into ordinary experiments, all run and ranked
+uv run vml-sweep experiments/sweeps/tree_precision_grid_3y.toml
+uv run vml-sweep experiments/sweeps/tree_precision_grid_3y.toml --dry-run  # names only
+
 # re-evaluate a saved bundle with different metric parameters (no refit)
 uv run vml-eval experiments/models/<bundle_dir> experiments/eval_thresholds.toml
 
@@ -88,6 +95,44 @@ uv run python scripts/run_baselines.py dataset_v1.0
 # tests (run against a hand-built miniature dataset; no real data needed)
 uv run pytest
 ```
+
+### Models
+
+`model.name` in a config selects from the registry: the baselines
+(`majority_class`, `rank_factor`, `random_ranking`), the Phase-1
+`decision_tree` (full sklearn regularization surface: `max_depth`,
+`min_samples_leaf`, `max_leaf_nodes`, `ccp_alpha`, …), and the Phase-3
+`random_forest` and `lightgbm`. All fit with the horizon's mandatory
+`sample_weight_{H}y` and handle NULLs natively — no imputation anywhere.
+
+**Precision-first tuning** (the core strategy: extremely high precision,
+even at low recall):
+
+- every classifier takes `class_weight`: `"balanced"` (recall-friendly)
+  or a positive float `w` → positives weighted `w` vs. 1 for negatives —
+  `w < 1` makes false positives expensive, so models only call very pure
+  regions positive;
+- `precision_targets = [0.75, 0.9]` in any config records
+  `recall_at_prec_*` / `thr_for_prec_*` / `n_at_prec_*`: the best recall
+  (and the score threshold and pick count achieving it) subject to each
+  precision floor, per fold, per era, and pooled;
+- a sweep's summary ranks by `rank_metric` (default: recall at the first
+  precision floor), so "which config recalls most at ≥ 90% precision?"
+  is answered directly.
+
+### Sweeps
+
+`experiments/sweeps/*.toml` declare grids instead of single runs:
+`[[cells]]` (horizon + label pairs — multiple label columns in one file),
+`[grid]` (model-param ranges, cartesian product), optional
+`[[feature_sets]]` and `seeds`. Every expanded run goes through the
+standard runner — logged to `experiments/results.csv` (failures included,
+they count as trials), STANDARD split access only, per-run reports under
+`reports/sweeps/<name>/` plus a ranked summary (`_summary.md` / `.csv`).
+Expansion is capped by `max_runs` (default 200) so trial-count inflation
+is always an explicit decision. The summary's ranking is model selection
+on walk-forward folds — candidates for the sealed holdout, never final
+results.
 
 ### Deployment: train on everything, score today's stocks
 

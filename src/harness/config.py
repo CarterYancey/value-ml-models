@@ -44,6 +44,10 @@ class ExperimentConfig:
     #: score thresholds for precision/recall over "score >= t" selections
     #: (empty = don't record threshold metrics)
     score_thresholds: tuple[float, ...] = ()
+    #: precision floors: record the best recall (and the threshold
+    #: achieving it) subject to precision >= target — the high-precision
+    #: strategy's headline trade-off (empty = don't record)
+    precision_targets: tuple[float, ...] = ()
 
     @classmethod
     def from_file(cls, path: str | Path) -> "ExperimentConfig":
@@ -85,6 +89,9 @@ class ExperimentConfig:
             score_thresholds=tuple(
                 float(t) for t in raw.get("score_thresholds", ())
             ),
+            precision_targets=tuple(
+                float(p) for p in raw.get("precision_targets", ())
+            ),
         )
 
     def to_raw_dict(self) -> dict:
@@ -102,6 +109,7 @@ class ExperimentConfig:
             "seed": self.seed,
             "top_k": list(self.top_k),
             "score_thresholds": list(self.score_thresholds),
+            "precision_targets": list(self.precision_targets),
         }
         if self.feature_columns is not None:
             raw["feature_columns"] = list(self.feature_columns)
@@ -125,9 +133,11 @@ class ExperimentConfig:
             "top_k": list(self.top_k),
         }
         # Only serialized when set: the config hash is the identity in the
-        # trial ledger, and configs predating this field must keep theirs.
+        # trial ledger, and configs predating these fields must keep theirs.
         if self.score_thresholds:
             payload["score_thresholds"] = list(self.score_thresholds)
+        if self.precision_targets:
+            payload["precision_targets"] = list(self.precision_targets)
         return json.dumps(payload, sort_keys=True, separators=(",", ":"))
 
     @property
@@ -135,7 +145,9 @@ class ExperimentConfig:
         return hashlib.sha256(self.canonical_json().encode()).hexdigest()[:16]
 
 
-_EVAL_ALLOWED = frozenset({"name", "top_k", "score_thresholds"})
+_EVAL_ALLOWED = frozenset(
+    {"name", "top_k", "score_thresholds", "precision_targets"}
+)
 
 
 @dataclass(frozen=True)
@@ -151,6 +163,7 @@ class EvalConfig:
     name: str
     top_k: tuple[int, ...] = (20, 50)
     score_thresholds: tuple[float, ...] = ()
+    precision_targets: tuple[float, ...] = ()
 
     @classmethod
     def from_file(cls, path: str | Path) -> "EvalConfig":
@@ -178,5 +191,8 @@ class EvalConfig:
             top_k=tuple(int(k) for k in raw.get("top_k", (20, 50))),
             score_thresholds=tuple(
                 float(t) for t in raw.get("score_thresholds", ())
+            ),
+            precision_targets=tuple(
+                float(p) for p in raw.get("precision_targets", ())
             ),
         )

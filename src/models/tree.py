@@ -11,8 +11,17 @@ returning leaf-frequency probabilities.
   sizes.
 - NULLs are meaningful upstream; sklearn's native missing-value support
   routes NaN at each split (no imputation anywhere).
-- `class_weight="balanced"` is available for heavily imbalanced cells;
-  sklearn multiplies it into the uniqueness weights, which stay mandatory.
+- `class_weight` accepts `"balanced"` for heavily imbalanced cells, or a
+  positive float `w` (→ `{True: w, False: 1}`) as the precision knob:
+  `w < 1` makes false positives relatively more expensive, so leaves are
+  only called positive when very pure (see `models.common`). sklearn
+  multiplies class weights into the uniqueness weights, which stay
+  mandatory.
+- The remaining regularizers (`min_weight_fraction_leaf`,
+  `min_samples_leaf`, `max_leaf_nodes`, `min_impurity_decrease`,
+  `ccp_alpha`, `max_features`) shape how conservative the tree is;
+  raising the leaf minima and pruning harder also pushes toward
+  fewer, purer positive leaves — precision over recall.
 - Scores are leaf frequencies: probabilistic in form, but single trees
   are poorly calibrated — a known Phase-1 limitation (PLAN §2), which is
   exactly what the calibration curve in the report makes visible.
@@ -26,6 +35,7 @@ from sklearn.tree import DecisionTreeClassifier
 
 from harness.errors import ConfigError, MissingSampleWeightError
 from models.baselines import _require_weights
+from models.common import resolve_class_weight
 
 
 class DecisionTreeModel:
@@ -37,8 +47,15 @@ class DecisionTreeModel:
         self,
         max_depth: int,
         min_weight_fraction_leaf: float = 0.01,
-        class_weight: str | None = None,
+        class_weight: str | float | None = None,
         criterion: str = "gini",
+        splitter: str = "best",
+        min_samples_split: int = 2,
+        min_samples_leaf: int = 1,
+        max_features: int | float | str | None = None,
+        max_leaf_nodes: int | None = None,
+        min_impurity_decrease: float = 0.0,
+        ccp_alpha: float = 0.0,
         seed: int = 0,
     ):
         if not isinstance(max_depth, int) or max_depth < 1:
@@ -46,15 +63,20 @@ class DecisionTreeModel:
                 "decision_tree requires an explicit integer max_depth >= 1; "
                 "an unbounded tree is neither interpretable nor honest"
             )
-        if class_weight not in (None, "balanced"):
-            raise ConfigError(
-                f"class_weight must be 'balanced' or absent, got {class_weight!r}"
-            )
+        if not 0.0 <= float(ccp_alpha):
+            raise ConfigError(f"ccp_alpha must be >= 0, got {ccp_alpha!r}")
         self.estimator_ = DecisionTreeClassifier(
             max_depth=max_depth,
             min_weight_fraction_leaf=min_weight_fraction_leaf,
-            class_weight=class_weight,
+            class_weight=resolve_class_weight(class_weight),
             criterion=criterion,
+            splitter=splitter,
+            min_samples_split=min_samples_split,
+            min_samples_leaf=min_samples_leaf,
+            max_features=max_features,
+            max_leaf_nodes=max_leaf_nodes,
+            min_impurity_decrease=min_impurity_decrease,
+            ccp_alpha=ccp_alpha,
             random_state=seed,
         )
         self.feature_names_: list[str] | None = None

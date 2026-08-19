@@ -102,6 +102,54 @@ def n_at_threshold(scores, threshold: float) -> int:
     return int(_at_threshold(scores, threshold).sum())
 
 
+def recall_at_precision(y_true, scores, target: float) -> dict:
+    """Best achievable recall subject to a precision floor, and the score
+    threshold that achieves it.
+
+    This is the project's headline trade-off (high precision even at low
+    recall) made directly tunable: sweep model hyperparameters and read
+    off which configuration recalls the most positives while keeping the
+    rule "select every name scoring >= t" at precision >= `target`.
+
+    Selection-rule semantics, like the other threshold metrics: each
+    selected name counts once (unweighted), a rule takes all score ties
+    together, and non-finite scores are unrankable and never selected —
+    though every positive, rankable or not, stays in the recall
+    denominator. Returns `{"recall", "threshold", "n_selected"}`;
+    recall 0.0 / NaN threshold when no non-empty selection reaches the
+    floor, all-NaN when there are no positives to recall.
+    """
+    y = np.asarray(y_true, dtype=float)
+    s = np.asarray(scores, dtype=float)
+    total_pos = y.sum()
+    if len(y) == 0 or total_pos == 0:
+        return {"recall": math.nan, "threshold": math.nan, "n_selected": math.nan}
+    finite = np.isfinite(s)
+    empty = {"recall": 0.0, "threshold": math.nan, "n_selected": 0}
+    if not finite.any():
+        return empty
+    ys, ss = y[finite], s[finite]
+    order = np.argsort(-ss, kind="stable")
+    ys, ss = ys[order], ss[order]
+    cum_pos = np.cumsum(ys)
+    n_sel = np.arange(1, len(ys) + 1)
+    # only cut where "score >= t" is a real rule: at the end of tie groups
+    cut = np.ones(len(ss), dtype=bool)
+    cut[:-1] = ss[:-1] > ss[1:]
+    ok = cut & (cum_pos / n_sel >= target)
+    if not ok.any():
+        return empty
+    # recall is nondecreasing down the ranking; among the qualifying cuts
+    # with maximal recall, take the tightest (fewest picks, most precise)
+    ok_idx = np.flatnonzero(ok)
+    best = ok_idx[cum_pos[ok_idx] == cum_pos[ok_idx].max()][0]
+    return {
+        "recall": float(cum_pos[best] / total_pos),
+        "threshold": float(ss[best]),
+        "n_selected": int(n_sel[best]),
+    }
+
+
 def pr_auc(y_true, scores, sample_weight=None) -> float:
     y = np.asarray(y_true, dtype=float)
     if len(y) == 0 or len(np.unique(y)) < 2:
@@ -181,7 +229,8 @@ def calibration_table(y_true, probs, sample_weight=None, n_bins: int = 10):
 
 
 def compute_all(y_true, scores, *, sample_weight=None, top_k=(20, 50),
-                score_thresholds=(), probabilistic: bool = False) -> dict[str, float]:
+                score_thresholds=(), precision_targets=(),
+                probabilistic: bool = False) -> dict[str, float]:
     """The standard per-fold metric block logged by the runner."""
     out: dict[str, float] = {
         "n_test": float(len(np.asarray(y_true))),
@@ -198,4 +247,10 @@ def compute_all(y_true, scores, *, sample_weight=None, top_k=(20, 50),
         out[f"precision_at_thr_{tag}"] = precision_at_threshold(y_true, scores, t)
         out[f"recall_at_thr_{tag}"] = recall_at_threshold(y_true, scores, t)
         out[f"n_at_thr_{tag}"] = float(n_at_threshold(scores, t))
+    for p in precision_targets:
+        tag = threshold_tag(p)
+        rap = recall_at_precision(y_true, scores, p)
+        out[f"recall_at_prec_{tag}"] = rap["recall"]
+        out[f"thr_for_prec_{tag}"] = rap["threshold"]
+        out[f"n_at_prec_{tag}"] = float(rap["n_selected"])
     return out

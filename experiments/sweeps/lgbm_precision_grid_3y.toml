@@ -1,0 +1,33 @@
+# LightGBM grid on the primary relative-label cell (PLAN §2: relative
+# labels are the primary lens). Small, regularized trees; the
+# class_weight axis trades recall for precision exactly as in the tree
+# sweep. No early stopping anywhere — boosting rounds are an ordinary
+# hyperparameter tuned across the upstream walk-forward folds (carving a
+# local validation split would violate invariant 1).
+#
+# Expanded: 1 cell x 2 x 2 x 3 = 12 runs.
+# Run: vml-sweep experiments/sweeps/lgbm_precision_grid_3y.toml
+name = "lgbm_precision_grid_3y"
+dataset_version = "dataset_v1.0"
+scheme = "walkforward"
+folds = "all"
+feature_groups = ["ranks", "sector_ranks"]
+seeds = [7]
+top_k = [20, 50]
+precision_targets = [0.75, 0.9]
+rank_metric = "recall_at_prec_0.9"
+
+[[cells]]
+horizon_years = 3
+label = "label_3y_beat_spy"
+
+[model]
+name = "lightgbm"
+learning_rate = 0.05
+min_child_samples = 40
+reg_lambda = 1.0
+
+[grid]
+n_estimators = [100, 300]
+num_leaves = [7, 15]
+class_weight = [1.0, 0.5, 0.25]

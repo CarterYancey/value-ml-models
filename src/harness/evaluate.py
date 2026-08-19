@@ -59,6 +59,7 @@ def evaluate_bundle(
         name=f"{train_config.name}__{eval_config.name}",
         top_k=eval_config.top_k,
         score_thresholds=eval_config.score_thresholds,
+        precision_targets=eval_config.precision_targets,
     )
 
     store = ResultsStore(results_path)
@@ -111,6 +112,7 @@ def evaluate_bundle(
                 sample_weight=test_fit.sample_weight,
                 top_k=config.top_k,
                 score_thresholds=config.score_thresholds,
+                precision_targets=config.precision_targets,
                 probabilistic=bundle.probabilistic,
             )
             stats = bundle.fold_train_stats[fold]
@@ -193,7 +195,7 @@ def _main(argv=None) -> int:
     )
     parser.add_argument(
         "eval_config", help="path to an eval-config TOML (name, top_k, "
-        "score_thresholds)"
+        "score_thresholds, precision_targets)"
     )
     parser.add_argument("--data-root", default=str(DEFAULT_DATA_ROOT))
     parser.add_argument("--results", default=str(DEFAULT_RESULTS))

@@ -107,6 +107,7 @@ def run_experiment(
                 sample_weight=test_fit.sample_weight,
                 top_k=config.top_k,
                 score_thresholds=config.score_thresholds,
+                precision_targets=config.precision_targets,
                 probabilistic=model.probabilistic,
             )
             fr = {
@@ -188,11 +189,24 @@ def run_experiment(
             reports_dir=reports_dir,
             artifacts=artifacts,
         )
+        # pooled over all folds' test rows — context for the era slices,
+        # and the single number a sweep can rank candidate configs by
+        pooled = pd.concat(prediction_frames, ignore_index=True)
+        pooled_metrics = compute_all(
+            pooled["y_true"],
+            pooled["score"],
+            sample_weight=pooled["sample_weight"],
+            top_k=config.top_k,
+            score_thresholds=config.score_thresholds,
+            precision_targets=config.precision_targets,
+            probabilistic=probabilistic,
+        )
         return {
             "run_id": run_id,
             "status": "completed",
             "folds": folds,
             "fold_results": fold_results,
+            "pooled_metrics": pooled_metrics,
             "configurations_tried": configurations_tried,
             "report_path": report_path,
             "model_bundle": bundle_path,
@@ -240,12 +254,14 @@ def finalize_run(
         predictions,
         top_k=config.top_k,
         score_thresholds=config.score_thresholds,
+        precision_targets=config.precision_targets,
         probabilistic=probabilistic,
     )
     crash_df = crash_era_table(
         predictions,
         top_k=config.top_k,
         score_thresholds=config.score_thresholds,
+        precision_targets=config.precision_targets,
         probabilistic=probabilistic,
     )
 

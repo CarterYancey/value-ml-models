@@ -1,0 +1,39 @@
+# Precision-first decision-tree grid over both 3y label cells.
+#
+# The strategy is extremely high precision even at low recall (PLAN §2):
+# the grid crosses depth with the positive-class weight — class_weight
+# below 1.0 makes false positives relatively more expensive, so trees
+# only call a region positive when it is very pure. precision_targets
+# records, per run, the best recall achievable while the "score >= t"
+# rule stays at >= 75% / 90% precision; the sweep summary ranks by
+# recall at the 90% floor.
+#
+# Expanded: 2 cells x 4 depths x 4 class weights = 32 runs, every one
+# logged to the trial ledger. Run: vml-sweep experiments/sweeps/tree_precision_grid_3y.toml
+name = "tree_precision_grid_3y"
+dataset_version = "dataset_v1.0"
+scheme = "walkforward"
+folds = "all"
+feature_groups = ["ranks", "sector_ranks"]
+seeds = [7]
+top_k = [20, 50]
+precision_targets = [0.75, 0.9]
+rank_metric = "recall_at_prec_0.9"
+
+[[cells]]
+horizon_years = 3
+label = "label_3y_beat_spy"
+
+[[cells]]
+horizon_years = 3
+label = "label_3y_cagr_ge_10"
+
+[model]
+name = "decision_tree"
+min_weight_fraction_leaf = 0.01
+
+[grid]
+max_depth = [3, 4, 5, 6]
+# 1.0 = unweighted; "balanced" upweights the rare positive class (recall-
+# friendly); 0.5 / 0.25 penalize false positives (precision-friendly)
+class_weight = ["balanced", 1.0, 0.5, 0.25]
