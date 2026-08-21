@@ -34,8 +34,12 @@ class ExperimentConfig:
     model_params: dict = field(default_factory=dict)
     #: manifest column groups to draw features from
     feature_groups: tuple[str, ...] = ()
-    #: optional explicit subset of the selected groups' columns
+    #: optional explicit subset of the selected groups' columns (whitelist)
     feature_columns: tuple[str, ...] | None = None
+    #: columns removed from the selection after any whitelist (blacklist —
+    #: "the whole group minus these"); every entry must exist in the
+    #: selection or the run refuses, so typos can't silently keep a column
+    exclude_feature_columns: tuple[str, ...] = ()
     #: "all" (every fold in split_folds for scheme+horizon) or explicit list
     folds: tuple[int, ...] | str = "all"
     seed: int = 0
@@ -83,6 +87,7 @@ class ExperimentConfig:
             model_params={k: v for k, v in model.items() if k != "name"},
             feature_groups=tuple(raw.get("feature_groups", ())),
             feature_columns=feature_columns,
+            exclude_feature_columns=tuple(raw.get("exclude_feature_columns", ())),
             folds=folds,
             seed=int(raw.get("seed", 0)),
             top_k=tuple(int(k) for k in raw.get("top_k", (20, 50))),
@@ -113,6 +118,8 @@ class ExperimentConfig:
         }
         if self.feature_columns is not None:
             raw["feature_columns"] = list(self.feature_columns)
+        if self.exclude_feature_columns:
+            raw["exclude_feature_columns"] = list(self.exclude_feature_columns)
         return raw
 
     def canonical_json(self) -> str:
@@ -138,6 +145,8 @@ class ExperimentConfig:
             payload["score_thresholds"] = list(self.score_thresholds)
         if self.precision_targets:
             payload["precision_targets"] = list(self.precision_targets)
+        if self.exclude_feature_columns:
+            payload["exclude_feature_columns"] = list(self.exclude_feature_columns)
         return json.dumps(payload, sort_keys=True, separators=(",", ":"))
 
     @property

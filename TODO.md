@@ -169,6 +169,30 @@ in [PLAN.md](PLAN.md); check items off (and add new ones) as work proceeds.
 - [ ] Ablations: raw vs. rank vs. sector-rank features; ± technicals;
       ± classification columns (current-state caveat). The sweep harness's
       `[[feature_sets]]` axis is the mechanism.
+- [x] Feature blacklist: `exclude_feature_columns` in any config (and per
+      `[[feature_sets]]` entry / top-level in sweeps) — "the whole
+      manifest group minus these", applied after any `feature_columns`
+      whitelist; excluding an absent column is an error so typos can't
+      silently keep a column in. Needed because the `features` group
+      contains non-numeric columns no tree model can consume.
+- [ ] Encode the categorical/non-numeric `features` columns (`sector`,
+      `industry`, `famaindustry`, `scalemarketcap`, the `Y`/`N` condition
+      flags like `negative_equity`, and the `fund_datekey` /
+      `fund_reportperiod` date fields) so they become usable as model
+      features — today they must be excluded via
+      `exclude_feature_columns`. Decide the route first, because
+      invariant 4 (no feature engineering here) is in tension with doing
+      it locally:
+      (a) preferred: upstream encodes them (one-hot / ordinal / native
+      categorical dtype) in a new dataset version;
+      (b) acceptable if argued: a disclosed, deterministic per-row
+      *recoding* in the harness (one-hot, or sklearn/LightGBM native
+      categorical support) — representation, not derivation. No
+      cross-row statistics under any circumstances: target/frequency
+      encoding fitted on the data is leakage.
+      Either way, mind the classification columns' current-state caveat
+      (data/features.md): `sector`/`industry` are today's values, not
+      point-in-time, so a model using them sees a hint of the future.
 
 ### Sweep harness (ranges instead of one-config-at-a-time)
 - [x] Sweep config (`experiments/sweeps/*.toml`): `[[cells]]` (several

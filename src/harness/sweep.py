@@ -67,6 +67,7 @@ _SWEEP_ALLOWED = frozenset(
         "grid",
         "feature_groups",
         "feature_columns",
+        "exclude_feature_columns",
         "feature_sets",
         "seeds",
         "top_k",
@@ -82,6 +83,7 @@ _SWEEP_ALLOWED = frozenset(
 class FeatureSet:
     groups: tuple[str, ...]
     columns: tuple[str, ...] | None = None
+    exclude: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -179,24 +181,32 @@ class SweepConfig:
 
         fs_raw = raw.get("feature_sets")
         if fs_raw is not None:
-            if "feature_groups" in raw or "feature_columns" in raw:
+            top_level = [
+                k
+                for k in (
+                    "feature_groups", "feature_columns",
+                    "exclude_feature_columns",
+                )
+                if k in raw
+            ]
+            if top_level:
                 raise ConfigError(
                     f"sweep config {source}: give either top-level "
-                    "feature_groups/feature_columns or [[feature_sets]], "
-                    "not both"
+                    f"{top_level} or [[feature_sets]], not both"
                 )
             if not isinstance(fs_raw, list) or not fs_raw:
                 raise ConfigError(
                     f"sweep config {source}: [[feature_sets]] must list at "
-                    "least one {groups[, columns]} table"
+                    "least one {groups[, columns][, exclude]} table"
                 )
             feature_sets = []
             for fs in fs_raw:
-                extra = sorted(set(fs) - {"groups", "columns"})
+                extra = sorted(set(fs) - {"groups", "columns", "exclude"})
                 if extra or "groups" not in fs:
                     raise ConfigError(
                         f"sweep config {source}: each [[feature_sets]] entry "
-                        f"needs groups (and optionally columns), got {fs!r}"
+                        f"needs groups (and optionally columns, exclude), "
+                        f"got {fs!r}"
                     )
                 feature_sets.append(
                     FeatureSet(
@@ -204,6 +214,7 @@ class SweepConfig:
                         columns=(
                             tuple(fs["columns"]) if "columns" in fs else None
                         ),
+                        exclude=tuple(fs.get("exclude", ())),
                     )
                 )
         else:
@@ -215,6 +226,7 @@ class SweepConfig:
                         if "feature_columns" in raw
                         else None
                     ),
+                    exclude=tuple(raw.get("exclude_feature_columns", ())),
                 )
             ]
 
@@ -284,6 +296,7 @@ class SweepConfig:
                 model_params={**self.base_params, **combo},
                 feature_groups=fs.groups,
                 feature_columns=fs.columns,
+                exclude_feature_columns=fs.exclude,
                 folds=self.folds,
                 seed=seed,
                 top_k=self.top_k,

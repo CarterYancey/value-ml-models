@@ -67,7 +67,9 @@ def run_experiment(
     try:
         dataset = Dataset(Path(data_root) / config.dataset_version)
         feature_cols = dataset.feature_columns(
-            config.feature_groups, config.feature_columns
+            config.feature_groups,
+            config.feature_columns,
+            exclude=config.exclude_feature_columns,
         )
         folds = (
             dataset.folds(config.scheme, config.horizon_years)

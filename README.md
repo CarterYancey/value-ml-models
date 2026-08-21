@@ -61,7 +61,14 @@ file it against `sharadar-dataset` and consume the next version.
 
 - One experiment = one TOML config file in `experiments/`, naming the
   dataset version, scheme/fold(s)/horizon, label column, feature groups
-  (from the manifest), model + params, and seed.
+  (from the manifest), model + params, and seed. Feature selection can be
+  narrowed either way: `feature_columns` whitelists an explicit subset,
+  `exclude_feature_columns` blacklists ("the whole group minus these" —
+  e.g. `features` minus its string categoricals and date fields, which no
+  tree model can consume). Naming a column that isn't in the selection is
+  an error, so typos can't silently keep or drop a feature. Both work in
+  sweep configs too (top-level or per `[[feature_sets]]` entry, as
+  `exclude`).
 - The harness runs configs; code never hardcodes an experiment. Every run
   appends dataset version + config hash + git SHA + seed + metrics to
   `experiments/results.csv`, including failed/abandoned runs.
