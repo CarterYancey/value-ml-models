@@ -125,10 +125,17 @@ even at low recall):
 `experiments/sweeps/*.toml` declare grids instead of single runs:
 `[[cells]]` (horizon + label pairs — multiple label columns in one file),
 `[grid]` (model-param ranges, cartesian product), optional
-`[[feature_sets]]` and `seeds`. Every expanded run goes through the
-standard runner — logged to `experiments/results.csv` (failures included,
-they count as trials), STANDARD split access only, per-run reports under
+`[[feature_sets]]` and `seeds`. `vml-sweep` trains exactly like
+`vml-run` does — each expanded config goes through the same runner,
+fitting fresh per-fold models and evaluating them on that fold's test
+year — so a 32-point sweep is 32 full training runs, logged to
+`experiments/results.csv` (failures included, they count as trials),
+STANDARD split access only, with per-run reports under
 `reports/sweeps/<name>/` plus a ranked summary (`_summary.md` / `.csv`).
+The one difference from `vml-run`: fitted models are discarded after
+scoring rather than saved as bundles (pass `--save-models` to keep
+them) — the intended flow is sweep → read the summary → re-run the
+winning config through `vml-run` for its bundle.
 Expansion is capped by `max_runs` (default 200) so trial-count inflation
 is always an explicit decision. The summary's ranking is model selection
 on walk-forward folds — candidates for the sealed holdout, never final
