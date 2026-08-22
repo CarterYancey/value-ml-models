@@ -138,6 +138,10 @@ in [PLAN.md](PLAN.md); check items off (and add new ones) as work proceeds.
       `predictions/*.csv` with a provenance sidecar `.meta.json`, top 50
       printed. Deployment fits have no test set — scores are rankings,
       never reported performance. (CLI: `vml-predict`)
+- [x] Multi-model inference: `vml-predict` accepts several deployment
+      bundles and writes one combined CSV (`rank_<model>`/`score_<model>`
+      pair per bundle, ordered by mean rank) for side-by-side model
+      comparison; one logged inference run per model.
 - [ ] Apply the investability filter (Phase 4) to deployment rankings
       before acting on them — microcaps dominate the universe and there is
       no upstream liquidity floor.

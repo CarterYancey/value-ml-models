@@ -18,11 +18,15 @@ Two entry points:
   measurement settings and are ignored here) and saves a single-model
   `DeploymentBundle`. The run is logged to the results store under scheme
   ``deployment``.
-- ``vml-predict <bundle_dir> <inference_data>`` scores an inference
+- ``vml-predict <bundle_dir>... <inference_data>`` scores an inference
   dataset — ``data/datasets/inference_{date}/`` with a `dataset.parquet`
   of today's stocks carrying the feature columns, no labels — writes the
   full ranking to CSV (plus a provenance sidecar JSON), and prints the
-  top picks.
+  top picks. With several bundle directories it writes one combined CSV
+  with a `rank_<model>`/`score_<model>` column pair per bundle so the
+  models' views of each stock sit side by side. Scores are only
+  comparable across models via the rank columns: each model's score is
+  its own probability/margin scale.
 """
 
 from __future__ import annotations
@@ -172,6 +176,18 @@ def load_inference_frame(path: str | Path) -> tuple[pd.DataFrame, str]:
     return frame, name
 
 
+def _score_frame(bundle: DeploymentBundle, frame: pd.DataFrame):
+    """Validate that `frame` carries the bundle's feature columns and
+    return the model's scores for every row."""
+    missing = sorted(set(bundle.feature_columns) - set(frame.columns))
+    if missing:
+        raise DatasetValidationError(
+            f"inference data lacks feature columns the model was "
+            f"trained on: {missing}"
+        )
+    return bundle.model.predict_scores(frame[list(bundle.feature_columns)])
+
+
 def predict_with_bundle(
     bundle_dir: str | Path,
     inference_path: str | Path,
@@ -206,15 +222,7 @@ def predict_with_bundle(
 
     try:
         frame, source_name = load_inference_frame(inference_path)
-        missing = sorted(set(bundle.feature_columns) - set(frame.columns))
-        if missing:
-            raise DatasetValidationError(
-                f"inference data lacks feature columns the model was "
-                f"trained on: {missing}"
-            )
-        scores = bundle.model.predict_scores(
-            frame[list(bundle.feature_columns)]
-        )
+        scores = _score_frame(bundle, frame)
 
         out = frame[[c for c in _ID_COLUMNS if c in frame.columns]].copy()
         out["score"] = scores
@@ -289,6 +297,149 @@ def predict_with_bundle(
         raise
 
 
+def _bundle_column_names(bundles: list[DeploymentBundle]) -> list[str]:
+    """One short, unique name per bundle for the combined CSV's column
+    suffixes: the config name, with the bundle's run_id appended only
+    when two bundles share a config name."""
+    names = [b.train_config.name for b in bundles]
+    return [
+        f"{name}_{bundle.run_id}" if names.count(name) > 1 else name
+        for name, bundle in zip(names, bundles)
+    ]
+
+
+def predict_with_bundles(
+    bundle_dirs: list[str | Path],
+    inference_path: str | Path,
+    *,
+    output_path: str | Path | None = None,
+    results_path: str | Path = DEFAULT_RESULTS,
+    predictions_dir: str | Path = DEFAULT_PREDICTIONS,
+    top_n: int = DEFAULT_TOP_N,
+) -> dict:
+    """Score one inference dataset with several deployment bundles and
+    write a single combined CSV: the id columns, `mean_rank` across
+    models, and a `rank_<model>`/`score_<model>` pair per bundle, ordered
+    by `mean_rank`. Each model's scoring is logged to the results store
+    as its own inference run, exactly as a single-bundle run would be.
+    Returns a summary dict with the top `top_n` rows."""
+    bundles = [DeploymentBundle.load(d) for d in bundle_dirs]
+    names = _bundle_column_names(bundles)
+    store = ResultsStore(results_path)
+    sha = git_sha()
+    frame, source_name = load_inference_frame(inference_path)
+
+    out = frame[[c for c in _ID_COLUMNS if c in frame.columns]].copy()
+    run_ids, per_model = [], []
+    for bundle_dir, bundle, name in zip(bundle_dirs, bundles, names):
+        config = bundle.train_config
+        run_id = new_run_id()
+        base_row = {
+            "run_id": run_id,
+            "experiment": f"{config.name}__inference",
+            "config_hash": config.config_hash,
+            "config_path": str(bundle_dir),
+            "dataset_version": config.dataset_version,
+            "git_sha": sha,
+            "seed": config.seed,
+            "scheme": INFERENCE_SCHEME,
+            "horizon_years": config.horizon_years,
+            "label": config.label,
+            "model": config.model_name,
+        }
+        try:
+            scores = _score_frame(bundle, frame)
+        except Exception as exc:
+            store.append(
+                {
+                    **base_row,
+                    "status": "failed",
+                    "error": f"{type(exc).__name__}: {exc}",
+                }
+            )
+            raise
+        out[f"score_{name}"] = scores
+        out[f"rank_{name}"] = (
+            out[f"score_{name}"].rank(ascending=False, method="min").astype(int)
+        )
+        store.append(
+            {
+                **base_row,
+                "status": "completed",
+                "fold": source_name,
+                "n_test_rows": len(out),
+            }
+        )
+        run_ids.append(run_id)
+        per_model.append(
+            {
+                "column_suffix": name,
+                "run_id": run_id,
+                "bundle_dir": str(bundle_dir),
+                "bundle_run_id": bundle.run_id,
+                "config_hash": config.config_hash,
+                "trained_on": config.dataset_version,
+                "label": config.label,
+                "horizon_years": config.horizon_years,
+                "model": config.model_name,
+                "probabilistic": bundle.probabilistic,
+            }
+        )
+
+    out["mean_rank"] = out[[f"rank_{n}" for n in names]].mean(axis=1)
+    out = out.sort_values(
+        ["mean_rank", "permaticker"], ascending=[True, True], kind="mergesort"
+    ).reset_index(drop=True)
+    id_cols = [c for c in _ID_COLUMNS if c in out.columns]
+    out = out[
+        id_cols
+        + ["mean_rank"]
+        + [c for n in names for c in (f"rank_{n}", f"score_{n}")]
+    ]
+
+    if output_path is None:
+        stem = f"{source_name}__multi__" + "__".join(names)
+        if len(stem) > 180:
+            stem = f"{source_name}__multi_{len(bundles)}models"
+        output_path = Path(predictions_dir) / f"{stem}.csv"
+    output_path = Path(output_path)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    out.to_csv(output_path, index=False)
+
+    meta_path = output_path.with_suffix(output_path.suffix + ".meta.json")
+    meta_path.write_text(
+        json.dumps(
+            {
+                "scored_utc": datetime.now(timezone.utc).isoformat(
+                    timespec="seconds"
+                ),
+                "git_sha": sha,
+                "inference_source": str(inference_path),
+                "n_rows_scored": len(out),
+                "models": per_model,
+                "note": (
+                    "Deployment scores: ranked by models refit on all "
+                    "labeled data (data/manual.md §4 rule 7). No test set "
+                    "exists for these fits — never report these as "
+                    "performance. Scores are per-model scales; compare "
+                    "models via the rank_* columns."
+                ),
+            },
+            indent=2,
+            sort_keys=True,
+        )
+    )
+
+    return {
+        "run_ids": run_ids,
+        "status": "completed",
+        "n_rows_scored": len(out),
+        "output_path": output_path,
+        "meta_path": meta_path,
+        "top": out.head(top_n),
+    }
+
+
 # ------------------------------------------------------------------- CLIs
 
 
@@ -332,13 +483,16 @@ def _main_predict(argv=None) -> int:
     import argparse
 
     parser = argparse.ArgumentParser(
-        description="Score an inference dataset (today's stocks) with a "
-        "deployment bundle; write the full ranking to CSV and print the "
-        "top picks."
+        description="Score an inference dataset (today's stocks) with one "
+        "or more deployment bundles; write the full ranking to CSV and "
+        "print the top picks. Several bundles produce one combined CSV "
+        "with a rank_<model>/score_<model> column pair per bundle."
     )
     parser.add_argument(
-        "bundle",
-        help="path to a deployment bundle directory "
+        "bundles",
+        nargs="+",
+        metavar="bundle",
+        help="path(s) to deployment bundle directories "
         "(experiments/models/<name>_deployment_<run_id>)",
     )
     parser.add_argument(
@@ -349,7 +503,9 @@ def _main_predict(argv=None) -> int:
     parser.add_argument(
         "--output", default=None,
         help=f"output CSV path (default: {DEFAULT_PREDICTIONS}/"
-        "<inference>__<bundle>.csv)",
+        "<inference>__<bundle>.csv, or "
+        f"{DEFAULT_PREDICTIONS}/<inference>__multi__<names>.csv for "
+        "several bundles)",
     )
     parser.add_argument("--results", default=str(DEFAULT_RESULTS))
     parser.add_argument(
@@ -358,13 +514,24 @@ def _main_predict(argv=None) -> int:
     )
     args = parser.parse_args(argv)
     try:
-        summary = predict_with_bundle(
-            args.bundle,
-            args.inference,
-            output_path=args.output,
-            results_path=args.results,
-            top_n=args.top,
-        )
+        if len(args.bundles) == 1:
+            summary = predict_with_bundle(
+                args.bundles[0],
+                args.inference,
+                output_path=args.output,
+                results_path=args.results,
+                top_n=args.top,
+            )
+            runs = summary["run_id"]
+        else:
+            summary = predict_with_bundles(
+                args.bundles,
+                args.inference,
+                output_path=args.output,
+                results_path=args.results,
+                top_n=args.top,
+            )
+            runs = ", ".join(summary["run_ids"])
     except Exception:
         traceback.print_exc()
         print("inference FAILED (logged to the results store)")
@@ -372,10 +539,11 @@ def _main_predict(argv=None) -> int:
     top = summary["top"]
     print(
         f"scored {summary['n_rows_scored']} rows "
-        f"(run {summary['run_id']}); full ranking: {summary['output_path']}"
+        f"(run {runs}); full ranking: {summary['output_path']}"
     )
     print(f"provenance: {summary['meta_path']}")
-    print(f"\ntop {len(top)} by score:\n")
+    order = "score" if len(args.bundles) == 1 else "mean rank"
+    print(f"\ntop {len(top)} by {order}:\n")
     print(top.to_string(index=False))
     return 0
 
