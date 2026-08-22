@@ -175,11 +175,19 @@ class Dataset:
         self,
         groups: Sequence[str],
         subset: Sequence[str] | None = None,
+        exclude: Sequence[str] = (),
     ) -> list[str]:
         """Feature columns from manifest groups, optionally narrowed to an
-        explicit subset. The subset must be contained in the selected groups
-        — selecting columns the manifest doesn't declare is refused, which
-        is what keeps name-pattern selection out of the codebase."""
+        explicit `subset` (whitelist) and/or stripped of `exclude`
+        (blacklist, applied after the whitelist). Both must reference
+        columns actually present in the selection so far — naming columns
+        the manifest doesn't declare is refused, which is what keeps
+        name-pattern selection out of the codebase, and it also catches
+        typos in an exclusion list (a silently ignored exclusion would
+        leave an unwanted column in the model). The blacklist is the tool
+        for "a whole group minus its unusable columns" — e.g. `features`
+        minus the raw string categoricals and date fields no tree model
+        can consume."""
         allowed_groups = {"features", "ranks", "sector_ranks"}
         bad = [g for g in groups if g not in allowed_groups]
         if bad:
@@ -187,15 +195,28 @@ class Dataset:
                 f"feature groups must be within {sorted(allowed_groups)}, got {bad}"
             )
         cols = [c for g in groups for c in self.columns(g)]
-        if subset is None:
-            return cols
-        unknown = sorted(set(subset) - set(cols))
-        if unknown:
+        if subset is not None:
+            unknown = sorted(set(subset) - set(cols))
+            if unknown:
+                raise DatasetValidationError(
+                    f"requested feature columns not in selected manifest "
+                    f"groups {list(groups)}: {unknown}"
+                )
+            cols = [c for c in cols if c in set(subset)]
+        if exclude:
+            unknown = sorted(set(exclude) - set(cols))
+            if unknown:
+                raise DatasetValidationError(
+                    f"excluded feature columns not in the selected columns "
+                    f"(groups {list(groups)}): {unknown}"
+                )
+            cols = [c for c in cols if c not in set(exclude)]
+        if groups and not cols:
             raise DatasetValidationError(
-                f"requested feature columns not in selected manifest groups "
-                f"{list(groups)}: {unknown}"
+                f"feature selection over groups {list(groups)} left no "
+                "columns (whitelist/blacklist removed everything)"
             )
-        return [c for c in cols if c in set(subset)]
+        return cols
 
     def sample_weight_column(self, horizon_years: int) -> str:
         """The `sample_weight_{H}y` column for a horizon, verified against

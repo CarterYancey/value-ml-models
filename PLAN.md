@@ -33,6 +33,18 @@ the regression reframe (§8) is ever pursued.
   slightly more accurate model whose probabilities are meaningless. Single
   trees are poorly calibrated; this is a known Phase-1 limitation, addressed
   in Phase 3.
+- **Precision over recall, deliberately.** The strategy is a small number of
+  extremely high-conviction picks: a model that finds 10 stocks at 90%
+  precision beats one that finds 200 at 60%, even though the latter has far
+  better recall and accuracy. This is tunable, not aspirational: every
+  classifier exposes a numeric `class_weight` (positives weighted `w` vs. 1;
+  `w < 1` makes false positives expensive, so only very pure regions are
+  called positive), and `precision_targets` in any config reports the best
+  recall achievable subject to a precision floor (`recall_at_prec_*`), with
+  the score threshold and pick count that achieve it — per fold, per era,
+  and pooled. Model selection ranks on recall-at-precision-floor rather
+  than accuracy. The era slices keep this honest: a 90%-precision rule that
+  only picks in bull years is still a bull-market artifact.
 - **Relative labels are expected to work better than absolute ones.** Absolute
   thresholds force implicit market-level prediction. Train both; compare; be
   unsurprised if absolute-threshold models underperform out-of-time.
@@ -107,13 +119,26 @@ Full contract: [data/manual.md](data/manual.md). The load-bearing points:
   is buying.
 
 ### Phase 3 — Better models, kept interpretable
-- Gradient-boosted trees (LightGBM) + post-hoc calibration (isotonic / Platt
-  on a purged validation fold).
+- Gradient-boosted trees (LightGBM) and random forests, under the same
+  harness protocol as the Phase-1 tree (mandatory uniqueness weights,
+  native NULL routing, no imputation). **No early stopping** in the
+  boosted models: early stopping needs a held-out set, and carving one
+  out locally would construct a split (invariant 1) — boosting rounds are
+  an ordinary hyperparameter tuned across the upstream walk-forward folds.
+- Post-hoc calibration (isotonic / Platt on a purged validation fold).
 - SHAP values for global and per-prediction explanation; compare discovered
   structure against the single-tree rules from Phase 1.
 - Feature ablations: raw vs. rank vs. sector-rank feature sets, with/without
   technicals, with/without classification columns (mind their current-state
   caveat — see [data/features.md](data/features.md)).
+- **Sweep harness for systematic search**: one TOML declares ranges —
+  several label cells (horizon + label pairs), a model-parameter grid,
+  alternative feature sets, several seeds — and expands into ordinary
+  experiment configs, all run through the standard runner (`vml-sweep`).
+  Per-run reports land under `reports/sweeps/<name>/` with a summary
+  ranked by pooled `rank_metric` (default: recall at the first precision
+  floor). Sweeps change how many configs get tried, not how any one of
+  them is measured — see §5 for the accounting.
 
 ### Phase 4 — Portfolio construction & backtest
 - Turn top-K probability rankings into quarterly-rebalanced portfolios.
@@ -135,6 +160,13 @@ Full contract: [data/manual.md](data/manual.md). The load-bearing points:
   not the max). `split_folds.parquet` is cited in every report so
   trial-count / PBO accounting can't be undermined by quietly redefining
   folds.
+- Sweeps industrialize trying configurations, so they get extra friction:
+  every expanded run (including failures) is logged individually to the
+  results store; the sweep summary restates each cell's all-time
+  configurations-tried count; expansion is capped by `max_runs` (default
+  200) so blowing past it requires editing the sweep file; and the summary
+  itself states that its ranking is selection-biased — sweep winners are
+  candidates for the sealed holdout, never reportable results.
 - No feature engineering in this repo. If a model "needs" a new feature,
   that's an upstream change and a new dataset version.
 - The model that ships is refit on all currently-eligible data — the

@@ -144,12 +144,75 @@ in [PLAN.md](PLAN.md); check items off (and add new ones) as work proceeds.
 
 ## 3 — Phase 3: better models, kept interpretable
 
-- [ ] LightGBM wrapper (native NaN handling; weights passed through).
+### Models & precision-first tuning
+- [x] LightGBM wrapper (native NaN handling; weights passed through; no
+      early stopping — a local validation split would violate invariant 1;
+      boosting rounds are tuned across walk-forward folds instead).
+      (`src/models/gbm.py`; exemplar sweep in
+      `experiments/sweeps/lgbm_precision_grid_3y.toml`)
+- [x] Random-forest wrapper (sklearn, NaN-native, weights mandatory).
+      (`src/models/forest.py`; exemplar config
+      `experiments/forest_3y_beat_spy.toml`)
+- [x] Full hyperparameter surface on the Phase-1 tree: `min_samples_leaf`,
+      `min_samples_split`, `max_leaf_nodes`, `max_features`,
+      `min_impurity_decrease`, `ccp_alpha`, `splitter` (`max_depth` stays
+      mandatory).
+- [x] Precision-over-recall knobs (PLAN §2): numeric `class_weight` on
+      every classifier (`w < 1` penalizes false positives → purer positive
+      calls), and `precision_targets` in any config reporting
+      `recall_at_prec_*` / `thr_for_prec_*` / `n_at_prec_*` — best recall
+      subject to a precision floor — per fold, per era, and pooled.
+      (`models/common.py`, `eval/metrics.recall_at_precision`)
 - [ ] Post-hoc calibration (isotonic / Platt) on a purged validation fold.
 - [ ] SHAP: global importance + per-prediction explanations; compare against
       Phase-1 tree rules.
 - [ ] Ablations: raw vs. rank vs. sector-rank features; ± technicals;
-      ± classification columns (current-state caveat).
+      ± classification columns (current-state caveat). The sweep harness's
+      `[[feature_sets]]` axis is the mechanism.
+- [x] Feature blacklist: `exclude_feature_columns` in any config (and per
+      `[[feature_sets]]` entry / top-level in sweeps) — "the whole
+      manifest group minus these", applied after any `feature_columns`
+      whitelist; excluding an absent column is an error so typos can't
+      silently keep a column in. Needed because the `features` group
+      contains non-numeric columns no tree model can consume.
+- [ ] Encode the categorical/non-numeric `features` columns (`sector`,
+      `industry`, `famaindustry`, `scalemarketcap`, the `Y`/`N` condition
+      flags like `negative_equity`, and the `fund_datekey` /
+      `fund_reportperiod` date fields) so they become usable as model
+      features — today they must be excluded via
+      `exclude_feature_columns`. Decide the route first, because
+      invariant 4 (no feature engineering here) is in tension with doing
+      it locally:
+      (a) preferred: upstream encodes them (one-hot / ordinal / native
+      categorical dtype) in a new dataset version;
+      (b) acceptable if argued: a disclosed, deterministic per-row
+      *recoding* in the harness (one-hot, or sklearn/LightGBM native
+      categorical support) — representation, not derivation. No
+      cross-row statistics under any circumstances: target/frequency
+      encoding fitted on the data is leakage.
+      Either way, mind the classification columns' current-state caveat
+      (data/features.md): `sector`/`industry` are today's values, not
+      point-in-time, so a model using them sees a hint of the future.
+
+### Sweep harness (ranges instead of one-config-at-a-time)
+- [x] Sweep config (`experiments/sweeps/*.toml`): `[[cells]]` (several
+      horizon+label cells in one file), `[grid]` (model-param cartesian
+      product), optional `[[feature_sets]]` and `seeds`; expansion capped
+      by `max_runs` (default 200). (`src/harness/sweep.py`)
+- [x] `vml-sweep` CLI (+ `--dry-run` to print the expansion): every
+      expanded run goes through the standard runner — logged to the
+      results store (failures included, they still count as trials),
+      STANDARD split access only, one report per run under
+      `reports/sweeps/<name>/`.
+- [x] Ranked sweep summary (`_summary.md` + full-metrics `_summary.csv`):
+      pooled `rank_metric` (default: recall at the first precision floor),
+      per-cell all-time configurations-tried counts, explicit
+      selection-bias warning.
+- [ ] Run the real sweeps against `dataset_v1.0`
+      (`tree_precision_grid_3y`, `lgbm_precision_grid_3y`), commit the
+      summaries, and pick Phase-3 candidates for the sealed holdout.
+- [ ] Seed-stability pass on the sweep winner (multi-seed sweep; a config
+      whose ranking collapses across seeds is noise, not signal).
 
 ## 4 — Phase 4: portfolio construction & backtest
 
