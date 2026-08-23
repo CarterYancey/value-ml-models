@@ -179,6 +179,18 @@ in [PLAN.md](PLAN.md); check items off (and add new ones) as work proceeds.
       whitelist; excluding an absent column is an error so typos can't
       silently keep a column in. Needed because the `features` group
       contains non-numeric columns no tree model can consume.
+- [x] Config ergonomics: default `name` derivation
+      (`{model}_{features}_{label}_{content-hash}` — a copied config with
+      edited values can't overwrite the original's artifacts), inferred
+      `horizon_years` from the label's `{H}y` token, and hierarchical
+      feature selection (`[features]` table: groups ⊃ families ⊃ columns,
+      family membership mirrored from data/features.md in
+      `src/harness/families.py`; blacklisting a child whose parent was
+      never selected is an error). Legacy top-level feature keys keep
+      working and keep their config hashes.
+      (`src/harness/config.py`, `src/harness/families.py`,
+      `Dataset.select_features`; example in
+      `experiments/tree_depth3_families_example.toml`)
 - [ ] Encode the categorical/non-numeric `features` columns (`sector`,
       `industry`, `famaindustry`, `scalemarketcap`, the `Y`/`N` condition
       flags like `negative_equity`, and the `fund_datekey` /

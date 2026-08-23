@@ -1,0 +1,19 @@
+# Example of the ergonomic config style: `name` is derived
+# ({model}_{features}_{label}_{content-hash}) and `horizon_years` is read
+# from the label, so a copy of this file with edited values gets a fresh
+# name automatically. Features are selected hierarchically: two registry
+# families' rank variants, minus one column.
+dataset_version = "dataset_v1.0"
+scheme = "walkforward"
+folds = "all"
+label = "label_3y_beat_spy"
+seed = 7
+top_k = [20, 50]
+
+[features]
+families = ["ranks/valuation", "ranks/profitability"]
+exclude_columns = ["dividend_yield_rank"]
+
+[model]
+name = "decision_tree"
+max_depth = 3

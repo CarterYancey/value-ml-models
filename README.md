@@ -60,15 +60,26 @@ file it against `sharadar-dataset` and consume the next version.
 ## Usage
 
 - One experiment = one TOML config file in `experiments/`, naming the
-  dataset version, scheme/fold(s)/horizon, label column, feature groups
-  (from the manifest), model + params, and seed. Feature selection can be
-  narrowed either way: `feature_columns` whitelists an explicit subset,
-  `exclude_feature_columns` blacklists ("the whole group minus these" —
-  e.g. `features` minus its string categoricals and date fields, which no
-  tree model can consume). Naming a column that isn't in the selection is
-  an error, so typos can't silently keep or drop a feature. Both work in
-  sweep configs too (top-level or per `[[feature_sets]]` entry, as
-  `exclude`).
+  dataset version, scheme/fold(s), label column, feature selection,
+  model + params, and seed. Two fields are derived when omitted:
+  `horizon_years` comes from the label's `{H}y` token
+  (`label_3y_beat_spy` → 3; stating both requires agreement), and `name`
+  defaults to `{model}_{features}_{label}_{content-hash}` — so a copied
+  config with edited values can't silently overwrite the original's
+  reports and bundles through a forgotten name.
+- Features are selected hierarchically with a `[features]` table:
+  `groups` (manifest groups), `families` (registry families from
+  data/features.md — bare `"valuation"` takes every group's variant,
+  `"ranks/valuation"` just that group's), and `columns` (individual
+  columns; group/family membership is implied). The selection is their
+  union, minus `exclude_columns` / `exclude_families`. Every exclusion
+  must remove something actually selected — blacklisting a child whose
+  parent was never selected is an error, as is naming a column the
+  manifest doesn't declare, so typos can't silently keep or drop a
+  feature. The legacy top-level keys (`feature_groups`,
+  `feature_columns` whitelist, `exclude_feature_columns`) keep working —
+  also in sweep configs (top-level or per `[[feature_sets]]` entry, as
+  `exclude`) — but can't be mixed with `[features]` in one config.
 - The harness runs configs; code never hardcodes an experiment. Every run
   appends dataset version + config hash + git SHA + seed + metrics to
   `experiments/results.csv`, including failed/abandoned runs.
