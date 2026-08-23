@@ -142,6 +142,12 @@ in [PLAN.md](PLAN.md); check items off (and add new ones) as work proceeds.
       bundles and writes one combined CSV (`rank_<model>`/`score_<model>`
       pair per bundle, ordered by mean rank) for side-by-side model
       comparison; one logged inference run per model.
+- [x] `vml-predict --trends`: carry the long-horizon trend context
+      columns (`revenue_trend_20q`, `tangibles_trend_20q`,
+      `ocf_trend_20q`, `div_years_paid_10y`, `div_cuts_10y`) verbatim
+      from the inference data into the output CSV (single and
+      multi-bundle; missing columns are an error, and the sidecar
+      records `extra_columns`).
 - [ ] Apply the investability filter (Phase 4) to deployment rankings
       before acting on them — microcaps dominate the universe and there is
       no upstream liquidity floor.

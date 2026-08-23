@@ -202,7 +202,11 @@ count), and prints the top 50 (`--top` to change). With several bundles
 the combined CSV goes to `predictions/<inference>__multi__<names>.csv`,
 each model still gets its own logged inference run, and the sidecar lists
 every bundle; each model's score is its own probability/margin scale, so
-cross-model comparison uses the `rank_*` columns. Both deployment
+cross-model comparison uses the `rank_*` columns. `--trends` carries the
+long-horizon trend context columns (`revenue_trend_20q`,
+`tangibles_trend_20q`, `ocf_trend_20q`, `div_years_paid_10y`,
+`div_cuts_10y`) verbatim from the inference data into either CSV, after
+the score columns. Both deployment
 training and inference runs are logged to `experiments/results.csv` under
 their own schemes (`deployment` / `inference`), so they never mix with
 walk-forward trial accounting.
