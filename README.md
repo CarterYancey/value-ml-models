@@ -76,7 +76,10 @@ file it against `sharadar-dataset` and consume the next version.
   must remove something actually selected — blacklisting a child whose
   parent was never selected is an error, as is naming a column the
   manifest doesn't declare, so typos can't silently keep or drop a
-  feature. The legacy top-level keys (`feature_groups`,
+  feature. Sweep configs take the same table (one `[features]` for every
+  run, or a `[[features]]` array as the sweep's feature axis), and their
+  `[[cells]]` entries infer `horizon_years` from the label the same way.
+  The legacy top-level keys (`feature_groups`,
   `feature_columns` whitelist, `exclude_feature_columns`) keep working —
   also in sweep configs (top-level or per `[[feature_sets]]` entry, as
   `exclude`) — but can't be mixed with `[features]` in one config.

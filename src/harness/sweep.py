@@ -38,7 +38,7 @@ from pathlib import Path
 import pandas as pd
 
 from eval.metrics import threshold_tag
-from harness.config import ExperimentConfig
+from harness.config import ExperimentConfig, FeatureSpec, infer_horizon_years
 from harness.errors import ConfigError
 from harness.report import _table
 from harness.results import ResultsStore, git_sha
@@ -69,6 +69,7 @@ _SWEEP_ALLOWED = frozenset(
         "feature_columns",
         "exclude_feature_columns",
         "feature_sets",
+        "features",
         "seeds",
         "top_k",
         "score_thresholds",
@@ -101,6 +102,10 @@ class SweepConfig:
     #: param name -> candidate values ([grid]); cartesian product
     grid: dict[str, tuple] = field(default_factory=dict)
     feature_sets: tuple[FeatureSet, ...] = ()
+    #: hierarchical selection(s) (top-level `features`: one `[features]`
+    #: table or a `[[features]]` array forming the feature axis) —
+    #: mutually exclusive with feature_sets / the legacy top-level keys
+    feature_specs: tuple[FeatureSpec, ...] = ()
     folds: tuple[int, ...] | str = "all"
     seeds: tuple[int, ...] = (0,)
     top_k: tuple[int, ...] = (20, 50)
@@ -140,10 +145,11 @@ class SweepConfig:
             )
         cells = []
         for c in cells_raw:
-            if not isinstance(c, dict) or {"horizon_years", "label"} - set(c):
+            if not isinstance(c, dict) or "label" not in c:
                 raise ConfigError(
-                    f"sweep config {source}: each [[cells]] entry needs "
-                    f"horizon_years and label, got {c!r}"
+                    f"sweep config {source}: each [[cells]] entry needs a "
+                    f"label (and horizon_years when the label carries no "
+                    f"horizon token), got {c!r}"
                 )
             extra = sorted(set(c) - {"horizon_years", "label"})
             if extra:
@@ -151,7 +157,24 @@ class SweepConfig:
                     f"sweep config {source}: [[cells]] entry has unknown "
                     f"fields {extra}"
                 )
-            cells.append((int(c["horizon_years"]), str(c["label"])))
+            label = str(c["label"])
+            inferred = infer_horizon_years(label)
+            if "horizon_years" in c:
+                horizon = int(c["horizon_years"])
+                if inferred is not None and inferred != horizon:
+                    raise ConfigError(
+                        f"sweep config {source}: cell horizon_years = "
+                        f"{horizon} contradicts label {label!r} (a "
+                        f"{inferred}y label)"
+                    )
+            elif inferred is None:
+                raise ConfigError(
+                    f"sweep config {source}: cell label {label!r} carries "
+                    "no `{H}y` horizon token, so horizon_years must be set"
+                )
+            else:
+                horizon = inferred
+            cells.append((horizon, label))
         if len(set(cells)) != len(cells):
             raise ConfigError(f"sweep config {source}: duplicate [[cells]] entries")
 
@@ -179,20 +202,44 @@ class SweepConfig:
                 )
             grid[key] = tuple(values)
 
+        legacy_top = [
+            k
+            for k in (
+                "feature_groups", "feature_columns",
+                "exclude_feature_columns",
+            )
+            if k in raw
+        ]
+        feature_specs: tuple[FeatureSpec, ...] = ()
+        if "features" in raw:
+            others = legacy_top + (
+                ["feature_sets"] if "feature_sets" in raw else []
+            )
+            if others:
+                raise ConfigError(
+                    f"sweep config {source}: `features` can't be mixed "
+                    f"with {others}; use one selection style"
+                )
+            f_raw = raw["features"]
+            # one [features] table, or a [[features]] array of tables
+            # forming the feature axis of the sweep
+            if isinstance(f_raw, dict):
+                f_raw = [f_raw]
+            if not isinstance(f_raw, list) or not f_raw:
+                raise ConfigError(
+                    f"sweep config {source}: `features` must be a "
+                    "[features] table or a [[features]] array of tables"
+                )
+            feature_specs = tuple(
+                FeatureSpec.from_table(entry, source) for entry in f_raw
+            )
+
         fs_raw = raw.get("feature_sets")
         if fs_raw is not None:
-            top_level = [
-                k
-                for k in (
-                    "feature_groups", "feature_columns",
-                    "exclude_feature_columns",
-                )
-                if k in raw
-            ]
-            if top_level:
+            if legacy_top:
                 raise ConfigError(
                     f"sweep config {source}: give either top-level "
-                    f"{top_level} or [[feature_sets]], not both"
+                    f"{legacy_top} or [[feature_sets]], not both"
                 )
             if not isinstance(fs_raw, list) or not fs_raw:
                 raise ConfigError(
@@ -217,6 +264,8 @@ class SweepConfig:
                         exclude=tuple(fs.get("exclude", ())),
                     )
                 )
+        elif feature_specs:
+            feature_sets = []
         else:
             feature_sets = [
                 FeatureSet(
@@ -258,6 +307,7 @@ class SweepConfig:
             base_params=base_params,
             grid=grid,
             feature_sets=tuple(feature_sets),
+            feature_specs=feature_specs,
             folds=folds,
             seeds=seeds,
             top_k=top_k,
@@ -271,6 +321,21 @@ class SweepConfig:
 
     # ------------------------------------------------------------------
 
+    @property
+    def n_feature_variants(self) -> int:
+        """Length of the sweep's feature axis, whichever style defines it."""
+        return len(self.feature_specs) or len(self.feature_sets)
+
+    def _feature_fields(self, fs) -> dict:
+        """ExperimentConfig field fragment for one feature-axis entry."""
+        if isinstance(fs, FeatureSpec):
+            return {"features": fs}
+        return {
+            "feature_groups": fs.groups,
+            "feature_columns": fs.columns,
+            "exclude_feature_columns": fs.exclude,
+        }
+
     def expand(self) -> list["SweepRun"]:
         """The full cartesian product: cells × feature sets × grid × seeds,
         each as an ordinary ExperimentConfig with a deterministic name."""
@@ -279,10 +344,11 @@ class SweepConfig:
             dict(zip(grid_keys, values))
             for values in itertools.product(*(self.grid[k] for k in grid_keys))
         ]
+        feature_axis = self.feature_specs or self.feature_sets
         runs: list[SweepRun] = []
         for (horizon, label), (fs_idx, fs), combo, seed in itertools.product(
             self.cells,
-            enumerate(self.feature_sets),
+            enumerate(feature_axis),
             combos,
             self.seeds,
         ):
@@ -294,9 +360,7 @@ class SweepConfig:
                 label=label,
                 model_name=self.model_name,
                 model_params={**self.base_params, **combo},
-                feature_groups=fs.groups,
-                feature_columns=fs.columns,
-                exclude_feature_columns=fs.exclude,
+                **self._feature_fields(fs),
                 folds=self.folds,
                 seed=seed,
                 top_k=self.top_k,
@@ -334,7 +398,7 @@ class SweepConfig:
         config: ExperimentConfig,
     ) -> str:
         parts = [self.name, label]
-        if len(self.feature_sets) > 1:
+        if self.n_feature_variants > 1:
             parts.append(f"fs{fs_idx}")
         for key in sorted(combo):
             parts.append(f"{_sanitize(key)}-{_sanitize(combo[key])}")
@@ -496,7 +560,7 @@ def _write_sweep_summary(
         if extra in df.columns and extra not in metric_cols:
             metric_cols.append(extra)
     id_cols = ["run", "status", "label", "seed", "grid_params"]
-    if len(sweep.feature_sets) > 1:
+    if sweep.n_feature_variants > 1:
         id_cols.insert(3, "feature_set")
     table_df = df[[c for c in id_cols + metric_cols if c in df.columns]]
 

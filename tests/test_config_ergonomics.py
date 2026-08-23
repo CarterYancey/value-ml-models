@@ -8,6 +8,7 @@ from harness.dataset import Dataset
 from harness.errors import ConfigError, DatasetValidationError
 from harness.model_store import ModelBundle
 from harness.runner import run_experiment
+from harness.sweep import SweepConfig
 
 VERSION = "dataset_v0.0-test"
 
@@ -240,6 +241,107 @@ def test_excluding_everything_is_an_error(dataset_dir):
                 groups=("ranks",), exclude_families=("ranks/valuation",)
             )
         )
+
+
+# --- sweeps -------------------------------------------------------------
+
+
+def _sweep_raw(**overrides):
+    raw = {
+        "name": "erg_sweep",
+        "dataset_version": VERSION,
+        "scheme": "walkforward",
+        "cells": [{"label": "label_3y_beat_spy"}],
+        "model": {"name": "decision_tree"},
+        "grid": {"max_depth": [2, 3]},
+        "features": {"families": ["ranks/valuation"]},
+    }
+    raw.update(overrides)
+    return raw
+
+
+def test_sweep_features_table_flows_into_every_run():
+    runs = SweepConfig.from_dict(_sweep_raw()).expand()
+    assert len(runs) == 2
+    assert all(
+        r.config.features == FeatureSpec(families=("ranks/valuation",))
+        for r in runs
+    )
+    # cell horizon inferred from the label
+    assert all(r.horizon_years == 3 for r in runs)
+
+
+def test_sweep_features_array_is_the_feature_axis():
+    sweep = SweepConfig.from_dict(
+        _sweep_raw(
+            features=[
+                {"families": ["ranks/valuation"]},
+                {"groups": ["ranks"], "exclude_columns": ["earnings_yield_rank"]},
+            ],
+            grid={"max_depth": [2]},
+        )
+    )
+    runs = sweep.expand()
+    assert len(runs) == 2
+    assert runs[0].config.features == FeatureSpec(families=("ranks/valuation",))
+    assert runs[1].config.features == FeatureSpec(
+        groups=("ranks",), exclude_columns=("earnings_yield_rank",)
+    )
+    # the feature axis shows up in the run names, as with [[feature_sets]]
+    assert "fs0" in runs[0].config.name and "fs1" in runs[1].config.name
+
+
+def test_sweep_features_excludes_other_styles():
+    with pytest.raises(ConfigError, match="can't be mixed"):
+        SweepConfig.from_dict(_sweep_raw(feature_groups=["ranks"]))
+    with pytest.raises(ConfigError, match="can't be mixed"):
+        SweepConfig.from_dict(
+            _sweep_raw(feature_sets=[{"groups": ["ranks"]}])
+        )
+
+
+def test_sweep_features_entries_are_validated():
+    with pytest.raises(ConfigError, match="unknown feature family"):
+        SweepConfig.from_dict(
+            _sweep_raw(features={"families": ["valution"]})
+        )
+    with pytest.raises(ConfigError, match="selects nothing"):
+        SweepConfig.from_dict(_sweep_raw(features={}))
+
+
+def test_sweep_cell_horizon_mismatch_is_an_error():
+    with pytest.raises(ConfigError, match="contradicts"):
+        SweepConfig.from_dict(
+            _sweep_raw(
+                cells=[{"horizon_years": 1, "label": "label_3y_beat_spy"}]
+            )
+        )
+    with pytest.raises(ConfigError, match="must be set"):
+        SweepConfig.from_dict(
+            _sweep_raw(cells=[{"label": "label_beat_spy"}])
+        )
+
+
+def test_sweep_with_features_runs_end_to_end(data_root, tmp_path):
+    from harness.sweep import run_sweep
+
+    sweep = SweepConfig.from_dict(
+        _sweep_raw(
+            grid={"max_depth": [2]},
+            features={
+                "families": ["valuation"],
+                "exclude_families": ["features/valuation"],
+            },
+        )
+    )
+    result = run_sweep(
+        sweep,
+        data_root=data_root,
+        results_path=tmp_path / "results.csv",
+        reports_dir=tmp_path / "reports",
+    )
+    assert result["n_failed"] == 0
+    assert len(result["runs"]) == 1
 
 
 # --- end-to-end ---------------------------------------------------------
