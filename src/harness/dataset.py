@@ -26,6 +26,11 @@ from harness.errors import (
     MissingSampleWeightError,
     SplitApplicationError,
 )
+from harness.families import (
+    FEATURE_GROUPS,
+    family_group_columns,
+    parse_family_ref,
+)
 
 SNAPSHOT_KEY = ["permaticker", "snapshot_date", "snapshot_kind"]
 
@@ -216,6 +221,79 @@ class Dataset:
                 f"feature selection over groups {list(groups)} left no "
                 "columns (whitelist/blacklist removed everything)"
             )
+        return cols
+
+    def select_features(self, spec) -> list[str]:
+        """Resolve a hierarchical `FeatureSpec` (harness.config) against
+        the manifest: union of the named groups, families, and columns,
+        minus the exclusions. Family membership comes from the registry
+        copy in harness.families, but a column enters the selection only
+        if the manifest declares it — the manifest stays the sole
+        authority on what exists. Every exclusion must remove something
+        actually selected: blacklisting a child whose parent was never
+        selected is an error, not a no-op."""
+        bad = [g for g in spec.groups if g not in FEATURE_GROUPS]
+        if bad:
+            raise DatasetValidationError(
+                f"feature groups must be within {list(FEATURE_GROUPS)}, got {bad}"
+            )
+        selected: set[str] = set()
+        for g in spec.groups:
+            selected.update(self.columns(g))
+        for ref in spec.families:
+            cols = self._family_columns(ref)
+            if not cols:
+                raise DatasetValidationError(
+                    f"feature family {ref!r} has no columns in the "
+                    f"{self.version} manifest"
+                )
+            selected.update(cols)
+        declared = {c for g in FEATURE_GROUPS for c in self.columns(g)}
+        unknown = sorted(set(spec.columns) - declared)
+        if unknown:
+            raise DatasetValidationError(
+                f"requested feature columns not declared by the manifest's "
+                f"feature groups {list(FEATURE_GROUPS)}: {unknown}"
+            )
+        selected.update(spec.columns)
+
+        for ref in spec.exclude_families:
+            cols = set(self._family_columns(ref))
+            if not cols & selected:
+                raise DatasetValidationError(
+                    f"exclude_families entry {ref!r} removes nothing: no "
+                    "selected group or family contains it (blacklisting a "
+                    "child whose parent was never selected)"
+                )
+            selected -= cols
+        missing = sorted(set(spec.exclude_columns) - selected)
+        if missing:
+            raise DatasetValidationError(
+                f"exclude_columns entries not in the selection: {missing} "
+                "(blacklisting a child whose parent was never selected, "
+                "or a typo)"
+            )
+        selected -= set(spec.exclude_columns)
+
+        ordered = [
+            c for g in FEATURE_GROUPS for c in self.columns(g) if c in selected
+        ]
+        if not ordered:
+            raise DatasetValidationError(
+                "feature selection left no columns (exclusions removed "
+                "everything)"
+            )
+        return ordered
+
+    def _family_columns(self, ref: str) -> list[str]:
+        """A family reference's columns as declared by this manifest —
+        registry candidates intersected with the manifest groups."""
+        group, family = parse_family_ref(ref)
+        groups = [group] if group else list(FEATURE_GROUPS)
+        cols: list[str] = []
+        for g in groups:
+            present = set(self.columns(g))
+            cols += [c for c in family_group_columns(family, g) if c in present]
         return cols
 
     def sample_weight_column(self, horizon_years: int) -> str:

@@ -142,6 +142,12 @@ in [PLAN.md](PLAN.md); check items off (and add new ones) as work proceeds.
       bundles and writes one combined CSV (`rank_<model>`/`score_<model>`
       pair per bundle, ordered by mean rank) for side-by-side model
       comparison; one logged inference run per model.
+- [x] `vml-predict --trends`: carry the long-horizon trend context
+      columns (`revenue_trend_20q`, `tangibles_trend_20q`,
+      `ocf_trend_20q`, `div_years_paid_10y`, `div_cuts_10y`) verbatim
+      from the inference data into the output CSV (single and
+      multi-bundle; missing columns are an error, and the sidecar
+      records `extra_columns`).
 - [ ] Apply the investability filter (Phase 4) to deployment rankings
       before acting on them — microcaps dominate the universe and there is
       no upstream liquidity floor.
@@ -179,6 +185,21 @@ in [PLAN.md](PLAN.md); check items off (and add new ones) as work proceeds.
       whitelist; excluding an absent column is an error so typos can't
       silently keep a column in. Needed because the `features` group
       contains non-numeric columns no tree model can consume.
+- [x] Config ergonomics: default `name` derivation
+      (`{model}_{features}_{label}_{content-hash}` — a copied config with
+      edited values can't overwrite the original's artifacts), inferred
+      `horizon_years` from the label's `{H}y` token, and hierarchical
+      feature selection (`[features]` table: groups ⊃ families ⊃ columns,
+      family membership mirrored from data/features.md in
+      `src/harness/families.py`; blacklisting a child whose parent was
+      never selected is an error). Legacy top-level feature keys keep
+      working and keep their config hashes.
+      (`src/harness/config.py`, `src/harness/families.py`,
+      `Dataset.select_features`; example in
+      `experiments/tree_depth3_families_example.toml`)
+      Sweeps take the same `[features]` table (or a `[[features]]` array
+      as the feature axis), infer cell horizons from labels, and derive
+      a default `name` (`{model}_sweep_{features}_{labels}_{hash}`) too.
 - [ ] Encode the categorical/non-numeric `features` columns (`sector`,
       `industry`, `famaindustry`, `scalemarketcap`, the `Y`/`N` condition
       flags like `negative_equity`, and the `fund_datekey` /

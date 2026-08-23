@@ -26,7 +26,9 @@ Two entry points:
   with a `rank_<model>`/`score_<model>` column pair per bundle so the
   models' views of each stock sit side by side. Scores are only
   comparable across models via the rank columns: each model's score is
-  its own probability/margin scale.
+  its own probability/margin scale. ``--trends`` carries the
+  long-horizon trend context columns (`TREND_COLUMNS`) verbatim from the
+  inference data into either CSV.
 """
 
 from __future__ import annotations
@@ -62,6 +64,33 @@ DEFAULT_TOP_N = 50
 
 _ID_COLUMNS = ("permaticker", "ticker", "snapshot_date", "snapshot_kind")
 
+#: Long-horizon trend/consistency context columns `vml-predict --trends`
+#: carries from the inference data into the output CSV — read-along
+#: context for a ranking, copied verbatim from the upstream columns
+#: (never derived here).
+TREND_COLUMNS = (
+    "revenue_trend_20q",
+    "tangibles_trend_20q",
+    "ocf_trend_20q",
+    "div_years_paid_10y",
+    "div_cuts_10y",
+)
+
+
+def _carry_columns(
+    frame: pd.DataFrame, columns: tuple[str, ...] | list[str]
+) -> list[str]:
+    """Validate columns to carry verbatim from the inference frame into
+    the output CSV; naming a column the frame lacks is an error, not a
+    silently thinner CSV."""
+    missing = sorted(set(columns) - set(frame.columns))
+    if missing:
+        raise DatasetValidationError(
+            f"inference data lacks columns requested for the output: "
+            f"{missing}"
+        )
+    return list(columns)
+
 
 def train_deployment_model(
     config: ExperimentConfig,
@@ -94,11 +123,7 @@ def train_deployment_model(
 
     try:
         dataset = Dataset(Path(data_root) / config.dataset_version)
-        feature_cols = dataset.feature_columns(
-            config.feature_groups,
-            config.feature_columns,
-            exclude=config.exclude_feature_columns,
-        )
+        feature_cols = config.resolve_feature_columns(dataset)
         # All currently-eligible data: fit_data keeps every row whose
         # label is observable — all roles, all kinds, delistings included.
         fit = dataset.fit_data(
@@ -196,11 +221,14 @@ def predict_with_bundle(
     results_path: str | Path = DEFAULT_RESULTS,
     predictions_dir: str | Path = DEFAULT_PREDICTIONS,
     top_n: int = DEFAULT_TOP_N,
+    extra_columns: tuple[str, ...] | list[str] = (),
 ) -> dict:
     """Score an inference dataset with a deployment bundle. Writes the
     full ranking (score-descending, 1-based `rank`) to CSV plus a
     provenance sidecar `<output>.meta.json`; returns a summary dict with
-    the top `top_n` rows. Raises after logging on failure."""
+    the top `top_n` rows. `extra_columns` (e.g. `TREND_COLUMNS` for the
+    CLI's `--trends`) are carried verbatim from the inference data into
+    the CSV after the score. Raises after logging on failure."""
     bundle = DeploymentBundle.load(bundle_dir)
     config = bundle.train_config
     store = ResultsStore(results_path)
@@ -223,13 +251,16 @@ def predict_with_bundle(
     try:
         frame, source_name = load_inference_frame(inference_path)
         scores = _score_frame(bundle, frame)
+        extra = _carry_columns(frame, extra_columns)
 
-        out = frame[[c for c in _ID_COLUMNS if c in frame.columns]].copy()
+        id_cols = [c for c in _ID_COLUMNS if c in frame.columns]
+        out = frame[id_cols + extra].copy()
         out["score"] = scores
         out = out.sort_values(
             ["score", "permaticker"], ascending=[False, True], kind="mergesort"
         ).reset_index(drop=True)
         out.insert(0, "rank", range(1, len(out) + 1))
+        out = out[["rank"] + id_cols + ["score"] + extra]
 
         if output_path is None:
             output_path = (
@@ -243,6 +274,7 @@ def predict_with_bundle(
         meta_path.write_text(
             json.dumps(
                 {
+                    **({"extra_columns": extra} if extra else {}),
                     "run_id": run_id,
                     "scored_utc": datetime.now(timezone.utc).isoformat(
                         timespec="seconds"
@@ -316,11 +348,13 @@ def predict_with_bundles(
     results_path: str | Path = DEFAULT_RESULTS,
     predictions_dir: str | Path = DEFAULT_PREDICTIONS,
     top_n: int = DEFAULT_TOP_N,
+    extra_columns: tuple[str, ...] | list[str] = (),
 ) -> dict:
     """Score one inference dataset with several deployment bundles and
     write a single combined CSV: the id columns, `mean_rank` across
-    models, and a `rank_<model>`/`score_<model>` pair per bundle, ordered
-    by `mean_rank`. Each model's scoring is logged to the results store
+    models, a `rank_<model>`/`score_<model>` pair per bundle, ordered
+    by `mean_rank`, then any `extra_columns` carried verbatim from the
+    inference data (e.g. `TREND_COLUMNS` for the CLI's `--trends`). Each model's scoring is logged to the results store
     as its own inference run, exactly as a single-bundle run would be.
     Returns a summary dict with the top `top_n` rows."""
     bundles = [DeploymentBundle.load(d) for d in bundle_dirs]
@@ -328,8 +362,11 @@ def predict_with_bundles(
     store = ResultsStore(results_path)
     sha = git_sha()
     frame, source_name = load_inference_frame(inference_path)
+    extra = _carry_columns(frame, extra_columns)
 
-    out = frame[[c for c in _ID_COLUMNS if c in frame.columns]].copy()
+    out = frame[
+        [c for c in _ID_COLUMNS if c in frame.columns] + extra
+    ].copy()
     run_ids, per_model = [], []
     for bundle_dir, bundle, name in zip(bundle_dirs, bundles, names):
         config = bundle.train_config
@@ -395,6 +432,7 @@ def predict_with_bundles(
         id_cols
         + ["mean_rank"]
         + [c for n in names for c in (f"rank_{n}", f"score_{n}")]
+        + extra
     ]
 
     if output_path is None:
@@ -410,6 +448,7 @@ def predict_with_bundles(
     meta_path.write_text(
         json.dumps(
             {
+                **({"extra_columns": extra} if extra else {}),
                 "scored_utc": datetime.now(timezone.utc).isoformat(
                     timespec="seconds"
                 ),
@@ -512,7 +551,14 @@ def _main_predict(argv=None) -> int:
         "--top", type=int, default=DEFAULT_TOP_N,
         help=f"how many top-ranked rows to print (default {DEFAULT_TOP_N})",
     )
+    parser.add_argument(
+        "--trends", action="store_true",
+        help="carry the long-horizon trend context columns "
+        f"({', '.join(TREND_COLUMNS)}) from the inference data into the "
+        "output CSV",
+    )
     args = parser.parse_args(argv)
+    extra_columns = TREND_COLUMNS if args.trends else ()
     try:
         if len(args.bundles) == 1:
             summary = predict_with_bundle(
@@ -521,6 +567,7 @@ def _main_predict(argv=None) -> int:
                 output_path=args.output,
                 results_path=args.results,
                 top_n=args.top,
+                extra_columns=extra_columns,
             )
             runs = summary["run_id"]
         else:
@@ -530,6 +577,7 @@ def _main_predict(argv=None) -> int:
                 output_path=args.output,
                 results_path=args.results,
                 top_n=args.top,
+                extra_columns=extra_columns,
             )
             runs = ", ".join(summary["run_ids"])
     except Exception:

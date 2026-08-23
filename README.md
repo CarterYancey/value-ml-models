@@ -60,15 +60,33 @@ file it against `sharadar-dataset` and consume the next version.
 ## Usage
 
 - One experiment = one TOML config file in `experiments/`, naming the
-  dataset version, scheme/fold(s)/horizon, label column, feature groups
-  (from the manifest), model + params, and seed. Feature selection can be
-  narrowed either way: `feature_columns` whitelists an explicit subset,
-  `exclude_feature_columns` blacklists ("the whole group minus these" —
-  e.g. `features` minus its string categoricals and date fields, which no
-  tree model can consume). Naming a column that isn't in the selection is
-  an error, so typos can't silently keep or drop a feature. Both work in
-  sweep configs too (top-level or per `[[feature_sets]]` entry, as
-  `exclude`).
+  dataset version, scheme/fold(s), label column, feature selection,
+  model + params, and seed. Two fields are derived when omitted:
+  `horizon_years` comes from the label's `{H}y` token
+  (`label_3y_beat_spy` → 3; stating both requires agreement), and `name`
+  defaults to `{model}_{features}_{label}_{content-hash}` — so a copied
+  config with edited values can't silently overwrite the original's
+  reports and bundles through a forgotten name.
+- Features are selected hierarchically with a `[features]` table:
+  `groups` (manifest groups), `families` (registry families from
+  data/features.md — bare `"valuation"` takes every group's variant,
+  `"ranks/valuation"` just that group's), and `columns` (individual
+  columns; group/family membership is implied). The selection is their
+  union, minus `exclude_columns` / `exclude_families`. Every exclusion
+  must remove something actually selected — blacklisting a child whose
+  parent was never selected is an error, as is naming a column the
+  manifest doesn't declare, so typos can't silently keep or drop a
+  feature. Sweep configs take the same table (one `[features]` for every
+  run, or a `[[features]]` array as the sweep's feature axis), their
+  `[[cells]]` entries infer `horizon_years` from the label the same way,
+  and a sweep's `name` defaults to
+  `{model}_sweep_{features}_{labels}_{content-hash}` — a copied sweep
+  file with edited values gets fresh run names and a fresh
+  `reports/sweeps/` directory too.
+  The legacy top-level keys (`feature_groups`,
+  `feature_columns` whitelist, `exclude_feature_columns`) keep working —
+  also in sweep configs (top-level or per `[[feature_sets]]` entry, as
+  `exclude`) — but can't be mixed with `[features]` in one config.
 - The harness runs configs; code never hardcodes an experiment. Every run
   appends dataset version + config hash + git SHA + seed + metrics to
   `experiments/results.csv`, including failed/abandoned runs.
@@ -184,7 +202,11 @@ count), and prints the top 50 (`--top` to change). With several bundles
 the combined CSV goes to `predictions/<inference>__multi__<names>.csv`,
 each model still gets its own logged inference run, and the sidecar lists
 every bundle; each model's score is its own probability/margin scale, so
-cross-model comparison uses the `rank_*` columns. Both deployment
+cross-model comparison uses the `rank_*` columns. `--trends` carries the
+long-horizon trend context columns (`revenue_trend_20q`,
+`tangibles_trend_20q`, `ocf_trend_20q`, `div_years_paid_10y`,
+`div_cuts_10y`) verbatim from the inference data into either CSV, after
+the score columns. Both deployment
 training and inference runs are logged to `experiments/results.csv` under
 their own schemes (`deployment` / `inference`), so they never mix with
 walk-forward trial accounting.

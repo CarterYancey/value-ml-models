@@ -17,6 +17,7 @@ from harness.config import ExperimentConfig
 from harness.deploy import (
     DEPLOYMENT_SCHEME,
     INFERENCE_SCHEME,
+    TREND_COLUMNS,
     _main_predict,
     _main_train,
     predict_with_bundle,
@@ -396,3 +397,116 @@ def test_cli_multi_bundle(trained_pair, inference_dir, tmp_path, capsys):
     )
     printed = capsys.readouterr().out
     assert "mean rank" in printed
+
+
+# --- --trends: carry trend context columns into the output ---------------
+
+
+@pytest.fixture()
+def inference_dir_trends(inference_dir, tmp_path) -> Path:
+    """The inference fixture plus the TREND_COLUMNS an upstream inference
+    dataset would carry (synthetic values keyed off the row index)."""
+    frame = pd.read_parquet(inference_dir / "dataset.parquet")
+    for i, col in enumerate(TREND_COLUMNS):
+        frame[col] = [float(100 * i + j) for j in range(len(frame))]
+    out = tmp_path / "inference_trends"
+    out.mkdir()
+    frame.to_parquet(out / "dataset.parquet")
+    return out
+
+
+def test_predict_carries_trend_columns(trained, inference_dir_trends, tmp_path):
+    summary, results = trained
+    out_csv = tmp_path / "ranking_trends.csv"
+    predict_with_bundle(
+        summary["bundle_path"],
+        inference_dir_trends,
+        output_path=out_csv,
+        results_path=results,
+        extra_columns=TREND_COLUMNS,
+    )
+    ranked = pd.read_csv(out_csv)
+    # trend columns sit after the score, values carried verbatim per row
+    assert list(ranked.columns)[-len(TREND_COLUMNS) - 1] == "score"
+    assert list(ranked.columns)[-len(TREND_COLUMNS):] == list(TREND_COLUMNS)
+    source = pd.read_parquet(inference_dir_trends / "dataset.parquet")
+    merged = ranked.merge(
+        source[["permaticker", *TREND_COLUMNS]],
+        on="permaticker",
+        suffixes=("", "_src"),
+    )
+    for col in TREND_COLUMNS:
+        assert (merged[col] == merged[f"{col}_src"]).all()
+    meta = json.loads(
+        (out_csv.parent / f"{out_csv.name}.meta.json").read_text()
+    )
+    assert meta["extra_columns"] == list(TREND_COLUMNS)
+
+
+def test_predict_without_flag_keeps_csv_unchanged(
+    trained, inference_dir_trends, tmp_path
+):
+    summary, results = trained
+    out_csv = tmp_path / "ranking_plain.csv"
+    predict_with_bundle(
+        summary["bundle_path"],
+        inference_dir_trends,
+        output_path=out_csv,
+        results_path=results,
+    )
+    ranked = pd.read_csv(out_csv)
+    assert not set(TREND_COLUMNS) & set(ranked.columns)
+
+
+def test_predict_trends_missing_from_inference_is_an_error(
+    trained, inference_dir, tmp_path
+):
+    summary, results = trained
+    with pytest.raises(DatasetValidationError, match="lacks columns"):
+        predict_with_bundle(
+            summary["bundle_path"],
+            inference_dir,
+            output_path=tmp_path / "nope.csv",
+            results_path=results,
+            extra_columns=TREND_COLUMNS,
+        )
+
+
+def test_multi_bundle_carries_trend_columns(
+    trained_pair, inference_dir_trends, tmp_path
+):
+    summaries, results = trained_pair
+    out_csv = tmp_path / "combined_trends.csv"
+    predict_with_bundles(
+        [s["bundle_path"] for s in summaries],
+        inference_dir_trends,
+        output_path=out_csv,
+        results_path=results,
+        extra_columns=TREND_COLUMNS,
+    )
+    combined = pd.read_csv(out_csv)
+    assert list(combined.columns)[-len(TREND_COLUMNS):] == list(TREND_COLUMNS)
+    meta = json.loads(
+        (out_csv.parent / f"{out_csv.name}.meta.json").read_text()
+    )
+    assert meta["extra_columns"] == list(TREND_COLUMNS)
+
+
+def test_cli_trends_flag(trained, inference_dir_trends, tmp_path, capsys):
+    summary, results = trained
+    out_csv = tmp_path / "cli_trends.csv"
+    assert (
+        _main_predict(
+            [
+                str(summary["bundle_path"]),
+                str(inference_dir_trends),
+                "--output", str(out_csv),
+                "--results", str(results),
+                "--trends",
+            ]
+        )
+        == 0
+    )
+    ranked = pd.read_csv(out_csv)
+    assert set(TREND_COLUMNS) <= set(ranked.columns)
+    capsys.readouterr()
