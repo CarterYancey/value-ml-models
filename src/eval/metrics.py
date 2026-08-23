@@ -49,6 +49,32 @@ def precision_at_k(y_true, scores, k: int) -> float:
     return float(y[top].mean())
 
 
+def hits_at_k(y_true, scores, k: int) -> tuple[float, int]:
+    """(number of true positives among the top-k picks, picks actually
+    made). The building block for pooling top-K metrics across years
+    *by picking per year* — scores from different folds' models are not
+    comparable, so a global top-K over pooled scores would just take the
+    hottest-scoring fold's picks."""
+    y = np.asarray(y_true, dtype=float)
+    scores = np.asarray(scores, dtype=float)
+    if len(y) == 0 or k <= 0:
+        return (0.0, 0)
+    top = _order_by_score(scores)[: min(k, len(y))]
+    return (float(y[top].sum()), int(len(top)))
+
+
+def confidence_at_k(scores, k: int) -> float:
+    """Mean score of the top-k picks — "how confident was the model in
+    the names it actually picked". NaN when nothing rankable."""
+    s = np.asarray(scores, dtype=float)
+    if len(s) == 0 or k <= 0:
+        return math.nan
+    top = _order_by_score(s)[: min(k, len(s))]
+    vals = s[top]
+    vals = vals[np.isfinite(vals)]
+    return float(vals.mean()) if len(vals) else math.nan
+
+
 def recall_at_k(y_true, scores, k: int) -> float:
     y = np.asarray(y_true, dtype=float)
     scores = np.asarray(scores, dtype=float)
@@ -174,6 +200,17 @@ def brier(y_true, probs, sample_weight=None) -> float:
                                   sample_weight=sample_weight))
 
 
+def base_rate_brier(y_true, sample_weight=None) -> float:
+    """Brier score of the no-skill predictor that always emits the
+    (weighted) base rate — the reference `brier` must beat to show any
+    skill. Equals p̄(1−p̄) under the weighted base rate p̄."""
+    y = np.asarray(y_true, dtype=float)
+    p = base_rate(y, sample_weight)
+    if math.isnan(p):
+        return math.nan
+    return brier(y, np.full(len(y), p), sample_weight)
+
+
 def base_rate(y_true, sample_weight=None) -> float:
     y = np.asarray(y_true, dtype=float)
     if len(y) == 0:
@@ -238,9 +275,13 @@ def compute_all(y_true, scores, *, sample_weight=None, top_k=(20, 50),
         "pr_auc": pr_auc(y_true, scores, sample_weight),
         "roc_auc": roc_auc(y_true, scores, sample_weight),
         "brier": brier(y_true, scores, sample_weight) if probabilistic else math.nan,
+        "base_rate_brier": (
+            base_rate_brier(y_true, sample_weight) if probabilistic else math.nan
+        ),
     }
     for k in top_k:
         out[f"precision_at_{k}"] = precision_at_k(y_true, scores, k)
+        out[f"conf_at_{k}"] = confidence_at_k(scores, k)
         out[f"recall_at_{k}"] = recall_at_k(y_true, scores, k)
     for t in score_thresholds:
         tag = threshold_tag(t)

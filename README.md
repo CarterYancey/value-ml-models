@@ -30,6 +30,12 @@ one config into a whole grid of experiments. See [TODO.md](TODO.md).
 | [data/labels.md](data/labels.md) | label matrix definitions (horizons, thresholds, delisting convention) |
 | [data/splits.md](data/splits.md) | split-tag schemes, roles, fold calendar |
 | [data/features.md](data/features.md) | the canonical feature registry |
+| [data/versions.md](data/versions.md) | dataset version compatibility (what each `dataset_vX.Y` provides; `min_dataset_version`) |
+
+The `data/*.md` docs (except `versions.md`) are synced copies of the
+upstream `radarash-dataset` docs — `scripts/sync_data_docs.py` copies
+them from the local upstream checkout and records the upstream commit in
+`data/upstream.json`; `--check` detects drift without copying.
 
 ## Setup
 
@@ -90,8 +96,11 @@ file it against `sharadar-dataset` and consume the next version.
 - The harness runs configs; code never hardcodes an experiment. Every run
   appends dataset version + config hash + git SHA + seed + metrics to
   `experiments/results.csv`, including failed/abandoned runs.
-- Evaluation reports (per-fold era-sliced metrics, `split_folds.parquet`
-  citation, effective sample sizes) are written to `reports/` and checked in.
+- Evaluation reports (era-sliced metrics, high-confidence-picks profile,
+  calibration; `split_folds.parquet` citation and effective sample sizes
+  in the appendix) are written to `reports/`. Generated reports are
+  **git-ignored working output** — promote the ones worth keeping (see
+  "Workflow & housekeeping" below).
 
 - Training and evaluation are distinct tasks: `vml-run` saves the fitted
   per-fold models as a bundle under `experiments/models/` (git-ignored),
@@ -120,6 +129,36 @@ uv run python scripts/run_baselines.py dataset_v1.0
 # tests (run against a hand-built miniature dataset; no real data needed)
 uv run pytest
 ```
+
+### Workflow & housekeeping
+
+Everything a run generates is working output, git-ignored by default:
+reports and figures under `reports/`, model bundles under
+`experiments/models/`, predictions under `predictions/`, and the local
+trial ledger `experiments/results.csv`. Only two kinds of evaluation
+output are tracked:
+
+- **Promoted reports** — a result worth review or a good example:
+  `uv run vml-promote <experiment-name>` copies the report and all its
+  artifacts (rules, figures) into `reports/promoted/<name>/`, which is
+  tracked; commit that directory. Sweep summaries promote too
+  (`vml-promote reports/sweeps/<name>/_summary.md`). Everything else can
+  be deleted whenever it stops being useful — the results ledger keeps
+  the trial accounting either way.
+- **The sealed final-eval record** (`reports/final_evals.csv` and
+  `reports/final_eval/`) — always tracked, never optional.
+
+To find your way around past work instead of grepping TOML files:
+
+```sh
+uv run vml-experiments                 # every config + run status/date/headline
+uv run vml-experiments list --model lightgbm --label beat_spy
+uv run vml-experiments runs            # ledger view: everything ever run
+uv run vml-experiments show <config-or-name>   # one config + its run history
+```
+
+Before writing a new config, `vml-experiments list --grep <something>`
+answers "have I done this already, and what's closest to edit from?".
 
 ### Models
 

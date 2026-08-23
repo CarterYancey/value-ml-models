@@ -20,6 +20,12 @@ invariants below are this repo's equivalents.
   `dataset.parquet`, `splits.parquet`, `split_folds.parquet`,
   `manifest.json`. Never edit files inside a dataset directory; data fixes
   are upstream changes producing a new version.
+- The `data/*.md` docs (except `versions.md`) are synced copies of the
+  upstream repo's docs: never hand-edit them here — fix upstream, then run
+  `scripts/sync_data_docs.py` (records provenance in `data/upstream.json`;
+  `--check` detects drift). [data/versions.md](data/versions.md) is
+  maintained *here* and maps dataset versions to what they provide;
+  configs needing newer-version columns declare `min_dataset_version`.
 
 ## Dataset facts every change must respect
 
@@ -62,12 +68,22 @@ invariants below are this repo's equivalents.
 - Python 3.12+, scikit-learn for trees, LightGBM for Phase 3, matplotlib for
   reports, duckdb/pandas for data access. Keep the dependency list short.
 - One experiment = one config file in `experiments/`; the harness runs
-  configs, code never hardcodes an experiment.
-- Metrics of record: precision@K, PR-AUC, Brier, calibration plot. ROC-AUC
-  may be logged but never headline (base rates are extreme in some label
-  cells).
-- Rule extraction output (human-readable tree rules) is a first-class
-  artifact, checked into `reports/`.
+  configs, code never hardcodes an experiment. Before writing a new
+  config, check `vml-experiments list` for an existing/closest one — the
+  catalog joins configs with the run ledger.
+- Metrics of record: precision@K (with `conf_at_K`, the mean score of the
+  picks), the precision-floor family (`n_at_prec_*`, `recall_at_prec_*`),
+  Brier against `base_rate_brier` (the no-skill reference), calibration
+  plot, PR-AUC. ROC-AUC and recall@K may be logged but never headline
+  (base rates are extreme in some label cells).
+- Pooled ranking metrics pick per year (eval.era) — per-fold model scores
+  are not comparable, so a global top-K over pooled scores is a bug, not
+  a metric.
+- Generated reports are git-ignored working output. Reports worth review
+  are promoted via `vml-promote` into the tracked `reports/promoted/`;
+  rule extraction output (human-readable tree rules) travels with its
+  report when promoted. The sealed final-eval record
+  (`reports/final_evals.csv`, `reports/final_eval/`) is always tracked.
 - Every report cites `split_folds.parquet` (the frozen fold definition) and
   the number of configurations tried.
 

@@ -45,6 +45,7 @@ def trained(data_root, tmp_path):
         results_path=paths["results"],
         reports_dir=paths["reports"],
         models_dir=paths["models"],
+        discrimination_curves=True,
     )
     return summary, paths
 
@@ -118,16 +119,32 @@ def test_evaluate_bundle_with_new_criteria(trained):
     assert "split_folds.parquet" in report
 
 
-def test_training_run_draws_curves(trained):
+def test_training_run_draws_curves_on_opt_in(trained):
     summary, paths = trained
     reports = paths["reports"]
-    # PR and ROC curves are always drawn; calibration too (tree is
-    # probabilistic)
+    # calibration is always drawn (tree is probabilistic); PR and ROC
+    # were opted in by the fixture via discrimination_curves=True
     for suffix in ("_pr_curve.png", "_roc_curve.png", "_calibration.png"):
         assert (reports / f"test_tree_3y_beat_spy{suffix}").exists()
     report = (reports / "test_tree_3y_beat_spy.md").read_text()
     assert "Discrimination curves" in report
     assert "![PR curve]" in report and "![ROC curve]" in report
+
+
+def test_discrimination_curves_are_opt_in(data_root, tmp_path):
+    reports = tmp_path / "reports"
+    run_experiment(
+        _train_config(),
+        data_root=data_root,
+        results_path=tmp_path / "results.csv",
+        reports_dir=reports,
+    )
+    # by default only the calibration figure is drawn
+    assert (reports / "test_tree_3y_beat_spy_calibration.png").exists()
+    for suffix in ("_pr_curve.png", "_roc_curve.png"):
+        assert not (reports / f"test_tree_3y_beat_spy{suffix}").exists()
+    report = (reports / "test_tree_3y_beat_spy.md").read_text()
+    assert "![PR curve]" not in report and "![ROC curve]" not in report
 
 
 def test_reeval_does_not_redraw_score_figures(trained):
