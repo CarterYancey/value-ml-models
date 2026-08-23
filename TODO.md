@@ -192,7 +192,8 @@ in [PLAN.md](PLAN.md); check items off (and add new ones) as work proceeds.
       `Dataset.select_features`; example in
       `experiments/tree_depth3_families_example.toml`)
       Sweeps take the same `[features]` table (or a `[[features]]` array
-      as the feature axis) and infer cell horizons from labels too.
+      as the feature axis), infer cell horizons from labels, and derive
+      a default `name` (`{model}_sweep_{features}_{labels}_{hash}`) too.
 - [ ] Encode the categorical/non-numeric `features` columns (`sector`,
       `industry`, `famaindustry`, `scalemarketcap`, the `Y`/`N` condition
       flags like `negative_equity`, and the `fund_datekey` /

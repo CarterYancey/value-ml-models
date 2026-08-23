@@ -27,6 +27,7 @@ re-run its expanded config through `vml-run`.
 
 from __future__ import annotations
 
+import hashlib
 import itertools
 import json
 import re
@@ -54,7 +55,7 @@ from harness.runner import (
 #: an explicit, logged decision
 DEFAULT_MAX_RUNS = 200
 
-_SWEEP_REQUIRED = ("name", "dataset_version", "scheme", "cells", "model")
+_SWEEP_REQUIRED = ("dataset_version", "scheme", "cells", "model")
 
 _SWEEP_ALLOWED = frozenset(
     {
@@ -298,8 +299,8 @@ class SweepConfig:
                 else f"precision_at_{top_k[0]}"
             )
 
-        return cls(
-            name=str(raw["name"]),
+        sweep = cls(
+            name=str(raw.get("name", "")),
             dataset_version=str(raw["dataset_version"]),
             scheme=str(raw["scheme"]),
             cells=tuple(cells),
@@ -318,6 +319,70 @@ class SweepConfig:
             rank_metric=rank_metric,
             max_runs=int(raw.get("max_runs", DEFAULT_MAX_RUNS)),
         )
+        if not sweep.name:
+            sweep = replace(sweep, name=sweep.derived_name())
+        return sweep
+
+    def derived_name(self) -> str:
+        """Default sweep name: `{model}_sweep_{features}_{labels}_{hash}`.
+
+        Same rationale as `ExperimentConfig.derived_name`: the hash is
+        over the sweep's content (everything but the name), so a copied
+        sweep file with edited values gets a fresh name — and with it
+        fresh run names and a fresh `reports/sweeps/` directory —
+        instead of overwriting the original's.
+        """
+        if self.feature_specs:
+            if len(self.feature_specs) == 1:
+                spec = self.feature_specs[0]
+                tags = list(spec.groups) + [
+                    f.replace("/", "-") for f in spec.families
+                ]
+                feat = "-".join(tags) if tags else "cols"
+            else:
+                feat = f"{len(self.feature_specs)}fs"
+        elif len(self.feature_sets) == 1:
+            feat = "-".join(self.feature_sets[0].groups) or "cols"
+        else:
+            feat = f"{len(self.feature_sets)}fs"
+        if len(self.cells) == 1:
+            label = self.cells[0][1].removeprefix("label_")
+        else:
+            label = f"{len(self.cells)}cells"
+        return f"{self.model_name}_sweep_{feat}_{label}_{self.identity_hash}"
+
+    @property
+    def identity_hash(self) -> str:
+        """Hash of the sweep's content with the name left out — what the
+        derived default name embeds."""
+        if self.feature_specs:
+            features = [spec.to_table() for spec in self.feature_specs]
+        else:
+            features = [
+                {
+                    "groups": list(fs.groups),
+                    "columns": None if fs.columns is None else list(fs.columns),
+                    "exclude": list(fs.exclude),
+                }
+                for fs in self.feature_sets
+            ]
+        payload = {
+            "dataset_version": self.dataset_version,
+            "scheme": self.scheme,
+            "cells": [list(c) for c in self.cells],
+            "model_name": self.model_name,
+            "base_params": self.base_params,
+            "grid": {k: list(v) for k, v in self.grid.items()},
+            "features": features,
+            "folds": self.folds if self.folds == "all" else list(self.folds),
+            "seeds": list(self.seeds),
+            "top_k": list(self.top_k),
+            "score_thresholds": list(self.score_thresholds),
+            "precision_targets": list(self.precision_targets),
+            "rank_metric": self.rank_metric,
+        }
+        blob = json.dumps(payload, sort_keys=True, separators=(",", ":"))
+        return hashlib.sha256(blob.encode()).hexdigest()[:8]
 
     # ------------------------------------------------------------------
 

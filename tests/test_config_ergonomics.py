@@ -260,6 +260,44 @@ def _sweep_raw(**overrides):
     return raw
 
 
+def test_sweep_omitted_name_is_derived():
+    raw = {k: v for k, v in _sweep_raw().items() if k != "name"}
+    sweep = SweepConfig.from_dict(raw)
+    assert sweep.name == (
+        f"decision_tree_sweep_ranks-valuation_3y_beat_spy_{sweep.identity_hash}"
+    )
+    # expanded run names inherit the derived sweep name
+    assert all(r.config.name.startswith(sweep.name) for r in sweep.expand())
+
+
+def test_sweep_derived_name_changes_with_content():
+    raw = {k: v for k, v in _sweep_raw().items() if k != "name"}
+    base = SweepConfig.from_dict(raw)
+    deeper = SweepConfig.from_dict(raw | {"grid": {"max_depth": [2, 3, 4]}})
+    seeded = SweepConfig.from_dict(raw | {"seeds": [0, 1]})
+    assert len({base.name, deeper.name, seeded.name}) == 3
+    # the name itself doesn't feed the hash: explicit-name content matches
+    assert SweepConfig.from_dict(_sweep_raw()).identity_hash == base.identity_hash
+
+
+def test_sweep_explicit_name_still_respected():
+    assert SweepConfig.from_dict(_sweep_raw()).name == "erg_sweep"
+
+
+def test_sweep_derived_name_multi_axis_tags():
+    raw = {k: v for k, v in _sweep_raw().items() if k != "name"}
+    raw["cells"] = [
+        {"label": "label_3y_beat_spy"},
+        {"label": "label_1y_beat_spy"},
+    ]
+    raw["features"] = [
+        {"families": ["ranks/valuation"]},
+        {"groups": ["ranks"]},
+    ]
+    sweep = SweepConfig.from_dict(raw)
+    assert sweep.name == f"decision_tree_sweep_2fs_2cells_{sweep.identity_hash}"
+
+
 def test_sweep_features_table_flows_into_every_run():
     runs = SweepConfig.from_dict(_sweep_raw()).expand()
     assert len(runs) == 2
