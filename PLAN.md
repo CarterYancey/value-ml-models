@@ -211,12 +211,19 @@ on four decisions:
    filters' and scorers' reach. Disclosed approximation vs. live
    inference: features up to a quarter-plus stale, ranks relative to the
    snapshot's own quarter.
-3. **Prices: a separate versioned upstream artifact**
-   (`data/datasets/prices_vX.Y/` — contract in `src/portfolio/prices.py`:
-   daily total-return-adjusted closes per permaticker carried through
-   each stock's final print, plus the benchmark series that defines the
-   trading calendar). The model dataset carries no price paths, and
-   rebuilding them here from raw Sharadar tables is the banned easy join.
+3. **Prices: a separate versioned artifact, extracted from the labels'
+   own price source.** `data/datasets/prices_vX.Y/` (contract in
+   `src/portfolio/prices.py`) carries daily total-return-adjusted closes
+   per permaticker through each stock's final print, plus the benchmark
+   series that defines the trading calendar.
+   `scripts/build_price_panel.py` extracts it from the upstream raw
+   tables (`SEP.closeadj` for stocks, `SFP` for SPY, `TICKERS` for the
+   ticker→permaticker resolution) restricted to a pinned dataset's
+   universe. This is the one sanctioned raw-table read in the repo, and
+   it is narrow by construction: forward price paths are the *outcome* a
+   backtest measures — the same role `closeadj` plays in the upstream
+   label build — never features (the raw-join ban protects the feature
+   side, and cross-sections/filters structurally cannot see the panel).
    Delistings follow the upstream label convention: a position whose
    series goes silent is liquidated at its final print.
 4. **The benchmark leg runs through the same engine** — same deposit

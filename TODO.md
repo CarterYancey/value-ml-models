@@ -351,13 +351,20 @@ slice. All within the invariants: no local splits, no derived features.
 - [x] Defensive-hypothesis check: benchmark down-years broken out in the
       report (not testable when the window has none — the report says
       so).
-- [ ] **Upstream: versioned price panel** `data/datasets/prices_vX.Y/`
-      (contract in `src/portfolio/prices.py`): daily total-return
-      adjusted closes per permaticker, survivorship-free through each
-      stock's final print, + benchmark series + manifest. Blocks running
-      real backtests — file against `sharadar-dataset`.
-- [ ] Run the real backtest of the live five-model screen once the price
-      panel and the five walk-forward bundles exist
+- [x] Versioned price panel `data/datasets/prices_vX.Y/` (consumer
+      contract in `src/portfolio/prices.py`; builder
+      `scripts/build_price_panel.py`): extracted from the raw
+      `SEP.closeadj` / `SFP` tables — the labels' own price source —
+      via the `TICKERS` ticker→permaticker mapping, restricted to a
+      pinned dataset's universe, with mapping/cleaning/coverage stats
+      and raw-pull provenance in the manifest. The one sanctioned
+      raw-table read in this repo: outcome price paths only, never
+      features. Build it locally with the upstream raw dir symlinked
+      (e.g. `data/raw -> ~/radarash-dataset/data/raw`):
+      `python scripts/build_price_panel.py data/raw dataset_v1.1
+      --out-version prices_v1.0`.
+- [ ] Run the real backtest of the live five-model screen once the
+      panel is built and the five walk-forward bundles exist
       (`vml-run` each model config, fill in the bundle run ids, then
       `vml-backtest experiments/portfolios/allprob_top25_5models.toml`);
       promote the report.
@@ -378,7 +385,9 @@ slice. All within the invariants: no local splits, no derived features.
       suspicion (PLAN §8).
 - [ ] Restated-dimension dataset variant (decision 0009) needed for the
       restated ablation.
-- [ ] Versioned price panel `prices_vX.Y` for Phase-4 backtests (see §4
-      above; contract in `src/portfolio/prices.py`).
+- [x] ~~Versioned price panel for Phase-4 backtests~~ — resolved locally:
+      `scripts/build_price_panel.py` extracts it from the raw
+      SEP/SFP/TICKERS tables (see §4 above), so no upstream build stage
+      is needed. Upstream only needs to keep shipping `data/raw/`.
 - [ ] Any feature request discovered during modeling → file upstream, new
       dataset version (never engineered here).

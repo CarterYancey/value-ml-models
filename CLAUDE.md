@@ -97,7 +97,11 @@ invariants below are this repo's equivalents.
   survivorship bias.
 - Feature selection by column-name pattern instead of the manifest.
 - Joins on `ticker`, or any join against raw Sharadar tables (the easy joins
-  leak the future).
+  leak the future). Registered exception: `scripts/build_price_panel.py`
+  extracts outcome price paths (`permaticker`, `date`, `closeadj`) from raw
+  SEP/SFP for the Phase-4 backtest — the labels' own price source. Nothing
+  from the panel may become a feature or screen; any other raw read is
+  still a bug.
 - Use of `entity_holdout`/`random_kfold` tags outside the registered
   leakage-gap experiment, or any read of `holdout` tags outside the
   final-eval script.

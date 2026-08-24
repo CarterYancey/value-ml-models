@@ -23,8 +23,9 @@ constraints that shape everything here:
   already-held positions may run past the last fold year and says so in
   the report.
 - **Prices are a separate versioned artifact** (`portfolio.prices`):
-  the model dataset carries no price paths, and rebuilding them here
-  from raw Sharadar tables is exactly the kind of easy join the
-  contract bans. The `prices_vX.Y` panel is built upstream with the
-  same survivorship discipline as the labels.
+  the model dataset carries no price paths. The `prices_vX.Y` panel is
+  extracted from the same raw source the labels are computed from
+  (`SEP.closeadj` / SFP benchmark) by `scripts/build_price_panel.py` —
+  the one sanctioned raw-table read in this repo, narrow by
+  construction: outcome price paths only, never features.
 """

@@ -1,10 +1,14 @@
 """Loader for a versioned price panel (`data/datasets/prices_vX.Y/`).
 
 The model dataset deliberately carries no price paths (labels are the
-only outcomes), and rebuilding paths here from raw Sharadar tables is the
-easy-join leak the contract bans. Backtests therefore consume a separate
-versioned artifact, built upstream with the same survivorship discipline
-as the labels — this module defines and enforces that contract:
+only outcomes), so backtests consume a separate versioned artifact,
+extracted from the same raw source the labels are computed from —
+`SEP.closeadj` for stocks, `SFP` for the benchmark (upstream contract) —
+by `scripts/build_price_panel.py`. That extraction is the one sanctioned
+read of raw Sharadar tables in this repo, and it is narrow: outcome
+price paths only, `(permaticker, date, closeadj)`, never features (the
+raw-join ban in CLAUDE.md protects the feature side). This module
+defines and enforces the consumer's contract:
 
     prices_vX.Y/
     ├── prices.parquet      permaticker, date, closeadj — daily,
@@ -21,11 +25,9 @@ as the labels — this module defines and enforces that contract:
 Because `closeadj` is total-return adjusted, holding a fixed share count
 implicitly reinvests dividends — the same convention the upstream labels
 use. A panel that only covers survivors would silently un-do the
-dataset's survivorship discipline, so coverage against the model
-dataset's permatickers is reported by the backtest, not assumed.
-
-Until the upstream builder ships this artifact, the file is the request:
-anything that validates here can be consumed.
+dataset's survivorship discipline, so the builder records universe
+coverage in the manifest and the backtest re-checks it, rather than
+assuming it.
 """
 
 from __future__ import annotations
@@ -66,6 +68,7 @@ class PricePanel:
         self._prices = self._load_prices()
         self._benchmark = self._load_benchmark()
         self._by_stock: dict[int, pd.Series] = {}
+        self._grouped = False
 
     # ------------------------------------------------------------- loading
 
@@ -145,17 +148,18 @@ class PricePanel:
 
     def series(self, permaticker: int) -> pd.Series | None:
         """The stock's full adjusted-close series (date-indexed,
-        ascending), or None if the panel has never seen it."""
-        pt = int(permaticker)
-        if pt not in self._by_stock:
-            sel = self._prices[self._prices["permaticker"] == pt]
-            if sel.empty:
-                return None
-            self._by_stock[pt] = pd.Series(
-                sel["closeadj"].to_numpy(dtype=float),
-                index=pd.DatetimeIndex(sel["date"]),
-            )
-        return self._by_stock[pt]
+        ascending), or None if the panel has never seen it. All series
+        are split out in one grouped pass on first access — a real panel
+        has tens of millions of rows, and a per-stock scan would make
+        every monthly rebalance O(panel)."""
+        if not self._grouped:
+            for pt, grp in self._prices.groupby("permaticker", sort=False):
+                self._by_stock[int(pt)] = pd.Series(
+                    grp["closeadj"].to_numpy(dtype=float),
+                    index=pd.DatetimeIndex(grp["date"]),
+                )
+            self._grouped = True
+        return self._by_stock.get(int(permaticker))
 
     def month_first_trading_days(
         self, start: date, end: date

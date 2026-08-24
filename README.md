@@ -301,8 +301,20 @@ uv run vml-backtest experiments/portfolios/allprob_top25_5models.toml
 Backtests additionally require a versioned **price panel**
 `data/datasets/prices_vX.Y/` (`prices.parquet` — daily total-return
 adjusted closes per permaticker, survivorship-free through each stock's
-final print; `benchmark.parquet`; `manifest.json`), built upstream by
-`sharadar-dataset` — the contract lives in `src/portfolio/prices.py`.
+final print; `benchmark.parquet` — SPY, whose dates define the trading
+calendar; `manifest.json`). Build it from the upstream repo's raw
+Sharadar tables — the same `SEP.closeadj` / `SFP` source the labels are
+computed from — with the raw directory symlinked like the datasets:
+
+```sh
+ln -s ~/radarash-dataset/data/raw data/raw
+uv run python scripts/build_price_panel.py data/raw dataset_v1.1 --out-version prices_v1.0
+```
+
+This is the one sanctioned read of raw Sharadar tables in this repo:
+the panel carries `(permaticker, date, closeadj)` outcome paths only —
+never features — and the consumer contract in `src/portfolio/prices.py`
+validates it on load.
 
 The sealed `holdout` scheme and the diagnostic schemes (`entity_holdout`,
 `random_kfold`) are refused by the runner — they raise errors unless
