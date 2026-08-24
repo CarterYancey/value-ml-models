@@ -99,8 +99,33 @@ def test_filter_and_floor_semantics():
     )
     passed = apply_filters(frame, (FilterSpec("x", ">", 0.0),))
     assert list(passed.index) == [0]  # NULL fails, negative fails
-    floored = apply_min_score(frame, ["score_a", "score_b"], 0.5)
+    floored = apply_min_score(frame, {"score_a": 0.5, "score_b": 0.5})
     assert list(floored.index) == [0, 2]
+    # per-model floors: only the floored column is screened
+    only_b = apply_min_score(frame, {"score_b": 0.5})
+    assert list(only_b.index) == [0, 2]
+    assert apply_min_score(frame, {}).equals(frame)
+
+
+def test_per_model_floors_resolve_and_validate(data_root, wf_bundle_dir):
+    from portfolio.signals import score_floors
+
+    dataset = Dataset(data_root / DATASET)
+    model_set = ModelSet([wf_bundle_dir])
+    config = _bt_config(
+        wf_bundle_dir,
+        signal={"min_score": 0.5,
+                "min_scores": {"wf_tree_3y_beat_spy": 0.9}},
+    )
+    model_set.validate_against(config, dataset)
+    assert score_floors(config, model_set.names) == {
+        "score_wf_tree_3y_beat_spy": 0.9
+    }
+    bad = _bt_config(
+        wf_bundle_dir, signal={"min_scores": {"no_such_bundle": 0.9}}
+    )
+    with pytest.raises(ConfigError, match="no_such_bundle"):
+        model_set.validate_against(bad, dataset)
 
 
 def test_combine_modes():
@@ -122,48 +147,89 @@ def test_combine_modes():
 # ------------------------------------------------------------- end to end
 
 
-def test_backtest_end_to_end(data_root, prices_dir, wf_bundle_dir, tmp_path):
+def test_backtest_end_to_end_with_refits(
+    data_root, prices_dir, wf_bundle_dir, tmp_path
+):
     results = tmp_path / "results.csv"
     reports = tmp_path / "reports"
+    config = _bt_config(wf_bundle_dir)
     summary = run_backtest(
-        _bt_config(wf_bundle_dir),
+        config,
         data_root=data_root,
         results_path=results,
         reports_dir=reports,
     )
     assert summary["status"] == "completed"
-    # buys are confined to the bundle's walk-forward fold years
-    assert summary["buy_years"] == [2016, 2017]
+    # buys start at the first fold year and keep rolling past the last
+    # fold (2017) under model_update = "refit", to the panel's end
+    assert summary["buy_years"] == [2016, 2017, 2018, 2019, 2020, 2021]
     strategy = summary["strategy_result"]
     benchmark = summary["benchmark_result"]
 
     buys = strategy.trades[strategy.trades["side"] == "buy"]
     assert not buys.empty
-    assert set(buys["date"].dt.year) <= {2016, 2017}
-    # 24 monthly deposits into both legs, identically
-    assert strategy.total_deposits == pytest.approx(24_000.0)
-    assert benchmark.total_deposits == pytest.approx(24_000.0)
+    assert set(buys["date"].dt.year) <= set(range(2016, 2022))
+    assert buys["date"].dt.year.max() >= 2018  # refit years traded too
+    # whole shares, tickers, and per-model scores in the trade log
+    assert (buys["shares"] % 1 == 0).all()
+    assert buys["ticker"].notna().all()
+    assert "score_wf_tree_3y_beat_spy" in buys.columns
+    # 66 monthly deposits (2016-01 .. 2021-06) into both legs
+    assert strategy.total_deposits == pytest.approx(66_000.0)
+    assert benchmark.total_deposits == pytest.approx(66_000.0)
     assert list(strategy.monthly["date"]) == list(benchmark.monthly["date"])
-    # valuation runs to the panel's final trading day
     assert strategy.monthly["date"].iloc[-1] == pd.Timestamp("2021-06-30")
+    assert {"value_after_deposit", "costs"} <= set(strategy.monthly.columns)
     assert strategy.final_value > 0
     assert benchmark.final_value > 0
-    # costs were actually charged
     assert strategy.total_costs > 0
 
-    report = (reports / "bt_e2e.md").read_text()
+    stem = f"bt_e2e_{config.config_hash}"
+    report = (reports / "backtest" / f"{stem}.md").read_text()
     assert "split_folds.parquet" in report
     assert "explicitly opted out" in report  # investability = "none"
     assert "configurations tried" in report
-    for artifact in ("bt_e2e_equity.csv", "bt_e2e_trades.csv",
-                     "bt_e2e_equity.png"):
-        assert (reports / artifact).exists()
+    assert "Simulated year-end refits" in report
+    assert "selection-toxic" in report
+    for suffix in ("_equity.csv", "_trades.csv", "_equity.png",
+                   "_rebalances.csv"):
+        assert (reports / "backtest" / f"{stem}{suffix}").exists()
 
     store = ResultsStore(results).load()
     row = store[store["scheme"] == BACKTEST_SCHEME].iloc[-1]
     assert row["status"] == "completed"
     assert row["experiment"] == "bt_e2e"
-    assert row["fold"] == "2016-2017"
+    assert row["fold"] == "2016-2021"
+
+
+def test_frozen_policy_and_window_start(
+    data_root, prices_dir, wf_bundle_dir, tmp_path
+):
+    from datetime import date
+
+    config = _bt_config(
+        wf_bundle_dir,
+        name="bt_frozen",
+        signal={"combine": "product", "model_update": "frozen"},
+        window={"start": date(2017, 1, 1), "end": date(2018, 12, 31)},
+    )
+    summary = run_backtest(
+        config,
+        data_root=data_root,
+        results_path=tmp_path / "results.csv",
+        reports_dir=tmp_path / "reports",
+    )
+    # start is honored (2016 skipped), 2018 served by the frozen model
+    assert summary["buy_years"] == [2017, 2018]
+    assert summary["strategy_result"].total_deposits == pytest.approx(
+        24_000.0
+    )
+    report = (
+        tmp_path / "reports" / "backtest"
+        / f"bt_frozen_{config.config_hash}.md"
+    ).read_text()
+    assert "frozen" in report
+    assert "Simulated year-end refits" not in report
 
 
 def test_backtest_failure_is_logged(
@@ -187,17 +253,17 @@ def test_backtest_failure_is_logged(
     assert store.iloc[-1]["scheme"] == BACKTEST_SCHEME
 
 
-def test_window_outside_fold_years_is_refused(
+def test_window_before_first_fold_year_is_refused(
     data_root, prices_dir, wf_bundle_dir, tmp_path
 ):
     from datetime import date
 
     config = _bt_config(
         wf_bundle_dir,
-        name="bt_holdout_grab",
-        window={"start": date(2018, 1, 1), "end": date(2019, 12, 31)},
+        name="bt_too_early",
+        window={"end": date(2015, 12, 31)},
     )
-    with pytest.raises(ConfigError, match="fold years"):
+    with pytest.raises(ConfigError, match="serveable"):
         run_backtest(
             config,
             data_root=data_root,

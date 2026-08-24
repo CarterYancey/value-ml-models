@@ -43,6 +43,7 @@ from portfolio.signals import (
     apply_filters,
     apply_min_score,
     combine_scores,
+    score_floors,
     validate_filter_columns,
 )
 from portfolio.strategy import BuyAndHoldTopK, build_strategy
@@ -69,6 +70,7 @@ class CandidateFeed:
         self.model_set = model_set
         self.config = config
         self.stock_source = stock_source
+        self.floors = score_floors(config, model_set.names)
 
     def __call__(self, when: pd.Timestamp):
         config = self.config
@@ -76,7 +78,7 @@ class CandidateFeed:
         scored = self.model_set.score(xs, int(when.year))
         cols = self.model_set.score_columns
 
-        after_floor = apply_min_score(scored, cols, config.min_score)
+        after_floor = apply_min_score(scored, self.floors)
         after_filters = apply_filters(after_floor, config.filters)
         after_inv = apply_filters(after_filters, config.investability)
 
@@ -114,37 +116,33 @@ class CandidateFeed:
 def _derive_window(
     config: BacktestConfig, model_set: ModelSet, panel: PricePanel
 ) -> tuple[list[int], date, date, date]:
-    """(buy_years, start, buy_end, valuation_end): buys are confined to
-    the contiguous fold years every bundle covers, clipped by the config
-    window; valuation may run to the panel's end."""
-    common = model_set.common_fold_years()
-    if not common:
-        raise ConfigError(
-            "the bundles share no walk-forward fold years — nothing to "
-            "backtest"
-        )
-    years = [
-        y
-        for y in common
-        if (config.start is None or y >= config.start.year)
-        and (config.end is None or y <= config.end.year)
-    ]
-    if not years:
-        raise ConfigError(
-            f"the window [{config.start}, {config.end}] leaves no common "
-            f"fold years (bundles share {common})"
-        )
-    if years != list(range(years[0], years[-1] + 1)):
-        raise ConfigError(
-            f"common fold years {years} are not contiguous; a monthly "
-            "deposit schedule cannot skip years — narrow the window"
-        )
-    start = max(config.start or date(years[0], 1, 1), date(years[0], 1, 1))
-    buy_end = min(config.end or date(years[-1], 12, 31), date(years[-1], 12, 31))
+    """(buy_years, start, buy_end, valuation_end).
+
+    Buys start no earlier than the latest first-fold year across the
+    bundles (before that, no honestly-trained model exists for some
+    bundle) and by default continue through the whole valuation window —
+    trade years past a bundle's last fold are served per the
+    `model_update` policy (deposits keep rolling in; a live portfolio
+    does not stop because the fold calendar did). The config window can
+    narrow both ends.
+    """
     panel_end = panel.trading_days[-1].date()
     valuation_end = config.valuation_end or panel_end
     if valuation_end > panel_end:
         valuation_end = panel_end
+
+    first_year = model_set.first_serveable_year()
+    if config.start is not None and config.start.year > first_year:
+        first_year = config.start.year
+    buy_end = min(config.end or valuation_end, valuation_end)
+    if buy_end.year < first_year:
+        raise ConfigError(
+            f"the window ends {buy_end}, before any trade year every "
+            f"bundle can serve (first serveable year: "
+            f"{model_set.first_serveable_year()})"
+        )
+    years = list(range(first_year, buy_end.year + 1))
+    start = max(config.start or date(first_year, 1, 1), date(first_year, 1, 1))
     if valuation_end < buy_end:
         raise ConfigError(
             f"valuation_end {valuation_end} precedes the last buy date "
@@ -190,6 +188,11 @@ def run_backtest(
 
         buy_years, start, buy_end, valuation_end = _derive_window(
             config, model_set, panel
+        )
+        # resolve a model per (bundle, trade year) up front: fold models
+        # where folds exist, the model_update policy past them
+        model_set.prepare(
+            buy_years, dataset, config.model_update, config.label_lag_days
         )
         buy_dates = panel.month_first_trading_days(start, buy_end)
         if not buy_dates:
@@ -237,6 +240,7 @@ def run_backtest(
             candidates_fn=feed,
             cost_bps=config.cost_bps,
             delist_after_days=config.delist_after_days,
+            fractional_shares=config.fractional_shares,
         )
 
         bench_source = benchmark_price_source(panel)
@@ -249,8 +253,8 @@ def run_backtest(
                     f"benchmark has no print on trading day {when.date()}"
                 )
             frame = pd.DataFrame(
-                {"asset": [bench_asset], "combined_score": [1.0],
-                 "price": [quote[0]]}
+                {"asset": [bench_asset], "ticker": [bench_asset],
+                 "combined_score": [1.0], "price": [quote[0]]}
             )
             return frame, {}
 
@@ -263,16 +267,20 @@ def run_backtest(
             candidates_fn=bench_candidates,
             cost_bps=config.benchmark_cost_bps,
             delist_after_days=config.delist_after_days,
+            fractional_shares=config.fractional_shares,
         )
 
-        reports_dir = Path(reports_dir)
+        # every artifact is stamped with the config hash: reruns of an
+        # edited config land next to (not on top of) earlier ones
+        out_dir = Path(reports_dir) / "backtest"
+        stem = f"{config.name}_{config.config_hash}"
         artifacts = _write_artifacts(
-            reports_dir, config.name, strategy_result, benchmark_result
+            out_dir, stem, strategy_result, benchmark_result
         )
         artifacts["equity_plot"] = render_equity_plot(
             strategy_result,
             benchmark_result,
-            reports_dir / f"{config.name}_equity.png",
+            out_dir / f"{stem}_equity.png",
             f"{config.name} — strategy vs {panel.benchmark_name}, "
             "identical monthly deposits",
         )
@@ -280,7 +288,7 @@ def run_backtest(
             store, config.dataset_version, config.config_hash
         )
         report_path = write_backtest_report(
-            path=reports_dir / f"{config.name}.md",
+            path=out_dir / f"{stem}.md",
             config=config,
             run_id=run_id,
             git_sha=sha,
@@ -346,6 +354,8 @@ def run_backtest(
 def _write_artifacts(
     reports_dir: Path, name: str, strategy_result, benchmark_result
 ) -> dict:
+    """CSV artifacts next to the report; `name` already carries the
+    config hash."""
     reports_dir.mkdir(parents=True, exist_ok=True)
     equity = strategy_result.monthly.merge(
         benchmark_result.monthly[["date", "total_value", "twr_index"]],

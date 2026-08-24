@@ -62,6 +62,41 @@ def test_score_weighting_refuses_mean_rank():
         )
 
 
+def test_model_update_and_min_scores_parse():
+    config = BacktestConfig.from_dict(
+        _raw(
+            signal={
+                "min_score": 0.5,
+                "min_scores": {"some_bundle": 0.8},
+                "model_update": "frozen",
+                "label_lag_days": 30,
+            }
+        )
+    )
+    assert config.min_scores == {"some_bundle": 0.8}
+    assert config.model_update == "frozen"
+    assert config.label_lag_days == 30
+    with pytest.raises(ConfigError, match="model_update"):
+        BacktestConfig.from_dict(_raw(signal={"model_update": "hope"}))
+    with pytest.raises(ConfigError, match="min_scores"):
+        BacktestConfig.from_dict(_raw(signal={"min_scores": [0.8]}))
+
+
+def test_new_fields_keep_old_hashes_at_defaults():
+    # a config predating model_update/min_scores/fractional_shares must
+    # hash identically to one that states the defaults explicitly
+    plain = BacktestConfig.from_dict(_raw())
+    explicit = BacktestConfig.from_dict(
+        _raw(
+            signal={"model_update": "refit", "label_lag_days": 45},
+            execution={"cost_bps": 20.0, "fractional_shares": False},
+        )
+    )
+    assert plain.config_hash == explicit.config_hash
+    frozen = BacktestConfig.from_dict(_raw(signal={"model_update": "frozen"}))
+    assert frozen.config_hash != plain.config_hash
+
+
 def test_filter_op_validation():
     with pytest.raises(ConfigError, match="op"):
         FilterSpec.from_table(

@@ -35,6 +35,19 @@ bundles = [
 combine = "product"        # AllProb
 min_score = 0.5            # every model must clear this individually
 max_staleness_days = 200   # latest completed-quarter snapshot, no older
+# Trade years past a bundle's last walk-forward fold (the fold calendar
+# stops where test labels stop being observable, but the portfolio keeps
+# trading): "refit" simulates the real year-end procedure — the config
+# refit on every row whose label window was observable by Jan 1
+# (manual.md §4 rule 7, point-in-time; no split tags read); "frozen"
+# keeps the last fold's model. Those years overlap the sealed holdout
+# era — context, never a selection signal.
+model_update = "refit"
+label_lag_days = 45        # settlement lag before a label counts as known
+
+# Per-model floors override min_score, keyed by bundle config name:
+# [signal.min_scores]
+# "lightgbm_ranks-technical_1y_cagr_ge_0_ada3e6fe" = 0.7
 
 [[filters]]
 column = "revenue_trend_20q"
@@ -67,10 +80,14 @@ cost_bps = 35.0            # per side; microcap spreads are not free
 benchmark_cost_bps = 0.0
 max_quote_age_days = 3     # candidate must have printed within 3 days
 delist_after_days = 30     # silent for 30+ days => liquidated at final print
+# whole shares by default (a buy budget's remainder stays in cash);
+# fractional_shares = true restores exact budget spending
 
-# [window] is optional: buys default to the intersection of the five
-# bundles' fold years; valuation runs to the price panel's end.
+# [window] is optional. Buys default to starting at the latest
+# first-fold year across the bundles and keep rolling (deposits
+# included) to the panel's end, with post-fold years served per
+# model_update; `start` trims the early, thinly-trained years.
 # [window]
-# start = 2016-01-01
-# end = 2021-12-31
-# valuation_end = 2024-12-31
+# start = 2010-01-01
+# end = 2024-12-31
+# valuation_end = 2026-06-30

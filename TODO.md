@@ -338,6 +338,14 @@ slice. All within the invariants: no local splits, no derived features.
       `backtest`. Exemplar config:
       `experiments/portfolios/allprob_top25_5models.toml` (the live
       five-model AllProb screen).
+      Deposits keep rolling past a bundle's last fold year: the
+      `model_update` policy serves those years (`refit` = simulated
+      point-in-time year-end deployment refits, manual.md §4 rule 7;
+      `frozen` = last fold model), with the holdout-era overlap flagged
+      as selection-toxic in every report. Per-model floors via
+      `[signal.min_scores]`; whole-share execution with realized
+      profit/ticker in the trade log; artifacts under
+      `reports/backtest/<name>_<config-hash>.*`.
 - [x] Investability filter mechanism: `[[investability]]` column screens
       are a mandatory config field (explicit `investability = "none"`
       opts out and is flagged in the report). Choosing honest thresholds

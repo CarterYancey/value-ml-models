@@ -282,6 +282,20 @@ def write_backtest_report(
         "convention, sell cost applied)"
     )
 
+    floors = {}
+    for name in model_set.names:
+        floor = config.min_scores.get(name, config.min_score)
+        if floor is not None:
+            floors[name] = floor
+    if not floors:
+        floor_line = ""
+    elif config.min_scores:
+        floor_line = ", per-model floors: " + ", ".join(
+            f"`{n}` > {f}" for n, f in floors.items()
+        )
+    else:
+        floor_line = f", per-model floor score > {config.min_score}"
+
     inv_lines = (
         [f"- `{f.describe()}`" for f in config.investability]
         if config.investability
@@ -293,17 +307,47 @@ def write_backtest_report(
         ]
     )
 
-    bundle_lines = []
-    for d, b, name in zip(
-        model_set.bundle_dirs, model_set.bundles, model_set.names
+    provenance = getattr(model_set, "provenance", None) or [{}] * len(
+        model_set.bundles
+    )
+    bundle_lines, refit_rows = [], []
+    for d, b, name, info in zip(
+        model_set.bundle_dirs, model_set.bundles, model_set.names, provenance
     ):
+        fold_years = info.get("fold_years", b.folds)
+        policy_years = info.get("policy_years", [])
+        parts = []
+        if fold_years:
+            parts.append(f"folds {fold_years[0]}–{fold_years[-1]}")
+        if policy_years:
+            what = (
+                "year-end refits"
+                if info.get("policy") == "refit"
+                else f"frozen fold-{max(b.folds)} model"
+            )
+            parts.append(
+                f"{policy_years[0]}–{policy_years[-1]} served by {what}"
+            )
+        served = "; ".join(parts) or f"folds {b.folds}"
         bundle_lines.append(
             f"- `{name}` — label `{b.train_config.label}` "
             f"({b.train_config.horizon_years}y), model "
             f"`{b.train_config.model_name}`, config "
             f"`{b.train_config.config_hash}`, train run `{b.run_id}`, "
-            f"folds {b.folds} (from `{d}`)"
+            f"{served} (from `{d}`)"
         )
+        for year, stats in sorted(info.get("refit_stats", {}).items()):
+            refit_rows.append(
+                {
+                    "bundle": name,
+                    "trade_year": year,
+                    "n_train_rows": stats["n_train_rows"],
+                    "effective_train_size": round(
+                        stats["effective_train_size"], 1
+                    ),
+                    "last_usable_snapshot": stats["last_usable_snapshot"],
+                }
+            )
 
     filters_lines = [f"- `{f.describe()}`" for f in config.filters] or [
         "- (none)"
@@ -316,9 +360,11 @@ def write_backtest_report(
         f"`{config.config_hash}`",
         f"- dataset `{dataset.version}`, price panel `{panel.version}` "
         f"(benchmark `{panel.benchmark_name}`)",
-        f"- buy window: {buy_years[0]}–{buy_years[-1]} (walk-forward fold "
-        f"years; last buy {buy_end.date()}), valuation through "
-        f"{valuation_end.date()}",
+        f"- buy window: {buy_years[0]}–{buy_years[-1]} (last buy "
+        f"{buy_end.date()}), valuation through {valuation_end.date()}; "
+        f"trade years past a bundle's walk-forward folds are served by "
+        f"`model_update = \"{config.model_update}\"` (see the bundle "
+        "list below)",
         f"- deposits: {_money(config.monthly_cash)} on the first trading "
         "day of each month, identically into both legs",
         "",
@@ -346,12 +392,7 @@ def write_backtest_report(
         "## Strategy definition",
         "",
         f"- signal: {len(model_set.bundles)} walk-forward model(s), "
-        f"combined by `{config.combine}`"
-        + (
-            f", per-model floor score > {config.min_score}"
-            if config.min_score is not None
-            else ""
-        ),
+        f"combined by `{config.combine}`" + floor_line,
         "- the `product` combination is a conviction ranking, not a joint "
         "probability — the per-model scores are correlated"
         if config.combine == "product"
@@ -372,8 +413,14 @@ def write_backtest_report(
         "## Assumptions (all of them)",
         "",
         "- Execution at the trade date's total-return adjusted close "
-        "(dividends implicitly reinvested), fractional shares, no market "
-        "impact beyond the flat per-side cost.",
+        "(dividends implicitly reinvested), "
+        + (
+            "fractional shares"
+            if config.fractional_shares
+            else "whole shares only (a buy budget's remainder stays in "
+            "cash for the next month)"
+        )
+        + ", no market impact beyond the flat per-side cost.",
         f"- Candidates need a print within {config.max_quote_age_days} "
         "day(s) of the trade date; positions silent for "
         f"{config.delist_after_days}+ days are liquidated at their final "
@@ -383,12 +430,24 @@ def write_backtest_report(
         "a quarter-plus staler than a live inference run, and ranked "
         "within the snapshot's own quarter rather than the trade date's "
         "cross-section.",
-        "- Buy decisions are structurally confined to walk-forward fold "
-        "years; the sealed holdout years have no fold model and can never "
-        "host a decision. Valuation of held positions may extend past the "
-        "last fold year — tuning a strategy on that tail erodes the "
-        "holdout, so treat post-fold-year valuation as context, not a "
-        "selection signal.",
+        "- Trade years inside a bundle's walk-forward folds use that "
+        "year's fold model (trained purged/embargoed on years before "
+        "it). Years past the last fold are served by "
+        + (
+            "**simulated year-end deployment refits**: the same config "
+            "refit on every row whose label window was fully observable "
+            f"by Jan 1 of the trade year (+{config.label_lag_days}d "
+            "settlement lag) — data/manual.md §4 rule 7 applied "
+            "point-in-time; no split tags are read and no test set "
+            "exists (see the refit appendix)."
+            if config.model_update == "refit"
+            else "the **frozen** last-fold model, unchanged."
+        ),
+        "- Those later trade years — and all valuation past the last "
+        "fold — overlap the sealed holdout era. That is what a live "
+        "simulation requires, but it makes this segment selection-toxic: "
+        "results there are context; feeding them back into model or "
+        "strategy selection erodes the holdout.",
         "",
         "## Provenance",
         "",
@@ -400,6 +459,21 @@ def write_backtest_report(
         "bundle's fold years)",
         "- model bundles:",
         *bundle_lines,
+        *(
+            [
+                "",
+                "### Simulated year-end refits",
+                "",
+                "One refit per (bundle, trade year) past that bundle's "
+                "folds — trained on rows whose labels were observable by "
+                "Jan 1, all snapshot kinds, delistings included, no "
+                "split tags read:",
+                "",
+                _table(pd.DataFrame(refit_rows)),
+            ]
+            if refit_rows
+            else []
+        ),
         "",
         "### Artifacts",
         "",

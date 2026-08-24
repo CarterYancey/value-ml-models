@@ -191,16 +191,23 @@ within the invariants (no local splits, no feature engineering):
 `vml-backtest`, configs in `experiments/portfolios/`). The design turns
 on four decisions:
 
-1. **Models: walk-forward fold bundles, never deployment bundles.** A
-   deployment model is refit on all labeled history, so its scores have
-   seen any backtest period. A trade date in year Y is scored by each
-   bundle's fold-Y model (trained purged/embargoed on years before Y) —
-   the "retrain at each year-end" cadence *is* the upstream fold
-   calendar. Corollary: buy decisions are structurally confined to fold
-   years — the sealed holdout years have no fold model and can never
-   host a decision (valuation of held positions may run past the last
-   fold year; the report flags that tuning on this tail erodes the
-   holdout).
+1. **Models: walk-forward fold bundles, never static deployment
+   bundles.** A deployment model is refit on all labeled history, so its
+   scores have seen any backtest period. A trade date in year Y is
+   scored by each bundle's fold-Y model (trained purged/embargoed on
+   years before Y) — the "retrain at each year-end" cadence *is* the
+   upstream fold calendar. The fold calendar stops where test labels
+   stop being observable, but a live portfolio keeps trading, so years
+   past a bundle's last fold are served by the config's `model_update`
+   policy: `"refit"` (default) — a *simulated year-end deployment
+   refit*, the bundle's config refit on every row whose label window
+   was fully observable by Jan 1 of the trade year (data/manual.md §4
+   rule 7 applied point-in-time: no split tags read, no test set built,
+   scores never label-evaluated) — or `"frozen"` (keep the last fold's
+   model). Those later trade years, and all valuation past the last
+   fold, overlap the sealed holdout era; the report marks the segment
+   selection-toxic: simulating there is what a live run requires, but
+   feeding it back into model or strategy selection erodes the holdout.
 2. **Cross-sections: from `dataset.parquet`, never from historical
    inference directories.** Inference builds are survivor-only by
    construction (data/manual.md §9); the training dataset keeps every

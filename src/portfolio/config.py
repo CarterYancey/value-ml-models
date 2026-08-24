@@ -16,7 +16,7 @@ from __future__ import annotations
 import hashlib
 import json
 import tomllib
-from dataclasses import dataclass, replace
+from dataclasses import dataclass, field, replace
 from datetime import date
 from pathlib import Path
 
@@ -29,6 +29,7 @@ _ORDERING_OPS = frozenset({">", ">=", "<", "<="})
 
 COMBINE_MODES = ("product", "mean", "min", "mean_rank")
 WEIGHTINGS = ("score", "equal")
+MODEL_UPDATE_POLICIES = ("refit", "frozen")
 
 
 @dataclass(frozen=True)
@@ -93,6 +94,17 @@ class BacktestConfig:
     #: every model's score must exceed this (None = no per-model floor);
     #: requires probabilistic bundles — raw margins have no common scale
     min_score: float | None = None
+    #: per-model overrides of `min_score`, keyed by bundle config name
+    #: ([signal.min_scores] table); validated against the loaded bundles
+    min_scores: dict = field(default_factory=dict)
+    #: how trade years past a bundle's last walk-forward fold are served:
+    #: "refit" — simulated year-end deployment refit on rows whose label
+    #: window was observable by Jan 1 (data/manual.md §4 rule 7,
+    #: point-in-time); "frozen" — keep the last fold's model
+    model_update: str = "refit"
+    #: days after `snapshot_date + horizon` before a label counts as
+    #: observable for refits (terminal-month averaging + settlement)
+    label_lag_days: int = 45
     #: a snapshot older than this at the trade date drops out of the
     #: cross-section (stale fundamentals are not a tradable signal)
     max_staleness_days: int = 200
@@ -121,6 +133,9 @@ class BacktestConfig:
     #: a held position whose last print is older than this is treated as
     #: delisted and liquidated at its final print
     delist_after_days: int = 30
+    #: whole shares by default (buy budgets round down; the remainder
+    #: stays in cash); True restores exact fractional spending
+    fractional_shares: bool = False
 
     # --- window (optional; defaults derived from folds and the panel) ----
     start: date | None = None
@@ -158,6 +173,19 @@ class BacktestConfig:
         min_score = signal.get("min_score")
         if min_score is not None:
             min_score = float(min_score)
+        min_scores_raw = signal.get("min_scores", {})
+        if not isinstance(min_scores_raw, dict):
+            raise ConfigError(
+                f"backtest config {source}: [signal.min_scores] must be a "
+                "table of bundle-name = floor entries"
+            )
+        min_scores = {str(k): float(v) for k, v in min_scores_raw.items()}
+        model_update = signal.get("model_update", "refit")
+        if model_update not in MODEL_UPDATE_POLICIES:
+            raise ConfigError(
+                f"backtest config {source}: model_update {model_update!r} "
+                f"not in {list(MODEL_UPDATE_POLICIES)}"
+            )
 
         filters = tuple(
             FilterSpec.from_table(t, source, "[[filters]]")
@@ -242,6 +270,9 @@ class BacktestConfig:
             bundles=bundles,
             combine=combine,
             min_score=min_score,
+            min_scores=min_scores,
+            model_update=model_update,
+            label_lag_days=int(signal.get("label_lag_days", 45)),
             max_staleness_days=int(signal.get("max_staleness_days", 200)),
             filters=filters,
             investability=investability,
@@ -254,6 +285,7 @@ class BacktestConfig:
             benchmark_cost_bps=float(ex.get("benchmark_cost_bps", 0.0)),
             max_quote_age_days=int(ex.get("max_quote_age_days", 0)),
             delist_after_days=int(ex.get("delist_after_days", 30)),
+            fractional_shares=bool(ex.get("fractional_shares", False)),
             start=_date("start"),
             end=_date("end"),
             valuation_end=_date("valuation_end"),
@@ -273,7 +305,20 @@ class BacktestConfig:
         )
 
     def _canonical_payload(self) -> dict:
+        # fields added after the first release are serialized only when
+        # they differ from the behavior-preserving default, so existing
+        # configs keep their hashes in the trial ledger
+        added = {}
+        if self.min_scores:
+            added["min_scores"] = dict(sorted(self.min_scores.items()))
+        if self.model_update != "refit":
+            added["model_update"] = self.model_update
+        if self.label_lag_days != 45:
+            added["label_lag_days"] = self.label_lag_days
+        if self.fractional_shares:
+            added["fractional_shares"] = True
         return {
+            **added,
             "name": self.name,
             "dataset_version": self.dataset_version,
             "prices_version": self.prices_version,
