@@ -27,6 +27,7 @@ vml-train-deploy = "harness.deploy:main_train"
 vml-predict = "harness.deploy:main_predict"
 vml-experiments = "harness.catalog:main"
 vml-promote = "harness.promote:main"
+vml-backtest = "portfolio.backtest:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]

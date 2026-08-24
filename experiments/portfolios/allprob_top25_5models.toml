@@ -1,0 +1,76 @@
+# Backtest of the live five-model screen (vml-predict --trends + manual
+# filtering), made honest:
+#
+# - every model score > 0.5, revenue_trend_20q > 0, tangibles_trend_20q > 0;
+# - rank and size by AllProb = product of the five scores (a conviction
+#   ranking, not a joint probability — the scores are correlated);
+# - first trading day of each month: deposit $1000 and buy the top 25,
+#   AllProb-weighted; buy and hold; benchmark gets identical deposits.
+#
+# The deployed (refit-on-everything) bundles are never backtested. Run
+# `vml-run` on each of the five experiment configs to produce walk-forward
+# fold bundles, then point `bundles` at those directories
+# (experiments/models/<experiment>_<run_id> — NOT the *_deployment_* dirs;
+# vml-backtest refuses deployment bundles). Trades in year Y are scored by
+# the fold-Y models: "update the models at the end of each calendar year",
+# purged and embargoed, exactly as the upstream fold calendar defines it.
+#
+# Requires the versioned price panel (data/datasets/prices_vX.Y/ — see
+# src/portfolio/prices.py for the contract; built upstream).
+
+name = "allprob_top25_5models"
+dataset_version = "dataset_v1.1"
+prices_version = "prices_v1.0"
+
+bundles = [
+    # replace <run_id> with the vml-run bundle run ids:
+    "experiments/models/lightgbm_ranks-technical_1y_cagr_ge_0_ada3e6fe_<run_id>",
+    "experiments/models/lightgbm_ranks-valuation-ranks-trend_2y_cagr_ge_0_e8728774_<run_id>",
+    "experiments/models/lightgbm_ranks-valuation-ranks-trend_5y_cagr_ge_0_a27572a9_<run_id>",
+    "experiments/models/lightgbm_features-valuation-features-trend_2y_beat_spy_a1dee823_<run_id>",
+    "experiments/models/lightgbm_features-valuation-features-trend_5y_beat_spy_b1c59ec7_<run_id>",
+]
+
+[signal]
+combine = "product"        # AllProb
+min_score = 0.5            # every model must clear this individually
+max_staleness_days = 200   # latest completed-quarter snapshot, no older
+
+[[filters]]
+column = "revenue_trend_20q"
+op = ">"
+value = 0.0
+
+[[filters]]
+column = "tangibles_trend_20q"
+op = ">"
+value = 0.0
+
+# The live screen has no liquidity floor; stating one here is mandatory
+# (there is none upstream, and microcaps dominate the universe). The
+# threshold is a modeling decision and is reported with the result.
+# To reproduce the unfiltered screen instead, replace this table with:
+#   investability = "none"
+[[investability]]
+column = "dollar_volume_3m"
+op = ">="
+value = 100000.0
+
+[portfolio]
+strategy = "buy_and_hold"
+top_k = 25
+weighting = "score"        # weight ∝ AllProb
+monthly_cash = 1000.0
+
+[execution]
+cost_bps = 35.0            # per side; microcap spreads are not free
+benchmark_cost_bps = 0.0
+max_quote_age_days = 3     # candidate must have printed within 3 days
+delist_after_days = 30     # silent for 30+ days => liquidated at final print
+
+# [window] is optional: buys default to the intersection of the five
+# bundles' fold years; valuation runs to the price panel's end.
+# [window]
+# start = 2016-01-01
+# end = 2021-12-31
+# valuation_end = 2024-12-31

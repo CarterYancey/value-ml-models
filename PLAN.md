@@ -177,7 +177,7 @@ within the invariants (no local splits, no feature engineering):
   upstream feature request with its own point-in-time discipline.
 
 ### Phase 4 — Portfolio construction & backtest
-- Turn top-K probability rankings into quarterly-rebalanced portfolios.
+- Turn top-K probability rankings into periodically-rebalanced portfolios.
 - Backtest with transaction-cost assumptions and an explicit investability
   filter built from the liquidity columns (`log_marketcap`,
   `dollar_volume_3m`, `amihud_12m`); the filter is part of the reported model
@@ -186,6 +186,54 @@ within the invariants (no local splits, no feature engineering):
   drawdowns and era-sliced results, not just CAGR.
 - Explicitly test the "defensive" hypothesis from the project's motivation:
   in market-down years, do selected stocks lose less?
+
+**Backtest architecture** (implemented in `src/portfolio/`, CLI
+`vml-backtest`, configs in `experiments/portfolios/`). The design turns
+on four decisions:
+
+1. **Models: walk-forward fold bundles, never deployment bundles.** A
+   deployment model is refit on all labeled history, so its scores have
+   seen any backtest period. A trade date in year Y is scored by each
+   bundle's fold-Y model (trained purged/embargoed on years before Y) —
+   the "retrain at each year-end" cadence *is* the upstream fold
+   calendar. Corollary: buy decisions are structurally confined to fold
+   years — the sealed holdout years have no fold model and can never
+   host a decision (valuation of held positions may run past the last
+   fold year; the report flags that tuning on this tail erodes the
+   holdout).
+2. **Cross-sections: from `dataset.parquet`, never from historical
+   inference directories.** Inference builds are survivor-only by
+   construction (data/manual.md §9); the training dataset keeps every
+   later-delisted stock. The monthly point-in-time cross-section is each
+   stock's latest *completed-quarter* median-kind snapshot (the quarter's
+   median touch date is unknowable mid-quarter), staleness-capped, and
+   carries only key/feature/rank columns — labels are structurally out of
+   filters' and scorers' reach. Disclosed approximation vs. live
+   inference: features up to a quarter-plus stale, ranks relative to the
+   snapshot's own quarter.
+3. **Prices: a separate versioned upstream artifact**
+   (`data/datasets/prices_vX.Y/` — contract in `src/portfolio/prices.py`:
+   daily total-return-adjusted closes per permaticker carried through
+   each stock's final print, plus the benchmark series that defines the
+   trading calendar). The model dataset carries no price paths, and
+   rebuilding them here from raw Sharadar tables is the banned easy join.
+   Delistings follow the upstream label convention: a position whose
+   series goes silent is liquidated at its final print.
+4. **The benchmark leg runs through the same engine** — same deposit
+   dates, same execution/cost mechanics, same valuation calendar — so
+   strategy-vs-benchmark differences are strategy, not accounting.
+
+The pieces compose config-first (one TOML per strategy, hashed and
+logged under scheme `backtest` — backtest configurations count as trials):
+declared score combination (`product`/`mean`/`min`/`mean_rank`) with an
+optional per-model floor; declared column filters plus a *mandatory*
+investability statement (filters or an explicit, report-flagged
+`"none"`); mandatory `cost_bps`; and a `Strategy` interface (candidates +
+cash + positions → orders) so richer portfolio management (rebalancing,
+sells, position caps) plugs in without touching the engine. Reports lead
+with money-weighted (XIRR) and time-weighted results, drawdowns, the
+per-year era slice with crash tagging, the defensive-hypothesis check,
+the candidate funnel, and full provenance.
 
 ## 5. Anti-overfitting rules
 

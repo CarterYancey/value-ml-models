@@ -11,12 +11,16 @@ point-in-time fundamentals, whether a stock will meet return criteria over
 the next year"), and turn ranked probabilities into portfolios — evaluated
 honestly (walk-forward, purged, era-sliced).
 
-Status: **Phases 1–2 built; Phase 3 (better models) in progress.** The
-experiment harness, split application with guardrails, trivial baselines,
-depth-limited decision trees with rule extraction, era-sliced evaluation,
-and the deployment path are implemented. Phase 3 adds random forests and
-LightGBM, precision-first tuning knobs, and a sweep harness that expands
-one config into a whole grid of experiments. See [TODO.md](TODO.md).
+Status: **Phases 1–2 built; Phase 3 (better models) in progress; the
+Phase 4 backtest harness is built** (awaiting the upstream price panel).
+The experiment harness, split application with guardrails, trivial
+baselines, depth-limited decision trees with rule extraction, era-sliced
+evaluation, and the deployment path are implemented. Phase 3 adds random
+forests and LightGBM, precision-first tuning knobs, and a sweep harness
+that expands one config into a whole grid of experiments. Phase 4 adds
+`vml-backtest`: config-driven portfolio simulation over walk-forward fold
+models against a benchmark under identical cash flows. See
+[TODO.md](TODO.md).
 
 ## Documentation map
 
@@ -249,6 +253,56 @@ the score columns. Both deployment
 training and inference runs are logged to `experiments/results.csv` under
 their own schemes (`deployment` / `inference`), so they never mix with
 walk-forward trial accounting.
+
+### Backtesting: simulate the strategy without the deployed models
+
+A deployment bundle is refit on all labeled history, so backtesting it
+would score the past with a model that has seen it. `vml-backtest`
+instead consumes the **walk-forward fold bundles** `vml-run` saves: a
+trade in year Y is scored by the fold-Y models — trained, purged, and
+embargoed on years before Y — which is exactly "update the models at the
+end of each calendar year". One TOML in `experiments/portfolios/`
+declares the whole strategy (see
+`experiments/portfolios/allprob_top25_5models.toml` for the live
+five-model AllProb screen):
+
+- the model bundles and how their scores combine (`product` = AllProb,
+  `mean`, `min`, `mean_rank`) plus an optional per-model `min_score`;
+- declared column filters (e.g. `revenue_trend_20q > 0`) — validated
+  against the manifest's feature/rank groups, so a screen can never
+  reference a label;
+- a **mandatory investability statement**: `[[investability]]` filters or
+  the explicit `investability = "none"` (reported with a warning);
+- the strategy (`buy_and_hold`: monthly deposit, buy top-K by combined
+  score, score- or equal-weighted, never sell) and **mandatory
+  `cost_bps`** — new portfolio-management ideas plug in as new `Strategy`
+  classes without touching the engine;
+- the simulation window (defaults: buys span the intersection of every
+  bundle's fold years — the sealed holdout years have no fold model and
+  can never host a buy decision; valuation runs to the price panel's
+  end).
+
+Monthly point-in-time cross-sections come from `dataset.parquet` itself
+(latest completed-quarter median-kind snapshot per stock, staleness-
+capped) — **not** from historical inference directories, which are
+survivor-only by construction. The benchmark leg (SPY) runs through the
+same engine with identical deposits and accounting. Reports lead with
+money- and time-weighted results, the per-year era slice with crash
+years tagged, and the defensive-hypothesis check; runs are logged to
+`experiments/results.csv` under scheme `backtest`.
+
+```sh
+# 1. train walk-forward bundles for the models the strategy uses
+uv run vml-run experiments/<model-config>.toml
+# 2. point the portfolio config's `bundles` at those directories, then
+uv run vml-backtest experiments/portfolios/allprob_top25_5models.toml
+```
+
+Backtests additionally require a versioned **price panel**
+`data/datasets/prices_vX.Y/` (`prices.parquet` — daily total-return
+adjusted closes per permaticker, survivorship-free through each stock's
+final print; `benchmark.parquet`; `manifest.json`), built upstream by
+`sharadar-dataset` — the contract lives in `src/portfolio/prices.py`.
 
 The sealed `holdout` scheme and the diagnostic schemes (`entity_holdout`,
 `random_kfold`) are refused by the runner — they raise errors unless
