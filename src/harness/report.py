@@ -1,10 +1,12 @@
 """Markdown report for one experiment run.
 
-Every report cites `split_folds.parquet` (the frozen fold definition:
-boundaries + role counts), reports effective sample sizes (Σ
-sample_weight) cross-checked against `manifest.json["effective_rows"]`,
-states the number of configurations tried against the cell, and presents
-per-fold (era-sliced) metrics — pooled numbers never stand alone.
+Structured for how the results actually get read: the era-sliced metrics
+table and the high-confidence-picks profile lead, calibration follows,
+and the provenance/accounting material every report must still carry
+(`split_folds.parquet` citation, effective sample sizes, crash-era
+breakout with intervals) lives in an appendix — cited, not headlined.
+Pooled numbers never stand alone, and the pooled ranking metrics pick
+per year (per-fold model scores aren't comparable — see eval.era).
 """
 
 from __future__ import annotations
@@ -13,6 +15,18 @@ import json
 from pathlib import Path
 
 import pandas as pd
+
+from eval.era import crash_label
+
+#: Metric families shown in the era table, in reading order. Anything
+#: logged but not listed here (roc_auc, recall_at_k, thr_for_prec_*)
+#: stays in the results store — logged, never headlined.
+_ERA_LEAD = ("n_test", "base_rate")
+_ERA_PREFIXES = (
+    "precision_at_", "conf_at_", "n_at_prec_", "recall_at_prec_",
+    "precision_at_thr_", "recall_at_thr_", "n_at_thr_",
+)
+_ERA_TAIL = ("brier", "base_rate_brier", "pr_auc")
 
 
 def _fmt(v) -> str:
@@ -24,14 +38,51 @@ def _fmt(v) -> str:
 
 
 def _table(df: pd.DataFrame) -> str:
+    """GitHub-flavored table with cells padded to the column width, so the
+    raw markdown reads as an aligned table too (long metric names over
+    short values used to make the source unreadable)."""
     cols = list(df.columns)
-    lines = [
-        "| " + " | ".join(cols) + " |",
-        "| " + " | ".join("---" for _ in cols) + " |",
+    cells = [[_fmt(row[c]) for c in cols] for _, row in df.iterrows()]
+    widths = [
+        max(len(str(c)), *(len(r[i]) for r in cells)) if cells else len(str(c))
+        for i, c in enumerate(cols)
     ]
-    for _, row in df.iterrows():
-        lines.append("| " + " | ".join(_fmt(row[c]) for c in cols) + " |")
+    def line(values):
+        return "| " + " | ".join(
+            v.ljust(w) for v, w in zip(values, widths)
+        ) + " |"
+    lines = [
+        line([str(c) for c in cols]),
+        line(["-" * w for w in widths]),
+    ]
+    lines += [line(r) for r in cells]
     return "\n".join(lines)
+
+
+def _era_view(era_df: pd.DataFrame) -> pd.DataFrame:
+    """The era table as reported: crash years tagged inline, columns in
+    reading order, the logged-only columns left to the results store."""
+    df = era_df.copy()
+    def tag(era):
+        if str(era) == "pooled":
+            return "pooled*"
+        label = crash_label(int(era)) if str(era).isdigit() else None
+        return f"{era} ({label})" if label else str(era)
+    df["era"] = df["era"].map(tag)
+    ordered = ["era"] + [c for c in _ERA_LEAD if c in df.columns]
+    for prefix in _ERA_PREFIXES:
+        ordered += [c for c in df.columns if c.startswith(prefix)
+                    and c not in ordered]
+    ordered += [c for c in _ERA_TAIL if c in df.columns]
+    return df[ordered]
+
+
+def _baseline_view(baseline_df: pd.DataFrame) -> pd.DataFrame:
+    """Baseline comparison trimmed to the columns that get read."""
+    drop = [c for c in baseline_df.columns
+            if c == "roc_auc" or c.startswith("recall_at_")
+            or c.startswith("thr_for_prec_") or c.startswith("conf_at_")]
+    return baseline_df.drop(columns=drop)
 
 
 def write_report(
@@ -45,6 +96,7 @@ def write_report(
     configurations_tried: int,
     era_df: pd.DataFrame | None = None,
     crash_df: pd.DataFrame | None = None,
+    confidence_df: pd.DataFrame | None = None,
     baseline_df: pd.DataFrame | None = None,
     calibration_path: Path | None = None,
     pr_curve_path: Path | None = None,
@@ -97,12 +149,129 @@ def write_report(
         )
     lines.append("")
 
-    lines.append("## Fold definition (cited from `split_folds.parquet`)")
+    if era_df is not None and not era_df.empty:
+        lines.append("## Era-sliced metrics (one row per test year)")
+        lines.append("")
+        lines.append(
+            "Sliced on the calendar year of each test row's `snapshot_date` "
+            "(one walk-forward fold per year); crash eras are tagged inline. "
+            "`conf_at_K` is the mean score of the top-K picks; "
+            "`base_rate_brier` is the no-skill Brier the model must beat. "
+            "\\*The pooled row picks per year — per-fold model scores are "
+            "not comparable, so a global top-K would just take the "
+            "hottest-scoring fold's picks; it is context for the era rows, "
+            "never a stand-alone result. ROC-AUC and recall@K are logged "
+            "in the results store, not shown here."
+        )
+        lines.append("")
+        lines.append(_table(_era_view(era_df)))
+        lines.append("")
+    else:
+        lines.append("## Metrics per fold")
+        lines.append("")
+        lines.append(
+            "One row per fold; pooled numbers are never presented alone."
+        )
+        lines.append("")
+        metric_rows = [{"fold": fr["fold"], **fr["metrics"]}
+                       for fr in fold_results]
+        lines.append(_table(pd.DataFrame(metric_rows)))
+        lines.append("")
+
+    if confidence_df is not None and not confidence_df.empty:
+        lines.append("## High-confidence picks (pooled)")
+        lines.append("")
+        lines.append(
+            "How many high-confidence calls the model made, how confident "
+            "it was, and how precise they were — no pre-chosen score "
+            "threshold needed. `top N/yr` rows pick per test year; "
+            "`score >= p` rows (probabilistic models) count every name at "
+            "or above that probability, pooled."
+        )
+        lines.append("")
+        lines.append(_table(confidence_df))
+        lines.append("")
+
+    source_bundle = artifacts.get("source_bundle") if artifacts else None
+    if not score_figures_rendered:
+        lines.append("## Calibration")
+        lines.append("")
+        lines.append(
+            "Not redrawn for this evaluation: the score-only figures "
+            "depend on the model's test scores alone, which this run did "
+            "not change — it re-scored the saved model under different "
+            "metric parameters. See the training run's report"
+            + (f" (bundle `{source_bundle}`)" if source_bundle else "")
+            + " for the figures."
+        )
+        lines.append("")
+    elif calibration_path is not None:
+        lines.append("## Calibration")
+        lines.append("")
+        lines.append(
+            "Reliability curve on pooled test predictions (each fold's "
+            "model is refit on its own expanding window). Downstream "
+            "ranking trusts these probabilities; single trees are "
+            "expected to calibrate poorly (known Phase-1 limitation, "
+            "PLAN §2)."
+        )
+        lines.append("")
+        lines.append(f"![calibration curve]({Path(calibration_path).name})")
+        lines.append("")
+
+    lines.append("## Baseline comparison")
+    lines.append("")
+    if baseline_df is not None and not baseline_df.empty:
+        lines.append(
+            "Latest completed baseline runs against this same cell "
+            "(dataset, scheme, horizon, label), metrics averaged across "
+            "folds. A model that does not clear these is a negative "
+            "result, reported as such."
+        )
+        lines.append("")
+        lines.append(_table(_baseline_view(baseline_df)))
+    else:
+        lines.append(
+            "**No baseline runs recorded for this cell.** Run "
+            "`scripts/run_baselines.py` first; a result without its "
+            "baselines is not reportable."
+        )
+    lines.append("")
+
+    if artifacts and ("rules" in artifacts or "tree_diagram" in artifacts):
+        lines.append("## Interpretability artifacts")
+        lines.append("")
+        if "rules" in artifacts:
+            lines.append(
+                f"- extracted rules (one tree per fold): "
+                f"[{Path(artifacts['rules']).name}]({Path(artifacts['rules']).name})"
+            )
+        if "tree_diagram" in artifacts:
+            fold_note = (
+                f" (fold {artifacts['tree_diagram_fold']}, the widest "
+                "training window)"
+                if "tree_diagram_fold" in artifacts
+                else ""
+            )
+            name = Path(artifacts["tree_diagram"]).name
+            lines.append(f"- tree diagram{fold_note}: [{name}]({name})")
+        lines.append("")
+
+    # ------------------------------------------------- appendix
+    lines.append("## Appendix — provenance & accounting")
     lines.append("")
     lines.append(
-        "Frozen fold manifest for the folds evaluated below — boundaries and "
-        "role counts as built upstream; this report is invalid if the folds "
-        "are redefined."
+        "The material every report must carry (honest-evaluation "
+        "checklist), kept out of the reading path."
+    )
+    lines.append("")
+
+    lines.append("### Fold definition (cited from `split_folds.parquet`)")
+    lines.append("")
+    lines.append(
+        "Frozen fold manifest for the folds evaluated above — boundaries "
+        "and role counts as built upstream; this report is invalid if the "
+        "folds are redefined."
     )
     lines.append("")
     cite_cols = [
@@ -116,7 +285,7 @@ def write_report(
     lines.append(_table(cited[cite_cols]))
     lines.append("")
 
-    lines.append("## Effective sample size")
+    lines.append("### Effective sample size")
     lines.append("")
     lines.append(
         "Σ `sample_weight_{H}y` over the rows actually fitted — the honest "
@@ -145,40 +314,14 @@ def write_report(
         )
         lines.append("")
 
-    lines.append("## Metrics per fold (era-sliced)")
-    lines.append("")
-    lines.append(
-        "One row per walk-forward fold = one test year; pooled numbers are "
-        "never presented alone. Brier is reported only for probabilistic "
-        "scores; ROC-AUC is logged, never headline."
-    )
-    lines.append("")
-    metric_rows = []
-    for fr in fold_results:
-        metric_rows.append({"fold": fr["fold"], **fr["metrics"]})
-    lines.append(_table(pd.DataFrame(metric_rows)))
-    lines.append("")
-
-    if era_df is not None and not era_df.empty:
-        lines.append("## Era-sliced metrics (per test year)")
-        lines.append("")
-        lines.append(
-            "Sliced on the calendar year of each test row's "
-            "`snapshot_date`. The pooled row is context for the era rows, "
-            "never a stand-alone result."
-        )
-        lines.append("")
-        lines.append(_table(era_df))
-        lines.append("")
-
-    lines.append("## Crash-era metrics")
+    lines.append("### Crash-era metrics (with intervals)")
     lines.append("")
     if crash_df is not None and not crash_df.empty:
         from eval.era import CORRELATED_PICKS_CAVEAT
 
         lines.append(
-            "Drawdown eras broken out separately — the defensive thesis is "
-            "only testable here. " + CORRELATED_PICKS_CAVEAT
+            "Drawdown eras broken out with uncertainty — the same years "
+            "are tagged in the era table above. " + CORRELATED_PICKS_CAVEAT
         )
         lines.append("")
         lines.append(_table(crash_df))
@@ -190,90 +333,23 @@ def write_report(
         )
     lines.append("")
 
-    source_bundle = artifacts.get("source_bundle") if artifacts else None
-    if not score_figures_rendered:
-        lines.append("## Discrimination & calibration curves")
+    if score_figures_rendered and (
+        pr_curve_path is not None or roc_curve_path is not None
+    ):
+        lines.append("### Discrimination curves (opt-in)")
         lines.append("")
         lines.append(
-            "Not redrawn for this evaluation. The precision–recall, ROC, "
-            "and calibration curves depend only on the model's scores on "
-            "the test rows, which this run did not change — it re-scored "
-            "the saved model under different metric parameters. See the "
-            "training run's report"
-            + (f" (bundle `{source_bundle}`)" if source_bundle else "")
-            + " for those figures."
+            "Pooled over folds (mind the cross-fold score-comparability "
+            "caveat). Read precision–recall against the base rate; ROC is "
+            "logged against the chance diagonal but never headlined."
         )
         lines.append("")
-    else:
-        if pr_curve_path is not None or roc_curve_path is not None:
-            lines.append("## Discrimination curves")
+        if pr_curve_path is not None:
+            lines.append(f"![PR curve]({Path(pr_curve_path).name})")
             lines.append("")
-            lines.append(
-                "Pooled over folds. Read precision–recall against the base "
-                "rate (the no-skill line moves with prevalence, which is "
-                "extreme in some cells); ROC is logged against the chance "
-                "diagonal but never headlined (CLAUDE.md) — PR-AUC is the "
-                "metric of record."
-            )
+        if roc_curve_path is not None:
+            lines.append(f"![ROC curve]({Path(roc_curve_path).name})")
             lines.append("")
-            if pr_curve_path is not None:
-                lines.append(f"![PR curve]({Path(pr_curve_path).name})")
-                lines.append("")
-            if roc_curve_path is not None:
-                lines.append(f"![ROC curve]({Path(roc_curve_path).name})")
-                lines.append("")
-
-        if calibration_path is not None:
-            lines.append("## Calibration")
-            lines.append("")
-            lines.append(
-                "Reliability curve on pooled test predictions (each fold's "
-                "model is refit on its own expanding window). Downstream "
-                "ranking trusts these probabilities; single trees are "
-                "expected to calibrate poorly (known Phase-1 limitation, "
-                "PLAN §2)."
-            )
-            lines.append("")
-            lines.append(f"![calibration curve]({Path(calibration_path).name})")
-            lines.append("")
-
-    lines.append("## Baseline comparison")
-    lines.append("")
-    if baseline_df is not None and not baseline_df.empty:
-        lines.append(
-            "Latest completed baseline runs against this same cell "
-            "(dataset, scheme, horizon, label), metrics averaged across "
-            "folds. A model that does not clear these is a negative "
-            "result, reported as such."
-        )
-        lines.append("")
-        lines.append(_table(baseline_df))
-    else:
-        lines.append(
-            "**No baseline runs recorded for this cell.** Run "
-            "`scripts/run_baselines.py` first; a result without its "
-            "baselines is not reportable."
-        )
-    lines.append("")
-
-    if artifacts and ("rules" in artifacts or "tree_diagram" in artifacts):
-        lines.append("## Interpretability artifacts")
-        lines.append("")
-        if "rules" in artifacts:
-            lines.append(
-                f"- extracted rules (one tree per fold): "
-                f"[{Path(artifacts['rules']).name}]({Path(artifacts['rules']).name})"
-            )
-        if "tree_diagram" in artifacts:
-            fold_note = (
-                f" (fold {artifacts['tree_diagram_fold']}, the widest "
-                "training window)"
-                if "tree_diagram_fold" in artifacts
-                else ""
-            )
-            name = Path(artifacts["tree_diagram"]).name
-            lines.append(f"- tree diagram{fold_note}: [{name}]({name})")
-        lines.append("")
 
     path.write_text("\n".join(lines))
     return path

@@ -152,6 +152,38 @@ in [PLAN.md](PLAN.md); check items off (and add new ones) as work proceeds.
       before acting on them — microcaps dominate the universe and there is
       no upstream liquidity floor.
 
+## Workflow & tooling (cross-phase)
+
+- [x] Artifact hygiene: generated `reports/` output is git-ignored;
+      `vml-promote` copies a report + its artifacts into the tracked
+      `reports/promoted/<name>/` (sweep summaries too); the sealed
+      final-eval record stays tracked unconditionally; the results
+      ledger `experiments/results.csv` is local. (`harness/promote.py`)
+- [x] Experiment catalog: `vml-experiments` (`list`/`runs`/`show`) joins
+      `experiments/*.toml` with the results ledger — answers "have I run
+      this?", "what's closest to edit from?", "what did it score?"
+      without grepping. (`harness/catalog.py`)
+- [x] Upstream doc sync: `scripts/sync_data_docs.py` copies the dataset
+      docs from the local `radarash-dataset` checkout, records upstream
+      commit + file hashes in `data/upstream.json`; `--check` detects
+      drift. `data/versions.md` (maintained here) maps dataset versions
+      to features; configs declare `min_dataset_version` and the harness
+      enforces it against the loaded manifest.
+- [x] Report overhaul: era table leads with crash years tagged inline and
+      per-year-pick pooled row (global top-K over pooled per-fold scores
+      was wrong — it returned the hottest fold's picks); new
+      high-confidence-picks profile (top-N/yr tiers + `score >= p` counts,
+      no pre-chosen threshold needed); `conf_at_K` (mean score of picks)
+      and `base_rate_brier` (no-skill Brier reference) added; fold
+      definition, effective sample size, and the crash-era CI table moved
+      to a provenance appendix; markdown tables width-padded; PR/ROC
+      curves opt-in (`vml-run --curves`), calibration always drawn.
+- [ ] `vml-experiments` quality-of-life: `--cell` filter (horizon+label),
+      and a `similar <config>` subcommand ranking configs by shared
+      cell/model/features.
+- [ ] Wire `scripts/sync_data_docs.py --check` into the test session or a
+      pre-commit hook on machines that have the upstream checkout.
+
 ## 3 — Phase 3: better models, kept interpretable
 
 ### Models & precision-first tuning
@@ -176,6 +208,11 @@ in [PLAN.md](PLAN.md); check items off (and add new ones) as work proceeds.
 - [ ] Post-hoc calibration (isotonic / Platt) on a purged validation fold.
 - [ ] SHAP: global importance + per-prediction explanations; compare against
       Phase-1 tree rules.
+- [ ] Explainability for forests/LightGBM beyond SHAP: native feature
+      importances (gain + permutation, weighted) as a standard report
+      section; per-prediction reason codes (top signed contributions) as
+      optional columns in `vml-predict` output so a ranking is auditable
+      stock by stock.
 - [ ] Ablations: raw vs. rank vs. sector-rank features; ± technicals;
       ± classification columns (current-state caveat). The sweep harness's
       `[[feature_sets]]` axis is the mechanism.
@@ -238,6 +275,51 @@ in [PLAN.md](PLAN.md); check items off (and add new ones) as work proceeds.
       summaries, and pick Phase-3 candidates for the sealed holdout.
 - [ ] Seed-stability pass on the sweep winner (multi-seed sweep; a config
       whose ranking collapses across seeds is noise, not signal).
+
+## 3.5 — Downturn specialization (PLAN §4 Phase 3.5)
+
+Make crash performance a training/selection objective, not just a report
+slice. All within the invariants: no local splits, no derived features.
+
+- [ ] Regime-emphasis training weights: config-declared multiplier on
+      `sample_weight_{H}y` for training rows whose label windows overlap
+      drawdown eras (disclosed, hashed, reported); report the effective
+      sample size under emphasis so the shrinkage is visible.
+- [ ] Crash-aware `rank_metric` for sweeps: rank candidates by
+      precision/recall-at-precision restricted to crash-era test years
+      (with the Wilson-interval caveat stated in the summary).
+- [ ] Specialist configs: relative (`beat_spy`) labels as the default
+      cell for downturn models; sweep tree/forest/lgbm under regime
+      emphasis and compare against the unemphasized winners on the
+      crash-era table.
+- [ ] Two-stage survival gating: stage-1 survival model
+      (interim target: `label_{H}_cagr_ge_0` until upstream ships a
+      max-drawdown/catastrophe label), stage-2 return model ranks
+      survivors only; evaluate the gate's precision cost outside crashes.
+- [ ] Upstream requests to file: catastrophe/max-drawdown label
+      (`label_{H}_max_drawdown_le_X` or similar); point-in-time
+      market-state context features (drawdown-from-high, index vol) if
+      regime-conditional models ever need them.
+
+## Model families to explore (PLAN §8)
+
+- [ ] Weighted, calibrated logistic regression on the rank feature set —
+      cheapest new family, interpretable coefficients, doubles as a
+      stronger baseline. Fold-internal imputation only, disclosed.
+- [ ] KNN and SVM comparison runs (registered as experiments like any
+      other): rank features only (already scaled), fold-internal
+      imputation, subsampling strategy that respects uniqueness weights;
+      keep unless they beat trees on the precision-floor metrics.
+- [ ] Regression reframe spike: `fwd_{H}_cagr` / `fwd_{H}_excess_cagr`
+      targets exist in the dataset — gradient-boosted quantile regression,
+      threshold the predicted quantiles into the same precision@K frame;
+      winsorize 1y (extreme-return caveat). Compare against the
+      classification cells before going further.
+- [ ] Deep learning goes through upstream first: sequence-shaped dataset
+      variant (per-quarter point-in-time history per stock) is a
+      prerequisite; do not flatten history locally (invariant 4). Then a
+      small TCN/transformer with embedded categoricals, same splits,
+      weights, and era-sliced reporting.
 
 ## 4 — Phase 4: portfolio construction & backtest
 

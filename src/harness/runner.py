@@ -15,7 +15,13 @@ from pathlib import Path
 import pandas as pd
 from sklearn.tree import DecisionTreeClassifier
 
-from eval.era import collect_predictions, crash_era_table, era_table
+from eval.era import (
+    collect_predictions,
+    confidence_profile,
+    crash_era_table,
+    era_table,
+    pooled_metrics,
+)
 from eval.metrics import compute_all
 from eval.plots import render_calibration_plot, render_pr_curve, render_roc_curve
 from explain.rules import render_tree_diagram, rules_text
@@ -43,6 +49,7 @@ def run_experiment(
     config_path: str = "",
     access: SplitAccess = SplitAccess.STANDARD,
     models_dir: str | Path | None = None,
+    discrimination_curves: bool = False,
 ) -> dict:
     """Run a config across its folds. Returns a summary dict; raises after
     logging on failure. With `models_dir` set, the fitted per-fold models
@@ -66,6 +73,7 @@ def run_experiment(
 
     try:
         dataset = Dataset(Path(data_root) / config.dataset_version)
+        config.check_dataset_version(dataset.version)
         feature_cols = config.resolve_feature_columns(dataset)
         folds = (
             dataset.folds(config.scheme, config.horizon_years)
@@ -186,14 +194,14 @@ def run_experiment(
             probabilistic=probabilistic,
             reports_dir=reports_dir,
             artifacts=artifacts,
+            discrimination_curves=discrimination_curves,
         )
         # pooled over all folds' test rows — context for the era slices,
-        # and the single number a sweep can rank candidate configs by
+        # and the single number a sweep can rank candidate configs by.
+        # Ranking metrics pick per year: per-fold scores aren't comparable
         pooled = pd.concat(prediction_frames, ignore_index=True)
-        pooled_metrics = compute_all(
-            pooled["y_true"],
-            pooled["score"],
-            sample_weight=pooled["sample_weight"],
+        pooled_block = pooled_metrics(
+            pooled,
             top_k=config.top_k,
             score_thresholds=config.score_thresholds,
             precision_targets=config.precision_targets,
@@ -204,7 +212,7 @@ def run_experiment(
             "status": "completed",
             "folds": folds,
             "fold_results": fold_results,
-            "pooled_metrics": pooled_metrics,
+            "pooled_metrics": pooled_block,
             "configurations_tried": configurations_tried,
             "report_path": report_path,
             "model_bundle": bundle_path,
@@ -233,15 +241,20 @@ def finalize_run(
     reports_dir: str | Path,
     artifacts: dict | None = None,
     render_score_figures: bool = True,
+    discrimination_curves: bool = False,
 ) -> tuple[Path, int]:
     """Shared tail of a training run and a bundle re-evaluation: era
-    tables, score-only figures (calibration + PR/ROC curves), baseline
-    comparison, report. Returns (report_path, configurations_tried).
+    tables, score-only figures, baseline comparison, report. Returns
+    (report_path, configurations_tried).
 
-    `render_score_figures=False` skips the calibration and PR/ROC curves:
+    `render_score_figures=False` skips the score-only figures entirely:
     they depend on `(y_true, score)` alone, so a re-evaluation of a saved
     model would only redraw the training run's identical figures. The
     report then points back to that run instead.
+
+    `discrimination_curves` opts in to the PR/ROC curve PNGs — the
+    calibration curve is the figure that gets read, so it is the only one
+    drawn by default.
     """
     configurations_tried = store.configurations_tried(
         config.dataset_version, config.scheme, config.horizon_years, config.label
@@ -262,6 +275,7 @@ def finalize_run(
         precision_targets=config.precision_targets,
         probabilistic=probabilistic,
     )
+    confidence_df = confidence_profile(predictions, probabilistic=probabilistic)
 
     calibration_path = pr_curve_path = roc_curve_path = None
     if render_score_figures:
@@ -269,16 +283,17 @@ def finalize_run(
             predictions["y_true"], predictions["score"],
             predictions["sample_weight"],
         )
-        pr_curve_path = render_pr_curve(
-            y, s, w,
-            path=reports_dir / f"{config.name}_pr_curve.png",
-            title=f"{config.name} — precision–recall, pooled over folds",
-        )
-        roc_curve_path = render_roc_curve(
-            y, s, w,
-            path=reports_dir / f"{config.name}_roc_curve.png",
-            title=f"{config.name} — ROC, pooled over folds",
-        )
+        if discrimination_curves:
+            pr_curve_path = render_pr_curve(
+                y, s, w,
+                path=reports_dir / f"{config.name}_pr_curve.png",
+                title=f"{config.name} — precision–recall, pooled over folds",
+            )
+            roc_curve_path = render_roc_curve(
+                y, s, w,
+                path=reports_dir / f"{config.name}_roc_curve.png",
+                title=f"{config.name} — ROC, pooled over folds",
+            )
         if probabilistic:
             calibration_path = render_calibration_plot(
                 y, s, w,
@@ -304,6 +319,7 @@ def finalize_run(
         configurations_tried=configurations_tried,
         era_df=era_df,
         crash_df=crash_df,
+        confidence_df=confidence_df,
         baseline_df=baseline_df,
         calibration_path=calibration_path,
         pr_curve_path=pr_curve_path,
@@ -365,6 +381,13 @@ def _main(argv=None) -> int:
         "(pass --no-save-models to skip)",
     )
     parser.add_argument("--no-save-models", action="store_true")
+    parser.add_argument(
+        "--curves",
+        action="store_true",
+        help="also render the PR/ROC curve PNGs (calibration is always "
+        "drawn for probabilistic models; the discrimination curves are "
+        "opt-in)",
+    )
     args = parser.parse_args(argv)
     try:
         summary = run_config_file(
@@ -373,6 +396,7 @@ def _main(argv=None) -> int:
             results_path=args.results,
             reports_dir=args.reports_dir,
             models_dir=None if args.no_save_models else args.models_dir,
+            discrimination_curves=args.curves,
         )
     except Exception:
         traceback.print_exc()

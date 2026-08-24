@@ -51,6 +51,20 @@ _FEATURES_TABLE_KEYS = frozenset(
 )
 
 
+def parse_dataset_version(version: str) -> tuple[int, ...]:
+    """Numeric tuple for a dataset version ("1.1", "v1.1", "dataset_v1.1"
+    all parse to (1, 1)) — the comparison behind `min_dataset_version`."""
+    v = str(version).strip()
+    v = v.removeprefix("dataset_").removeprefix("v")
+    try:
+        return tuple(int(part) for part in v.split("."))
+    except ValueError as exc:
+        raise ConfigError(
+            f"cannot parse dataset version {version!r} (expected X.Y, "
+            "vX.Y, or dataset_vX.Y)"
+        ) from exc
+
+
 def infer_horizon_years(label: str) -> int | None:
     """The horizon a label name carries, or None when it carries none."""
     m = _HORIZON_IN_LABEL.search(label)
@@ -157,6 +171,10 @@ class ExperimentConfig:
     #: achieving it) subject to precision >= target — the high-precision
     #: strategy's headline trade-off (empty = don't record)
     precision_targets: tuple[float, ...] = ()
+    #: minimum upstream dataset version this config's feature/label needs
+    #: (e.g. the trend features exist only from v1.1) — checked against
+    #: the loaded dataset's manifest version, empty = no requirement
+    min_dataset_version: str = ""
 
     @classmethod
     def from_file(cls, path: str | Path) -> "ExperimentConfig":
@@ -214,10 +232,36 @@ class ExperimentConfig:
             precision_targets=tuple(
                 float(p) for p in raw.get("precision_targets", ())
             ),
+            min_dataset_version=str(raw.get("min_dataset_version", "")),
         )
+        if config.min_dataset_version:
+            parse_dataset_version(config.min_dataset_version)  # fail early
+            if parse_dataset_version(config.dataset_version) < parse_dataset_version(
+                config.min_dataset_version
+            ):
+                raise ConfigError(
+                    f"config {source}: dataset_version "
+                    f"{config.dataset_version!r} is below this config's "
+                    f"min_dataset_version {config.min_dataset_version!r}"
+                )
         if not config.name:
             config = replace(config, name=config.derived_name())
         return config
+
+    def check_dataset_version(self, loaded_version: str) -> None:
+        """Refuse to run against a dataset older than the config requires
+        (e.g. trend features exist only from v1.1). Called by the runner
+        with the manifest's `dataset_version`."""
+        if not self.min_dataset_version:
+            return
+        if parse_dataset_version(loaded_version) < parse_dataset_version(
+            self.min_dataset_version
+        ):
+            raise ConfigError(
+                f"dataset {loaded_version!r} is below this config's "
+                f"min_dataset_version {self.min_dataset_version!r} — see "
+                "data/versions.md for what each dataset version provides"
+            )
 
     def derived_name(self) -> str:
         """Default experiment name: `{model}_{features}_{label}_{hash}`.
@@ -263,6 +307,8 @@ class ExperimentConfig:
             "score_thresholds": list(self.score_thresholds),
             "precision_targets": list(self.precision_targets),
         }
+        if self.min_dataset_version:
+            raw["min_dataset_version"] = self.min_dataset_version
         if self.features is not None:
             raw["features"] = self.features.to_table()
         else:
@@ -302,6 +348,8 @@ class ExperimentConfig:
             payload["exclude_feature_columns"] = list(self.exclude_feature_columns)
         if self.features is not None:
             payload["features"] = self.features.to_table()
+        if self.min_dataset_version:
+            payload["min_dataset_version"] = self.min_dataset_version
         return payload
 
     def canonical_json(self) -> str:

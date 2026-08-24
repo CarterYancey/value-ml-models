@@ -45,7 +45,7 @@ def test_tree_run_produces_full_report_and_artifacts(data_root, tmp_path):
     # era slicing: one row per test year plus a pooled row
     assert "Era-sliced metrics" in report
     assert "| 2016 |" in report and "| 2017 |" in report
-    assert "| pooled |" in report
+    assert "pooled*" in report
 
     # crash eras: fixture years contain none; the report must say so
     assert "Crash-era metrics" in report

@@ -140,6 +140,42 @@ Full contract: [data/manual.md](data/manual.md). The load-bearing points:
   floor). Sweeps change how many configs get tried, not how any one of
   them is measured — see §5 for the accounting.
 
+### Phase 3.5 — Downturn specialization (crash-resistant picks)
+
+The project's core thesis — high-precision picks that survive drawdowns —
+has so far been evaluated (crash-era slices) but not *targeted*: models
+are trained on all eras and merely inspected on the bad ones. This phase
+makes crash performance a first-class training and selection objective,
+within the invariants (no local splits, no feature engineering):
+
+- **Regime-emphasis training weights.** Multiply the mandatory
+  `sample_weight_{H}y` by a disclosed era-emphasis factor that up-weights
+  training rows whose *label windows* overlap drawdown eras. This is a
+  training-time weighting, not a split or a filter — every row stays in,
+  purge/embargo tags untouched — and the emphasis schedule is part of the
+  config (hashed, reported). Risk to check: up-weighting a handful of
+  eras shrinks effective sample size; report Σ(effective weights) under
+  the emphasis so the shrinkage is visible.
+- **Crash-aware model selection.** Rank sweep candidates by crash-era
+  metrics (precision/recall-at-precision restricted to the drawdown test
+  years) instead of pooled numbers — a `rank_metric` over the crash-era
+  table. Wide Wilson intervals are expected; selection across ~4 eras is
+  weak evidence and gets reported as such.
+- **Relative labels as the primary lens** (`beat_spy`): absolute-threshold
+  labels can't see "lost 5% when the market lost 15%" (already stated in
+  Phase 2; here it becomes the default for the specialist models).
+- **Two-stage survival gating.** Stage 1: a "survival" model predicting
+  the *absence* of catastrophe over the horizon; stage 2: the return
+  model ranks only the survivors. Needs upstream labels to do properly —
+  e.g. `label_{H}_max_drawdown_le_{X}` or a delisting/large-loss outcome
+  label — file the request upstream (never derived here). Until then an
+  approximation is `{H}y_cagr_ge_0` as the stage-1 target.
+- **Regime-conditional evaluation, not regime prediction.** Predicting
+  crashes themselves (market timing) is out of scope; the models must be
+  *robust to* crashes, not forecast them. If a market-state feature ever
+  seems necessary (drawdown-from-high, index-level volatility), it is an
+  upstream feature request with its own point-in-time discipline.
+
 ### Phase 4 — Portfolio construction & backtest
 - Turn top-K probability rankings into quarterly-rebalanced portfolios.
 - Backtest with transaction-cost assumptions and an explicit investability
@@ -222,3 +258,29 @@ only** — never model selection, never reported performance:
 - [ ] How to treat pre-2000 training rows: 1997–99 have depressed filing
       coverage and history-gated features are NULL during burn-in; the
       upstream earliest-trustworthy-year verification is still open.
+- [ ] **Other classifier families (KNN, SVM, logistic).** Worth a
+      registered comparison, with eyes open about the fit: none of them
+      handle NULLs natively (imputation must be fold-internal and
+      disclosed — a real friction given "missingness is information"),
+      distance/margin methods need feature scaling (the rank features are
+      already uniform — use those), and KNN/SVM scale poorly to ~300k-row
+      folds (subsampling interacts with the uniqueness weights). A
+      weighted, calibrated logistic regression on the rank set is the
+      cheapest and most interpretable candidate and doubles as another
+      baseline; KNN/SVM are curiosity experiments unless they beat the
+      trees on the precision-floor metrics.
+- [ ] **Regression reframe & deep learning (Phase 5 candidates).**
+      Regression on `fwd_{H}_cagr` / `fwd_{H}_excess_cagr` (columns
+      already exist) then thresholding: gives one model per horizon
+      instead of per cell, calibrated quantiles could drive the
+      precision floor directly; 1y variance is dominated by extreme
+      returns (winsorize or model quantiles, per the upstream caveat).
+      Deep learning only where tabular DL has a real edge: sequence
+      models over a stock's quarterly snapshot history
+      (TCN/transformer) rather than MLPs on flat rows — that needs an
+      upstream sequence-shaped dataset variant (per-quarter history
+      aligned point-in-time), plus embedding-based handling of
+      categoricals. Both keep the same harness discipline: upstream
+      splits, uniqueness weights, era-sliced reporting; interpretability
+      requirement means SHAP/attention inspection is mandatory, not
+      optional.

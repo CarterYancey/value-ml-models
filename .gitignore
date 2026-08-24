@@ -3,6 +3,8 @@ data/**
 !data/**/
 !data/**/.gitkeep
 !data/**/*.md
+# provenance record for the synced upstream docs (scripts/sync_data_docs.py)
+!data/upstream.json
 
 # Saved model bundles: binaries are artifacts; the provenance to
 # recreate them (config + results store + git SHA) is what's committed.
@@ -11,6 +13,23 @@ experiments/models/
 # Inference rankings written by vml-predict (each CSV has a provenance
 # sidecar .meta.json; the run is also logged to the results store).
 predictions/
+
+# Generated evaluation output is working material, not repo content:
+# most runs teach something and then stop mattering. Reports worth
+# review are promoted with `vml-promote` into reports/promoted/, which
+# is tracked. The sealed final-eval record is always tracked — it is the
+# one-shot holdout ledger and must never be lost.
+reports/**
+!reports/**/
+!reports/.gitkeep
+!reports/promoted/**
+!reports/final_eval/**
+!reports/final_evals.csv
+
+# Local trial ledger (append-only, machine-local). Reports quote its
+# configurations-tried counts; promoted reports carry the number even
+# though the raw ledger stays local.
+experiments/results.csv
 
 # Secrets
 .env
