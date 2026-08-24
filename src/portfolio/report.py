@@ -346,6 +346,7 @@ def write_backtest_report(
                         stats["effective_train_size"], 1
                     ),
                     "last_usable_snapshot": stats["last_usable_snapshot"],
+                    "source": stats.get("source", "fit"),
                 }
             )
 
@@ -467,7 +468,10 @@ def write_backtest_report(
                 "One refit per (bundle, trade year) past that bundle's "
                 "folds — trained on rows whose labels were observable by "
                 "Jan 1, all snapshot kinds, delistings included, no "
-                "split tags read:",
+                "split tags read. `source = cache` rows were reused from "
+                "the refit cache (identical by construction: the cache "
+                "key pins train config, dataset version, year, and "
+                "label lag):",
                 "",
                 _table(pd.DataFrame(refit_rows)),
             ]

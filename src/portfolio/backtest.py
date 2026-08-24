@@ -21,7 +21,12 @@ import pandas as pd
 from harness.dataset import Dataset
 from harness.errors import ConfigError, DatasetValidationError
 from harness.results import ResultsStore, git_sha, new_run_id
-from harness.runner import DEFAULT_DATA_ROOT, DEFAULT_REPORTS, DEFAULT_RESULTS
+from harness.runner import (
+    DEFAULT_DATA_ROOT,
+    DEFAULT_MODELS,
+    DEFAULT_REPORTS,
+    DEFAULT_RESULTS,
+)
 from portfolio.config import BacktestConfig
 from portfolio.crosssection import CrossSectionBuilder
 from portfolio.engine import run_simulation
@@ -53,6 +58,12 @@ from portfolio.strategy import BuyAndHoldTopK, build_strategy
 #: among) per-cell walk-forward trials, but still accumulate their own
 #: trial count.
 BACKTEST_SCHEME = "backtest"
+
+#: Where simulated year-end refits are cached across runs (git-ignored,
+#: under the model-bundle directory). A refit is fully determined by
+#: (train config hash, dataset version, trade year, label lag), so runs
+#: that only change strategy parameters reuse the identical models.
+DEFAULT_REFIT_CACHE = DEFAULT_MODELS / "refits"
 
 
 class CandidateFeed:
@@ -157,6 +168,7 @@ def run_backtest(
     data_root: str | Path = DEFAULT_DATA_ROOT,
     results_path: str | Path = DEFAULT_RESULTS,
     reports_dir: str | Path = DEFAULT_REPORTS,
+    refit_cache_dir: str | Path | None = DEFAULT_REFIT_CACHE,
     config_path: str = "",
 ) -> dict:
     """Run one backtest config. Returns a summary dict; raises after
@@ -190,9 +202,14 @@ def run_backtest(
             config, model_set, panel
         )
         # resolve a model per (bundle, trade year) up front: fold models
-        # where folds exist, the model_update policy past them
+        # where folds exist, the model_update policy past them (refits
+        # cached on disk across runs)
         model_set.prepare(
-            buy_years, dataset, config.model_update, config.label_lag_days
+            buy_years,
+            dataset,
+            config.model_update,
+            config.label_lag_days,
+            refit_cache_dir=refit_cache_dir,
         )
         buy_dates = panel.month_first_trading_days(start, buy_end)
         if not buy_dates:
@@ -412,6 +429,18 @@ def _main(argv=None) -> int:
     parser.add_argument("--data-root", default=str(DEFAULT_DATA_ROOT))
     parser.add_argument("--results", default=str(DEFAULT_RESULTS))
     parser.add_argument("--reports-dir", default=str(DEFAULT_REPORTS))
+    parser.add_argument(
+        "--refit-cache",
+        default=str(DEFAULT_REFIT_CACHE),
+        help="directory where simulated year-end refits are cached "
+        "across runs, keyed by (train config hash, dataset version, "
+        f"trade year, label lag) (default {DEFAULT_REFIT_CACHE})",
+    )
+    parser.add_argument(
+        "--no-refit-cache",
+        action="store_true",
+        help="refit from scratch and don't write the cache",
+    )
     args = parser.parse_args(argv)
     try:
         summary = run_backtest_file(
@@ -419,6 +448,7 @@ def _main(argv=None) -> int:
             data_root=args.data_root,
             results_path=args.results,
             reports_dir=args.reports_dir,
+            refit_cache_dir=None if args.no_refit_cache else args.refit_cache,
         )
     except Exception:
         traceback.print_exc()

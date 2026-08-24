@@ -41,7 +41,9 @@ max_staleness_days = 200   # latest completed-quarter snapshot, no older
 # refit on every row whose label window was observable by Jan 1
 # (manual.md §4 rule 7, point-in-time; no split tags read); "frozen"
 # keeps the last fold's model. Those years overlap the sealed holdout
-# era — context, never a selection signal.
+# era — context, never a selection signal. Refits are cached under
+# experiments/models/refits/ keyed by (train config, dataset, year,
+# lag), so strategy-parameter reruns don't refit anything.
 model_update = "refit"
 label_lag_days = 45        # settlement lag before a label counts as known
 

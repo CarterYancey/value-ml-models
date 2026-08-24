@@ -286,9 +286,14 @@ five-model AllProb screen):
   real year-end procedure — the bundle's config refit on every row
   whose label window was observable by Jan 1 of the trade year
   (manual.md §4 rule 7 applied point-in-time; no split tags read, no
-  test set) — while `"frozen"` keeps the last fold's model. Reports
-  flag that these years overlap the sealed holdout era: context, never
-  a selection signal;
+  test set) — while `"frozen"` keeps the last fold's model. Refits are
+  cached on disk (`experiments/models/refits/`, git-ignored) keyed by
+  (train config hash, dataset version, trade year, label lag), so
+  re-running with different strategy parameters reuses the identical
+  models — the report's refit appendix marks each row `fit` or `cache`
+  (`--refit-cache DIR` moves the cache, `--no-refit-cache` bypasses
+  it). Reports flag that these years overlap the sealed holdout era:
+  context, never a selection signal;
 - the simulation window (defaults: buys start at the latest first-fold
   year across the bundles and continue, deposits included, to the price
   panel's end; `[window] start` trims the early thin years).

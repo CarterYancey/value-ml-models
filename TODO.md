@@ -342,7 +342,10 @@ slice. All within the invariants: no local splits, no derived features.
       `model_update` policy serves those years (`refit` = simulated
       point-in-time year-end deployment refits, manual.md §4 rule 7;
       `frozen` = last fold model), with the holdout-era overlap flagged
-      as selection-toxic in every report. Per-model floors via
+      as selection-toxic in every report. Refits are disk-cached
+      across runs (`experiments/models/refits/`, keyed by train config
+      hash + dataset version + year + lag; sidecar-validated before a
+      pickle is trusted). Per-model floors via
       `[signal.min_scores]`; whole-share execution with realized
       profit/ticker in the trade log; artifacts under
       `reports/backtest/<name>_<config-hash>.*`.

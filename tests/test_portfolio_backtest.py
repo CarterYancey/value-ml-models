@@ -1,7 +1,9 @@
 """Signal guardrails and the end-to-end backtest on the miniature
 dataset + price panel: deployment bundles refused, dataset-version pins
-enforced, buys confined to fold years, both legs under identical
+enforced, refits cached and validated, both legs under identical
 deposits, everything logged."""
+
+import json
 
 import pandas as pd
 import pytest
@@ -147,6 +149,60 @@ def test_combine_modes():
 # ------------------------------------------------------------- end to end
 
 
+def test_refit_cache_roundtrip(data_root, wf_bundle_dir, tmp_path):
+    from portfolio.crosssection import CrossSectionBuilder
+
+    dataset = Dataset(data_root / DATASET)
+    cache = tmp_path / "refits"
+    years = [2016, 2017, 2018, 2019]
+
+    first = ModelSet([wf_bundle_dir])
+    first.prepare(years, dataset, "refit", 45, refit_cache_dir=cache)
+    stats1 = first.provenance[0]["refit_stats"]
+    assert {y: s["source"] for y, s in stats1.items()} == {
+        2018: "fit", 2019: "fit"
+    }
+
+    second = ModelSet([wf_bundle_dir])
+    second.prepare(years, dataset, "refit", 45, refit_cache_dir=cache)
+    stats2 = second.provenance[0]["refit_stats"]
+    assert {y: s["source"] for y, s in stats2.items()} == {
+        2018: "cache", 2019: "cache"
+    }
+    for year in (2018, 2019):
+        assert stats2[year]["n_train_rows"] == stats1[year]["n_train_rows"]
+        assert stats2[year]["effective_train_size"] == pytest.approx(
+            stats1[year]["effective_train_size"]
+        )
+    # a cached model scores identically to the one it replaced
+    xs = CrossSectionBuilder(dataset, 200).at(pd.Timestamp("2018-02-01"))
+    col = first.score_columns[0]
+    assert second.score(xs, 2018)[col].tolist() == pytest.approx(
+        first.score(xs, 2018)[col].tolist()
+    )
+
+    # a different label lag is a different fit, not a cache hit
+    other_lag = ModelSet([wf_bundle_dir])
+    other_lag.prepare(
+        [2016, 2017, 2018], dataset, "refit", 30, refit_cache_dir=cache
+    )
+    assert other_lag.provenance[0]["refit_stats"][2018]["source"] == "fit"
+
+    # a sidecar that doesn't vouch for the pickle is not trusted
+    meta_path = next(cache.rglob("refit_y2019_lag45.json"))
+    meta = json.loads(meta_path.read_text())
+    meta["config_hash"] = "deadbeef"
+    meta_path.write_text(json.dumps(meta))
+    tampered = ModelSet([wf_bundle_dir])
+    tampered.prepare(years, dataset, "refit", 45, refit_cache_dir=cache)
+    stats4 = tampered.provenance[0]["refit_stats"]
+    assert stats4[2018]["source"] == "cache"
+    assert stats4[2019]["source"] == "fit"  # refit and re-cached
+    restored = ModelSet([wf_bundle_dir])
+    restored.prepare(years, dataset, "refit", 45, refit_cache_dir=cache)
+    assert restored.provenance[0]["refit_stats"][2019]["source"] == "cache"
+
+
 def test_backtest_end_to_end_with_refits(
     data_root, prices_dir, wf_bundle_dir, tmp_path
 ):
@@ -158,6 +214,7 @@ def test_backtest_end_to_end_with_refits(
         data_root=data_root,
         results_path=results,
         reports_dir=reports,
+        refit_cache_dir=tmp_path / "refits",
     )
     assert summary["status"] == "completed"
     # buys start at the first fold year and keep rolling past the last
@@ -218,6 +275,7 @@ def test_frozen_policy_and_window_start(
         data_root=data_root,
         results_path=tmp_path / "results.csv",
         reports_dir=tmp_path / "reports",
+        refit_cache_dir=tmp_path / "refits",
     )
     # start is honored (2016 skipped), 2018 served by the frozen model
     assert summary["buy_years"] == [2017, 2018]

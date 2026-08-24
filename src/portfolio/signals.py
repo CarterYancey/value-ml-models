@@ -31,7 +31,10 @@ every filter: missingness never passes a screen.
 
 from __future__ import annotations
 
+import json
 import operator
+import pickle
+from datetime import datetime, timezone
 from pathlib import Path
 
 import pandas as pd
@@ -91,12 +94,23 @@ class ModelSet:
         dataset: Dataset,
         policy: str,
         label_lag_days: int,
+        refit_cache_dir: str | Path | None = None,
     ) -> None:
         """Resolve the model for every (bundle, trade year) up front:
         fold model where a fold exists, else the `model_update` policy
         (see the module docstring). Populates `self.provenance` (one
         entry per bundle: fold years used, policy-served years, per-year
-        refit sizes) for the report."""
+        refit sizes) for the report.
+
+        With `refit_cache_dir` set, refits are read from / written to a
+        disk cache keyed by everything that determines the fit — train
+        config hash (params, label, features, seed, dataset version),
+        trade year, label lag — so re-running a backtest with different
+        *strategy* parameters (filters, floors, costs, window) reuses
+        the identical models instead of refitting them. The sidecar is
+        validated before a cached model is trusted; any mismatch or
+        unreadable file falls back to a fresh fit that overwrites it.
+        """
         self._year_models: dict[tuple[int, int], object] = {}
         self.provenance: list[dict] = []
         for i, (d, b) in enumerate(zip(self.bundle_dirs, self.bundles)):
@@ -115,8 +129,9 @@ class ModelSet:
                     if policy == "frozen":
                         self._year_models[(i, year)] = b.fold_models[last]
                     else:
-                        model, stats = _refit_as_of_year(
-                            b, dataset, year, label_lag_days
+                        model, stats = _cached_refit(
+                            b, dataset, year, label_lag_days,
+                            refit_cache_dir,
                         )
                         self._year_models[(i, year)] = model
                         info["refit_stats"][year] = stats
@@ -203,6 +218,109 @@ class ModelSet:
                 frame[list(b.feature_columns)]
             )
         return out
+
+
+#: Bump on any incompatible change to the refit-cache layout — stale
+#: entries are then refit and overwritten instead of trusted.
+REFIT_CACHE_FORMAT = 1
+
+
+def _refit_cache_paths(
+    cache_dir: str | Path, bundle: ModelBundle, year: int, label_lag_days: int
+) -> tuple[Path, Path]:
+    """(model.pkl, sidecar.json) for one cached refit. The directory key
+    is the train config hash — it already pins model params, label,
+    feature selection, seed, and dataset version, which is everything a
+    refit depends on besides (year, lag) in the file name. Bundle run
+    ids are deliberately absent: two training runs of the same config
+    share their refits."""
+    version = bundle.train_config.dataset_version.replace("/", "_")
+    d = Path(cache_dir) / f"{bundle.train_config.config_hash}_{version}"
+    stem = f"refit_y{year}_lag{label_lag_days}"
+    return d / f"{stem}.pkl", d / f"{stem}.json"
+
+
+def _load_cached_refit(
+    model_path: Path,
+    meta_path: Path,
+    bundle: ModelBundle,
+    year: int,
+    label_lag_days: int,
+) -> tuple[object, dict] | None:
+    """A cached refit, or None when absent, unreadable, or its sidecar
+    fails validation (never trust a pickle the sidecar can't vouch
+    for)."""
+    if not (model_path.exists() and meta_path.exists()):
+        return None
+    try:
+        meta = json.loads(meta_path.read_text())
+        expected = {
+            "refit_cache_format": REFIT_CACHE_FORMAT,
+            "config_hash": bundle.train_config.config_hash,
+            "dataset_version": bundle.train_config.dataset_version,
+            "trade_year": year,
+            "label_lag_days": label_lag_days,
+            "feature_columns": list(bundle.feature_columns),
+        }
+        if any(meta.get(k) != v for k, v in expected.items()):
+            return None
+        with open(model_path, "rb") as fh:
+            model = pickle.load(fh)
+    except Exception:
+        return None
+    stats = {
+        k: meta[k]
+        for k in ("n_train_rows", "effective_train_size",
+                  "last_usable_snapshot")
+    }
+    return model, {**stats, "source": "cache"}
+
+
+def _cached_refit(
+    bundle: ModelBundle,
+    dataset: Dataset,
+    year: int,
+    label_lag_days: int,
+    cache_dir: str | Path | None,
+) -> tuple[object, dict]:
+    """`_refit_as_of_year` behind the optional disk cache."""
+    if cache_dir is None:
+        model, stats = _refit_as_of_year(bundle, dataset, year, label_lag_days)
+        return model, {**stats, "source": "fit"}
+    model_path, meta_path = _refit_cache_paths(
+        cache_dir, bundle, year, label_lag_days
+    )
+    cached = _load_cached_refit(
+        model_path, meta_path, bundle, year, label_lag_days
+    )
+    if cached is not None:
+        return cached
+    model, stats = _refit_as_of_year(bundle, dataset, year, label_lag_days)
+    model_path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = model_path.with_suffix(".pkl.tmp")
+    with open(tmp, "wb") as fh:
+        pickle.dump(model, fh)
+    tmp.replace(model_path)
+    meta_path.write_text(
+        json.dumps(
+            {
+                "refit_cache_format": REFIT_CACHE_FORMAT,
+                "config_hash": bundle.train_config.config_hash,
+                "config_name": bundle.train_config.name,
+                "dataset_version": bundle.train_config.dataset_version,
+                "trade_year": year,
+                "label_lag_days": label_lag_days,
+                "feature_columns": list(bundle.feature_columns),
+                "created_utc": datetime.now(timezone.utc).isoformat(
+                    timespec="seconds"
+                ),
+                **stats,
+            },
+            indent=2,
+            sort_keys=True,
+        )
+    )
+    return model, {**stats, "source": "fit"}
 
 
 def _refit_as_of_year(
