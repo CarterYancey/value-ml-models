@@ -48,7 +48,10 @@ from portfolio.signals import (
     apply_filters,
     apply_min_score,
     combine_scores,
+    review_held,
     score_floors,
+    sell_filter_specs,
+    sell_score_floors,
     validate_filter_columns,
 )
 from portfolio.strategy import BuyAndHoldTopK, build_strategy
@@ -67,8 +70,9 @@ DEFAULT_REFIT_CACHE = DEFAULT_MODELS / "refits"
 
 
 class CandidateFeed:
-    """Scored, filtered, priced candidates for one rebalance date, plus
-    the funnel diagnostics the report aggregates."""
+    """Scored, filtered, priced candidates for one rebalance date, a
+    review of the held book against the sell criteria (when the strategy
+    sells), and the funnel diagnostics the report aggregates."""
 
     def __init__(
         self,
@@ -76,18 +80,32 @@ class CandidateFeed:
         model_set: ModelSet,
         config: BacktestConfig,
         stock_source,
+        evaluate_sells: bool = False,
     ):
         self.builder = builder
         self.model_set = model_set
         self.config = config
         self.stock_source = stock_source
         self.floors = score_floors(config, model_set.names)
+        self.evaluate_sells = evaluate_sells
+        self.sell_floors = sell_score_floors(config, model_set.names)
+        self.sell_filters = sell_filter_specs(config)
 
-    def __call__(self, when: pd.Timestamp):
+    def __call__(self, when: pd.Timestamp, held_assets: list):
         config = self.config
         xs = self.builder.at(when)
         scored = self.model_set.score(xs, int(when.year))
         cols = self.model_set.score_columns
+
+        # the held book is judged on the scored, unfiltered
+        # cross-section: dropping out of the top-K or the buy screen is
+        # not a sell — failing the sell criteria is
+        held_review = (
+            review_held(scored, held_assets, self.sell_floors,
+                        self.sell_filters)
+            if self.evaluate_sells
+            else pd.DataFrame(columns=["passes_sell", "sell_reason"])
+        )
 
         after_floor = apply_min_score(scored, self.floors)
         after_filters = apply_filters(after_floor, config.filters)
@@ -121,7 +139,11 @@ class CandidateFeed:
             "n_after_investability": len(after_inv),
             "n_priced": len(priced),
         }
-        return priced, diagnostics
+        if self.evaluate_sells:
+            diagnostics["n_flagged_sell"] = int(
+                (~held_review["passes_sell"]).sum()
+            )
+        return priced, held_review, diagnostics
 
 
 def _derive_window(
@@ -197,6 +219,10 @@ def run_backtest(
         validate_filter_columns(
             config.investability, dataset, "[[investability]]"
         )
+        if config.sell_filters is not None:
+            validate_filter_columns(
+                config.sell_filters, dataset, "[[sell.filters]]"
+            )
 
         buy_years, start, buy_end, valuation_end = _derive_window(
             config, model_set, panel
@@ -238,15 +264,23 @@ def run_backtest(
                 "(survivorship suspicion)"
             )
 
+        strategy = build_strategy(
+            config.strategy, config.top_k, config.weighting
+        )
+        sells = hasattr(strategy, "sell_orders")
+        if config.has_sell_criteria and not sells:
+            raise ConfigError(
+                f"a [sell] section is configured but strategy "
+                f"{config.strategy!r} never sells — use "
+                "'sell_below_criteria' (or drop the section)"
+            )
         stock_source = stock_price_source(panel)
         feed = CandidateFeed(
             CrossSectionBuilder(dataset, config.max_staleness_days),
             model_set,
             config,
             stock_source,
-        )
-        strategy = build_strategy(
-            config.strategy, config.top_k, config.weighting
+            evaluate_sells=sells,
         )
         strategy_result = run_simulation(
             dates=dates,
@@ -263,7 +297,7 @@ def run_backtest(
         bench_source = benchmark_price_source(panel)
         bench_asset = panel.benchmark_name
 
-        def bench_candidates(when: pd.Timestamp):
+        def bench_candidates(when: pd.Timestamp, held_assets: list):
             quote = bench_source.asof(bench_asset, when, 0)
             if quote is None:
                 raise DatasetValidationError(
@@ -273,7 +307,8 @@ def run_backtest(
                 {"asset": [bench_asset], "ticker": [bench_asset],
                  "combined_score": [1.0], "price": [quote[0]]}
             )
-            return frame, {}
+            review = pd.DataFrame(columns=["passes_sell", "sell_reason"])
+            return frame, review, {}
 
         benchmark_result = run_simulation(
             dates=dates,

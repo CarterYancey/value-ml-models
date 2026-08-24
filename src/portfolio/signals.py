@@ -145,14 +145,22 @@ class ModelSet:
             self.provenance.append(info)
 
     def validate_against(self, config: BacktestConfig, dataset: Dataset) -> None:
-        unknown = sorted(set(config.min_scores) - set(self.names))
-        if unknown:
-            raise ConfigError(
-                f"[signal.min_scores] names {unknown} match no loaded "
-                f"bundle; bundles are keyed by their config names: "
-                f"{self.names}"
-            )
-        any_floor = config.min_score is not None or config.min_scores
+        for where, keys in (
+            ("[signal.min_scores]", config.min_scores),
+            ("[sell.min_scores]", config.sell_min_scores),
+        ):
+            unknown = sorted(set(keys) - set(self.names))
+            if unknown:
+                raise ConfigError(
+                    f"{where} names {unknown} match no loaded bundle; "
+                    f"bundles are keyed by their config names: {self.names}"
+                )
+        any_floor = (
+            config.min_score is not None
+            or config.min_scores
+            or config.sell_min_score is not None
+            or config.sell_min_scores
+        )
         for d, b in zip(self.bundle_dirs, self.bundles):
             trained_on = b.train_config.dataset_version
             if trained_on != config.dataset_version:
@@ -432,6 +440,74 @@ def score_floors(config: BacktestConfig, names: list[str]) -> dict[str, float]:
         if floor is not None:
             floors[f"score_{name}"] = float(floor)
     return floors
+
+
+def sell_score_floors(
+    config: BacktestConfig, names: list[str]
+) -> dict[str, float]:
+    """The floors the *sell* criteria use. If [sell] names any floor key,
+    sell floors come solely from [sell] (no silent mixing with the buy
+    floors — a hysteresis band like buy > 0.7 / sell < 0.5 must be
+    stated whole); otherwise the buy floors are inherited."""
+    if config.sell_min_score is not None or config.sell_min_scores:
+        floors: dict[str, float] = {}
+        for name in names:
+            floor = config.sell_min_scores.get(name, config.sell_min_score)
+            if floor is not None:
+                floors[f"score_{name}"] = float(floor)
+        return floors
+    return score_floors(config, names)
+
+
+def sell_filter_specs(config: BacktestConfig) -> tuple[FilterSpec, ...]:
+    """The column screens the sell criteria use: [sell] filters when the
+    key is present (an explicit `filters = []` means none), else the buy
+    [[filters]] inherited."""
+    return (
+        config.filters if config.sell_filters is None else config.sell_filters
+    )
+
+
+def review_held(
+    scored: pd.DataFrame,
+    held_assets: list,
+    floors: dict[str, float],
+    filters: tuple[FilterSpec, ...],
+) -> pd.DataFrame:
+    """Evaluate the held book against the sell criteria on the *scored,
+    unfiltered* cross-section — a stock that merely dropped out of the
+    top-K (or out of the buy screen) is judged here on the criteria
+    alone. Returns one row per held asset: `passes_sell` and, when it
+    fails, a `sell_reason`. A held asset absent from the cross-section
+    (its snapshot aged past the staleness cap — the fundamentals can no
+    longer be verified) fails: missingness never passes a screen."""
+    rows = []
+    by_asset = (
+        scored.set_index("permaticker") if not scored.empty else pd.DataFrame()
+    )
+    for asset in held_assets:
+        reason = ""
+        if asset not in by_asset.index:
+            reason = "not_in_cross_section"
+        else:
+            row = by_asset.loc[asset]
+            for col, floor in floors.items():
+                value = row[col]
+                if pd.isna(value) or not value > floor:
+                    reason = f"score_floor:{col.removeprefix('score_')}"
+                    break
+            if not reason:
+                for spec in filters:
+                    value = row[spec.column]
+                    if pd.isna(value) or not _OPS[spec.op](value, spec.value):
+                        reason = f"filter:{spec.column}"
+                        break
+        rows.append(
+            {"asset": asset, "passes_sell": not reason, "sell_reason": reason}
+        )
+    return pd.DataFrame(
+        rows, columns=["asset", "passes_sell", "sell_reason"]
+    ).set_index("asset")
 
 
 def combine_scores(

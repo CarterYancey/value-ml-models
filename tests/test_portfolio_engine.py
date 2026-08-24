@@ -7,13 +7,15 @@ import pytest
 from portfolio.engine import run_simulation
 from portfolio.prices import SeriesPriceSource
 from portfolio.report import max_drawdown, twr_cagr, xirr
-from portfolio.strategy import BuyAndHoldTopK
+from portfolio.strategy import BuyAndHoldTopK, SellBelowCriteria
 
 D1, D2, D3 = (
     pd.Timestamp("2016-01-04"),
     pd.Timestamp("2016-02-01"),
     pd.Timestamp("2016-03-01"),
 )
+
+_NO_REVIEW = pd.DataFrame(columns=["passes_sell", "sell_reason"])
 
 
 def _series(values: dict) -> pd.Series:
@@ -23,12 +25,13 @@ def _series(values: dict) -> pd.Series:
 
 
 def _one_asset_candidates(price: float):
-    def fn(when):
+    def fn(when, held):
         return (
             pd.DataFrame(
                 {"asset": ["A"], "ticker": ["AAA"],
                  "combined_score": [1.0], "price": [price]}
             ),
+            _NO_REVIEW,
             {},
         )
 
@@ -145,8 +148,12 @@ def test_delisting_liquidates_at_final_print():
 def test_no_candidates_holds_cash():
     source = SeriesPriceSource({})
 
-    def empty_candidates(when):
-        return pd.DataFrame(columns=["asset", "combined_score", "price"]), {}
+    def empty_candidates(when, held):
+        return (
+            pd.DataFrame(columns=["asset", "combined_score", "price"]),
+            _NO_REVIEW,
+            {},
+        )
 
     result = run_simulation(
         dates=[D1, D2],
@@ -169,7 +176,7 @@ def test_score_weighting_splits_cash_proportionally():
         {"A": _series({D1: 10.0}), "B": _series({D1: 5.0})}
     )
 
-    def candidates(when):
+    def candidates(when, held):
         return (
             pd.DataFrame(
                 {
@@ -180,6 +187,7 @@ def test_score_weighting_splits_cash_proportionally():
                     "price": [10.0, 5.0],
                 }
             ),
+            _NO_REVIEW,
             {},
         )
 
@@ -200,6 +208,99 @@ def test_score_weighting_splits_cash_proportionally():
     assert buys.loc["B", "shares"] == pytest.approx(50.0)
     # per-model score columns are carried into the trade log
     assert buys.loc["A", "score_m1"] == pytest.approx(0.6)
+
+
+def test_sell_below_criteria_sells_and_reinvests_same_month():
+    """D1: buy A. D2: A fails the sell criteria -> sold; the proceeds
+    plus the deposit buy B the same month."""
+    source = SeriesPriceSource(
+        {"A": _series({D1: 10.0, D2: 12.0}), "B": _series({D2: 5.0})}
+    )
+
+    def feed(when, held):
+        if when == D1:
+            frame = pd.DataFrame(
+                {"asset": ["A"], "ticker": ["AAA"],
+                 "combined_score": [1.0], "price": [10.0]}
+            )
+            review = _NO_REVIEW
+        else:
+            frame = pd.DataFrame(
+                {"asset": ["B"], "ticker": ["BBB"],
+                 "combined_score": [1.0], "price": [5.0]}
+            )
+            review = pd.DataFrame(
+                {"passes_sell": [False],
+                 "sell_reason": ["score_floor:m1"]},
+                index=pd.Index(held, name="asset"),
+            )
+        return frame, review, {}
+
+    result = run_simulation(
+        dates=[D1, D2],
+        buy_dates={D1, D2},
+        deposit=1000.0,
+        price_source=source,
+        strategy=SellBelowCriteria(top_k=1, weighting="equal"),
+        candidates_fn=feed,
+        cost_bps=0.0,
+        delist_after_days=30,
+    )
+    trades = result.trades
+    sell = trades[trades["side"] == "sell"].iloc[0]
+    assert sell["asset"] == "A"
+    assert sell["reason"] == "criteria:score_floor:m1"
+    assert sell["shares"] == 100  # the whole position
+    assert sell["profit"] == pytest.approx(200.0)  # bought 1000, sold 1200
+    # D2 buy of B spends deposit + proceeds: 2200 -> 440 shares at 5
+    buy_b = trades[(trades["side"] == "buy") & (trades["asset"] == "B")]
+    assert buy_b.iloc[0]["gross"] == pytest.approx(2200.0)
+    assert buy_b.iloc[0]["shares"] == 440
+    m = result.monthly.set_index("date")
+    assert m.loc[D2, "n_held"] == 1
+    assert result.rebalance_log.set_index("date").loc[D2, "n_sold"] == 1
+
+
+def test_top_k_dropout_is_not_a_sell():
+    """The defining distinction: A drops out of the candidate list (not
+    top-K any more) but still passes the sell criteria -> held, no
+    sell; the deposit buys the new top pick."""
+    source = SeriesPriceSource(
+        {"A": _series({D1: 10.0, D2: 10.0}), "B": _series({D2: 5.0})}
+    )
+
+    def feed(when, held):
+        if when == D1:
+            frame = pd.DataFrame(
+                {"asset": ["A"], "ticker": ["AAA"],
+                 "combined_score": [1.0], "price": [10.0]}
+            )
+            review = _NO_REVIEW
+        else:
+            frame = pd.DataFrame(  # A is no longer a candidate
+                {"asset": ["B"], "ticker": ["BBB"],
+                 "combined_score": [1.0], "price": [5.0]}
+            )
+            review = pd.DataFrame(
+                {"passes_sell": [True], "sell_reason": [""]},
+                index=pd.Index(held, name="asset"),
+            )
+        return frame, review, {}
+
+    result = run_simulation(
+        dates=[D1, D2],
+        buy_dates={D1, D2},
+        deposit=1000.0,
+        price_source=source,
+        strategy=SellBelowCriteria(top_k=1, weighting="equal"),
+        candidates_fn=feed,
+        cost_bps=0.0,
+        delist_after_days=30,
+    )
+    assert (result.trades["side"] == "buy").all()  # no sells at all
+    m = result.monthly.set_index("date")
+    assert m.loc[D2, "n_held"] == 2  # A held, B added
+    assert m.loc[D2, "total_value"] == pytest.approx(2000.0)
 
 
 def test_xirr_matches_closed_form():

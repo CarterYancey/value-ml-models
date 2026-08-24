@@ -21,6 +21,9 @@ from portfolio.signals import (
     apply_filters,
     apply_min_score,
     combine_scores,
+    review_held,
+    sell_filter_specs,
+    sell_score_floors,
     validate_filter_columns,
 )
 
@@ -147,6 +150,108 @@ def test_combine_modes():
 
 
 # ------------------------------------------------------------- end to end
+
+
+def test_review_held_verdicts():
+    scored = pd.DataFrame(
+        {
+            "permaticker": [1, 2, 3],
+            "score_m": [0.9, 0.3, 0.9],
+            "trend": [1.0, 1.0, -1.0],
+        }
+    )
+    review = review_held(
+        scored,
+        held_assets=[1, 2, 3, 4],  # 4 is not in the cross-section
+        floors={"score_m": 0.5},
+        filters=(FilterSpec("trend", ">", 0.0),),
+    )
+    assert review.loc[1, "passes_sell"]
+    assert not review.loc[2, "passes_sell"]
+    assert review.loc[2, "sell_reason"] == "score_floor:m"
+    assert not review.loc[3, "passes_sell"]
+    assert review.loc[3, "sell_reason"] == "filter:trend"
+    assert not review.loc[4, "passes_sell"]
+    assert review.loc[4, "sell_reason"] == "not_in_cross_section"
+
+
+def test_sell_criteria_inherit_and_override(wf_bundle_dir):
+    name = "wf_tree_3y_beat_spy"
+    inherit = _bt_config(wf_bundle_dir, signal={"min_score": 0.7})
+    assert sell_score_floors(inherit, [name]) == {f"score_{name}": 0.7}
+    assert sell_filter_specs(inherit) == inherit.filters
+
+    # hysteresis: buy > 0.7, sell < 0.5; sell filters cleared explicitly
+    band = _bt_config(
+        wf_bundle_dir,
+        signal={"min_score": 0.7},
+        sell={"min_score": 0.5, "filters": []},
+    )
+    assert sell_score_floors(band, [name]) == {f"score_{name}": 0.5}
+    assert sell_filter_specs(band) == ()
+    assert band.config_hash != inherit.config_hash
+
+    with pytest.raises(ConfigError, match="unknown \\[sell\\] keys"):
+        BacktestConfig.from_dict(
+            {
+                "name": "x",
+                "dataset_version": DATASET,
+                "prices_version": PRICES,
+                "bundles": ["b"],
+                "investability": "none",
+                "execution": {"cost_bps": 1.0},
+                "sell": {"max_score": 1.0},
+            }
+        )
+
+
+def test_sell_backtest_end_to_end(
+    data_root, prices_dir, wf_bundle_dir, tmp_path
+):
+    # a sell floor above every attainable tree score forces criteria
+    # sells of everything bought the month before
+    config = _bt_config(
+        wf_bundle_dir,
+        name="bt_sell",
+        portfolio={"strategy": "sell_below_criteria", "top_k": 2,
+                   "weighting": "equal", "monthly_cash": 1000.0},
+        sell={"min_score": 1.5},
+        window={"end": __import__("datetime").date(2017, 12, 31)},
+    )
+    summary = run_backtest(
+        config,
+        data_root=data_root,
+        results_path=tmp_path / "results.csv",
+        reports_dir=tmp_path / "reports",
+        refit_cache_dir=tmp_path / "refits",
+    )
+    trades = summary["strategy_result"].trades
+    criteria = trades[trades["reason"].astype(str).str.startswith("criteria:")]
+    assert not criteria.empty
+    assert (criteria["side"] == "sell").all()
+    report = (
+        tmp_path / "reports" / "backtest"
+        / f"bt_sell_{config.config_hash}.md"
+    ).read_text()
+    assert "sell discipline" in report
+    assert "criteria sells:" in report
+    assert "sell floors: " in report
+
+
+def test_sell_section_needs_a_selling_strategy(
+    data_root, prices_dir, wf_bundle_dir, tmp_path
+):
+    config = _bt_config(
+        wf_bundle_dir, name="bt_sell_mismatch", sell={"min_score": 0.5}
+    )
+    with pytest.raises(ConfigError, match="never sells"):
+        run_backtest(
+            config,
+            data_root=data_root,
+            results_path=tmp_path / "results.csv",
+            reports_dir=tmp_path / "reports",
+            refit_cache_dir=tmp_path / "refits",
+        )
 
 
 def test_refit_cache_roundtrip(data_root, wf_bundle_dir, tmp_path):

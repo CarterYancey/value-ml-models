@@ -85,10 +85,15 @@ def run_simulation(
 ) -> SimulationResult:
     """Run one portfolio leg over `dates` (ascending valuation dates;
     those in `buy_dates` also receive the deposit and a rebalance).
-    `candidates_fn(date) -> (candidates, diagnostics)` supplies the
-    scored, filtered, priced candidate frame (columns at least `asset`,
-    `combined_score`, `price`; `ticker` and `score_*` columns are
-    carried into the trade log when present)."""
+    `candidates_fn(date, held_assets) -> (candidates, held_review,
+    diagnostics)` supplies the scored, filtered, priced candidate frame
+    (columns at least `asset`, `combined_score`, `price`; `ticker` and
+    `score_*` columns are carried into the trade log when present) and a
+    review of the held book against the sell criteria (asset-indexed,
+    `passes_sell`/`sell_reason`; empty when the strategy never sells).
+    Strategies exposing `sell_orders(date, held_review, positions)` have
+    those sells executed before their buys, so proceeds join the month's
+    investable cash."""
     cost_rate = float(cost_bps) / 10_000.0
     cash = 0.0
     positions: dict[object, Position] = {}
@@ -159,18 +164,20 @@ def run_simulation(
             total_deposits += flow
             cashflows.append((when, -flow))
 
-            candidates, diagnostics = candidates_fn(when)
-            orders = strategy.orders(
-                when, candidates, cash,
-                {a: p.shares for a, p in positions.items()},
+            candidates, held_review, diagnostics = candidates_fn(
+                when, list(positions)
             )
             cand_info = (
                 candidates.set_index("asset")
                 if not candidates.empty
                 else pd.DataFrame()
             )
-            n_bought = 0
-            for order in orders:
+
+            n_bought = n_sold = 0
+
+            def execute(order):
+                nonlocal cash, holdings_value, total_costs, costs_today
+                nonlocal n_bought, n_sold
                 before = len(trade_rows)
                 cash, holdings_value = _execute(
                     order, when, cost_rate, cash, holdings_value,
@@ -182,11 +189,33 @@ def run_simulation(
                     costs_today += trade_rows[-1]["cost"]
                     if trade_rows[-1]["side"] == "buy":
                         n_bought += 1
+                    else:
+                        n_sold += 1
+
+            # sells first: their proceeds are investable this month
+            sell_fn = getattr(strategy, "sell_orders", None)
+            n_orders = 0
+            if sell_fn is not None:
+                sells = sell_fn(
+                    when, held_review,
+                    {a: p.shares for a, p in positions.items()},
+                )
+                n_orders += len(sells)
+                for order in sells:
+                    execute(order)
+            buys = strategy.orders(
+                when, candidates, cash,
+                {a: p.shares for a, p in positions.items()},
+            )
+            n_orders += len(buys)
+            for order in buys:
+                execute(order)
             rebalance_rows.append(
                 {
                     "date": when,
-                    "n_orders": len(orders),
+                    "n_orders": n_orders,
                     "n_bought": n_bought,
+                    "n_sold": n_sold,
                     "cash_after": cash,
                     **diagnostics,
                 }
@@ -270,7 +299,7 @@ def _execute(
                 "asset": order.asset,
                 "ticker": position.ticker,
                 "side": "buy",
-                "reason": "rebalance",
+                "reason": order.reason,
                 "shares": shares,
                 "price": price,
                 "price_date": when,
@@ -316,7 +345,7 @@ def _execute(
                 "asset": order.asset,
                 "ticker": position.ticker,
                 "side": "sell",
-                "reason": "rebalance",
+                "reason": order.reason,
                 "shares": shares,
                 "price": price,
                 "price_date": when,

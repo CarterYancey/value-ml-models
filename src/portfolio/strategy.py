@@ -25,12 +25,13 @@ from harness.errors import ConfigError
 class Order:
     """One instruction to the engine. Buys are cash-sized (the engine
     converts to shares at the execution price, net of costs); sells are
-    share-sized."""
+    share-sized. `reason` lands verbatim in the trade log."""
 
     asset: object
     side: str  # "buy" | "sell"
     cash_amount: float = 0.0
     shares: float = 0.0
+    reason: str = "rebalance"
 
 
 class BuyAndHoldTopK:
@@ -71,8 +72,47 @@ class BuyAndHoldTopK:
         ]
 
 
+class SellBelowCriteria(BuyAndHoldTopK):
+    """Buy-and-hold with a sell discipline: at every rebalance, any held
+    position that fails the *sell criteria* is sold entirely (proceeds
+    join that month's investable cash); buying is exactly
+    `BuyAndHoldTopK`.
+
+    The distinction that defines this strategy: falling out of the
+    top-K is never a sell. A held stock that still clears the criteria
+    simply stops receiving new shares. The engine hands `sell_orders` a
+    review of the held book evaluated on the full scored cross-section
+    (portfolio.signals.review_held), so the verdict is independent of
+    what the buy screen and ranking selected this month. The sell
+    criteria default to the buy criteria; a separate `[sell]` section
+    (looser floors, different filters) makes the band explicit —
+    including a stricter-than-buy band, which can sell and immediately
+    rebuy: state your criteria with intent.
+    """
+
+    def sell_orders(
+        self, date, held_review: pd.DataFrame, positions: dict
+    ) -> list[Order]:
+        orders = []
+        if held_review is None or held_review.empty:
+            return orders
+        for asset, row in held_review.iterrows():
+            shares = positions.get(asset, 0.0)
+            if shares > 0 and not row["passes_sell"]:
+                orders.append(
+                    Order(
+                        asset=asset,
+                        side="sell",
+                        shares=shares,
+                        reason=f"criteria:{row['sell_reason']}",
+                    )
+                )
+        return orders
+
+
 STRATEGIES = {
     "buy_and_hold": BuyAndHoldTopK,
+    "sell_below_criteria": SellBelowCriteria,
 }
 
 

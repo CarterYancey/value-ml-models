@@ -72,10 +72,25 @@ op = ">="
 value = 100000.0
 
 [portfolio]
-strategy = "buy_and_hold"
+strategy = "buy_and_hold"  # or "sell_below_criteria" (see [sell] below)
 top_k = 25
 weighting = "score"        # weight ∝ AllProb
 monthly_cash = 1000.0
+
+# strategy = "sell_below_criteria" adds a sell discipline: at each
+# rebalance, any HELD position failing the sell criteria is sold
+# entirely (proceeds fund that month's buys). Falling out of the top_k
+# alone is never a sell — a holding that still clears the criteria just
+# stops receiving new shares. Without a [sell] section the buy criteria
+# (min_score/min_scores + [[filters]]) are the sell criteria; a [sell]
+# section makes a hysteresis band explicit:
+# [sell]
+# min_score = 0.5            # sell only when a model drops below 0.5
+#                            # (buys still require > 0.7)
+# filters = []               # explicit []: no column screens on sells
+# # [[sell.filters]] tables and [sell.min_scores] overrides also work.
+# A holding whose snapshot has aged out of the cross-section fails the
+# criteria (missingness never passes a screen) and is sold.
 
 [execution]
 cost_bps = 35.0            # per side; microcap spreads are not free

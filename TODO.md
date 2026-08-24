@@ -382,9 +382,14 @@ slice. All within the invariants: no local splits, no derived features.
 - [ ] Pick and justify investability thresholds (microcaps dominate;
       report sensitivity of the headline result to the floor).
 - [ ] Equal-weight-universe benchmark as a second comparison leg.
+- [x] Sell discipline: `sell_below_criteria` strategy — held positions
+      failing the sell criteria are sold at rebalance (top-K drop-out
+      alone is never a sell); optional `[sell]` section for a separate
+      criteria band (hysteresis), inherited from the buy criteria
+      otherwise; sells logged with per-cause reasons.
 - [ ] Richer strategies behind the `Strategy` interface: periodic full
-      rebalance, sell rules (score decay / stop-loss), position caps,
-      partial-fill / integer-share realism.
+      rebalance, stop-loss / trailing-stop sells, position caps,
+      partial trimming (sell down to weight instead of all-or-nothing).
 - [ ] Cross-section rank freshness: ranks in a backtest cross-section are
       relative to each snapshot's own quarter. Consider an upstream
       "as-of re-rank" artifact if this approximation ever drives results.

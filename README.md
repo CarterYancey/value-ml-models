@@ -275,11 +275,17 @@ five-model AllProb screen):
   the explicit `investability = "none"` (reported with a warning);
 - per-model floors via `[signal.min_scores]` (bundle name → floor,
   overriding the scalar `min_score`);
-- the strategy (`buy_and_hold`: monthly deposit, buy top-K by combined
-  score, score- or equal-weighted, whole shares — the budget remainder
-  stays in cash — never sell) and **mandatory `cost_bps`** — new
-  portfolio-management ideas plug in as new `Strategy` classes without
-  touching the engine;
+- the strategy and **mandatory `cost_bps`**: `buy_and_hold` (monthly
+  deposit, buy top-K by combined score, score- or equal-weighted, whole
+  shares — the budget remainder stays in cash — never sell) or
+  `sell_below_criteria` (same buying, plus: any held position failing
+  the *sell criteria* at a rebalance is sold entirely, proceeds funding
+  that month's buys — falling out of the top-K alone is never a sell,
+  and a holding whose snapshot aged out of the cross-section fails).
+  The sell criteria default to the buy criteria; an optional `[sell]`
+  section (own `min_score`/`min_scores`/`filters`) states a hysteresis
+  band explicitly (buy > 0.7, sell < 0.5). New portfolio-management
+  ideas plug in as new `Strategy` classes without touching the engine;
 - the `model_update` policy for trade years past a bundle's last fold
   (the fold calendar stops where test labels stop being observable, but
   a live portfolio keeps trading): `"refit"` (default) simulates the

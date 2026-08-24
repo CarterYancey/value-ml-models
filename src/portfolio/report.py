@@ -22,6 +22,11 @@ import pandas as pd  # noqa: E402
 from eval.era import crash_label  # noqa: E402
 from harness.report import _table  # noqa: E402
 from portfolio.engine import SimulationResult  # noqa: E402
+from portfolio.signals import (  # noqa: E402
+    sell_filter_specs,
+    sell_score_floors,
+)
+from portfolio.strategy import STRATEGIES  # noqa: E402
 
 _DAYS_PER_YEAR = 365.25
 
@@ -220,6 +225,11 @@ def write_backtest_report(
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
 
+    strategy_cls = STRATEGIES.get(config.strategy)
+    strategy_sells = strategy_cls is not None and hasattr(
+        strategy_cls, "sell_orders"
+    )
+
     headline = headline_table(strategy_result, benchmark_result)
     headline_view = headline.copy()
     for col in ("mwr_annualized", "twr_cagr", "max_drawdown"):
@@ -272,10 +282,15 @@ def write_backtest_report(
                     f"- mean {desc}: {reb[col].mean():.1f} "
                     f"(min {int(reb[col].min())})"
                 )
-    delisted = 0
+    delisted = criteria_sells = 0
     if not strategy_result.trades.empty:
-        delisted = int(
-            (strategy_result.trades["reason"] == "delisted").sum()
+        reasons = strategy_result.trades["reason"].astype(str)
+        delisted = int((reasons == "delisted").sum())
+        criteria_sells = int(reasons.str.startswith("criteria:").sum())
+    if strategy_sells:
+        coverage_lines.append(
+            f"- criteria sells: {criteria_sells} (per-cause breakdown in "
+            "the trades CSV `reason` column)"
         )
     coverage_lines.append(
         f"- forced delisting liquidations: {delisted} (final-print "
@@ -295,6 +310,41 @@ def write_backtest_report(
         )
     else:
         floor_line = f", per-model floor score > {config.min_score}"
+
+    sell_lines = []
+    if strategy_sells:
+        sell_lines.append(
+            f"- sell discipline (`{config.strategy}`): a held position "
+            "failing the sell criteria at a rebalance is sold entirely "
+            "(proceeds fund that month's buys); falling out of the top "
+            f"{config.top_k} alone is never a sell. A holding whose "
+            "snapshot has aged out of the cross-section fails the "
+            "criteria."
+        )
+        s_floors = sell_score_floors(config, model_set.names)
+        s_filters = sell_filter_specs(config)
+        own_floors = (
+            config.sell_min_score is not None or config.sell_min_scores
+        )
+        floor_desc = (
+            ", ".join(
+                f"`{c.removeprefix('score_')}` > {v}"
+                for c, v in s_floors.items()
+            )
+            or "(none)"
+        )
+        filter_desc = (
+            "; ".join(f"`{f.describe()}`" for f in s_filters) or "(none)"
+        )
+        sell_lines.append(
+            f"- sell floors{'' if own_floors else ' (inherited from buy)'}: "
+            f"{floor_desc}"
+        )
+        sell_lines.append(
+            "- sell filters"
+            f"{'' if config.sell_filters is not None else ' (inherited from buy)'}: "
+            f"{filter_desc}"
+        )
 
     inv_lines = (
         [f"- `{f.describe()}`" for f in config.investability]
@@ -404,6 +454,7 @@ def write_backtest_report(
         *inv_lines,
         f"- selection: top {config.top_k} by combined score, "
         f"`{config.weighting}`-weighted; strategy `{config.strategy}`",
+        *sell_lines,
         f"- costs: {config.cost_bps} bps per side (benchmark "
         f"{config.benchmark_cost_bps} bps)",
         "",

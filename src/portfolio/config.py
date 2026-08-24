@@ -105,6 +105,18 @@ class BacktestConfig:
     #: days after `snapshot_date + horizon` before a label counts as
     #: observable for refits (terminal-month averaging + settlement)
     label_lag_days: int = 45
+
+    # --- sell criteria (optional [sell] section) --------------------------
+    #: whether a [sell] section was given; selling strategies without one
+    #: inherit the buy criteria (floors + filters) as the sell criteria
+    has_sell_criteria: bool = False
+    #: if [sell] names any floor key, sell floors come solely from these
+    #: two (no silent mixing with the buy floors)
+    sell_min_score: float | None = None
+    sell_min_scores: dict = field(default_factory=dict)
+    #: None = inherit the buy [[filters]]; [] (an explicit empty
+    #: `filters = []`) = no column screens on sells
+    sell_filters: tuple[FilterSpec, ...] | None = None
     #: a snapshot older than this at the trade date drops out of the
     #: cross-section (stale fundamentals are not a tradable signal)
     max_staleness_days: int = 200
@@ -219,6 +231,39 @@ class BacktestConfig:
                 '[[investability]] tables or the string "none"'
             )
 
+        sell_raw = raw.get("sell")
+        has_sell_criteria = sell_raw is not None
+        sell_min_score, sell_min_scores, sell_filters = None, {}, None
+        if has_sell_criteria:
+            if not isinstance(sell_raw, dict):
+                raise ConfigError(
+                    f"backtest config {source}: [sell] must be a table "
+                    "(min_score, min_scores, filters)"
+                )
+            unknown = sorted(set(sell_raw) - {"min_score", "min_scores",
+                                              "filters"})
+            if unknown:
+                raise ConfigError(
+                    f"backtest config {source}: unknown [sell] keys "
+                    f"{unknown}; expected min_score, min_scores, filters"
+                )
+            if "min_score" in sell_raw:
+                sell_min_score = float(sell_raw["min_score"])
+            raw_scores = sell_raw.get("min_scores", {})
+            if not isinstance(raw_scores, dict):
+                raise ConfigError(
+                    f"backtest config {source}: [sell.min_scores] must be "
+                    "a table of bundle-name = floor entries"
+                )
+            sell_min_scores = {
+                str(k): float(v) for k, v in raw_scores.items()
+            }
+            if "filters" in sell_raw:
+                sell_filters = tuple(
+                    FilterSpec.from_table(t, source, "[[sell.filters]]")
+                    for t in sell_raw["filters"]
+                )
+
         pf = raw.get("portfolio", {})
         weighting = pf.get("weighting", "score")
         if weighting not in WEIGHTINGS:
@@ -273,6 +318,10 @@ class BacktestConfig:
             min_scores=min_scores,
             model_update=model_update,
             label_lag_days=int(signal.get("label_lag_days", 45)),
+            has_sell_criteria=has_sell_criteria,
+            sell_min_score=sell_min_score,
+            sell_min_scores=sell_min_scores,
+            sell_filters=sell_filters,
             max_staleness_days=int(signal.get("max_staleness_days", 200)),
             filters=filters,
             investability=investability,
@@ -317,6 +366,16 @@ class BacktestConfig:
             added["label_lag_days"] = self.label_lag_days
         if self.fractional_shares:
             added["fractional_shares"] = True
+        if self.has_sell_criteria:
+            added["sell"] = {
+                "min_score": self.sell_min_score,
+                "min_scores": dict(sorted(self.sell_min_scores.items())),
+                "filters": (
+                    None
+                    if self.sell_filters is None
+                    else [f.to_table() for f in self.sell_filters]
+                ),
+            }
         return {
             **added,
             "name": self.name,
