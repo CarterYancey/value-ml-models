@@ -1,0 +1,110 @@
+# Backtest of the live five-model screen (vml-predict --trends + manual
+# filtering), made honest:
+#
+# - every model score > 0.5, revenue_trend_20q > 0, tangibles_trend_20q > 0;
+# - rank and size by AllProb = product of the five scores (a conviction
+#   ranking, not a joint probability — the scores are correlated);
+# - first trading day of each month: deposit $1000 and buy the top 25,
+#   AllProb-weighted; buy and hold; benchmark gets identical deposits.
+#
+# The deployed (refit-on-everything) bundles are never backtested. Run
+# `vml-run` on each of the five experiment configs to produce walk-forward
+# fold bundles, then point `bundles` at those directories
+# (experiments/models/<experiment>_<run_id> — NOT the *_deployment_* dirs;
+# vml-backtest refuses deployment bundles). Trades in year Y are scored by
+# the fold-Y models: "update the models at the end of each calendar year",
+# purged and embargoed, exactly as the upstream fold calendar defines it.
+#
+# Requires the versioned price panel (data/datasets/prices_vX.Y/ — see
+# src/portfolio/prices.py for the contract; built upstream).
+
+name = "allprob_top25_5models"
+dataset_version = "dataset_v1.1"
+prices_version = "prices_v1.0"
+
+bundles = [
+    # replace <run_id> with the vml-run bundle run ids:
+    "experiments/models/lightgbm_ranks-technical_1y_cagr_ge_0_ada3e6fe_<run_id>",
+    "experiments/models/lightgbm_ranks-valuation-ranks-trend_2y_cagr_ge_0_e8728774_<run_id>",
+    "experiments/models/lightgbm_ranks-valuation-ranks-trend_5y_cagr_ge_0_a27572a9_<run_id>",
+    "experiments/models/lightgbm_features-valuation-features-trend_2y_beat_spy_a1dee823_<run_id>",
+    "experiments/models/lightgbm_features-valuation-features-trend_5y_beat_spy_b1c59ec7_<run_id>",
+]
+
+[signal]
+combine = "product"        # AllProb
+min_score = 0.5            # every model must clear this individually
+max_staleness_days = 200   # latest completed-quarter snapshot, no older
+# Trade years past a bundle's last walk-forward fold (the fold calendar
+# stops where test labels stop being observable, but the portfolio keeps
+# trading): "refit" simulates the real year-end procedure — the config
+# refit on every row whose label window was observable by Jan 1
+# (manual.md §4 rule 7, point-in-time; no split tags read); "frozen"
+# keeps the last fold's model. Those years overlap the sealed holdout
+# era — context, never a selection signal. Refits are cached under
+# experiments/models/refits/ keyed by (train config, dataset, year,
+# lag), so strategy-parameter reruns don't refit anything.
+model_update = "refit"
+label_lag_days = 45        # settlement lag before a label counts as known
+
+# Per-model floors override min_score, keyed by bundle config name:
+# [signal.min_scores]
+# "lightgbm_ranks-technical_1y_cagr_ge_0_ada3e6fe" = 0.7
+
+[[filters]]
+column = "revenue_trend_20q"
+op = ">"
+value = 0.0
+
+[[filters]]
+column = "tangibles_trend_20q"
+op = ">"
+value = 0.0
+
+# The live screen has no liquidity floor; stating one here is mandatory
+# (there is none upstream, and microcaps dominate the universe). The
+# threshold is a modeling decision and is reported with the result.
+# To reproduce the unfiltered screen instead, replace this table with:
+#   investability = "none"
+[[investability]]
+column = "dollar_volume_3m"
+op = ">="
+value = 100000.0
+
+[portfolio]
+strategy = "buy_and_hold"  # or "sell_below_criteria" (see [sell] below)
+top_k = 25
+weighting = "score"        # weight ∝ AllProb
+monthly_cash = 1000.0
+
+# strategy = "sell_below_criteria" adds a sell discipline: at each
+# rebalance, any HELD position failing the sell criteria is sold
+# entirely (proceeds fund that month's buys). Falling out of the top_k
+# alone is never a sell — a holding that still clears the criteria just
+# stops receiving new shares. Without a [sell] section the buy criteria
+# (min_score/min_scores + [[filters]]) are the sell criteria; a [sell]
+# section makes a hysteresis band explicit:
+# [sell]
+# min_score = 0.5            # sell only when a model drops below 0.5
+#                            # (buys still require > 0.7)
+# filters = []               # explicit []: no column screens on sells
+# # [[sell.filters]] tables and [sell.min_scores] overrides also work.
+# A holding whose snapshot has aged out of the cross-section fails the
+# criteria (missingness never passes a screen) and is sold.
+
+[execution]
+cost_bps = 35.0            # per side; microcap spreads are not free
+benchmark_cost_bps = 0.0
+max_quote_age_days = 3     # candidate must have printed within 3 days
+delist_after_days = 30     # silent for 30+ days => liquidated at final print
+# whole shares by default (a buy budget's remainder stays in cash);
+# fractional_shares = true restores exact budget spending
+
+# [window] is optional. Buys default to starting at the latest
+# first-fold year across the bundles and keep rolling (deposits
+# included) to the panel's end, with post-fold years served per
+# model_update; `start` trims the early, thinly-trained years.
+# [window]
+# start = 2010-01-01
+# end = 2024-12-31
+# valuation_end = 2026-06-30

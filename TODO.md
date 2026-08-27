@@ -323,15 +323,76 @@ slice. All within the invariants: no local splits, no derived features.
 
 ## 4 — Phase 4: portfolio construction & backtest
 
-- [ ] Ranking → quarterly-rebalanced top-K portfolio.
-- [ ] Investability filter from `log_marketcap`, `dollar_volume_3m`,
-      `amihud_12m`; filter definition reported with the model.
-- [ ] Transaction-cost model (microcap fidelity is an open question,
-      PLAN §8).
-- [ ] Benchmarks: SPY and equal-weight universe; drawdowns and era-sliced
-      results, not just CAGR.
-- [ ] Defensive-hypothesis test: in market-down years, do selected stocks
-      lose less?
+- [x] Backtest harness (`src/portfolio/`, CLI `vml-backtest`, one TOML
+      per strategy in `experiments/portfolios/`; design in PLAN §4):
+      walk-forward fold bundles score each trade year (deployment
+      bundles refused; buys structurally confined to fold years),
+      monthly point-in-time cross-sections from `dataset.parquet`
+      (latest completed-quarter median snapshot, staleness-capped, no
+      label columns), declared score combination
+      (`product`/`mean`/`min`/`mean_rank`) + per-model floor + validated
+      column filters, buy-and-hold top-K strategy behind a pluggable
+      `Strategy` interface, benchmark leg through the same engine under
+      identical deposits, XIRR/TWR/drawdown/per-year-era report with
+      defensive-hypothesis check, every run logged under scheme
+      `backtest`. Exemplar config:
+      `experiments/portfolios/allprob_top25_5models.toml` (the live
+      five-model AllProb screen).
+      Deposits keep rolling past a bundle's last fold year: the
+      `model_update` policy serves those years (`refit` = simulated
+      point-in-time year-end deployment refits, manual.md §4 rule 7;
+      `frozen` = last fold model), with the holdout-era overlap flagged
+      as selection-toxic in every report. Refits are disk-cached
+      across runs (`experiments/models/refits/`, keyed by train config
+      hash + dataset version + year + lag; sidecar-validated before a
+      pickle is trusted). Per-model floors via
+      `[signal.min_scores]`; whole-share execution with realized
+      profit/ticker in the trade log; artifacts under
+      `reports/backtest/<name>_<config-hash>.*`.
+- [x] Investability filter mechanism: `[[investability]]` column screens
+      are a mandatory config field (explicit `investability = "none"`
+      opts out and is flagged in the report). Choosing honest thresholds
+      from `log_marketcap` / `dollar_volume_3m` / `amihud_12m` is still
+      open (below).
+- [x] Transaction-cost mechanism: flat per-side `cost_bps`, required in
+      every config (no default); costs paid inside TWR. Microcap
+      fidelity (spread/impact models) is an open question, PLAN §8.
+- [x] SPY benchmark under identical cash flows; drawdowns and per-year
+      era slices with crash tagging in every report.
+- [x] Defensive-hypothesis check: benchmark down-years broken out in the
+      report (not testable when the window has none — the report says
+      so).
+- [x] Versioned price panel `data/datasets/prices_vX.Y/` (consumer
+      contract in `src/portfolio/prices.py`; builder
+      `scripts/build_price_panel.py`): extracted from the raw
+      `SEP.closeadj` / `SFP` tables — the labels' own price source —
+      via the `TICKERS` ticker→permaticker mapping, restricted to a
+      pinned dataset's universe, with mapping/cleaning/coverage stats
+      and raw-pull provenance in the manifest. The one sanctioned
+      raw-table read in this repo: outcome price paths only, never
+      features. Build it locally with the upstream raw dir symlinked
+      (e.g. `data/raw -> ~/radarash-dataset/data/raw`):
+      `python scripts/build_price_panel.py data/raw dataset_v1.1
+      --out-version prices_v1.0`.
+- [ ] Run the real backtest of the live five-model screen once the
+      panel is built and the five walk-forward bundles exist
+      (`vml-run` each model config, fill in the bundle run ids, then
+      `vml-backtest experiments/portfolios/allprob_top25_5models.toml`);
+      promote the report.
+- [ ] Pick and justify investability thresholds (microcaps dominate;
+      report sensitivity of the headline result to the floor).
+- [ ] Equal-weight-universe benchmark as a second comparison leg.
+- [x] Sell discipline: `sell_below_criteria` strategy — held positions
+      failing the sell criteria are sold at rebalance (top-K drop-out
+      alone is never a sell); optional `[sell]` section for a separate
+      criteria band (hysteresis), inherited from the buy criteria
+      otherwise; sells logged with per-cause reasons.
+- [ ] Richer strategies behind the `Strategy` interface: periodic full
+      rebalance, stop-loss / trailing-stop sells, position caps,
+      partial trimming (sell down to weight instead of all-or-nothing).
+- [ ] Cross-section rank freshness: ranks in a backtest cross-section are
+      relative to each snapshot's own quarter. Consider an upstream
+      "as-of re-rank" artifact if this approximation ever drives results.
 
 ## Upstream coordination / watch list
 
@@ -340,5 +401,9 @@ slice. All within the invariants: no local splits, no derived features.
       suspicion (PLAN §8).
 - [ ] Restated-dimension dataset variant (decision 0009) needed for the
       restated ablation.
+- [x] ~~Versioned price panel for Phase-4 backtests~~ — resolved locally:
+      `scripts/build_price_panel.py` extracts it from the raw
+      SEP/SFP/TICKERS tables (see §4 above), so no upstream build stage
+      is needed. Upstream only needs to keep shipping `data/raw/`.
 - [ ] Any feature request discovered during modeling → file upstream, new
       dataset version (never engineered here).

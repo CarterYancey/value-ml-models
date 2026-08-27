@@ -275,6 +275,66 @@ def build_mini_dataset(root: Path, version: str = "dataset_v0.0-test") -> Path:
     return out
 
 
+PRICES_VERSION = "prices_v0.0-test"
+#: this permaticker's price series ends here — the panel's stand-in for a
+#: delisting (the series simply stops; the final print is what you got)
+DELISTED_PERMATICKER = 100010
+DELIST_LAST_PRINT = date(2017, 6, 30)
+
+
+def build_mini_prices(root: Path, version: str = PRICES_VERSION) -> Path:
+    """Write a miniature price panel matching the portfolio.prices
+    contract: daily total-return-adjusted closes for every fixture
+    permaticker (one of which stops printing mid-sample), plus a
+    benchmark series whose dates define the trading calendar."""
+    out = root / version
+    out.mkdir(parents=True, exist_ok=True)
+    days = pd.bdate_range("2010-01-04", "2021-06-30")
+    n = np.arange(len(days), dtype=float)
+
+    bench = 100.0 * (1.06 ** (n / 252.0)) * (1.0 + 0.02 * np.sin(n / 37.0))
+    benchmark = pd.DataFrame({"date": days.date, "closeadj": bench})
+
+    frames = []
+    for permaticker in PERMATICKERS:
+        rng = np.random.default_rng(permaticker)
+        drift = float(rng.uniform(0.0, 0.15))
+        base = float(rng.uniform(5.0, 80.0))
+        wiggle = 1.0 + 0.05 * np.sin(n / 23.0 + permaticker % 7)
+        close = base * ((1.0 + drift) ** (n / 252.0)) * wiggle
+        stock_days = days
+        if permaticker == DELISTED_PERMATICKER:
+            keep = days <= pd.Timestamp(DELIST_LAST_PRINT)
+            stock_days, close = days[keep], close[: keep.sum()]
+        frames.append(
+            pd.DataFrame(
+                {
+                    "permaticker": permaticker,
+                    "date": stock_days.date,
+                    "closeadj": close,
+                }
+            )
+        )
+    prices = pd.concat(frames, ignore_index=True)
+
+    prices.to_parquet(out / "prices.parquet")
+    benchmark.to_parquet(out / "benchmark.parquet")
+    (out / "manifest.json").write_text(
+        json.dumps(
+            {
+                "prices_version": version,
+                "benchmark": "SPY",
+                "start_date": str(days[0].date()),
+                "end_date": str(days[-1].date()),
+                "rows": len(prices),
+                "permatickers": len(PERMATICKERS),
+            },
+            indent=2,
+        )
+    )
+    return out
+
+
 @pytest.fixture(scope="session")
 def data_root(tmp_path_factory) -> Path:
     root = tmp_path_factory.mktemp("datasets")
@@ -285,3 +345,38 @@ def data_root(tmp_path_factory) -> Path:
 @pytest.fixture(scope="session")
 def dataset_dir(data_root) -> Path:
     return data_root / "dataset_v0.0-test"
+
+
+@pytest.fixture(scope="session")
+def prices_dir(data_root) -> Path:
+    return build_mini_prices(data_root)
+
+
+@pytest.fixture(scope="session")
+def wf_bundle_dir(data_root, tmp_path_factory) -> Path:
+    """A real walk-forward ModelBundle over the fixture's 3y folds
+    (2016, 2017), for backtest tests."""
+    from harness.config import ExperimentConfig
+    from harness.runner import run_experiment
+
+    tmp = tmp_path_factory.mktemp("wf_models")
+    config = ExperimentConfig.from_dict(
+        {
+            "name": "wf_tree_3y_beat_spy",
+            "dataset_version": "dataset_v0.0-test",
+            "scheme": "walkforward",
+            "horizon_years": 3,
+            "label": "label_3y_beat_spy",
+            "feature_groups": ["features", "ranks"],
+            "model": {"name": "decision_tree", "max_depth": 3},
+            "top_k": [5],
+        }
+    )
+    summary = run_experiment(
+        config,
+        data_root=data_root,
+        results_path=tmp / "results.csv",
+        reports_dir=tmp / "reports",
+        models_dir=tmp / "models",
+    )
+    return Path(summary["model_bundle"])
