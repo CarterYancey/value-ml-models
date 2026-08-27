@@ -12,6 +12,7 @@ from __future__ import annotations
 import traceback
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
 from sklearn.tree import DecisionTreeClassifier
 
@@ -30,7 +31,12 @@ from harness.dataset import Dataset, SplitAccess
 from harness.model_store import ModelBundle
 from harness.report import write_report
 from harness.results import ResultsStore, git_sha, new_run_id
-from models.registry import BASELINE_MODELS, build_model
+from models.registry import (
+    BASELINE_MODELS,
+    build_model,
+    check_target_labels,
+    model_target,
+)
 
 DEFAULT_DATA_ROOT = Path("data/datasets")
 DEFAULT_RESULTS = Path("experiments/results.csv")
@@ -67,11 +73,19 @@ def run_experiment(
         "seed": config.seed,
         "scheme": config.scheme,
         "horizon_years": config.horizon_years,
-        "label": config.label,
+        # a continuous-target run is a trial against the binary cell it
+        # is *measured* on — logging it under fwd_* would dilute the
+        # per-cell configurations-tried accounting
+        "label": config.eval_label or config.label,
         "model": config.model_name,
     }
 
     try:
+        check_target_labels(config)
+        target = model_target(config.model_name)
+        # continuous-target runs rank by predicted return but are
+        # *measured* against the binary eval_label cell
+        eval_label = config.eval_label or config.label
         dataset = Dataset(Path(data_root) / config.dataset_version)
         config.check_dataset_version(dataset.version)
         feature_cols = config.resolve_feature_columns(dataset)
@@ -93,18 +107,20 @@ def run_experiment(
         fold_train_stats: dict[int, dict] = {}
         last_tree: tuple[int, DecisionTreeClassifier] | None = None
         probabilistic = False
+        fold_importances: list[tuple[int, np.ndarray]] = []
         for fold in folds:
             split = dataset.apply_split(
                 config.scheme, fold, config.horizon_years, access=access
             )
             fit = dataset.fit_data(
-                split.train, config.label, feature_cols, config.horizon_years
+                split.train, config.label, feature_cols, config.horizon_years,
+                target=target,
             )
             model = build_model(config.model_name, config.model_params, config.seed)
             model.fit(fit.X, fit.y, sample_weight=fit.sample_weight)
 
             test_fit = dataset.fit_data(
-                split.test, config.label, feature_cols, config.horizon_years
+                split.test, eval_label, feature_cols, config.horizon_years
             )
             scores = model.predict_scores(test_fit.X)
             metrics = compute_all(
@@ -144,6 +160,11 @@ def run_experiment(
             if isinstance(estimator, DecisionTreeClassifier):
                 fold_rules.append((fold, rules_text(estimator, feature_cols)))
                 last_tree = (fold, estimator)
+            imp_fn = getattr(model, "feature_importances", None)
+            if imp_fn is not None:
+                imp = imp_fn()
+                if imp is not None:
+                    fold_importances.append((fold, imp))
             store.append(
                 {
                     **base_row,
@@ -169,6 +190,12 @@ def run_experiment(
                 estimator, feature_cols, reports_dir / f"{config.name}_tree.png"
             )
             artifacts["tree_diagram_fold"] = diagram_fold
+        if fold_importances:
+            artifacts["importances"] = _write_importances_file(
+                reports_dir / f"{config.name}_importances.csv",
+                feature_cols,
+                fold_importances,
+            )
 
         bundle_path = None
         if models_dir is not None:
@@ -256,8 +283,9 @@ def finalize_run(
     calibration curve is the figure that gets read, so it is the only one
     drawn by default.
     """
+    cell_label = config.eval_label or config.label
     configurations_tried = store.configurations_tried(
-        config.dataset_version, config.scheme, config.horizon_years, config.label
+        config.dataset_version, config.scheme, config.horizon_years, cell_label
     )
     reports_dir = Path(reports_dir)
     predictions = pd.concat(prediction_frames, ignore_index=True)
@@ -305,7 +333,7 @@ def finalize_run(
         config.dataset_version,
         config.scheme,
         config.horizon_years,
-        config.label,
+        cell_label,
         BASELINE_MODELS,
     )
 
@@ -356,6 +384,30 @@ def _write_rules_file(
     for fold, text in fold_rules:
         lines += ["", f"## Fold {fold}", "", "```", text, "```"]
     path.write_text("\n".join(lines) + "\n")
+    return path
+
+
+def _write_importances_file(
+    path: Path,
+    feature_cols: list[str],
+    fold_importances: list[tuple[int, np.ndarray]],
+) -> Path:
+    """Per-fold feature importances (models that expose them), sorted by
+    the cross-fold mean. Impurity/gain importances are known to flatter
+    high-cardinality features and say nothing about direction — this is a
+    triage artifact for importance-guided feature *subsets* (which then
+    count as configurations tried like any other selection), not an
+    explanation."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    df = pd.DataFrame({"feature": feature_cols})
+    for fold, imp in fold_importances:
+        df[f"fold_{fold}"] = imp
+    fold_cols = [c for c in df.columns if c.startswith("fold_")]
+    df.insert(1, "mean_importance", df[fold_cols].mean(axis=1))
+    df = df.sort_values(
+        "mean_importance", ascending=False, kind="mergesort"
+    ).reset_index(drop=True)
+    df.to_csv(path, index=False)
     return path
 
 

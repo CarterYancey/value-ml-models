@@ -131,6 +131,14 @@ def write_report(
                  f"params `{json.dumps(config.model_params, sort_keys=True)}`")
     lines.append(f"- label: `{config.label}` — horizon {config.horizon_years}y, "
                  f"scheme `{config.scheme}`")
+    if getattr(config, "eval_label", ""):
+        lines.append(
+            f"- **regression reframe**: trained on the continuous target "
+            f"`{config.label}`; every metric below is computed against the "
+            f"binary cell `{config.eval_label}`. Scores are predicted "
+            "returns (a ranking), not probabilities — any score thresholds "
+            "are on that scale."
+        )
     lines.append(
         f"- **configurations tried against this cell "
         f"(dataset, scheme, horizon, label): {configurations_tried}** "
@@ -238,7 +246,11 @@ def write_report(
         )
     lines.append("")
 
-    if artifacts and ("rules" in artifacts or "tree_diagram" in artifacts):
+    if artifacts and (
+        "rules" in artifacts
+        or "tree_diagram" in artifacts
+        or "importances" in artifacts
+    ):
         lines.append("## Interpretability artifacts")
         lines.append("")
         if "rules" in artifacts:
@@ -255,6 +267,18 @@ def write_report(
             )
             name = Path(artifacts["tree_diagram"]).name
             lines.append(f"- tree diagram{fold_note}: [{name}]({name})")
+        if "importances" in artifacts:
+            imp_path = Path(artifacts["importances"])
+            lines.append(
+                f"- per-fold feature importances: [{imp_path.name}]"
+                f"({imp_path.name}) — impurity/gain-based, so a triage "
+                "list for feature subsets (which count as configurations "
+                "tried), not an explanation; the top of the ranking:"
+            )
+            lines.append("")
+            top = pd.read_csv(imp_path).head(10)
+            cols = ["feature", "mean_importance"]
+            lines.append(_table(top[[c for c in cols if c in top.columns]]))
         lines.append("")
 
     # ------------------------------------------------- appendix

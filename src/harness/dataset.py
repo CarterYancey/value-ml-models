@@ -93,6 +93,53 @@ class FitData:
     effective_size: float
 
 
+def _is_boolean_values(vals: pd.Series) -> bool:
+    """Whether a (NULL-filtered) label column holds boolean values —
+    covers both real bool dtype and parquet's object-of-bools round-trip."""
+    if pd.api.types.is_bool_dtype(vals.dtype):
+        return True
+    if vals.dtype == object:
+        return bool(len(vals)) and all(
+            isinstance(v, (bool, np.bool_)) for v in vals
+        )
+    return False
+
+
+def _target_array(label: str, vals: pd.Series, target: str) -> np.ndarray:
+    """A label column as a fit target, refusing kind mismatches.
+
+    A continuous column under a classifier used to cast via
+    `astype(bool)`, turning almost every nonzero return into True — a
+    silent result-inflating bug; the reverse (a boolean column under a
+    regressor) degenerates to 0/1 regression. Both now fail loudly.
+    """
+    if target == "continuous":
+        if _is_boolean_values(vals):
+            raise DatasetValidationError(
+                f"label {label!r} is boolean; continuous-target models "
+                "train on the continuous outcome columns (fwd_*), with "
+                "the binary cell named in eval_label instead"
+            )
+        return vals.to_numpy(dtype=float)
+    if _is_boolean_values(vals):
+        return vals.astype(bool).to_numpy()
+    try:
+        arr = vals.to_numpy(dtype=float)
+    except (TypeError, ValueError) as exc:
+        raise DatasetValidationError(
+            f"label {label!r} is not usable as a binary target: {exc}"
+        ) from exc
+    uniq = np.unique(arr)
+    if not np.isin(uniq, (0.0, 1.0)).all():
+        raise DatasetValidationError(
+            f"label {label!r} has non-binary values (e.g. "
+            f"{[float(v) for v in uniq[:3]]}); a classifier would "
+            "silently cast them to True — continuous columns belong to a "
+            "continuous-target model (with the binary cell in eval_label)"
+        )
+    return arr.astype(bool)
+
+
 class Dataset:
     """A pinned, immutable `dataset_vX.Y` directory."""
 
@@ -426,6 +473,7 @@ class Dataset:
         label: str,
         feature_cols: Sequence[str],
         horizon_years: int,
+        target: str = "binary",
     ) -> FitData:
         """Assemble (X, y, w) for a weighted fit.
 
@@ -433,7 +481,16 @@ class Dataset:
         are excluded from the fit — note this is *not* a delisting filter;
         delisted rows are labeled rows like any other and stay in.
         Fitting without the horizon's weight is refused.
+
+        `target` declares what kind of label column the caller expects:
+        `"binary"` (the default — the `label_*` matrix) refuses continuous
+        columns instead of silently casting nearly everything to True;
+        `"continuous"` (the regression reframe's `fwd_*` return columns)
+        keeps float targets and refuses boolean columns. Both directions
+        are errors, not coercions.
         """
+        if target not in ("binary", "continuous"):
+            raise ValueError(f"target must be 'binary' or 'continuous', got {target!r}")
         if label not in self.columns("labels"):
             raise DatasetValidationError(
                 f"label {label!r} is not in the manifest labels group"
@@ -449,7 +506,7 @@ class Dataset:
             )
         return FitData(
             X=labeled[list(feature_cols)],
-            y=labeled[label].astype(bool).to_numpy(),
+            y=_target_array(label, labeled[label], target),
             sample_weight=w.to_numpy(dtype=float),
             effective_size=float(w.sum()),
         )

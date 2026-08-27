@@ -139,6 +139,12 @@ Full contract: [data/manual.md](data/manual.md). The load-bearing points:
   ranked by pooled `rank_metric` (default: recall at the first precision
   floor). Sweeps change how many configs get tried, not how any one of
   them is measured — see §5 for the accounting.
+- **Random search over the continuous surfaces**: a `[random]` table of
+  distributions (log-uniform for scale parameters, integer ranges,
+  choices) with `n_samples` joint draws, deterministic given
+  `search_seed` — grids stay for coarse axes (class weight, feature
+  sets), random covers learning rate/regularization at full resolution
+  under the same run budget, `max_runs`, and trial-ledger accounting.
 
 ### Phase 3.5 — Downturn specialization (crash-resistant picks)
 
@@ -337,6 +343,9 @@ only** — never model selection, never reported performance:
       instead of per cell, calibrated quantiles could drive the
       precision floor directly; 1y variance is dominated by extreme
       returns (winsorize or model quantiles, per the upstream caveat).
+      *Mechanism implemented*: `lightgbm_regressor` + `eval_label` keeps
+      evaluation in the precision@K frame (see TODO); the spike run and
+      the classification comparison are what remain open.
       Deep learning only where tabular DL has a real edge: sequence
       models over a stock's quarterly snapshot history
       (TCN/transformer) rather than MLPs on flat rows — that needs an

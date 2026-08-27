@@ -75,7 +75,9 @@ def evaluate_bundle(
         "seed": config.seed,
         "scheme": config.scheme,
         "horizon_years": config.horizon_years,
-        "label": config.label,
+        # same cell accounting as the runner: continuous-target bundles
+        # are trials against their binary eval_label cell
+        "label": config.eval_label or config.label,
         "model": config.model_name,
     }
 
@@ -100,9 +102,11 @@ def evaluate_bundle(
                 config.scheme, fold, config.horizon_years,
                 access=SplitAccess.STANDARD,
             )
+            # continuous-target bundles are measured against their binary
+            # eval_label cell, exactly as in the training run
             test_fit = dataset.fit_data(
-                split.test, config.label, bundle.feature_columns,
-                config.horizon_years,
+                split.test, config.eval_label or config.label,
+                bundle.feature_columns, config.horizon_years,
             )
             model = bundle.fold_models[fold]
             scores = model.predict_scores(test_fit.X)

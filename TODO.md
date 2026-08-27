@@ -208,11 +208,18 @@ in [PLAN.md](PLAN.md); check items off (and add new ones) as work proceeds.
 - [ ] Post-hoc calibration (isotonic / Platt) on a purged validation fold.
 - [ ] SHAP: global importance + per-prediction explanations; compare against
       Phase-1 tree rules.
-- [ ] Explainability for forests/LightGBM beyond SHAP: native feature
-      importances (gain + permutation, weighted) as a standard report
-      section; per-prediction reason codes (top signed contributions) as
-      optional columns in `vml-predict` output so a ranking is auditable
-      stock by stock.
+- [x] Native feature importances as a standard artifact: every model
+      exposing `feature_importances()` (tree impurity, forest impurity,
+      LightGBM gain — classifier and regressor) gets a per-fold
+      `reports/<run>_importances.csv` (cross-fold mean, sorted) plus a
+      top-10 table in the report's Interpretability section. Flagged in
+      the artifact itself as a *triage list* for importance-guided
+      feature subsets (which count as configurations tried), not an
+      explanation. (`harness/runner.py::_write_importances_file`)
+- [ ] Explainability for forests/LightGBM beyond impurity/gain:
+      permutation importance (weighted, on training folds); per-prediction
+      reason codes (top signed contributions) as optional columns in
+      `vml-predict` output so a ranking is auditable stock by stock.
 - [ ] Ablations: raw vs. rank vs. sector-rank features; ± technicals;
       ± classification columns (current-state caveat). The sweep harness's
       `[[feature_sets]]` axis is the mechanism.
@@ -270,11 +277,28 @@ in [PLAN.md](PLAN.md); check items off (and add new ones) as work proceeds.
       pooled `rank_metric` (default: recall at the first precision floor),
       per-cell all-time configurations-tried counts, explicit
       selection-bias warning.
-- [ ] Run the real sweeps against `dataset_v1.0`
-      (`tree_precision_grid_3y`, `lgbm_precision_grid_3y`), commit the
-      summaries, and pick Phase-3 candidates for the sealed holdout.
+- [x] Random search alongside the grid: a `[random]` table of
+      distribution specs (`{low, high[, log][, int]}` or `{choices}`)
+      plus `n_samples`/`search_seed`, sampled deterministically (a pure
+      function of the sweep content, so `--dry-run` shows exactly what
+      will run) and crossed with the grid and every other axis;
+      `max_runs` still caps the total and every draw hits the trial
+      ledger. Sampled values land in the summary's `sampled_params`
+      column. (`harness/sweep.py`; curated search spaces with range
+      rationale in `experiments/sweeps/lgbm_random_search_3y.toml` and
+      `experiments/sweeps/forest_random_search_3y.toml`, both with a
+      `[[features]]` axis so the feature set is searched, not
+      hand-picked)
+- [ ] Run the real searches against `dataset_v1.1`
+      (`lgbm_random_search_3y`, `forest_random_search_3y`, plus the
+      grid exemplars), commit the summaries, and pick Phase-3
+      candidates for the sealed holdout.
 - [ ] Seed-stability pass on the sweep winner (multi-seed sweep; a config
       whose ranking collapses across seeds is noise, not signal).
+- [ ] Successive-halving style budgeting if random searches get slow:
+      re-run the top decile of a cheap-budget search (low
+      `n_estimators`) at full budget via a follow-up sweep file — no
+      harness change needed, just two sweep configs.
 
 ## 3.5 — Downturn specialization (PLAN §4 Phase 3.5)
 
@@ -310,11 +334,23 @@ slice. All within the invariants: no local splits, no derived features.
       other): rank features only (already scaled), fold-internal
       imputation, subsampling strategy that respects uniqueness weights;
       keep unless they beat trees on the precision-floor metrics.
-- [ ] Regression reframe spike: `fwd_{H}_cagr` / `fwd_{H}_excess_cagr`
-      targets exist in the dataset — gradient-boosted quantile regression,
-      threshold the predicted quantiles into the same precision@K frame;
-      winsorize 1y (extreme-return caveat). Compare against the
-      classification cells before going further.
+- [x] Regression reframe mechanism: `lightgbm_regressor` trains on the
+      continuous `fwd_{H}y_cagr` / `fwd_{H}y_excess_cagr` columns
+      (objectives `regression`/`regression_l1`/`huber`/`quantile` —
+      quantile with low alpha ranks by a pessimistic return estimate,
+      the regression analogue of the precision knob; `winsorize = q`
+      clips the training target fold-internally per the extreme-return
+      caveat). Configs set `eval_label` to a binary cell and every
+      metric/report/eval stays in the precision@K frame; the trial
+      ledger and baseline comparison charge the run to the eval cell.
+      Guardrails: continuous columns refuse `astype(bool)` coercion
+      under classifiers and vice versa. (`models/gbm.py`,
+      `harness/dataset.py::_target_array`; exemplars
+      `experiments/lgbm_regressor_3y_cagr_ge_10.toml`,
+      `experiments/sweeps/lgbm_cagr_quantile_3y.toml`)
+- [ ] Run the regression-reframe spike against `dataset_v1.1`
+      (`lgbm_cagr_quantile_3y`) and compare its summary against the
+      classification sweeps on the same eval cells before going further.
 - [ ] Deep learning goes through upstream first: sequence-shaped dataset
       variant (per-quarter point-in-time history per stock) is a
       prerequisite; do not flatten history locally (invariant 4). Then a

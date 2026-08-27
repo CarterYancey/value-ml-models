@@ -46,7 +46,7 @@ from harness.errors import DatasetValidationError
 from harness.model_store import DeploymentBundle
 from harness.results import ResultsStore, git_sha, new_run_id
 from harness.runner import DEFAULT_DATA_ROOT, DEFAULT_MODELS, DEFAULT_RESULTS
-from models.registry import build_model
+from models.registry import build_model, check_target_labels, model_target
 
 #: Where vml-predict writes ranking CSVs by default (git-ignored: scores
 #: are data artifacts; the provenance to recreate them is the sidecar
@@ -122,12 +122,14 @@ def train_deployment_model(
     }
 
     try:
+        check_target_labels(config)
         dataset = Dataset(Path(data_root) / config.dataset_version)
         feature_cols = config.resolve_feature_columns(dataset)
         # All currently-eligible data: fit_data keeps every row whose
         # label is observable — all roles, all kinds, delistings included.
         fit = dataset.fit_data(
-            dataset.data, config.label, feature_cols, config.horizon_years
+            dataset.data, config.label, feature_cols, config.horizon_years,
+            target=model_target(config.model_name),
         )
         if not len(fit.X):
             raise DatasetValidationError(
@@ -285,6 +287,11 @@ def predict_with_bundle(
                     "config_hash": config.config_hash,
                     "trained_on": config.dataset_version,
                     "label": config.label,
+                    **(
+                        {"eval_label": config.eval_label}
+                        if config.eval_label
+                        else {}
+                    ),
                     "horizon_years": config.horizon_years,
                     "model": config.model_name,
                     "probabilistic": bundle.probabilistic,
@@ -417,6 +424,11 @@ def predict_with_bundles(
                 "config_hash": config.config_hash,
                 "trained_on": config.dataset_version,
                 "label": config.label,
+                **(
+                    {"eval_label": config.eval_label}
+                    if config.eval_label
+                    else {}
+                ),
                 "horizon_years": config.horizon_years,
                 "model": config.model_name,
                 "probabilistic": bundle.probabilistic,

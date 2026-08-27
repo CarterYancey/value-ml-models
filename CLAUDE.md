@@ -113,6 +113,11 @@ invariants below are this repo's equivalents.
 - Backtest results reported without transaction costs or without the
   investability filter (there is no upstream liquidity floor; the filter is
   built here from `log_marketcap`, `dollar_volume_3m`, `amihud_12m`).
+- Regression-reframe scores read as probabilities: `lightgbm_regressor`
+  scores are predicted CAGRs — no Brier/calibration, score thresholds are
+  on the return scale, and evaluation/trial accounting happens on the
+  config's binary `eval_label` cell (required for continuous-target
+  models, refused for classifiers).
 - Deployment scores presented as performance. `vml-train-deploy` legitimately
   refits on all labeled rows without split filtering (data/manual.md §4
   rule 7 — it reads no split tags, so it is not a holdout violation), but

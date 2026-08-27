@@ -98,3 +98,12 @@ class RandomForestModel:
         if True not in classes:  # degenerate single-class training cell
             return np.zeros(len(X))
         return proba[:, classes.index(True)]
+
+    def feature_importances(self) -> np.ndarray | None:
+        """Mean impurity-decrease importances over the ensemble (weighted,
+        normalized) — the forest's answer to "which columns matter", and
+        the cheap starting point for importance-guided feature subsets."""
+        if self.feature_names_ is None:
+            return None
+        imp = np.asarray(self.estimator_.feature_importances_, dtype=float)
+        return imp if imp.sum() > 0 else None

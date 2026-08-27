@@ -1,0 +1,33 @@
+# Regression-reframe exemplar (PLAN §8): LightGBM quantile regression on
+# the continuous 3y CAGR, ranked by the pessimistic 25th-percentile
+# predicted return, evaluated against the binary >= 10%/yr cell so every
+# metric/report stays in the precision@K frame. Scores are predicted
+# CAGRs (a ranking), not probabilities. winsorize = 0.01 clips the 1%
+# training-target tails inside each fold's own training window
+# (fold-internal, disclosed) — the upstream extreme-return caveat.
+# Run: vml-run experiments/lgbm_regressor_3y_cagr_ge_10.toml
+dataset_version = "dataset_v1.1"
+scheme = "walkforward"
+folds = "all"
+label = "fwd_3y_cagr"
+eval_label = "label_3y_cagr_ge_10"
+seed = 7
+top_k = [20, 50]
+precision_targets = [0.75, 0.9]
+
+[features]
+groups = ["ranks", "sector_ranks"]
+
+[model]
+name = "lightgbm_regressor"
+objective = "quantile"
+alpha = 0.25
+winsorize = 0.01
+n_estimators = 300
+learning_rate = 0.05
+num_leaves = 15
+min_child_samples = 60
+subsample = 0.8
+subsample_freq = 1
+colsample_bytree = 0.8
+reg_lambda = 1.0

@@ -1,10 +1,25 @@
-"""Sweep harness: one TOML defines a *grid* of experiments.
+"""Sweep harness: one TOML defines a *grid* (and/or a random search)
+of experiments.
 
 Up to now experiments were written one config file at a time. A sweep
 config declares ranges instead — several label cells, a model-parameter
 grid, alternative feature sets, several seeds — and the harness expands
 the cartesian product into ordinary `ExperimentConfig`s and runs each
 one through the standard runner (`vml-sweep experiments/sweeps/x.toml`).
+
+Two search styles compose:
+
+- `[grid]`: explicit candidate lists, full cartesian product — right for
+  few, coarse axes (class_weight, a feature axis).
+- `[random]` + `n_samples`: distributions sampled jointly — right for
+  the wide continuous surfaces (learning rate, regularization) where a
+  grid either misses or explodes. Each spec is `{low, high}` (uniform;
+  `log = true` for log-uniform — scale parameters live on a log scale;
+  `int = true` for integers) or `{choices = [...]}`. Sampling is a pure
+  function of `search_seed` and the sweep content, so an expansion is
+  reproducible and `--dry-run` shows exactly what will run. Random
+  draws cross with the grid and every other axis; `max_runs` still
+  caps the total.
 
 Nothing about the honesty machinery is bypassed:
 
@@ -36,6 +51,7 @@ import traceback
 from dataclasses import dataclass, field, replace
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
 
 from eval.metrics import threshold_tag
@@ -49,6 +65,7 @@ from harness.runner import (
     DEFAULT_RESULTS,
     run_experiment,
 )
+from models.registry import model_target
 
 #: hard default ceiling on expanded runs — a sweep that wants more must
 #: say so in its own file (max_runs), so trial-count inflation is always
@@ -66,6 +83,9 @@ _SWEEP_ALLOWED = frozenset(
         "cells",
         "model",
         "grid",
+        "random",
+        "n_samples",
+        "search_seed",
         "feature_groups",
         "feature_columns",
         "exclude_feature_columns",
@@ -95,13 +115,23 @@ class SweepConfig:
     name: str
     dataset_version: str
     scheme: str
-    #: (horizon_years, label) cells to sweep — the multi-label axis
-    cells: tuple[tuple[int, str], ...]
+    #: (horizon_years, label, eval_label) cells to sweep — the
+    #: multi-label axis; eval_label is "" except for continuous-target
+    #: model sweeps (the regression reframe)
+    cells: tuple[tuple[int, str, str], ...]
     model_name: str
     #: params fixed for every run in the sweep ([model] minus name)
     base_params: dict = field(default_factory=dict)
     #: param name -> candidate values ([grid]); cartesian product
     grid: dict[str, tuple] = field(default_factory=dict)
+    #: param name -> canonical distribution spec ([random]); one joint
+    #: draw per sample, crossed with the grid and every other axis
+    random: dict[str, dict] = field(default_factory=dict)
+    #: how many joint draws [random] contributes (required with [random])
+    n_samples: int = 0
+    #: RNG seed the draws are a pure function of (config-content seed,
+    #: distinct from the model seeds axis)
+    search_seed: int = 0
     feature_sets: tuple[FeatureSet, ...] = ()
     #: hierarchical selection(s) (top-level `features`: one `[features]`
     #: table or a `[[features]]` array forming the feature axis) —
@@ -152,7 +182,7 @@ class SweepConfig:
                     f"label (and horizon_years when the label carries no "
                     f"horizon token), got {c!r}"
                 )
-            extra = sorted(set(c) - {"horizon_years", "label"})
+            extra = sorted(set(c) - {"horizon_years", "label", "eval_label"})
             if extra:
                 raise ConfigError(
                     f"sweep config {source}: [[cells]] entry has unknown "
@@ -175,7 +205,22 @@ class SweepConfig:
                 )
             else:
                 horizon = inferred
-            cells.append((horizon, label))
+            eval_label = str(c.get("eval_label", ""))
+            if eval_label:
+                if eval_label == label:
+                    raise ConfigError(
+                        f"sweep config {source}: cell eval_label equals "
+                        f"label ({label!r}); eval_label is the binary cell "
+                        "a continuous-target run is measured against"
+                    )
+                ev_horizon = infer_horizon_years(eval_label)
+                if ev_horizon is not None and ev_horizon != horizon:
+                    raise ConfigError(
+                        f"sweep config {source}: cell eval_label "
+                        f"{eval_label!r} is a {ev_horizon}y label but the "
+                        f"cell horizon is {horizon}y"
+                    )
+            cells.append((horizon, label, eval_label))
         if len(set(cells)) != len(cells):
             raise ConfigError(f"sweep config {source}: duplicate [[cells]] entries")
 
@@ -185,6 +230,26 @@ class SweepConfig:
                 f"sweep config {source}: [model] must be a table with a name"
             )
         base_params = {k: v for k, v in model.items() if k != "name"}
+
+        # fail the whole sweep now rather than every expanded run later:
+        # continuous-target models need each cell's binary eval_label
+        if model_target(str(model["name"])) == "continuous":
+            bad = [label for _, label, ev in cells if not ev]
+            if bad:
+                raise ConfigError(
+                    f"sweep config {source}: model {model['name']!r} trains "
+                    f"on continuous targets, but cells {bad} set no "
+                    "eval_label (the binary cell the ranking is measured "
+                    "against)"
+                )
+        else:
+            bad = [ev for _, _, ev in cells if ev]
+            if bad:
+                raise ConfigError(
+                    f"sweep config {source}: eval_label is only meaningful "
+                    f"for continuous-target models; {model['name']!r} is "
+                    "evaluated on its own label"
+                )
 
         grid_raw = raw.get("grid", {})
         if not isinstance(grid_raw, dict):
@@ -202,6 +267,29 @@ class SweepConfig:
                     "and swept in [grid]"
                 )
             grid[key] = tuple(values)
+
+        random_raw = raw.get("random", {})
+        if not isinstance(random_raw, dict):
+            raise ConfigError(f"sweep config {source}: [random] must be a table")
+        random: dict[str, dict] = {}
+        for key, spec in random_raw.items():
+            if key in base_params or key in grid:
+                raise ConfigError(
+                    f"sweep config {source}: {key!r} is both in [random] and "
+                    "fixed/swept elsewhere"
+                )
+            random[key] = _parse_random_spec(key, spec, source)
+        n_samples = int(raw.get("n_samples", 0))
+        if random and n_samples < 1:
+            raise ConfigError(
+                f"sweep config {source}: [random] requires n_samples >= 1 "
+                "(how many joint draws to run)"
+            )
+        if n_samples and not random:
+            raise ConfigError(
+                f"sweep config {source}: n_samples is set but there is no "
+                "[random] table to sample from"
+            )
 
         legacy_top = [
             k
@@ -307,6 +395,9 @@ class SweepConfig:
             model_name=str(model["name"]),
             base_params=base_params,
             grid=grid,
+            random=random,
+            n_samples=n_samples,
+            search_seed=int(raw.get("search_seed", 0)),
             feature_sets=tuple(feature_sets),
             feature_specs=feature_specs,
             folds=folds,
@@ -369,7 +460,12 @@ class SweepConfig:
         payload = {
             "dataset_version": self.dataset_version,
             "scheme": self.scheme,
-            "cells": [list(c) for c in self.cells],
+            # eval_label-free cells keep their historical 2-element shape
+            # so existing sweeps keep their hashes (and derived names)
+            "cells": [
+                [h, label] if not ev else [h, label, ev]
+                for h, label, ev in self.cells
+            ],
             "model_name": self.model_name,
             "base_params": self.base_params,
             "grid": {k: list(v) for k, v in self.grid.items()},
@@ -381,6 +477,10 @@ class SweepConfig:
             "precision_targets": list(self.precision_targets),
             "rank_metric": self.rank_metric,
         }
+        if self.random:
+            payload["random"] = {k: self.random[k] for k in sorted(self.random)}
+            payload["n_samples"] = self.n_samples
+            payload["search_seed"] = self.search_seed
         blob = json.dumps(payload, sort_keys=True, separators=(",", ":"))
         return hashlib.sha256(blob.encode()).hexdigest()[:8]
 
@@ -401,20 +501,44 @@ class SweepConfig:
             "exclude_feature_columns": fs.exclude,
         }
 
+    def sample_draws(self) -> list[dict]:
+        """The [random] table's joint draws — a pure function of the
+        sweep content and `search_seed`, so expansion is reproducible.
+        One dict per sample; empty specs yield the single empty draw."""
+        if not self.random:
+            return [{}]
+        rng = np.random.default_rng(self.search_seed)
+        draws = []
+        for _ in range(self.n_samples):
+            draw = {}
+            for key in sorted(self.random):
+                draw[key] = _sample_param(self.random[key], rng)
+            draws.append(draw)
+        return draws
+
     def expand(self) -> list["SweepRun"]:
-        """The full cartesian product: cells × feature sets × grid × seeds,
-        each as an ordinary ExperimentConfig with a deterministic name."""
+        """The full cartesian product: cells × feature sets × grid ×
+        random draws × seeds, each as an ordinary ExperimentConfig with a
+        deterministic name."""
         grid_keys = sorted(self.grid)
         combos = [
             dict(zip(grid_keys, values))
             for values in itertools.product(*(self.grid[k] for k in grid_keys))
         ]
+        draws = self.sample_draws()
         feature_axis = self.feature_specs or self.feature_sets
         runs: list[SweepRun] = []
-        for (horizon, label), (fs_idx, fs), combo, seed in itertools.product(
+        for (
+            (horizon, label, eval_label),
+            (fs_idx, fs),
+            combo,
+            (draw_idx, draw),
+            seed,
+        ) in itertools.product(
             self.cells,
             enumerate(feature_axis),
             combos,
+            enumerate(draws),
             self.seeds,
         ):
             config = ExperimentConfig(
@@ -423,8 +547,9 @@ class SweepConfig:
                 scheme=self.scheme,
                 horizon_years=horizon,
                 label=label,
+                eval_label=eval_label,
                 model_name=self.model_name,
-                model_params={**self.base_params, **combo},
+                model_params={**self.base_params, **combo, **draw},
                 **self._feature_fields(fs),
                 folds=self.folds,
                 seed=seed,
@@ -432,7 +557,7 @@ class SweepConfig:
                 score_thresholds=self.score_thresholds,
                 precision_targets=self.precision_targets,
             )
-            name = self._run_name(label, fs_idx, combo, seed, config)
+            name = self._run_name(label, fs_idx, combo, draw_idx, seed, config)
             runs.append(
                 SweepRun(
                     config=replace(config, name=name),
@@ -440,6 +565,7 @@ class SweepConfig:
                     horizon_years=horizon,
                     feature_set_index=fs_idx,
                     grid_params=combo,
+                    sampled_params=draw,
                     seed=seed,
                 )
             )
@@ -459,7 +585,7 @@ class SweepConfig:
         return runs
 
     def _run_name(
-        self, label: str, fs_idx: int, combo: dict, seed: int,
+        self, label: str, fs_idx: int, combo: dict, draw_idx: int, seed: int,
         config: ExperimentConfig,
     ) -> str:
         parts = [self.name, label]
@@ -467,6 +593,11 @@ class SweepConfig:
             parts.append(f"fs{fs_idx}")
         for key in sorted(combo):
             parts.append(f"{_sanitize(key)}-{_sanitize(combo[key])}")
+        if self.random:
+            # sampled values would make unreadable names; the draw index
+            # is stable (sampling is deterministic) and the summary CSV
+            # carries the actual values
+            parts.append(f"r{draw_idx}")
         if len(self.seeds) > 1:
             parts.append(f"s{seed}")
         name = "__".join(parts)
@@ -477,7 +608,7 @@ class SweepConfig:
 
 @dataclass(frozen=True)
 class SweepRun:
-    """One expanded grid point (the config plus its sweep coordinates)."""
+    """One expanded search point (the config plus its sweep coordinates)."""
 
     config: ExperimentConfig
     label: str
@@ -485,10 +616,94 @@ class SweepRun:
     feature_set_index: int
     grid_params: dict
     seed: int
+    #: the [random] draw this run carries (empty for pure-grid sweeps)
+    sampled_params: dict = field(default_factory=dict)
 
 
 def _sanitize(value) -> str:
     return re.sub(r"[^A-Za-z0-9._=-]+", "-", str(value)).strip("-") or "x"
+
+
+_RANDOM_SPEC_KEYS = frozenset({"low", "high", "log", "int", "choices"})
+
+
+def _parse_random_spec(key: str, spec, source: str) -> dict:
+    """Normalize one [random] entry into its canonical form (what the
+    identity hash embeds): `{choices: [...]}` or
+    `{low, high, log: bool, int: bool}`."""
+    if not isinstance(spec, dict):
+        raise ConfigError(
+            f"sweep config {source}: random.{key} must be a table "
+            "({low, high[, log][, int]} or {choices})"
+        )
+    unknown = sorted(set(spec) - _RANDOM_SPEC_KEYS)
+    if unknown:
+        raise ConfigError(
+            f"sweep config {source}: random.{key} has unknown keys {unknown}"
+        )
+    if "choices" in spec:
+        extra = sorted(set(spec) - {"choices"})
+        if extra:
+            raise ConfigError(
+                f"sweep config {source}: random.{key} mixes choices with "
+                f"{extra}"
+            )
+        choices = spec["choices"]
+        if not isinstance(choices, list) or not choices:
+            raise ConfigError(
+                f"sweep config {source}: random.{key}.choices must be a "
+                "non-empty list"
+            )
+        return {"choices": list(choices)}
+    if "low" not in spec or "high" not in spec:
+        raise ConfigError(
+            f"sweep config {source}: random.{key} needs low and high "
+            "(or choices)"
+        )
+    low, high = spec["low"], spec["high"]
+    if not all(isinstance(v, (int, float)) and not isinstance(v, bool)
+               for v in (low, high)):
+        raise ConfigError(
+            f"sweep config {source}: random.{key} low/high must be numbers"
+        )
+    if not low < high:
+        raise ConfigError(
+            f"sweep config {source}: random.{key} needs low < high, "
+            f"got [{low}, {high}]"
+        )
+    log = bool(spec.get("log", False))
+    as_int = bool(spec.get("int", False))
+    if log and low <= 0:
+        raise ConfigError(
+            f"sweep config {source}: random.{key} is log-scaled, so low "
+            f"must be > 0, got {low}"
+        )
+    if as_int and not (
+        isinstance(low, int) and isinstance(high, int)
+    ):
+        raise ConfigError(
+            f"sweep config {source}: random.{key} has int = true, so low "
+            "and high must be integers"
+        )
+    return {"low": low, "high": high, "log": log, "int": as_int}
+
+
+def _sample_param(spec: dict, rng: np.random.Generator):
+    """One value from a canonical [random] spec. Floats are rounded to 6
+    significant digits so configs/names/ledgers stay readable and the
+    values round-trip exactly through JSON."""
+    if "choices" in spec:
+        return spec["choices"][int(rng.integers(len(spec["choices"])))]
+    low, high = spec["low"], spec["high"]
+    if spec["int"] and not spec["log"]:
+        return int(rng.integers(low, high + 1))  # inclusive, uniform
+    if spec["log"]:
+        value = float(np.exp(rng.uniform(np.log(low), np.log(high))))
+    else:
+        value = float(rng.uniform(low, high))
+    if spec["int"]:
+        return int(np.clip(round(value), low, high))
+    return float(f"{value:.6g}")
 
 
 # ----------------------------------------------------------------------
@@ -518,10 +733,12 @@ def run_sweep(
         outcome = {
             "run": run.config.name,
             "label": run.label,
+            "eval_label": run.config.eval_label,
             "horizon_years": run.horizon_years,
             "feature_set": run.feature_set_index,
             "seed": run.seed,
             "grid_params": run.grid_params,
+            "sampled_params": run.sampled_params,
             "config_hash": run.config.config_hash,
         }
         try:
@@ -581,10 +798,14 @@ def _write_sweep_summary(
                 "run": o["run"],
                 "status": o["status"],
                 "label": o["label"],
+                "eval_label": o["eval_label"],
                 "horizon_years": o["horizon_years"],
                 "feature_set": o["feature_set"],
                 "seed": o["seed"],
                 "grid_params": json.dumps(o["grid_params"], sort_keys=True),
+                "sampled_params": json.dumps(
+                    o["sampled_params"], sort_keys=True
+                ),
                 "config_hash": o["config_hash"],
                 **o["pooled_metrics"],
             }
@@ -599,7 +820,11 @@ def _write_sweep_summary(
     df.to_csv(csv_path, index=False)
 
     n_failed = sum(1 for o in outcomes if o["status"] == "failed")
-    cells = sorted({(o["horizon_years"], o["label"]) for o in outcomes})
+    # trial accounting is per *evaluation* cell: a continuous-target run
+    # counts against the binary eval_label cell it is measured on
+    cells = sorted(
+        {(o["horizon_years"], o["eval_label"] or o["label"]) for o in outcomes}
+    )
     tried_lines = [
         f"- `{label}` ({horizon}y): "
         f"{store.configurations_tried(sweep.dataset_version, sweep.scheme, horizon, label)} "
@@ -625,6 +850,8 @@ def _write_sweep_summary(
         if extra in df.columns and extra not in metric_cols:
             metric_cols.append(extra)
     id_cols = ["run", "status", "label", "seed", "grid_params"]
+    if sweep.random:
+        id_cols.append("sampled_params")
     if sweep.n_feature_variants > 1:
         id_cols.insert(3, "feature_set")
     table_df = df[[c for c in id_cols + metric_cols if c in df.columns]]
@@ -638,6 +865,15 @@ def _write_sweep_summary(
         f"- model family: `{sweep.model_name}`, fixed params "
         f"`{json.dumps(sweep.base_params, sort_keys=True)}`",
         f"- grid: `{json.dumps({k: list(v) for k, v in sweep.grid.items()}, sort_keys=True)}`",
+        *(
+            [
+                f"- random search: `{json.dumps(sweep.random, sort_keys=True)}` "
+                f"— {sweep.n_samples} joint draws, search_seed "
+                f"{sweep.search_seed} (deterministic)"
+            ]
+            if sweep.random
+            else []
+        ),
         f"- expanded runs: {len(outcomes)} ({n_failed} failed), "
         f"seeds {list(sweep.seeds)}",
         f"- ranked by pooled `{sweep.rank_metric}` (higher is better)",

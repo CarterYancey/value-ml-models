@@ -1,0 +1,60 @@
+# Random-forest random search on the primary relative-label cell — the
+# first systematic forest sweep (the family had only a single exemplar
+# config until now).
+#
+# Forests earn their keep two ways here: averaged leaf frequencies are
+# usually better-ranked (and less overconfident) than a single tree's,
+# and the fitted forests emit per-fold feature importances
+# (reports/<run>_importances.csv) — the cheap triage list for building
+# importance-guided feature subsets later, instead of hand-picking
+# columns up front.
+#
+# Range rationale:
+#   n_estimators  200–800    more trees only stabilize (cost is linear);
+#                            below ~200 the top of the ranking is noisy
+#   max_depth     4–24       int-uniform; ~24 is effectively unbounded at
+#                            these leaf minima, so the range spans "very
+#                            interpretable" to "let the leaf minima rule"
+#   min_samples_leaf 5–500   log — THE forest regularizer at ~300k-row
+#                            folds; large leaves = purer, better-calibrated
+#                            leaf frequencies (precision over recall)
+#   max_features  0.05–0.8   fraction per split; low values decorrelate
+#                            trees (sqrt(p) for ~100 rank features is
+#                            ~0.1), high values approach bagged trees
+#   criterion                gini vs entropy occasionally differ on
+#                            imbalanced cells; costs nothing to include
+#   class_weight             the shared precision knob, as everywhere
+#
+# Expanded: 1 cell x 2 feature sets x 60 draws = 120 runs.
+# Run: vml-sweep experiments/sweeps/forest_random_search_3y.toml
+name = "forest_random_search_3y"
+dataset_version = "dataset_v1.1"
+scheme = "walkforward"
+folds = "all"
+seeds = [7]
+top_k = [20, 50]
+precision_targets = [0.75, 0.9]
+rank_metric = "recall_at_prec_0.9"
+n_samples = 60
+search_seed = 11
+
+[[cells]]
+label = "label_3y_beat_spy"
+
+[[features]]
+groups = ["ranks", "sector_ranks"]
+
+[[features]]
+groups = ["ranks"]
+
+[model]
+name = "random_forest"
+bootstrap = true
+
+[random]
+n_estimators = { low = 200, high = 800, int = true }
+max_depth = { low = 4, high = 24, int = true }
+min_samples_leaf = { low = 5, high = 500, int = true, log = true }
+max_features = { low = 0.05, high = 0.8 }
+criterion = { choices = ["gini", "entropy"] }
+class_weight = { choices = [1.0, 0.5, 0.25, "balanced_subsample"] }
