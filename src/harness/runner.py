@@ -23,7 +23,7 @@ from eval.era import (
     era_table,
     pooled_metrics,
 )
-from eval.metrics import compute_all
+from eval.metrics import compute_all, regression_diagnostics
 from eval.plots import render_calibration_plot, render_pr_curve, render_roc_curve
 from explain.rules import render_tree_diagram, rules_text
 from harness.config import ExperimentConfig
@@ -132,6 +132,22 @@ def run_experiment(
                 precision_targets=config.precision_targets,
                 probabilistic=model.probabilistic,
             )
+            outcome = None
+            if target == "continuous":
+                # the realized continuous label on the same test rows —
+                # upstream guarantees it is observable exactly where the
+                # binary eval label is
+                outcome = split.test.loc[
+                    test_fit.X.index, config.label
+                ].to_numpy(dtype=float)
+                metrics.update(
+                    regression_diagnostics(
+                        outcome,
+                        scores,
+                        top_k=config.top_k,
+                        sample_weight=test_fit.sample_weight,
+                    )
+                )
             fr = {
                 "fold": fold,
                 "n_train_rows": len(fit.X),
@@ -153,7 +169,8 @@ def run_experiment(
             ).dt.year.to_numpy()
             prediction_frames.append(
                 collect_predictions(
-                    fold, test_years, test_fit.y, scores, test_fit.sample_weight
+                    fold, test_years, test_fit.y, scores,
+                    test_fit.sample_weight, outcome=outcome,
                 )
             )
             estimator = getattr(model, "estimator_", None)

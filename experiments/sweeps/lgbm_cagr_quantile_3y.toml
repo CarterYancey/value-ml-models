@@ -24,6 +24,13 @@
 # against the classification sweeps on the same eval cells before going
 # further (that comparison is the whole point of the spike).
 #
+# Regression runs also report fwd_at_K (mean realized CAGR of the top-K
+# picks, per year) and spearman_ic in the era table; either works as
+# rank_metric here (e.g. rank_metric = "fwd_at_20" ranks candidates by
+# what the picks actually returned). MAE/R² are logged as fit
+# diagnostics only — near-zero R² on stock returns is expected and says
+# nothing about the top of the ranking.
+#
 # Expanded: 2 cells x 3 alpha x 2 winsorize x 12 draws = 144 runs.
 # Run: vml-sweep experiments/sweeps/lgbm_cagr_quantile_3y.toml
 name = "lgbm_cagr_quantile_3y"

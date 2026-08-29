@@ -176,6 +176,96 @@ def recall_at_precision(y_true, scores, target: float) -> dict:
     }
 
 
+def outcome_at_k(outcome, scores, k: int) -> float:
+    """Mean realized continuous outcome (e.g. forward CAGR) of the top-k
+    picks — "what did the picks actually return". Unweighted like
+    precision@K: a portfolio buys K names, each counts once."""
+    o = np.asarray(outcome, dtype=float)
+    s = np.asarray(scores, dtype=float)
+    if len(o) == 0 or k <= 0:
+        return math.nan
+    top = _order_by_score(s)[: min(k, len(o))]
+    vals = o[top]
+    vals = vals[np.isfinite(vals)]
+    return float(vals.mean()) if len(vals) else math.nan
+
+
+def spearman_ic(outcome, scores) -> float:
+    """Spearman rank correlation between predicted and realized outcomes
+    — the information coefficient. Rank-based, so it ignores the score
+    scale and is robust to the extreme-return tail; unweighted. NaN with
+    fewer than 3 finite pairs or a constant side."""
+    from scipy.stats import spearmanr
+
+    o = np.asarray(outcome, dtype=float)
+    s = np.asarray(scores, dtype=float)
+    keep = np.isfinite(o) & np.isfinite(s)
+    if keep.sum() < 3:
+        return math.nan
+    o, s = o[keep], s[keep]
+    if len(np.unique(o)) < 2 or len(np.unique(s)) < 2:
+        return math.nan
+    return float(spearmanr(o, s).statistic)
+
+
+def weighted_mae(outcome, scores, sample_weight=None) -> float:
+    """Weighted mean absolute error of predicted vs. realized outcome —
+    a fit diagnostic only (dominated by the noise mass the strategy never
+    touches), logged, never headlined. Quantile-objective scores predict
+    a quantile, not the mean, so their MAE is expected to be biased."""
+    o = np.asarray(outcome, dtype=float)
+    s = np.asarray(scores, dtype=float)
+    w = (
+        np.ones(len(o))
+        if sample_weight is None
+        else np.asarray(sample_weight, dtype=float)
+    )
+    keep = np.isfinite(o) & np.isfinite(s)
+    if not keep.any():
+        return math.nan
+    return float(np.average(np.abs(o[keep] - s[keep]), weights=w[keep]))
+
+
+def weighted_r2(outcome, scores, sample_weight=None) -> float:
+    """Weighted R² of predicted vs. realized outcome — same status as
+    MAE: a fit diagnostic. Near-zero (even negative) R² on stock returns
+    is normal and says nothing about whether the top of the ranking is
+    good; that is what fwd_at_K and the precision frame measure."""
+    o = np.asarray(outcome, dtype=float)
+    s = np.asarray(scores, dtype=float)
+    w = (
+        np.ones(len(o))
+        if sample_weight is None
+        else np.asarray(sample_weight, dtype=float)
+    )
+    keep = np.isfinite(o) & np.isfinite(s)
+    if not keep.any():
+        return math.nan
+    o, s, w = o[keep], s[keep], w[keep]
+    ss_res = float(np.average((o - s) ** 2, weights=w))
+    ss_tot = float(np.average((o - np.average(o, weights=w)) ** 2, weights=w))
+    if ss_tot == 0:
+        return math.nan
+    return 1.0 - ss_res / ss_tot
+
+
+def regression_diagnostics(
+    outcome, scores, *, top_k=(20, 50), sample_weight=None
+) -> dict[str, float]:
+    """The per-fold diagnostic block for continuous-target models,
+    computed against the realized continuous outcome (the training
+    label's column on the test rows). fwd_at_K and spearman_ic are the
+    readable ones; MAE/R² are logged for fit debugging only."""
+    out = {
+        "spearman_ic": spearman_ic(outcome, scores),
+        "mae": weighted_mae(outcome, scores, sample_weight),
+        "r2": weighted_r2(outcome, scores, sample_weight),
+    }
+    for k in top_k:
+        out[f"fwd_at_{k}"] = outcome_at_k(outcome, scores, k)
+    return out
+
+
 def pr_auc(y_true, scores, sample_weight=None) -> float:
     y = np.asarray(y_true, dtype=float)
     if len(y) == 0 or len(np.unique(y)) < 2:

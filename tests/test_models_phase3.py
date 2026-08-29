@@ -197,3 +197,43 @@ def test_lightgbm_registry_and_numeric_class_weight():
         .mean()
     )
     assert strict < loose
+
+
+# --- forest resource knobs (max_samples, n_jobs) ----------------------
+
+
+def test_forest_max_samples_and_n_jobs():
+    X, y, w = _toy_data()
+    m = RandomForestModel(
+        n_estimators=20, min_samples_leaf=5, max_samples=0.5, n_jobs=2
+    )
+    m.fit(X, y, sample_weight=w)
+    assert len(m.predict_scores(X)) == len(X)
+    # 1.0 normalizes to None (sklearn's "full bootstrap")
+    assert RandomForestModel(max_samples=1.0).estimator_.max_samples is None
+
+
+@pytest.mark.parametrize(
+    "params",
+    [
+        {"max_samples": 0.0},
+        {"max_samples": 1.5},
+        {"max_samples": True},
+        {"max_samples": 0.5, "bootstrap": False},
+        {"n_jobs": 0},
+        {"n_jobs": 1.5},
+    ],
+)
+def test_forest_resource_knob_validation(params):
+    with pytest.raises(ConfigError):
+        RandomForestModel(**params)
+
+
+def test_registry_accepts_forest_resource_knobs():
+    m = build_model(
+        "random_forest",
+        {"n_estimators": 10, "max_samples": 0.4, "n_jobs": 2},
+        seed=0,
+    )
+    assert m.estimator_.max_samples == 0.4
+    assert m.estimator_.n_jobs == 2

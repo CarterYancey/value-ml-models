@@ -41,6 +41,9 @@ def crash_label(year: int) -> str | None:
 
 
 #: Columns a predictions frame must carry (one row per test-set row).
+#: Continuous-target runs additionally carry an `outcome` column (the
+#: realized continuous label, e.g. fwd_3y_cagr) which unlocks the
+#: outcome-based diagnostics (fwd_at_K, spearman_ic, mae, r2).
 PREDICTION_COLUMNS = ("fold", "year", "y_true", "score", "sample_weight")
 
 CORRELATED_PICKS_CAVEAT = (
@@ -94,6 +97,13 @@ def _metric_row(
         rap = metrics.recall_at_precision(y, s, p)
         row[f"recall_at_prec_{tag}"] = rap["recall"]
         row[f"n_at_prec_{tag}"] = rap["n_selected"]
+    if "outcome" in grp.columns:
+        o = grp["outcome"].to_numpy(dtype=float)
+        row["spearman_ic"] = metrics.spearman_ic(o, s)
+        row["mae"] = metrics.weighted_mae(o, s, w)
+        row["r2"] = metrics.weighted_r2(o, s, w)
+        for k in top_k:
+            row[f"fwd_at_{k}"] = metrics.outcome_at_k(o, s, k)
     return row
 
 
@@ -172,6 +182,34 @@ def _pooled_metric_row(
         else:
             row[f"recall_at_prec_{tag}"] = hits / total_pos
             row[f"n_at_prec_{tag}"] = n_sel
+    if "outcome" in predictions.columns:
+        o = predictions["outcome"].to_numpy(dtype=float)
+        # picks per year, like every other ranking metric; the pooled IC
+        # is the mean of per-year ICs (per-fold scores aren't comparable,
+        # so a pooled-rank correlation would be meaningless)
+        ics = []
+        for grp in groups:
+            ic = metrics.spearman_ic(
+                grp["outcome"].to_numpy(dtype=float),
+                grp["score"].to_numpy(dtype=float),
+            )
+            if not math.isnan(ic):
+                ics.append(ic)
+        row["spearman_ic"] = float(np.mean(ics)) if ics else math.nan
+        row["mae"] = metrics.weighted_mae(o, s, w)
+        row["r2"] = metrics.weighted_r2(o, s, w)
+        for k in top_k:
+            total = picks = 0.0
+            for grp in groups:
+                go = grp["outcome"].to_numpy(dtype=float)
+                gs = grp["score"].to_numpy(dtype=float)
+                mean_k = metrics.outcome_at_k(go, gs, k)
+                if math.isnan(mean_k):
+                    continue
+                n_picks = min(k, len(grp))
+                total += mean_k * n_picks
+                picks += n_picks
+            row[f"fwd_at_{k}"] = total / picks if picks else math.nan
     return row
 
 
@@ -328,10 +366,15 @@ def _check_predictions(predictions: pd.DataFrame) -> None:
 
 
 def collect_predictions(
-    fold: int, years: np.ndarray, y_true, scores, sample_weight
+    fold: int, years: np.ndarray, y_true, scores, sample_weight,
+    outcome=None,
 ) -> pd.DataFrame:
-    """One fold's test predictions in the standard frame layout."""
-    return pd.DataFrame(
+    """One fold's test predictions in the standard frame layout.
+
+    `outcome` (continuous-target runs only) is the realized continuous
+    label on the same rows; its presence turns on the outcome-based
+    diagnostics in the era/pooled tables."""
+    frame = pd.DataFrame(
         {
             "fold": fold,
             "year": np.asarray(years, dtype=int),
@@ -340,3 +383,6 @@ def collect_predictions(
             "sample_weight": np.asarray(sample_weight, dtype=float),
         }
     )
+    if outcome is not None:
+        frame["outcome"] = np.asarray(outcome, dtype=float)
+    return frame

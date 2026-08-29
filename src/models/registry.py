@@ -54,6 +54,8 @@ _FOREST_PARAMS = frozenset(
         "class_weight",
         "criterion",
         "bootstrap",
+        "max_samples",
+        "n_jobs",
     }
 )
 

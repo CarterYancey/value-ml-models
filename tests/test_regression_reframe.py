@@ -279,3 +279,73 @@ def test_regression_deployment_refit(regression_summary, data_root, tmp_path):
     )
     assert result["status"] == "completed"
     assert result["n_train_rows"] > 0
+
+
+# --- outcome-based diagnostics (fwd_at_K, spearman IC, mae/r2) ------------
+
+
+def test_outcome_at_k_and_spearman_ic():
+    from eval.metrics import outcome_at_k, spearman_ic
+
+    outcome = np.array([0.30, 0.20, 0.10, 0.00, -0.10])
+    scores = np.array([5.0, 4.0, 3.0, 2.0, 1.0])  # perfectly ranked
+    assert outcome_at_k(outcome, scores, 2) == pytest.approx(0.25)
+    assert spearman_ic(outcome, scores) == pytest.approx(1.0)
+    assert spearman_ic(outcome, -scores) == pytest.approx(-1.0)
+    assert math.isnan(spearman_ic(outcome[:2], scores[:2]))  # < 3 pairs
+    # non-finite scores rank last and never enter the picks' mean
+    scores_nan = np.array([np.nan, 4.0, 3.0, 2.0, 1.0])
+    assert outcome_at_k(outcome, scores_nan, 2) == pytest.approx(0.15)
+
+
+def test_weighted_mae_and_r2():
+    from eval.metrics import weighted_mae, weighted_r2
+
+    outcome = np.array([1.0, 2.0, 3.0])
+    w = np.array([1.0, 1.0, 2.0])
+    assert weighted_mae(outcome, outcome, w) == 0.0
+    assert weighted_r2(outcome, outcome, w) == pytest.approx(1.0)
+    off = outcome + 0.5
+    assert weighted_mae(outcome, off, w) == pytest.approx(0.5)
+    assert weighted_r2(outcome, off, w) < 1.0
+    assert math.isnan(weighted_r2(np.ones(3), np.ones(3)))  # constant truth
+
+
+def test_regression_run_reports_outcome_diagnostics(regression_summary):
+    summary, tmp, _ = regression_summary
+    pooled = summary["pooled_metrics"]
+    for key in ("fwd_at_5", "spearman_ic", "mae", "r2"):
+        assert key in pooled
+    assert math.isfinite(pooled["fwd_at_5"])
+    # per-fold ledger metrics carry the same block
+    fold_metrics = summary["fold_results"][0]["metrics"]
+    for key in ("fwd_at_5", "spearman_ic", "mae", "r2"):
+        assert key in fold_metrics
+    report = summary["report_path"].read_text()
+    assert "fwd_at_5" in report
+    assert "spearman_ic" in report
+    # fit diagnostics are logged, never headlined: not era-table columns
+    assert "| mae" not in report and "| r2" not in report
+
+
+def test_classifier_runs_have_no_outcome_diagnostics(data_root, tmp_path):
+    config = ExperimentConfig.from_dict(
+        {
+            "name": "clf_no_outcome",
+            "dataset_version": VERSION,
+            "scheme": "walkforward",
+            "horizon_years": 3,
+            "label": "label_3y_beat_spy",
+            "feature_groups": ["ranks"],
+            "model": {"name": "decision_tree", "max_depth": 3},
+            "top_k": [5],
+        }
+    )
+    summary = run_experiment(
+        config,
+        data_root=data_root,
+        results_path=tmp_path / "results.csv",
+        reports_dir=tmp_path / "reports",
+    )
+    assert "fwd_at_5" not in summary["pooled_metrics"]
+    assert "spearman_ic" not in summary["pooled_metrics"]

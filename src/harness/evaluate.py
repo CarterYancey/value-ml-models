@@ -24,7 +24,7 @@ from pathlib import Path
 import pandas as pd
 
 from eval.era import collect_predictions
-from eval.metrics import compute_all
+from eval.metrics import compute_all, regression_diagnostics
 from harness.config import EvalConfig
 from harness.dataset import Dataset, SplitAccess
 from harness.errors import DatasetValidationError
@@ -119,6 +119,19 @@ def evaluate_bundle(
                 precision_targets=config.precision_targets,
                 probabilistic=bundle.probabilistic,
             )
+            outcome = None
+            if config.eval_label:  # continuous-target bundle
+                outcome = split.test.loc[
+                    test_fit.X.index, config.label
+                ].to_numpy(dtype=float)
+                metrics.update(
+                    regression_diagnostics(
+                        outcome,
+                        scores,
+                        top_k=config.top_k,
+                        sample_weight=test_fit.sample_weight,
+                    )
+                )
             stats = bundle.fold_train_stats[fold]
             fold_results.append(
                 {
@@ -134,7 +147,8 @@ def evaluate_bundle(
             ).dt.year.to_numpy()
             prediction_frames.append(
                 collect_predictions(
-                    fold, test_years, test_fit.y, scores, test_fit.sample_weight
+                    fold, test_years, test_fit.y, scores,
+                    test_fit.sample_weight, outcome=outcome,
                 )
             )
             store.append(

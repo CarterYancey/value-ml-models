@@ -205,7 +205,18 @@ in [PLAN.md](PLAN.md); check items off (and add new ones) as work proceeds.
       `recall_at_prec_*` / `thr_for_prec_*` / `n_at_prec_*` — best recall
       subject to a precision floor — per fold, per era, and pooled.
       (`models/common.py`, `eval/metrics.recall_at_precision`)
-- [ ] Post-hoc calibration (isotonic / Platt) on a purged validation fold.
+- [ ] Post-hoc calibration (isotonic / Platt), prequentially: calibrate
+      fold Y's model on the pooled out-of-sample test predictions of
+      folds < Y — already purged/embargoed and strictly earlier than
+      fold Y's test year, so no local split is constructed (invariant 1
+      intact). Isotonic when the pooled history is large (10k+ rows),
+      Platt/sigmoid for the earliest folds; monotone maps leave every
+      ranking metric unchanged, so the wins are stable/interpretable
+      thresholds (`thr_for_prec_*` chosen ex ante), honest `score >= p`
+      tiers in the confidence profile, and probability-scale score
+      combination in multi-model backtests. Report the calibrated
+      reliability curve next to the raw one; flag the earliest fold(s)
+      with too little history as uncalibrated.
 - [ ] SHAP: global importance + per-prediction explanations; compare against
       Phase-1 tree rules.
 - [x] Native feature importances as a standard artifact: every model
@@ -348,6 +359,16 @@ slice. All within the invariants: no local splits, no derived features.
       `harness/dataset.py::_target_array`; exemplars
       `experiments/lgbm_regressor_3y_cagr_ge_10.toml`,
       `experiments/sweeps/lgbm_cagr_quantile_3y.toml`)
+- [x] Regression-run diagnostics beyond the binary frame: continuous
+      runs carry the realized outcome through the prediction frames, so
+      the era table and pooled block report `fwd_at_K` (mean realized
+      CAGR of the top-K picks, picked per year — sweep-rankable via
+      `rank_metric = "fwd_at_20"`) and `spearman_ic` (rank IC; pooled
+      row is the mean of per-year ICs since per-fold scores aren't
+      comparable). Weighted MAE/R² are logged in the results store as
+      fit diagnostics only — R²≈0 on stock returns is normal and says
+      nothing about the top of the ranking, so neither is ever
+      headlined. (`eval/metrics.regression_diagnostics`, `eval/era.py`)
 - [ ] Run the regression-reframe spike against `dataset_v1.1`
       (`lgbm_cagr_quantile_3y`) and compare its summary against the
       classification sweeps on the same eval cells before going further.
