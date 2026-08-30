@@ -144,6 +144,26 @@ def write_report(
             "realized outcomes (pooled row: mean of per-year ICs); the "
             "MAE/R² fit diagnostics are logged in the results store only."
         )
+    if artifacts and "calibration" in artifacts:
+        cal = artifacts["calibration"]
+
+        def _folds(f):
+            return ", ".join(str(x) for x in f) if f else "none"
+
+        lines.append(
+            f"- **prequential calibration** (`{cal['method']}`): each "
+            "fold's scores are calibrated on the pooled out-of-sample "
+            "predictions of earlier folds (min "
+            f"{cal['min_rows']} history rows; no local split "
+            "constructed). Calibrated folds: "
+            f"{_folds(cal['calibrated_folds'])}; raw for lack of "
+            f"history: {_folds(cal['uncalibrated_folds'])}. The map is "
+            "monotone, so rankings are unchanged — the gain is that "
+            "score thresholds and confidence tiers read as "
+            "probabilities. Caveat: the history was scored by earlier "
+            "folds' refits, so this assumes score stability across "
+            "refits of this config (what a live deployment assumes too)."
+        )
     lines.append(
         f"- **configurations tried against this cell "
         f"(dataset, scheme, horizon, label): {configurations_tried}** "
@@ -231,6 +251,16 @@ def write_report(
         lines.append("")
         lines.append(f"![calibration curve]({Path(calibration_path).name})")
         lines.append("")
+        if artifacts and "calibration_raw_curve" in artifacts:
+            raw_name = Path(artifacts["calibration_raw_curve"]).name
+            lines.append(
+                "The curve above reflects the *calibrated* scores this "
+                "run reports; the raw scores before the prequential "
+                "correction, for comparison:"
+            )
+            lines.append("")
+            lines.append(f"![raw calibration curve]({raw_name})")
+            lines.append("")
 
     lines.append("## Baseline comparison")
     lines.append("")

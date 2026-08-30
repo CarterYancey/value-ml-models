@@ -25,6 +25,7 @@ import pandas as pd
 
 from eval.era import collect_predictions
 from eval.metrics import compute_all, regression_diagnostics
+from harness.calibration import PrequentialCalibration
 from harness.config import EvalConfig
 from harness.dataset import Dataset, SplitAccess
 from harness.errors import DatasetValidationError
@@ -97,6 +98,16 @@ def evaluate_bundle(
 
         fold_results: list[dict] = []
         prediction_frames: list[pd.DataFrame] = []
+        # bundles store raw fold models; a calibrated config's scores are
+        # re-derived prequentially, identically to the training run
+        # (bundle.folds is sorted — chronological under walkforward)
+        calib = (
+            PrequentialCalibration(
+                config.calibration, config.calibration_min_rows
+            )
+            if config.calibration
+            else None
+        )
         for fold in bundle.folds:
             split = dataset.apply_split(
                 config.scheme, fold, config.horizon_years,
@@ -110,6 +121,9 @@ def evaluate_bundle(
             )
             model = bundle.fold_models[fold]
             scores = model.predict_scores(test_fit.X)
+            raw_scores = scores
+            if calib is not None:
+                scores = calib.calibrate(fold, raw_scores)
             metrics = compute_all(
                 test_fit.y,
                 scores,
@@ -151,6 +165,8 @@ def evaluate_bundle(
                     test_fit.sample_weight, outcome=outcome,
                 )
             )
+            if calib is not None:
+                calib.observe(raw_scores, test_fit.y, test_fit.sample_weight)
             store.append(
                 {
                     **base_row,
@@ -175,7 +191,14 @@ def evaluate_bundle(
             prediction_frames=prediction_frames,
             probabilistic=bundle.probabilistic,
             reports_dir=reports_dir,
-            artifacts={"source_bundle": Path(bundle_dir)},
+            artifacts={
+                "source_bundle": Path(bundle_dir),
+                **(
+                    {"calibration": calib.summary()}
+                    if calib is not None
+                    else {}
+                ),
+            },
             # calibration and PR/ROC curves are score-only; the scores are
             # identical to the training run, so we don't redraw them
             render_score_figures=False,

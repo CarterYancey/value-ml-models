@@ -1,0 +1,38 @@
+# Prequentially calibrated LightGBM exemplar. Each walk-forward fold's
+# raw scores are mapped through an isotonic fit on the pooled
+# out-of-sample predictions of all earlier folds — no local split is
+# constructed (invariant 1 intact; see harness/calibration.py). The
+# earliest fold(s) with under calibration_min_rows of history stay raw
+# and are flagged in the report, which draws the calibrated and raw
+# reliability curves side by side.
+#
+# Calibration is monotone, so precision@K and the precision-floor
+# ranking are unchanged; what changes is that thr_for_prec_* and the
+# "score >= p" confidence tiers become honest probabilities you could
+# fix ex ante. class_weight is deliberately absent here: weighted
+# losses distort probabilities, and this config's philosophy is
+# calibrate-then-threshold rather than force-precision-in-training.
+# Run: vml-run experiments/lgbm_isotonic_3y_beat_spy.toml
+dataset_version = "dataset_v1.1"
+scheme = "walkforward"
+folds = "all"
+label = "label_3y_beat_spy"
+seed = 7
+top_k = [20, 50]
+precision_targets = [0.75, 0.9]
+calibration = "isotonic"
+calibration_min_rows = 5000
+
+[features]
+groups = ["ranks", "sector_ranks"]
+
+[model]
+name = "lightgbm"
+n_estimators = 300
+learning_rate = 0.05
+num_leaves = 15
+min_child_samples = 60
+subsample = 0.8
+subsample_freq = 1
+colsample_bytree = 0.8
+reg_lambda = 1.0

@@ -55,6 +55,10 @@ import numpy as np
 import pandas as pd
 
 from eval.metrics import threshold_tag
+from harness.calibration import (
+    CALIBRATION_METHODS,
+    DEFAULT_CALIBRATION_MIN_ROWS,
+)
 from harness.config import ExperimentConfig, FeatureSpec, infer_horizon_years
 from harness.errors import ConfigError
 from harness.report import _table
@@ -97,6 +101,8 @@ _SWEEP_ALLOWED = frozenset(
         "precision_targets",
         "rank_metric",
         "max_runs",
+        "calibration",
+        "calibration_min_rows",
     }
 )
 
@@ -146,6 +152,9 @@ class SweepConfig:
     #: precision floor when floors are set, else precision at the first K
     rank_metric: str = ""
     max_runs: int = DEFAULT_MAX_RUNS
+    #: prequential calibration applied to every expanded run ("" = off)
+    calibration: str = ""
+    calibration_min_rows: int = DEFAULT_CALIBRATION_MIN_ROWS
 
     @classmethod
     def from_file(cls, path: str | Path) -> "SweepConfig":
@@ -375,6 +384,25 @@ class SweepConfig:
         if not seeds or len(set(seeds)) != len(seeds):
             raise ConfigError(f"sweep config {source}: seeds must be distinct")
 
+        calibration = str(raw.get("calibration", ""))
+        if calibration and calibration not in CALIBRATION_METHODS:
+            raise ConfigError(
+                f"sweep config {source}: calibration must be one of "
+                f"{list(CALIBRATION_METHODS)} or absent (off), "
+                f"got {calibration!r}"
+            )
+        if "calibration_min_rows" in raw and not calibration:
+            raise ConfigError(
+                f"sweep config {source}: calibration_min_rows is set but "
+                "calibration is off"
+            )
+        if calibration and model_target(str(model["name"])) == "continuous":
+            raise ConfigError(
+                f"sweep config {source}: calibration applies to "
+                f"probabilistic classifiers; {model['name']!r} scores are "
+                "predicted returns, not probabilities"
+            )
+
         top_k = tuple(int(k) for k in raw.get("top_k", (20, 50)))
         precision_targets = tuple(
             float(p) for p in raw.get("precision_targets", ())
@@ -409,6 +437,10 @@ class SweepConfig:
             precision_targets=precision_targets,
             rank_metric=rank_metric,
             max_runs=int(raw.get("max_runs", DEFAULT_MAX_RUNS)),
+            calibration=calibration,
+            calibration_min_rows=int(
+                raw.get("calibration_min_rows", DEFAULT_CALIBRATION_MIN_ROWS)
+            ),
         )
         if not sweep.name:
             sweep = replace(sweep, name=sweep.derived_name())
@@ -481,6 +513,9 @@ class SweepConfig:
             payload["random"] = {k: self.random[k] for k in sorted(self.random)}
             payload["n_samples"] = self.n_samples
             payload["search_seed"] = self.search_seed
+        if self.calibration:
+            payload["calibration"] = self.calibration
+            payload["calibration_min_rows"] = self.calibration_min_rows
         blob = json.dumps(payload, sort_keys=True, separators=(",", ":"))
         return hashlib.sha256(blob.encode()).hexdigest()[:8]
 
@@ -556,6 +591,8 @@ class SweepConfig:
                 top_k=self.top_k,
                 score_thresholds=self.score_thresholds,
                 precision_targets=self.precision_targets,
+                calibration=self.calibration,
+                calibration_min_rows=self.calibration_min_rows,
             )
             name = self._run_name(label, fs_idx, combo, draw_idx, seed, config)
             runs.append(

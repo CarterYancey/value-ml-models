@@ -26,8 +26,10 @@ from eval.era import (
 from eval.metrics import compute_all, regression_diagnostics
 from eval.plots import render_calibration_plot, render_pr_curve, render_roc_curve
 from explain.rules import render_tree_diagram, rules_text
+from harness.calibration import PrequentialCalibration
 from harness.config import ExperimentConfig
 from harness.dataset import Dataset, SplitAccess
+from harness.errors import ConfigError
 from harness.model_store import ModelBundle
 from harness.report import write_report
 from harness.results import ResultsStore, git_sha, new_run_id
@@ -99,6 +101,14 @@ def run_experiment(
                 f"no folds for scheme={config.scheme!r} "
                 f"horizon={config.horizon_years}"
             )
+        calib = None
+        if config.calibration:
+            calib = PrequentialCalibration(
+                config.calibration, config.calibration_min_rows
+            )
+            # prequential calibration consumes folds chronologically
+            # (walkforward fold ids are test years)
+            folds = sorted(folds)
 
         fold_results: list[dict] = []
         prediction_frames: list[pd.DataFrame] = []
@@ -108,6 +118,7 @@ def run_experiment(
         last_tree: tuple[int, DecisionTreeClassifier] | None = None
         probabilistic = False
         fold_importances: list[tuple[int, np.ndarray]] = []
+        raw_score_arrays: list[np.ndarray] = []
         for fold in folds:
             split = dataset.apply_split(
                 config.scheme, fold, config.horizon_years, access=access
@@ -123,6 +134,14 @@ def run_experiment(
                 split.test, eval_label, feature_cols, config.horizon_years
             )
             scores = model.predict_scores(test_fit.X)
+            raw_scores = scores
+            if calib is not None:
+                if not model.probabilistic:
+                    raise ConfigError(
+                        f"calibration requires a probabilistic classifier; "
+                        f"{config.model_name!r} scores are not probabilities"
+                    )
+                scores = calib.calibrate(fold, raw_scores)
             metrics = compute_all(
                 test_fit.y,
                 scores,
@@ -173,6 +192,10 @@ def run_experiment(
                     test_fit.sample_weight, outcome=outcome,
                 )
             )
+            if calib is not None:
+                # history is always raw scores; reported scores may differ
+                calib.observe(raw_scores, test_fit.y, test_fit.sample_weight)
+                raw_score_arrays.append(np.asarray(raw_scores, dtype=float))
             estimator = getattr(model, "estimator_", None)
             if isinstance(estimator, DecisionTreeClassifier):
                 fold_rules.append((fold, rules_text(estimator, feature_cols)))
@@ -212,6 +235,21 @@ def run_experiment(
                 reports_dir / f"{config.name}_importances.csv",
                 feature_cols,
                 fold_importances,
+            )
+        if calib is not None:
+            artifacts["calibration"] = calib.summary()
+            # the standard calibration figure now shows *calibrated*
+            # scores; draw the raw pooled scores beside it so the
+            # correction is visible
+            pooled_pred = pd.concat(prediction_frames, ignore_index=True)
+            reports_dir.mkdir(parents=True, exist_ok=True)
+            artifacts["calibration_raw_curve"] = render_calibration_plot(
+                pooled_pred["y_true"],
+                np.concatenate(raw_score_arrays),
+                pooled_pred["sample_weight"],
+                path=reports_dir / f"{config.name}_calibration_raw.png",
+                title=f"{config.name} — RAW (uncalibrated) scores, "
+                "pooled over folds",
             )
 
         bundle_path = None

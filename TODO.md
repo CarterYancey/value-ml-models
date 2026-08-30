@@ -205,18 +205,28 @@ in [PLAN.md](PLAN.md); check items off (and add new ones) as work proceeds.
       `recall_at_prec_*` / `thr_for_prec_*` / `n_at_prec_*` — best recall
       subject to a precision floor — per fold, per era, and pooled.
       (`models/common.py`, `eval/metrics.recall_at_precision`)
-- [ ] Post-hoc calibration (isotonic / Platt), prequentially: calibrate
-      fold Y's model on the pooled out-of-sample test predictions of
-      folds < Y — already purged/embargoed and strictly earlier than
-      fold Y's test year, so no local split is constructed (invariant 1
-      intact). Isotonic when the pooled history is large (10k+ rows),
-      Platt/sigmoid for the earliest folds; monotone maps leave every
-      ranking metric unchanged, so the wins are stable/interpretable
-      thresholds (`thr_for_prec_*` chosen ex ante), honest `score >= p`
-      tiers in the confidence profile, and probability-scale score
-      combination in multi-model backtests. Report the calibrated
-      reliability curve next to the raw one; flag the earliest fold(s)
-      with too little history as uncalibrated.
+- [x] Post-hoc calibration (isotonic / Platt), prequentially: with
+      `calibration = "isotonic"|"platt"` in a config (or sweep), fold
+      Y's raw scores are calibrated on the pooled out-of-sample test
+      predictions of folds < Y — already purged/embargoed and strictly
+      earlier, so no local split is constructed (invariant 1 intact).
+      Folds below `calibration_min_rows` of history (default 1000) stay
+      raw and are flagged in the report; the report draws the calibrated
+      and raw reliability curves side by side and states the
+      across-refit score-stability assumption. Monotone maps leave the
+      rankings unchanged — the win is that `thr_for_prec_*` and the
+      `score >= p` confidence tiers become real probabilities. `vml-eval`
+      re-derives identical calibrated scores from a bundle of raw
+      models (nothing new persisted); probabilistic classifiers only.
+      (`harness/calibration.py`; exemplar
+      `experiments/lgbm_isotonic_3y_beat_spy.toml`)
+- [ ] Deployment-time calibration: a deployment refit has no
+      out-of-sample history, so `vml-train-deploy` refuses calibrated
+      configs today. Design: fit the final calibrator on the *full*
+      walk-forward OOS history of the same config and store it in the
+      DeploymentBundle (format bump), so `vml-predict` scores read as
+      probabilities; until then deployment rankings are identical to
+      the uncalibrated config's.
 - [ ] SHAP: global importance + per-prediction explanations; compare against
       Phase-1 tree rules.
 - [x] Native feature importances as a standard artifact: every model
@@ -462,5 +472,21 @@ slice. All within the invariants: no local splits, no derived features.
       `scripts/build_price_panel.py` extracts it from the raw
       SEP/SFP/TICKERS tables (see §4 above), so no upstream build stage
       is needed. Upstream only needs to keep shipping `data/raw/`.
+- [ ] Inner-validation role (only if early stopping ever becomes worth
+      it): invariant 1 stays absolute — no local split carving, however
+      "temporal and careful" it looks, because the purge/embargo
+      machinery lives upstream and a second local implementation would
+      drift silently. If a use case genuinely needs a within-train
+      validation set (LightGBM early stopping is the only candidate so
+      far; calibration is served prequentially without one), the
+      sanctioned path is an upstream request: an additional
+      `inner_val` role inside each walkforward fold's training window
+      (last pre-purge year, purged/embargoed against the rest of train
+      with the same discipline as test), shipped as extra rows in
+      `splits.parquet`. Additive and opt-in — configs that ignore the
+      role are byte-identical in behavior, so no "third split always"
+      burden — and frozen/citable like every other fold definition.
+      Weigh against the cheap alternative first: boosting rounds are
+      already tuned across folds by the random search.
 - [ ] Any feature request discovered during modeling → file upstream, new
       dataset version (never engineered here).

@@ -42,7 +42,7 @@ import pandas as pd
 
 from harness.config import ExperimentConfig
 from harness.dataset import Dataset
-from harness.errors import DatasetValidationError
+from harness.errors import ConfigError, DatasetValidationError
 from harness.model_store import DeploymentBundle
 from harness.results import ResultsStore, git_sha, new_run_id
 from harness.runner import DEFAULT_DATA_ROOT, DEFAULT_MODELS, DEFAULT_RESULTS
@@ -123,6 +123,15 @@ def train_deployment_model(
 
     try:
         check_target_labels(config)
+        if config.calibration:
+            raise ConfigError(
+                "a deployment refit has no out-of-sample history to "
+                "calibrate on (prequential calibration lives in the "
+                "walk-forward runner); deploy the uncalibrated config — "
+                "the ranking is identical. Deployment-time calibration "
+                "(fit on the full walk-forward OOS history) is an open "
+                "TODO item."
+            )
         dataset = Dataset(Path(data_root) / config.dataset_version)
         feature_cols = config.resolve_feature_columns(dataset)
         # All currently-eligible data: fit_data keeps every row whose
