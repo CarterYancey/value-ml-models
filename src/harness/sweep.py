@@ -661,6 +661,22 @@ def _sanitize(value) -> str:
     return re.sub(r"[^A-Za-z0-9._=-]+", "-", str(value)).strip("-") or "x"
 
 
+def _peak_rss_note() -> str:
+    """Process peak-RSS suffix for sweep progress lines (a memory
+    regression should be visible run by run, not discovered as an OOM
+    kill hours in). Empty where the resource module is unavailable."""
+    try:
+        import resource
+        import sys
+
+        peak = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+    except (ImportError, OSError):  # pragma: no cover - non-Unix
+        return ""
+    # ru_maxrss is KB on Linux, bytes on macOS
+    divisor = 1e9 if sys.platform == "darwin" else 1e6
+    return f"  (peak RSS {peak / divisor:.1f} GB)"
+
+
 _RANDOM_SPEC_KEYS = frozenset({"low", "high", "log", "int", "choices"})
 
 
@@ -766,7 +782,7 @@ def run_sweep(
     sweep_reports = Path(reports_dir) / "sweeps" / sweep.name
     outcomes: list[dict] = []
     for i, run in enumerate(runs, start=1):
-        print(f"[{i}/{len(runs)}] {run.config.name}")
+        print(f"[{i}/{len(runs)}] {run.config.name}{_peak_rss_note()}")
         outcome = {
             "run": run.config.name,
             "label": run.label,

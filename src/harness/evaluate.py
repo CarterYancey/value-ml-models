@@ -88,9 +88,12 @@ def evaluate_bundle(
         # name); the manifest's own dataset_version field is a separate
         # build-identity string ("X.Y") and is not expected to match it.
         dataset = Dataset(Path(data_root) / train_config.dataset_version)
-        missing = sorted(
-            set(bundle.feature_columns) - set(dataset.data.columns)
-        )
+        declared = {
+            c
+            for group in ("features", "ranks", "sector_ranks")
+            for c in dataset.columns(group)
+        }
+        missing = sorted(set(bundle.feature_columns) - declared)
         if missing:
             raise DatasetValidationError(
                 f"bundle feature columns absent from dataset: {missing}"
@@ -108,10 +111,19 @@ def evaluate_bundle(
             if config.calibration
             else None
         )
+        needed_columns = list(
+            dict.fromkeys(
+                list(bundle.feature_columns)
+                + [config.label]
+                + ([config.eval_label] if config.eval_label else [])
+                + [dataset.sample_weight_column(config.horizon_years)]
+            )
+        )
         for fold in bundle.folds:
             split = dataset.apply_split(
                 config.scheme, fold, config.horizon_years,
                 access=SplitAccess.STANDARD,
+                columns=needed_columns,
             )
             # continuous-target bundles are measured against their binary
             # eval_label cell, exactly as in the training run

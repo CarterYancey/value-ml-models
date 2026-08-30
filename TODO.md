@@ -178,6 +178,18 @@ in [PLAN.md](PLAN.md); check items off (and add new ones) as work proceeds.
       definition, effective sample size, and the crash-era CI table moved
       to a provenance appendix; markdown tables width-padded; PR/ROC
       curves opt-in (`vml-run --curves`), calibration always drawn.
+- [x] Memory-bounded data access (the real cause of the vml-sweep OOM
+      at ~29 GB RSS): `apply_split(columns=...)` merges a column
+      projection instead of the full-width frame (string metadata
+      columns dominated the old copies), the label-observability
+      column is always force-included so validation can't be projected
+      away, split tags load parquet-filtered per (scheme, horizon)
+      instead of the whole tag table, manifest validation reads parquet
+      metadata instead of materializing the frame, and deployment
+      refits fit on a projection. Runner/eval pass exactly the columns
+      a run touches; `dataset.data` stays full-width for the backtest
+      cross-section. vml-sweep prints peak RSS per run so regressions
+      are visible before the OOM killer finds them.
 - [ ] `vml-experiments` quality-of-life: `--cell` filter (horizon+label),
       and a `similar <config>` subcommand ranking configs by shared
       cell/model/features.

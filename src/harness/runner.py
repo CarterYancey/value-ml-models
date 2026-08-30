@@ -117,11 +117,22 @@ def run_experiment(
         fold_train_stats: dict[int, dict] = {}
         last_tree: tuple[int, DecisionTreeClassifier] | None = None
         probabilistic = False
+        # only the columns this run touches: full-width fold frames copy
+        # every string metadata column and cost tens of GB on real data
+        needed_columns = list(
+            dict.fromkeys(
+                list(feature_cols)
+                + [config.label]
+                + ([config.eval_label] if config.eval_label else [])
+                + [dataset.sample_weight_column(config.horizon_years)]
+            )
+        )
         fold_importances: list[tuple[int, np.ndarray]] = []
         raw_score_arrays: list[np.ndarray] = []
         for fold in folds:
             split = dataset.apply_split(
-                config.scheme, fold, config.horizon_years, access=access
+                config.scheme, fold, config.horizon_years, access=access,
+                columns=needed_columns,
             )
             fit = dataset.fit_data(
                 split.train, config.label, feature_cols, config.horizon_years,

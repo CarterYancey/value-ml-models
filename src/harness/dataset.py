@@ -18,6 +18,7 @@ from typing import Sequence
 
 import numpy as np
 import pandas as pd
+import pyarrow.parquet as pq
 
 from harness.errors import (
     DatasetValidationError,
@@ -151,6 +152,13 @@ class Dataset:
         self._data: pd.DataFrame | None = None
         self._splits: pd.DataFrame | None = None
         self._split_folds: pd.DataFrame | None = None
+        #: column-projected reads of dataset.parquet, keyed by the
+        #: requested column tuple (see `frame`)
+        self._projections: dict[tuple[str, ...], pd.DataFrame] = {}
+        #: split tags filtered per (scheme, horizon) — splits.parquet
+        #: covers every scheme x fold x horizon and can dwarf the
+        #: dataset itself in pandas
+        self._tag_cache: dict[tuple[str, int], pd.DataFrame] = {}
         self._validate_manifest()
 
     # ------------------------------------------------------------- loading
@@ -174,14 +182,17 @@ class Dataset:
             raise DatasetValidationError(
                 f"manifest columns lack groups: {missing_groups}"
             )
-        n_rows = len(self.data)
+        # validated against the parquet metadata, not a full load — a
+        # multi-GB dataset must not be materialized just to count rows
+        meta = pq.ParquetFile(self.root / "dataset.parquet")
+        n_rows = meta.metadata.num_rows
         if n_rows != self.manifest["rows"]:
             raise DatasetValidationError(
                 f"manifest declares {self.manifest['rows']} rows but "
                 f"dataset.parquet has {n_rows}"
             )
         declared = [c for g in COLUMN_GROUPS for c in cols[g]]
-        absent = sorted(set(declared) - set(self.data.columns))
+        absent = sorted(set(declared) - set(meta.schema_arrow.names))
         if absent:
             raise DatasetValidationError(
                 f"manifest declares columns absent from dataset.parquet: {absent}"
@@ -197,15 +208,63 @@ class Dataset:
 
     @property
     def data(self) -> pd.DataFrame:
+        """The full dataset frame — every column, object-dtype strings
+        included. Multi-GB on real data: harness code paths that know
+        their columns use `frame`/`apply_split(columns=...)` instead."""
         if self._data is None:
             self._data = pd.read_parquet(self.root / "dataset.parquet")
         return self._data
+
+    def frame(self, columns: Sequence[str]) -> pd.DataFrame:
+        """A column projection of dataset.parquet (snapshot key always
+        included). Reads only the requested columns — the string-heavy
+        metadata columns are what make full-width frames cost tens of
+        GB on real data — and caches per projection."""
+        cols = tuple(dict.fromkeys(list(SNAPSHOT_KEY) + list(columns)))
+        if cols in self._projections:
+            return self._projections[cols]
+        if self._data is not None:  # already paid for the full load
+            projected = self._data[list(cols)]
+        else:
+            try:
+                projected = pd.read_parquet(
+                    self.root / "dataset.parquet", columns=list(cols)
+                )
+            except (KeyError, ValueError) as exc:
+                raise DatasetValidationError(
+                    f"dataset.parquet lacks requested columns: {exc}"
+                ) from exc
+        self._projections[cols] = projected
+        return projected
 
     @property
     def splits(self) -> pd.DataFrame:
         if self._splits is None:
             self._splits = pd.read_parquet(self.root / "splits.parquet")
         return self._splits
+
+    def _split_tags(self, scheme: str, horizon_years: int) -> pd.DataFrame:
+        """Split tags for one (scheme, horizon), read with a parquet
+        filter so the full tag table (every scheme x fold x horizon —
+        it can dwarf the dataset) is never materialized in pandas."""
+        key = (scheme, int(horizon_years))
+        if key in self._tag_cache:
+            return self._tag_cache[key]
+        if self._splits is not None:  # already paid for the full load
+            tags = self._splits[
+                (self._splits["scheme"] == scheme)
+                & (self._splits["horizon_years"] == horizon_years)
+            ]
+        else:
+            tags = pd.read_parquet(
+                self.root / "splits.parquet",
+                filters=[
+                    ("scheme", "==", scheme),
+                    ("horizon_years", "==", int(horizon_years)),
+                ],
+            )
+        self._tag_cache[key] = tags
+        return tags
 
     @property
     def split_folds(self) -> pd.DataFrame:
@@ -381,6 +440,7 @@ class Dataset:
         fold: int,
         horizon_years: int,
         access: SplitAccess = SplitAccess.STANDARD,
+        columns: Sequence[str] | None = None,
     ) -> SplitFrames:
         """Join split tags for (scheme, fold, horizon) and return train/test.
 
@@ -391,16 +451,19 @@ class Dataset:
         - test rows come only from the tags, and are verified to be
           median-kind and label-observable (defense against a malformed
           upstream artifact).
+
+        `columns` narrows the returned frames to the snapshot key plus
+        the named columns (the horizon's label-observability column is
+        always included so test-row validation cannot be projected
+        away). Callers that know their columns should pass them: the
+        default full-width frames copy every string metadata column per
+        fold and cost tens of GB on real data.
         """
         self._check_scheme_access(scheme, access)
         self._check_horizon(horizon_years)
 
-        tags = self.splits
-        sel = tags[
-            (tags["scheme"] == scheme)
-            & (tags["fold"] == fold)
-            & (tags["horizon_years"] == horizon_years)
-        ]
+        tags = self._split_tags(scheme, horizon_years)
+        sel = tags[tags["fold"] == fold]
         if sel.empty:
             raise SplitApplicationError(
                 f"no split tags for scheme={scheme!r} fold={fold} "
@@ -408,11 +471,22 @@ class Dataset:
                 f"{self.folds(scheme, horizon_years)}"
             )
 
+        if columns is None:
+            source = self.data
+        else:
+            observable = f"delisted_in_window_{horizon_years}y"
+            extra = (
+                [observable]
+                if observable in self.columns("labels")
+                else []
+            )
+            source = self.frame(list(columns) + extra)
+
         key = SNAPSHOT_KEY
         train_keys = sel.loc[sel["role"] == "train", key]
         test_keys = sel.loc[sel["role"] == "test", key]
-        train = self.data.merge(train_keys, on=key, how="inner")
-        test = self.data.merge(test_keys, on=key, how="inner")
+        train = source.merge(train_keys, on=key, how="inner")
+        test = source.merge(test_keys, on=key, how="inner")
         if len(train) != len(train_keys) or len(test) != len(test_keys):
             raise SplitApplicationError(
                 f"split tags reference snapshots missing from dataset.parquet "

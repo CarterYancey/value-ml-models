@@ -136,8 +136,17 @@ def train_deployment_model(
         feature_cols = config.resolve_feature_columns(dataset)
         # All currently-eligible data: fit_data keeps every row whose
         # label is observable — all roles, all kinds, delistings included.
+        # Column-projected: the refit needs features + label + weight,
+        # not the full-width (string-heavy) frame.
+        refit_frame = dataset.frame(
+            list(feature_cols)
+            + [
+                config.label,
+                dataset.sample_weight_column(config.horizon_years),
+            ]
+        )
         fit = dataset.fit_data(
-            dataset.data, config.label, feature_cols, config.horizon_years,
+            refit_frame, config.label, feature_cols, config.horizon_years,
             target=model_target(config.model_name),
         )
         if not len(fit.X):

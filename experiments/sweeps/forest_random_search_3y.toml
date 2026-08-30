@@ -9,16 +9,18 @@
 # importance-guided feature subsets later, instead of hand-picking
 # columns up front.
 #
-# RESOURCE BUDGET (why these ranges are bounded the way they are): a
-# fitted sklearn tree costs ~64 bytes per node, and node count grows
-# like 2 x n_rows / min_samples_leaf until max_depth caps it. Training
-# windows here run to ~10^6 rows (all three snapshot kinds), so a
-# depth-20+, leaf-5 forest of 800 trees is tens of GB and got the sweep
-# OOM-killed. The space below caps the worst draw at roughly
-# 2^16 nodes x 500 trees ~ 2 GB per fit, n_jobs caps concurrent tree
-# builders, and max_samples shrinks each tree's bootstrap (cheaper AND
-# better-decorrelated). If a run still dies, check `journalctl -k |
-# grep -i oom` — an OOM kill leaves no Python traceback.
+# RESOURCE BUDGET: the harness OOM that first hit this sweep was NOT
+# the forest itself — full-width fold frames (every string metadata
+# column copied per fold) were the dominant allocation, fixed by
+# column-projected split application in harness/dataset.py. The ranges
+# below stay bounded anyway because they are *statistically* right at
+# ~10^6-row training windows (tiny leaves memorize microcap noise) and
+# keep fitted-model size sane: a sklearn tree costs ~64 bytes/node,
+# and node count grows like 2 x n_rows / min_samples_leaf until
+# max_depth caps it. n_jobs caps concurrent tree builders; max_samples
+# shrinks each tree's bootstrap (cheaper AND better-decorrelated).
+# vml-sweep prints peak RSS after each run; if a run still dies, check
+# `journalctl -k | grep -i oom` — an OOM kill leaves no traceback.
 #
 # Range rationale:
 #   n_estimators  150–500    more trees only stabilize (cost is linear);
