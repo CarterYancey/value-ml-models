@@ -12,6 +12,7 @@ from __future__ import annotations
 import traceback
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
 from sklearn.tree import DecisionTreeClassifier
 
@@ -22,15 +23,22 @@ from eval.era import (
     era_table,
     pooled_metrics,
 )
-from eval.metrics import compute_all
+from eval.metrics import compute_all, regression_diagnostics
 from eval.plots import render_calibration_plot, render_pr_curve, render_roc_curve
 from explain.rules import render_tree_diagram, rules_text
+from harness.calibration import PrequentialCalibration
 from harness.config import ExperimentConfig
 from harness.dataset import Dataset, SplitAccess
+from harness.errors import ConfigError
 from harness.model_store import ModelBundle
 from harness.report import write_report
 from harness.results import ResultsStore, git_sha, new_run_id
-from models.registry import BASELINE_MODELS, build_model
+from models.registry import (
+    BASELINE_MODELS,
+    build_model,
+    check_target_labels,
+    model_target,
+)
 
 DEFAULT_DATA_ROOT = Path("data/datasets")
 DEFAULT_RESULTS = Path("experiments/results.csv")
@@ -67,11 +75,19 @@ def run_experiment(
         "seed": config.seed,
         "scheme": config.scheme,
         "horizon_years": config.horizon_years,
-        "label": config.label,
+        # a continuous-target run is a trial against the binary cell it
+        # is *measured* on — logging it under fwd_* would dilute the
+        # per-cell configurations-tried accounting
+        "label": config.eval_label or config.label,
         "model": config.model_name,
     }
 
     try:
+        check_target_labels(config)
+        target = model_target(config.model_name)
+        # continuous-target runs rank by predicted return but are
+        # *measured* against the binary eval_label cell
+        eval_label = config.eval_label or config.label
         dataset = Dataset(Path(data_root) / config.dataset_version)
         config.check_dataset_version(dataset.version)
         feature_cols = config.resolve_feature_columns(dataset)
@@ -85,6 +101,14 @@ def run_experiment(
                 f"no folds for scheme={config.scheme!r} "
                 f"horizon={config.horizon_years}"
             )
+        calib = None
+        if config.calibration:
+            calib = PrequentialCalibration(
+                config.calibration, config.calibration_min_rows
+            )
+            # prequential calibration consumes folds chronologically
+            # (walkforward fold ids are test years)
+            folds = sorted(folds)
 
         fold_results: list[dict] = []
         prediction_frames: list[pd.DataFrame] = []
@@ -93,20 +117,42 @@ def run_experiment(
         fold_train_stats: dict[int, dict] = {}
         last_tree: tuple[int, DecisionTreeClassifier] | None = None
         probabilistic = False
+        # only the columns this run touches: full-width fold frames copy
+        # every string metadata column and cost tens of GB on real data
+        needed_columns = list(
+            dict.fromkeys(
+                list(feature_cols)
+                + [config.label]
+                + ([config.eval_label] if config.eval_label else [])
+                + [dataset.sample_weight_column(config.horizon_years)]
+            )
+        )
+        fold_importances: list[tuple[int, np.ndarray]] = []
+        raw_score_arrays: list[np.ndarray] = []
         for fold in folds:
             split = dataset.apply_split(
-                config.scheme, fold, config.horizon_years, access=access
+                config.scheme, fold, config.horizon_years, access=access,
+                columns=needed_columns,
             )
             fit = dataset.fit_data(
-                split.train, config.label, feature_cols, config.horizon_years
+                split.train, config.label, feature_cols, config.horizon_years,
+                target=target,
             )
             model = build_model(config.model_name, config.model_params, config.seed)
             model.fit(fit.X, fit.y, sample_weight=fit.sample_weight)
 
             test_fit = dataset.fit_data(
-                split.test, config.label, feature_cols, config.horizon_years
+                split.test, eval_label, feature_cols, config.horizon_years
             )
             scores = model.predict_scores(test_fit.X)
+            raw_scores = scores
+            if calib is not None:
+                if not model.probabilistic:
+                    raise ConfigError(
+                        f"calibration requires a probabilistic classifier; "
+                        f"{config.model_name!r} scores are not probabilities"
+                    )
+                scores = calib.calibrate(fold, raw_scores)
             metrics = compute_all(
                 test_fit.y,
                 scores,
@@ -116,6 +162,22 @@ def run_experiment(
                 precision_targets=config.precision_targets,
                 probabilistic=model.probabilistic,
             )
+            outcome = None
+            if target == "continuous":
+                # the realized continuous label on the same test rows —
+                # upstream guarantees it is observable exactly where the
+                # binary eval label is
+                outcome = split.test.loc[
+                    test_fit.X.index, config.label
+                ].to_numpy(dtype=float)
+                metrics.update(
+                    regression_diagnostics(
+                        outcome,
+                        scores,
+                        top_k=config.top_k,
+                        sample_weight=test_fit.sample_weight,
+                    )
+                )
             fr = {
                 "fold": fold,
                 "n_train_rows": len(fit.X),
@@ -137,13 +199,23 @@ def run_experiment(
             ).dt.year.to_numpy()
             prediction_frames.append(
                 collect_predictions(
-                    fold, test_years, test_fit.y, scores, test_fit.sample_weight
+                    fold, test_years, test_fit.y, scores,
+                    test_fit.sample_weight, outcome=outcome,
                 )
             )
+            if calib is not None:
+                # history is always raw scores; reported scores may differ
+                calib.observe(raw_scores, test_fit.y, test_fit.sample_weight)
+                raw_score_arrays.append(np.asarray(raw_scores, dtype=float))
             estimator = getattr(model, "estimator_", None)
             if isinstance(estimator, DecisionTreeClassifier):
                 fold_rules.append((fold, rules_text(estimator, feature_cols)))
                 last_tree = (fold, estimator)
+            imp_fn = getattr(model, "feature_importances", None)
+            if imp_fn is not None:
+                imp = imp_fn()
+                if imp is not None:
+                    fold_importances.append((fold, imp))
             store.append(
                 {
                     **base_row,
@@ -169,6 +241,27 @@ def run_experiment(
                 estimator, feature_cols, reports_dir / f"{config.name}_tree.png"
             )
             artifacts["tree_diagram_fold"] = diagram_fold
+        if fold_importances:
+            artifacts["importances"] = _write_importances_file(
+                reports_dir / f"{config.name}_importances.csv",
+                feature_cols,
+                fold_importances,
+            )
+        if calib is not None:
+            artifacts["calibration"] = calib.summary()
+            # the standard calibration figure now shows *calibrated*
+            # scores; draw the raw pooled scores beside it so the
+            # correction is visible
+            pooled_pred = pd.concat(prediction_frames, ignore_index=True)
+            reports_dir.mkdir(parents=True, exist_ok=True)
+            artifacts["calibration_raw_curve"] = render_calibration_plot(
+                pooled_pred["y_true"],
+                np.concatenate(raw_score_arrays),
+                pooled_pred["sample_weight"],
+                path=reports_dir / f"{config.name}_calibration_raw.png",
+                title=f"{config.name} — RAW (uncalibrated) scores, "
+                "pooled over folds",
+            )
 
         bundle_path = None
         if models_dir is not None:
@@ -256,8 +349,9 @@ def finalize_run(
     calibration curve is the figure that gets read, so it is the only one
     drawn by default.
     """
+    cell_label = config.eval_label or config.label
     configurations_tried = store.configurations_tried(
-        config.dataset_version, config.scheme, config.horizon_years, config.label
+        config.dataset_version, config.scheme, config.horizon_years, cell_label
     )
     reports_dir = Path(reports_dir)
     predictions = pd.concat(prediction_frames, ignore_index=True)
@@ -305,7 +399,7 @@ def finalize_run(
         config.dataset_version,
         config.scheme,
         config.horizon_years,
-        config.label,
+        cell_label,
         BASELINE_MODELS,
     )
 
@@ -356,6 +450,30 @@ def _write_rules_file(
     for fold, text in fold_rules:
         lines += ["", f"## Fold {fold}", "", "```", text, "```"]
     path.write_text("\n".join(lines) + "\n")
+    return path
+
+
+def _write_importances_file(
+    path: Path,
+    feature_cols: list[str],
+    fold_importances: list[tuple[int, np.ndarray]],
+) -> Path:
+    """Per-fold feature importances (models that expose them), sorted by
+    the cross-fold mean. Impurity/gain importances are known to flatter
+    high-cardinality features and say nothing about direction — this is a
+    triage artifact for importance-guided feature *subsets* (which then
+    count as configurations tried like any other selection), not an
+    explanation."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    df = pd.DataFrame({"feature": feature_cols})
+    for fold, imp in fold_importances:
+        df[f"fold_{fold}"] = imp
+    fold_cols = [c for c in df.columns if c.startswith("fold_")]
+    df.insert(1, "mean_importance", df[fold_cols].mean(axis=1))
+    df = df.sort_values(
+        "mean_importance", ascending=False, kind="mergesort"
+    ).reset_index(drop=True)
+    df.to_csv(path, index=False)
     return path
 
 

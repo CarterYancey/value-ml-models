@@ -24,7 +24,8 @@ from pathlib import Path
 import pandas as pd
 
 from eval.era import collect_predictions
-from eval.metrics import compute_all
+from eval.metrics import compute_all, regression_diagnostics
+from harness.calibration import PrequentialCalibration
 from harness.config import EvalConfig
 from harness.dataset import Dataset, SplitAccess
 from harness.errors import DatasetValidationError
@@ -75,7 +76,9 @@ def evaluate_bundle(
         "seed": config.seed,
         "scheme": config.scheme,
         "horizon_years": config.horizon_years,
-        "label": config.label,
+        # same cell accounting as the runner: continuous-target bundles
+        # are trials against their binary eval_label cell
+        "label": config.eval_label or config.label,
         "model": config.model_name,
     }
 
@@ -85,9 +88,12 @@ def evaluate_bundle(
         # name); the manifest's own dataset_version field is a separate
         # build-identity string ("X.Y") and is not expected to match it.
         dataset = Dataset(Path(data_root) / train_config.dataset_version)
-        missing = sorted(
-            set(bundle.feature_columns) - set(dataset.data.columns)
-        )
+        declared = {
+            c
+            for group in ("features", "ranks", "sector_ranks")
+            for c in dataset.columns(group)
+        }
+        missing = sorted(set(bundle.feature_columns) - declared)
         if missing:
             raise DatasetValidationError(
                 f"bundle feature columns absent from dataset: {missing}"
@@ -95,17 +101,41 @@ def evaluate_bundle(
 
         fold_results: list[dict] = []
         prediction_frames: list[pd.DataFrame] = []
+        # bundles store raw fold models; a calibrated config's scores are
+        # re-derived prequentially, identically to the training run
+        # (bundle.folds is sorted — chronological under walkforward)
+        calib = (
+            PrequentialCalibration(
+                config.calibration, config.calibration_min_rows
+            )
+            if config.calibration
+            else None
+        )
+        needed_columns = list(
+            dict.fromkeys(
+                list(bundle.feature_columns)
+                + [config.label]
+                + ([config.eval_label] if config.eval_label else [])
+                + [dataset.sample_weight_column(config.horizon_years)]
+            )
+        )
         for fold in bundle.folds:
             split = dataset.apply_split(
                 config.scheme, fold, config.horizon_years,
                 access=SplitAccess.STANDARD,
+                columns=needed_columns,
             )
+            # continuous-target bundles are measured against their binary
+            # eval_label cell, exactly as in the training run
             test_fit = dataset.fit_data(
-                split.test, config.label, bundle.feature_columns,
-                config.horizon_years,
+                split.test, config.eval_label or config.label,
+                bundle.feature_columns, config.horizon_years,
             )
             model = bundle.fold_models[fold]
             scores = model.predict_scores(test_fit.X)
+            raw_scores = scores
+            if calib is not None:
+                scores = calib.calibrate(fold, raw_scores)
             metrics = compute_all(
                 test_fit.y,
                 scores,
@@ -115,6 +145,19 @@ def evaluate_bundle(
                 precision_targets=config.precision_targets,
                 probabilistic=bundle.probabilistic,
             )
+            outcome = None
+            if config.eval_label:  # continuous-target bundle
+                outcome = split.test.loc[
+                    test_fit.X.index, config.label
+                ].to_numpy(dtype=float)
+                metrics.update(
+                    regression_diagnostics(
+                        outcome,
+                        scores,
+                        top_k=config.top_k,
+                        sample_weight=test_fit.sample_weight,
+                    )
+                )
             stats = bundle.fold_train_stats[fold]
             fold_results.append(
                 {
@@ -130,9 +173,12 @@ def evaluate_bundle(
             ).dt.year.to_numpy()
             prediction_frames.append(
                 collect_predictions(
-                    fold, test_years, test_fit.y, scores, test_fit.sample_weight
+                    fold, test_years, test_fit.y, scores,
+                    test_fit.sample_weight, outcome=outcome,
                 )
             )
+            if calib is not None:
+                calib.observe(raw_scores, test_fit.y, test_fit.sample_weight)
             store.append(
                 {
                     **base_row,
@@ -157,7 +203,14 @@ def evaluate_bundle(
             prediction_frames=prediction_frames,
             probabilistic=bundle.probabilistic,
             reports_dir=reports_dir,
-            artifacts={"source_bundle": Path(bundle_dir)},
+            artifacts={
+                "source_bundle": Path(bundle_dir),
+                **(
+                    {"calibration": calib.summary()}
+                    if calib is not None
+                    else {}
+                ),
+            },
             # calibration and PR/ROC curves are score-only; the scores are
             # identical to the training run, so we don't redraw them
             render_score_figures=False,

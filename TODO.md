@@ -178,6 +178,18 @@ in [PLAN.md](PLAN.md); check items off (and add new ones) as work proceeds.
       definition, effective sample size, and the crash-era CI table moved
       to a provenance appendix; markdown tables width-padded; PR/ROC
       curves opt-in (`vml-run --curves`), calibration always drawn.
+- [x] Memory-bounded data access (the real cause of the vml-sweep OOM
+      at ~29 GB RSS): `apply_split(columns=...)` merges a column
+      projection instead of the full-width frame (string metadata
+      columns dominated the old copies), the label-observability
+      column is always force-included so validation can't be projected
+      away, split tags load parquet-filtered per (scheme, horizon)
+      instead of the whole tag table, manifest validation reads parquet
+      metadata instead of materializing the frame, and deployment
+      refits fit on a projection. Runner/eval pass exactly the columns
+      a run touches; `dataset.data` stays full-width for the backtest
+      cross-section. vml-sweep prints peak RSS per run so regressions
+      are visible before the OOM killer finds them.
 - [ ] `vml-experiments` quality-of-life: `--cell` filter (horizon+label),
       and a `similar <config>` subcommand ranking configs by shared
       cell/model/features.
@@ -205,14 +217,42 @@ in [PLAN.md](PLAN.md); check items off (and add new ones) as work proceeds.
       `recall_at_prec_*` / `thr_for_prec_*` / `n_at_prec_*` — best recall
       subject to a precision floor — per fold, per era, and pooled.
       (`models/common.py`, `eval/metrics.recall_at_precision`)
-- [ ] Post-hoc calibration (isotonic / Platt) on a purged validation fold.
+- [x] Post-hoc calibration (isotonic / Platt), prequentially: with
+      `calibration = "isotonic"|"platt"` in a config (or sweep), fold
+      Y's raw scores are calibrated on the pooled out-of-sample test
+      predictions of folds < Y — already purged/embargoed and strictly
+      earlier, so no local split is constructed (invariant 1 intact).
+      Folds below `calibration_min_rows` of history (default 1000) stay
+      raw and are flagged in the report; the report draws the calibrated
+      and raw reliability curves side by side and states the
+      across-refit score-stability assumption. Monotone maps leave the
+      rankings unchanged — the win is that `thr_for_prec_*` and the
+      `score >= p` confidence tiers become real probabilities. `vml-eval`
+      re-derives identical calibrated scores from a bundle of raw
+      models (nothing new persisted); probabilistic classifiers only.
+      (`harness/calibration.py`; exemplar
+      `experiments/lgbm_isotonic_3y_beat_spy.toml`)
+- [ ] Deployment-time calibration: a deployment refit has no
+      out-of-sample history, so `vml-train-deploy` refuses calibrated
+      configs today. Design: fit the final calibrator on the *full*
+      walk-forward OOS history of the same config and store it in the
+      DeploymentBundle (format bump), so `vml-predict` scores read as
+      probabilities; until then deployment rankings are identical to
+      the uncalibrated config's.
 - [ ] SHAP: global importance + per-prediction explanations; compare against
       Phase-1 tree rules.
-- [ ] Explainability for forests/LightGBM beyond SHAP: native feature
-      importances (gain + permutation, weighted) as a standard report
-      section; per-prediction reason codes (top signed contributions) as
-      optional columns in `vml-predict` output so a ranking is auditable
-      stock by stock.
+- [x] Native feature importances as a standard artifact: every model
+      exposing `feature_importances()` (tree impurity, forest impurity,
+      LightGBM gain — classifier and regressor) gets a per-fold
+      `reports/<run>_importances.csv` (cross-fold mean, sorted) plus a
+      top-10 table in the report's Interpretability section. Flagged in
+      the artifact itself as a *triage list* for importance-guided
+      feature subsets (which count as configurations tried), not an
+      explanation. (`harness/runner.py::_write_importances_file`)
+- [ ] Explainability for forests/LightGBM beyond impurity/gain:
+      permutation importance (weighted, on training folds); per-prediction
+      reason codes (top signed contributions) as optional columns in
+      `vml-predict` output so a ranking is auditable stock by stock.
 - [ ] Ablations: raw vs. rank vs. sector-rank features; ± technicals;
       ± classification columns (current-state caveat). The sweep harness's
       `[[feature_sets]]` axis is the mechanism.
@@ -270,11 +310,28 @@ in [PLAN.md](PLAN.md); check items off (and add new ones) as work proceeds.
       pooled `rank_metric` (default: recall at the first precision floor),
       per-cell all-time configurations-tried counts, explicit
       selection-bias warning.
-- [ ] Run the real sweeps against `dataset_v1.0`
-      (`tree_precision_grid_3y`, `lgbm_precision_grid_3y`), commit the
-      summaries, and pick Phase-3 candidates for the sealed holdout.
+- [x] Random search alongside the grid: a `[random]` table of
+      distribution specs (`{low, high[, log][, int]}` or `{choices}`)
+      plus `n_samples`/`search_seed`, sampled deterministically (a pure
+      function of the sweep content, so `--dry-run` shows exactly what
+      will run) and crossed with the grid and every other axis;
+      `max_runs` still caps the total and every draw hits the trial
+      ledger. Sampled values land in the summary's `sampled_params`
+      column. (`harness/sweep.py`; curated search spaces with range
+      rationale in `experiments/sweeps/lgbm_random_search_3y.toml` and
+      `experiments/sweeps/forest_random_search_3y.toml`, both with a
+      `[[features]]` axis so the feature set is searched, not
+      hand-picked)
+- [ ] Run the real searches against `dataset_v1.1`
+      (`lgbm_random_search_3y`, `forest_random_search_3y`, plus the
+      grid exemplars), commit the summaries, and pick Phase-3
+      candidates for the sealed holdout.
 - [ ] Seed-stability pass on the sweep winner (multi-seed sweep; a config
       whose ranking collapses across seeds is noise, not signal).
+- [ ] Successive-halving style budgeting if random searches get slow:
+      re-run the top decile of a cheap-budget search (low
+      `n_estimators`) at full budget via a follow-up sweep file — no
+      harness change needed, just two sweep configs.
 
 ## 3.5 — Downturn specialization (PLAN §4 Phase 3.5)
 
@@ -310,11 +367,33 @@ slice. All within the invariants: no local splits, no derived features.
       other): rank features only (already scaled), fold-internal
       imputation, subsampling strategy that respects uniqueness weights;
       keep unless they beat trees on the precision-floor metrics.
-- [ ] Regression reframe spike: `fwd_{H}_cagr` / `fwd_{H}_excess_cagr`
-      targets exist in the dataset — gradient-boosted quantile regression,
-      threshold the predicted quantiles into the same precision@K frame;
-      winsorize 1y (extreme-return caveat). Compare against the
-      classification cells before going further.
+- [x] Regression reframe mechanism: `lightgbm_regressor` trains on the
+      continuous `fwd_{H}y_cagr` / `fwd_{H}y_excess_cagr` columns
+      (objectives `regression`/`regression_l1`/`huber`/`quantile` —
+      quantile with low alpha ranks by a pessimistic return estimate,
+      the regression analogue of the precision knob; `winsorize = q`
+      clips the training target fold-internally per the extreme-return
+      caveat). Configs set `eval_label` to a binary cell and every
+      metric/report/eval stays in the precision@K frame; the trial
+      ledger and baseline comparison charge the run to the eval cell.
+      Guardrails: continuous columns refuse `astype(bool)` coercion
+      under classifiers and vice versa. (`models/gbm.py`,
+      `harness/dataset.py::_target_array`; exemplars
+      `experiments/lgbm_regressor_3y_cagr_ge_10.toml`,
+      `experiments/sweeps/lgbm_cagr_quantile_3y.toml`)
+- [x] Regression-run diagnostics beyond the binary frame: continuous
+      runs carry the realized outcome through the prediction frames, so
+      the era table and pooled block report `fwd_at_K` (mean realized
+      CAGR of the top-K picks, picked per year — sweep-rankable via
+      `rank_metric = "fwd_at_20"`) and `spearman_ic` (rank IC; pooled
+      row is the mean of per-year ICs since per-fold scores aren't
+      comparable). Weighted MAE/R² are logged in the results store as
+      fit diagnostics only — R²≈0 on stock returns is normal and says
+      nothing about the top of the ranking, so neither is ever
+      headlined. (`eval/metrics.regression_diagnostics`, `eval/era.py`)
+- [ ] Run the regression-reframe spike against `dataset_v1.1`
+      (`lgbm_cagr_quantile_3y`) and compare its summary against the
+      classification sweeps on the same eval cells before going further.
 - [ ] Deep learning goes through upstream first: sequence-shaped dataset
       variant (per-quarter point-in-time history per stock) is a
       prerequisite; do not flatten history locally (invariant 4). Then a
@@ -405,5 +484,21 @@ slice. All within the invariants: no local splits, no derived features.
       `scripts/build_price_panel.py` extracts it from the raw
       SEP/SFP/TICKERS tables (see §4 above), so no upstream build stage
       is needed. Upstream only needs to keep shipping `data/raw/`.
+- [ ] Inner-validation role (only if early stopping ever becomes worth
+      it): invariant 1 stays absolute — no local split carving, however
+      "temporal and careful" it looks, because the purge/embargo
+      machinery lives upstream and a second local implementation would
+      drift silently. If a use case genuinely needs a within-train
+      validation set (LightGBM early stopping is the only candidate so
+      far; calibration is served prequentially without one), the
+      sanctioned path is an upstream request: an additional
+      `inner_val` role inside each walkforward fold's training window
+      (last pre-purge year, purged/embargoed against the rest of train
+      with the same discipline as test), shipped as extra rows in
+      `splits.parquet`. Additive and opt-in — configs that ignore the
+      role are byte-identical in behavior, so no "third split always"
+      burden — and frozen/citable like every other fold definition.
+      Weigh against the cheap alternative first: boosting rounds are
+      already tuned across folds by the random search.
 - [ ] Any feature request discovered during modeling → file upstream, new
       dataset version (never engineered here).

@@ -19,14 +19,15 @@ import pandas as pd
 from eval.era import crash_label
 
 #: Metric families shown in the era table, in reading order. Anything
-#: logged but not listed here (roc_auc, recall_at_k, thr_for_prec_*)
-#: stays in the results store — logged, never headlined.
+#: logged but not listed here (roc_auc, recall_at_k, thr_for_prec_*,
+#: and the mae/r2 fit diagnostics of regression runs) stays in the
+#: results store — logged, never headlined.
 _ERA_LEAD = ("n_test", "base_rate")
 _ERA_PREFIXES = (
-    "precision_at_", "conf_at_", "n_at_prec_", "recall_at_prec_",
+    "precision_at_", "fwd_at_", "conf_at_", "n_at_prec_", "recall_at_prec_",
     "precision_at_thr_", "recall_at_thr_", "n_at_thr_",
 )
-_ERA_TAIL = ("brier", "base_rate_brier", "pr_auc")
+_ERA_TAIL = ("brier", "base_rate_brier", "pr_auc", "spearman_ic")
 
 
 def _fmt(v) -> str:
@@ -131,6 +132,38 @@ def write_report(
                  f"params `{json.dumps(config.model_params, sort_keys=True)}`")
     lines.append(f"- label: `{config.label}` — horizon {config.horizon_years}y, "
                  f"scheme `{config.scheme}`")
+    if getattr(config, "eval_label", ""):
+        lines.append(
+            f"- **regression reframe**: trained on the continuous target "
+            f"`{config.label}`; classification metrics below are computed "
+            f"against the binary cell `{config.eval_label}`. Scores are "
+            "predicted returns (a ranking), not probabilities — any score "
+            "thresholds are on that scale. `fwd_at_K` is the mean realized "
+            f"`{config.label}` of the top-K picks (picked per year), and "
+            "`spearman_ic` the rank correlation between predicted and "
+            "realized outcomes (pooled row: mean of per-year ICs); the "
+            "MAE/R² fit diagnostics are logged in the results store only."
+        )
+    if artifacts and "calibration" in artifacts:
+        cal = artifacts["calibration"]
+
+        def _folds(f):
+            return ", ".join(str(x) for x in f) if f else "none"
+
+        lines.append(
+            f"- **prequential calibration** (`{cal['method']}`): each "
+            "fold's scores are calibrated on the pooled out-of-sample "
+            "predictions of earlier folds (min "
+            f"{cal['min_rows']} history rows; no local split "
+            "constructed). Calibrated folds: "
+            f"{_folds(cal['calibrated_folds'])}; raw for lack of "
+            f"history: {_folds(cal['uncalibrated_folds'])}. The map is "
+            "monotone, so rankings are unchanged — the gain is that "
+            "score thresholds and confidence tiers read as "
+            "probabilities. Caveat: the history was scored by earlier "
+            "folds' refits, so this assumes score stability across "
+            "refits of this config (what a live deployment assumes too)."
+        )
     lines.append(
         f"- **configurations tried against this cell "
         f"(dataset, scheme, horizon, label): {configurations_tried}** "
@@ -218,6 +251,16 @@ def write_report(
         lines.append("")
         lines.append(f"![calibration curve]({Path(calibration_path).name})")
         lines.append("")
+        if artifacts and "calibration_raw_curve" in artifacts:
+            raw_name = Path(artifacts["calibration_raw_curve"]).name
+            lines.append(
+                "The curve above reflects the *calibrated* scores this "
+                "run reports; the raw scores before the prequential "
+                "correction, for comparison:"
+            )
+            lines.append("")
+            lines.append(f"![raw calibration curve]({raw_name})")
+            lines.append("")
 
     lines.append("## Baseline comparison")
     lines.append("")
@@ -238,7 +281,11 @@ def write_report(
         )
     lines.append("")
 
-    if artifacts and ("rules" in artifacts or "tree_diagram" in artifacts):
+    if artifacts and (
+        "rules" in artifacts
+        or "tree_diagram" in artifacts
+        or "importances" in artifacts
+    ):
         lines.append("## Interpretability artifacts")
         lines.append("")
         if "rules" in artifacts:
@@ -255,6 +302,18 @@ def write_report(
             )
             name = Path(artifacts["tree_diagram"]).name
             lines.append(f"- tree diagram{fold_note}: [{name}]({name})")
+        if "importances" in artifacts:
+            imp_path = Path(artifacts["importances"])
+            lines.append(
+                f"- per-fold feature importances: [{imp_path.name}]"
+                f"({imp_path.name}) — impurity/gain-based, so a triage "
+                "list for feature subsets (which count as configurations "
+                "tried), not an explanation; the top of the ranking:"
+            )
+            lines.append("")
+            top = pd.read_csv(imp_path).head(10)
+            cols = ["feature", "mean_importance"]
+            lines.append(_table(top[[c for c in cols if c in top.columns]]))
         lines.append("")
 
     # ------------------------------------------------- appendix

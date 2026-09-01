@@ -1,0 +1,78 @@
+# Random-forest random search on the primary relative-label cell — the
+# first systematic forest sweep (the family had only a single exemplar
+# config until now).
+#
+# Forests earn their keep two ways here: averaged leaf frequencies are
+# usually better-ranked (and less overconfident) than a single tree's,
+# and the fitted forests emit per-fold feature importances
+# (reports/<run>_importances.csv) — the cheap triage list for building
+# importance-guided feature subsets later, instead of hand-picking
+# columns up front.
+#
+# RESOURCE BUDGET: the harness OOM that first hit this sweep was NOT
+# the forest itself — full-width fold frames (every string metadata
+# column copied per fold) were the dominant allocation, fixed by
+# column-projected split application in harness/dataset.py. The ranges
+# below stay bounded anyway because they are *statistically* right at
+# ~10^6-row training windows (tiny leaves memorize microcap noise) and
+# keep fitted-model size sane: a sklearn tree costs ~64 bytes/node,
+# and node count grows like 2 x n_rows / min_samples_leaf until
+# max_depth caps it. n_jobs caps concurrent tree builders; max_samples
+# shrinks each tree's bootstrap (cheaper AND better-decorrelated).
+# vml-sweep prints peak RSS after each run; if a run still dies, check
+# `journalctl -k | grep -i oom` — an OOM kill leaves no traceback.
+#
+# Range rationale:
+#   n_estimators  150–500    more trees only stabilize (cost is linear);
+#                            below ~150 the top of the ranking is noisy
+#   max_depth     6–16       int-uniform; with the leaf minima below,
+#                            16 is effectively "let the leaves decide"
+#   min_samples_leaf 20–500  log — THE forest regularizer at these fold
+#                            sizes; large leaves = purer, better-behaved
+#                            leaf frequencies (precision over recall)
+#   max_features  0.05–0.6   fraction per split; low values decorrelate
+#                            trees (sqrt(p) for ~100 rank features is
+#                            ~0.1), high values approach bagged trees
+#   max_samples   0.3–1.0    per-tree bootstrap fraction — variance
+#                            reduction and the main time/RAM lever
+#   criterion                gini vs entropy occasionally differ on
+#                            imbalanced cells; costs nothing to include
+#   class_weight             the shared precision knob, as everywhere
+#
+# Expanded: 1 cell x 2 feature sets x 60 draws = 120 runs.
+# Run: vml-sweep experiments/sweeps/forest_random_search_3y.toml
+name = "forest_random_search_3y"
+dataset_version = "dataset_v1.1"
+scheme = "walkforward"
+folds = "all"
+seeds = [7]
+top_k = [20, 50]
+precision_targets = [0.75, 0.9]
+rank_metric = "recall_at_prec_0.9"
+n_samples = 60
+search_seed = 11
+
+[[cells]]
+label = "label_3y_beat_spy"
+
+[[features]]
+groups = ["ranks", "sector_ranks"]
+
+[[features]]
+groups = ["ranks"]
+
+[model]
+name = "random_forest"
+bootstrap = true
+# cap concurrent tree builders: peak build memory scales with n_jobs,
+# and 8 builders keep a 12-core box responsive while it sweeps
+n_jobs = 8
+
+[random]
+n_estimators = { low = 150, high = 500, int = true }
+max_depth = { low = 6, high = 16, int = true }
+min_samples_leaf = { low = 20, high = 500, int = true, log = true }
+max_features = { low = 0.05, high = 0.6 }
+max_samples = { low = 0.3, high = 1.0 }
+criterion = { choices = ["gini", "entropy"] }
+class_weight = { choices = [1.0, 0.5, 0.25, "balanced_subsample"] }

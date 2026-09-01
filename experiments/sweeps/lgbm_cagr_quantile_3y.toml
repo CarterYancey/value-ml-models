@@ -1,0 +1,74 @@
+# Regression-reframe sweep (PLAN §8): gradient-boosted QUANTILE
+# regression on the continuous 3y forward returns, evaluated in the same
+# precision@K frame as every classifier via each cell's binary
+# eval_label. The trial ledger charges these runs to the eval cell.
+#
+# Why quantile: ranking by a *lower* quantile of the predicted return
+# distribution ("even pessimistically, this stock returns a lot") is a
+# natural precision-first score — the regression analogue of
+# class_weight < 1. alpha is the quantile:
+#   0.25 pessimistic (precision-friendly), 0.5 median (robust central
+#   estimate), 0.4 in between. The matched pairs below keep target and
+#   yardstick consistent: absolute returns → absolute-threshold cell,
+#   excess returns → beat_spy cell.
+#
+# winsorize clips the *training* target to its [q, 1-q] quantiles,
+# computed inside each fold's training window only (fold-internal,
+# disclosed in the report). Rationale: upstream flags that CAGR variance
+# is dominated by a few extreme returns; a squared/quantile loss chasing
+# a 40x outlier distorts the whole fit. 0.0 = off, 0.01 = clip the 1%
+# tails.
+#
+# Scores are predicted CAGRs, not probabilities: no Brier/calibration,
+# and any score threshold is on the return scale. Compare the summary
+# against the classification sweeps on the same eval cells before going
+# further (that comparison is the whole point of the spike).
+#
+# Regression runs also report fwd_at_K (mean realized CAGR of the top-K
+# picks, per year) and spearman_ic in the era table; either works as
+# rank_metric here (e.g. rank_metric = "fwd_at_20" ranks candidates by
+# what the picks actually returned). MAE/R² are logged as fit
+# diagnostics only — near-zero R² on stock returns is expected and says
+# nothing about the top of the ranking.
+#
+# Expanded: 2 cells x 3 alpha x 2 winsorize x 12 draws = 144 runs.
+# Run: vml-sweep experiments/sweeps/lgbm_cagr_quantile_3y.toml
+name = "lgbm_cagr_quantile_3y"
+dataset_version = "dataset_v1.1"
+scheme = "walkforward"
+folds = "all"
+seeds = [7]
+top_k = [20, 50]
+precision_targets = [0.75, 0.9]
+rank_metric = "recall_at_prec_0.9"
+n_samples = 12
+search_seed = 11
+
+[[cells]]
+label = "fwd_3y_cagr"
+eval_label = "label_3y_cagr_ge_10"
+
+[[cells]]
+label = "fwd_3y_excess_cagr"
+eval_label = "label_3y_beat_spy"
+
+[[features]]
+groups = ["ranks", "sector_ranks"]
+
+[model]
+name = "lightgbm_regressor"
+objective = "quantile"
+subsample_freq = 1
+
+[grid]
+alpha = [0.25, 0.4, 0.5]
+winsorize = [0.0, 0.01]
+
+[random]
+learning_rate = { low = 0.02, high = 0.15, log = true }
+n_estimators = { low = 150, high = 800, int = true, log = true }
+num_leaves = { low = 7, high = 31, int = true, log = true }
+min_child_samples = { low = 30, high = 300, int = true, log = true }
+subsample = { low = 0.7, high = 1.0 }
+colsample_bytree = { low = 0.5, high = 1.0 }
+reg_lambda = { low = 1e-2, high = 30.0, log = true }

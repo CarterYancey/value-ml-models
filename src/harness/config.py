@@ -32,6 +32,10 @@ import tomllib
 from dataclasses import dataclass, field, replace
 from pathlib import Path
 
+from harness.calibration import (
+    CALIBRATION_METHODS,
+    DEFAULT_CALIBRATION_MIN_ROWS,
+)
 from harness.errors import ConfigError
 from harness.families import FEATURE_GROUPS, parse_family_ref
 
@@ -175,6 +179,22 @@ class ExperimentConfig:
     #: (e.g. the trend features exist only from v1.1) — checked against
     #: the loaded dataset's manifest version, empty = no requirement
     min_dataset_version: str = ""
+    #: binary label the run is *evaluated* against when `label` is a
+    #: continuous target (the regression reframe: train on `fwd_3y_cagr`,
+    #: rank by predicted return, measure precision@K against e.g.
+    #: `label_3y_cagr_ge_10`). Required for continuous-target models,
+    #: forbidden otherwise — enforced by
+    #: `models.registry.check_target_labels` at run time.
+    eval_label: str = ""
+    #: prequential post-hoc calibration of the fold scores: "isotonic",
+    #: "platt", or "" (off). Fold Y is calibrated on the pooled
+    #: out-of-sample predictions of folds < Y — no local split is
+    #: constructed (see harness.calibration). Probabilistic classifiers
+    #: only; refused by vml-train-deploy (no history to calibrate on).
+    calibration: str = ""
+    #: minimum pooled history rows before a fold gets calibrated;
+    #: earlier folds report raw scores and are flagged in the report
+    calibration_min_rows: int = DEFAULT_CALIBRATION_MIN_ROWS
 
     @classmethod
     def from_file(cls, path: str | Path) -> "ExperimentConfig":
@@ -233,7 +253,42 @@ class ExperimentConfig:
                 float(p) for p in raw.get("precision_targets", ())
             ),
             min_dataset_version=str(raw.get("min_dataset_version", "")),
+            eval_label=str(raw.get("eval_label", "")),
+            calibration=str(raw.get("calibration", "")),
+            calibration_min_rows=int(
+                raw.get("calibration_min_rows", DEFAULT_CALIBRATION_MIN_ROWS)
+            ),
         )
+        if config.calibration and config.calibration not in CALIBRATION_METHODS:
+            raise ConfigError(
+                f"config {source}: calibration must be one of "
+                f"{list(CALIBRATION_METHODS)} or absent (off), "
+                f"got {config.calibration!r}"
+            )
+        if config.calibration_min_rows < 1:
+            raise ConfigError(
+                f"config {source}: calibration_min_rows must be >= 1, "
+                f"got {config.calibration_min_rows}"
+            )
+        if "calibration_min_rows" in raw and not config.calibration:
+            raise ConfigError(
+                f"config {source}: calibration_min_rows is set but "
+                "calibration is off"
+            )
+        if config.eval_label:
+            if config.eval_label == config.label:
+                raise ConfigError(
+                    f"config {source}: eval_label equals label "
+                    f"({config.label!r}); eval_label is the *binary* cell a "
+                    "continuous-target run is measured against"
+                )
+            ev_horizon = infer_horizon_years(config.eval_label)
+            if ev_horizon is not None and ev_horizon != config.horizon_years:
+                raise ConfigError(
+                    f"config {source}: eval_label {config.eval_label!r} is a "
+                    f"{ev_horizon}y label but the config's horizon is "
+                    f"{config.horizon_years}y"
+                )
         if config.min_dataset_version:
             parse_dataset_version(config.min_dataset_version)  # fail early
             if parse_dataset_version(config.dataset_version) < parse_dataset_version(
@@ -309,6 +364,11 @@ class ExperimentConfig:
         }
         if self.min_dataset_version:
             raw["min_dataset_version"] = self.min_dataset_version
+        if self.eval_label:
+            raw["eval_label"] = self.eval_label
+        if self.calibration:
+            raw["calibration"] = self.calibration
+            raw["calibration_min_rows"] = self.calibration_min_rows
         if self.features is not None:
             raw["features"] = self.features.to_table()
         else:
@@ -350,6 +410,11 @@ class ExperimentConfig:
             payload["features"] = self.features.to_table()
         if self.min_dataset_version:
             payload["min_dataset_version"] = self.min_dataset_version
+        if self.eval_label:
+            payload["eval_label"] = self.eval_label
+        if self.calibration:
+            payload["calibration"] = self.calibration
+            payload["calibration_min_rows"] = self.calibration_min_rows
         return payload
 
     def canonical_json(self) -> str:
