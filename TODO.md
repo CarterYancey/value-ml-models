@@ -341,14 +341,24 @@ in [PLAN.md](PLAN.md); check items off (and add new ones) as work proceeds.
       neither `sample_weight` (mandatory uniqueness weights) nor native
       NaN routing — incompatible with the contract, not just
       inconvenient.
-- [ ] XGBoost (`device="cuda"`, `tree_method="hist"`) as a possible
-      new GBDT family if CUDA LightGBM proves not worth the build
-      hassle: GPU works out of the box from the PyPI wheel, supports
-      sample weights and native NaN routing, and is typically the
-      largest GPU speedup available for this data shape. Costs a new
-      dependency (CLAUDE.md: keep the list short) and a third boosted
-      family to sweep — decide against measured LightGBM-CUDA timings
-      first.
+- [x] XGBoost family (`xgboost` / `xgboost_regressor`, hist method) —
+      the GPU path that needs no custom build: `device = "cuda"` works
+      from the stock PyPI wheel. Harness protocol throughout (mandatory
+      uniqueness weights, native NaN routing, no early stopping);
+      numeric `class_weight` maps to `scale_pos_weight` with identical
+      semantics to every other classifier ("balanced" computes
+      Σw_neg/Σw_pos fold-internally); regressor mirrors the reframe
+      (`eval_label`, `winsorize`, `quantile` objective via
+      `quantile_alpha`); gain importances feed the standard artifact;
+      prequential calibration applies. Guardrails: `device` is a model
+      param (cuda and cpu runs hash as distinct configs), and because
+      XGBoost silently falls back to CPU when no GPU is visible, the
+      wrapper reads the fitted booster's own config after every
+      non-cpu fit and refuses if the actual device differs — a CPU fit
+      can never be logged under a cuda hash. (`src/models/xgb.py`;
+      exemplar `experiments/sweeps/xgb_random_search_3y.toml`, same
+      cell/axes/metrics as the LightGBM search for a fair
+      family-vs-family read)
 - [ ] Successive-halving style budgeting if random searches get slow:
       re-run the top decile of a cheap-budget search (low
       `n_estimators`) at full budget via a follow-up sweep file — no

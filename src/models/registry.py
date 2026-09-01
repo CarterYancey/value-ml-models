@@ -15,6 +15,7 @@ from models.baselines import (
 from models.forest import RandomForestModel
 from models.gbm import LightGBMModel, LightGBMRegressorModel
 from models.tree import DecisionTreeModel
+from models.xgb import XGBoostModel, XGBoostRegressorModel
 
 #: Baseline model names every reported result is compared against.
 BASELINE_MODELS = frozenset({"majority_class", "rank_factor", "random_ranking"})
@@ -22,7 +23,9 @@ BASELINE_MODELS = frozenset({"majority_class", "rank_factor", "random_ranking"})
 #: Models trained on a continuous label column (the regression reframe).
 #: Configs using one must set `eval_label` (a binary label from the
 #: upstream matrix) so evaluation stays in the precision@K frame.
-CONTINUOUS_TARGET_MODELS = frozenset({"lightgbm_regressor"})
+CONTINUOUS_TARGET_MODELS = frozenset(
+    {"lightgbm_regressor", "xgboost_regressor"}
+)
 
 _TREE_PARAMS = frozenset(
     {
@@ -81,6 +84,26 @@ _LIGHTGBM_REGRESSOR_PARAMS = (
     _LIGHTGBM_PARAMS - {"class_weight"}
 ) | {"objective", "alpha", "winsorize"}
 
+_XGBOOST_PARAMS = frozenset(
+    {
+        "n_estimators",
+        "learning_rate",
+        "max_depth",
+        "min_child_weight",
+        "gamma",
+        "subsample",
+        "colsample_bytree",
+        "reg_alpha",
+        "reg_lambda",
+        "class_weight",
+        "device",
+    }
+)
+
+_XGBOOST_REGRESSOR_PARAMS = (
+    _XGBOOST_PARAMS - {"class_weight"}
+) | {"objective", "alpha", "winsorize"}
+
 
 def build_model(name: str, params: dict, seed: int):
     if name == "majority_class":
@@ -112,6 +135,12 @@ def build_model(name: str, params: dict, seed: int):
     if name == "lightgbm_regressor":
         _reject_extra(name, params, allowed=_LIGHTGBM_REGRESSOR_PARAMS)
         return LightGBMRegressorModel(seed=seed, **params)
+    if name == "xgboost":
+        _reject_extra(name, params, allowed=_XGBOOST_PARAMS)
+        return XGBoostModel(seed=seed, **params)
+    if name == "xgboost_regressor":
+        _reject_extra(name, params, allowed=_XGBOOST_REGRESSOR_PARAMS)
+        return XGBoostRegressorModel(seed=seed, **params)
     raise ConfigError(f"unknown model name {name!r}")
 
 
