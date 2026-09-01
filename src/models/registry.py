@@ -73,6 +73,7 @@ _LIGHTGBM_PARAMS = frozenset(
         "reg_alpha",
         "reg_lambda",
         "class_weight",
+        "device",
     }
 )
 

@@ -328,6 +328,27 @@ in [PLAN.md](PLAN.md); check items off (and add new ones) as work proceeds.
       candidates for the sealed holdout.
 - [ ] Seed-stability pass on the sweep winner (multi-seed sweep; a config
       whose ranking collapses across seeds is noise, not signal).
+- [x] GPU opt-in for LightGBM: `device = "cuda"` (or legacy-OpenCL
+      `"gpu"`) on `lightgbm`/`lightgbm_regressor`, passed through as
+      LightGBM's `device_type`. Requires a CUDA build of lightgbm (the
+      PyPI wheel is CPU-only; the install command is in
+      `models/gbm.py::LGBM_DEVICES`, and a cpu-only build asked for
+      cuda fails with that command, not an opaque error). GPU histogram
+      arithmetic differs slightly from CPU, so `device` is a model
+      param: CPU and GPU runs hash as distinct configs and are never
+      mixed in the trial ledger. Ruled out for the other families:
+      sklearn trees/forests are CPU-only, and cuML's forest supports
+      neither `sample_weight` (mandatory uniqueness weights) nor native
+      NaN routing — incompatible with the contract, not just
+      inconvenient.
+- [ ] XGBoost (`device="cuda"`, `tree_method="hist"`) as a possible
+      new GBDT family if CUDA LightGBM proves not worth the build
+      hassle: GPU works out of the box from the PyPI wheel, supports
+      sample weights and native NaN routing, and is typically the
+      largest GPU speedup available for this data shape. Costs a new
+      dependency (CLAUDE.md: keep the list short) and a third boosted
+      family to sweep — decide against measured LightGBM-CUDA timings
+      first.
 - [ ] Successive-halving style budgeting if random searches get slow:
       re-run the top decile of a cheap-budget search (low
       `n_estimators`) at full budget via a follow-up sweep file — no

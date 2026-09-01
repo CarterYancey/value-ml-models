@@ -237,3 +237,37 @@ def test_registry_accepts_forest_resource_knobs():
     )
     assert m.estimator_.max_samples == 0.4
     assert m.estimator_.n_jobs == 2
+
+
+# --- GPU device knob (LightGBM only) ----------------------------------
+
+
+def test_lightgbm_device_param_flows_and_validates():
+    m = LightGBMModel(n_estimators=5, num_leaves=4)  # default cpu
+    assert m.estimator_.get_params()["device_type"] == "cpu"
+    m = LightGBMModel(n_estimators=5, num_leaves=4, device="cuda")
+    assert m.estimator_.get_params()["device_type"] == "cuda"
+    with pytest.raises(ConfigError, match="device"):
+        LightGBMModel(device="tpu")
+    reg = build_model("lightgbm", {"n_estimators": 5, "device": "cuda"}, 0)
+    assert reg.estimator_.get_params()["device_type"] == "cuda"
+
+
+def test_lightgbm_cuda_without_cuda_build_is_actionable():
+    """The stock PyPI wheel is CPU-only: asking for cuda must fail with
+    the install command, not an opaque LightGBMError."""
+    X, y, w = _toy_data()
+    m = LightGBMModel(
+        n_estimators=5, num_leaves=4, min_child_samples=5, device="cuda"
+    )
+    with pytest.raises(ConfigError, match="USE_CUDA"):
+        m.fit(X, y, sample_weight=w)
+
+
+def test_lightgbm_regressor_accepts_device():
+    from models.gbm import LightGBMRegressorModel
+
+    m = LightGBMRegressorModel(n_estimators=5, device="gpu")
+    assert m.estimator_.get_params()["device_type"] == "gpu"
+    with pytest.raises(ConfigError, match="unknown params"):
+        build_model("random_forest", {"device": "cuda"}, 0)
