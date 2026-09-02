@@ -326,8 +326,20 @@ in [PLAN.md](PLAN.md); check items off (and add new ones) as work proceeds.
       (`lgbm_random_search_3y`, `forest_random_search_3y`, plus the
       grid exemplars), commit the summaries, and pick Phase-3
       candidates for the sealed holdout.
-- [ ] Seed-stability pass on the sweep winner (multi-seed sweep; a config
-      whose ranking collapses across seeds is noise, not signal).
+- [x] `[[sets]]` axis: whole parameter dictionaries taken as units (the
+      top candidates of a wide search), crossed with cells, feature sets,
+      `[grid]`, `[random]` and seeds; a parameter lives in exactly one of
+      `[model]`, `[grid]`, `[random]`, `[[sets]]`. Summary carries
+      `param_set` / `set_params`.
+      (exemplar: `experiments/sweeps/lgbm_candidate_sets_3y.toml`)
+- [x] Multi-seed sweeps report per candidate: one seed-stability report
+      each (mean / std / min / max / 95% t-interval across seeds, pooled
+      and per test year), summary ranked by the mean with the spread
+      beside it (`_summary_seeds.csv`), per-seed run reports under
+      `seeds/`. (`src/harness/seed_report.py`)
+- [ ] Seed-stability pass on the sweep winner (multi-seed `[[sets]]`
+      sweep over the top candidates; a config whose ranking collapses
+      across seeds is noise, not signal).
 - [x] GPU opt-in for LightGBM: `device = "cuda"` (or legacy-OpenCL
       `"gpu"`) on `lightgbm`/`lightgbm_regressor`, passed through as
       LightGBM's `device_type`. Requires a CUDA build of lightgbm (the

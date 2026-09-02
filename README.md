@@ -192,7 +192,8 @@ even at low recall):
 
 `experiments/sweeps/*.toml` declare grids instead of single runs:
 `[[cells]]` (horizon + label pairs — multiple label columns in one file),
-`[grid]` (model-param ranges, cartesian product), optional
+`[grid]` (model-param ranges, cartesian product), `[[sets]]` (whole
+model-param dictionaries, each taken as a unit), optional
 `[[feature_sets]]` and `seeds`. `vml-sweep` trains exactly like
 `vml-run` does — each expanded config goes through the same runner,
 fitting fresh per-fold models and evaluating them on that fold's test
@@ -208,6 +209,48 @@ Expansion is capped by `max_runs` (default 200) so trial-count inflation
 is always an explicit decision. The summary's ranking is model selection
 on walk-forward folds — candidates for the sealed holdout, never final
 results.
+
+`[[sets]]` is the follow-up to a wide `[grid]` search: paste its top
+candidates in as whole parameter dictionaries and re-run them across
+seeds, feature sets, label cells, or a further `[grid]` / `[random]`
+over the parameters the sets leave open (sets cross with every other
+axis). Either
+TOML spelling works — one inline table per line, or an array of tables:
+
+```toml
+sets = [
+  {n_estimators = 300, num_leaves = 7,  learning_rate = 0.05, reg_lambda = 1.0},
+  {n_estimators = 100, num_leaves = 15, learning_rate = 0.05, reg_lambda = 5.0},
+]
+
+[[sets]]            # equivalent
+n_estimators = 300
+num_leaves = 7
+learning_rate = 0.05
+reg_lambda = 1.0
+```
+
+A parameter may appear in only one of `[model]`, `[grid]`, `[random]`,
+`[[sets]]` (a collision is a config error, not a silent override). Runs
+are named `set<i>` by position; the summary CSV carries the full
+dictionary in its `set_params` column and the markdown header lists
+every set. Exemplar:
+`experiments/sweeps/lgbm_candidate_sets_3y.toml` (candidate sets × a
+`class_weight` grid × three seeds).
+
+**Several seeds → one report per candidate.** When `seeds` lists more
+than one value, the sweep reports per *candidate* (cell × feature set ×
+parameter set × grid point × random draw — everything but the seed)
+rather than per run: `reports/sweeps/<name>/<candidate>.md` gives, for
+every pooled metric and for each test year, the `n` / `mean` / `std` /
+`min` / `max` / 95% t-interval across seeds, plus the per-seed values.
+The summary ranks candidates by the **mean** of `rank_metric` across
+seeds with its std / min / 95%-CI lower bound beside it
+(`_summary_seeds.csv` has every metric's statistics; `_summary.csv`
+still lists every run), and the per-seed run reports move to
+`reports/sweeps/<name>/seeds/`. A candidate is only as good as its
+worst seed — read `_min` before `_mean`; with two or three seeds the
+interval is wide by construction, which is the honest width.
 
 ### Deployment: train on everything, score today's stocks
 
