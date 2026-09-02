@@ -7,10 +7,15 @@ grid, alternative feature sets, several seeds — and the harness expands
 the cartesian product into ordinary `ExperimentConfig`s and runs each
 one through the standard runner (`vml-sweep experiments/sweeps/x.toml`).
 
-Two search styles compose:
+Three search styles compose:
 
 - `[grid]`: explicit candidate lists, full cartesian product — right for
   few, coarse axes (class_weight, a feature axis).
+- `[[sets]]`: whole parameter dictionaries taken *as a unit* — the
+  natural follow-up to a wide search: take its top candidates and
+  re-run them across seeds, feature sets, label cells, or a further
+  `[grid]` / `[random]` over parameters the sets leave open. A parameter
+  appears in at most one of `[model]`, `[grid]`, `[random]`, `[[sets]]`.
 - `[random]` + `n_samples`: distributions sampled jointly — right for
   the wide continuous surfaces (learning rate, regularization) where a
   grid either misses or explodes. Each spec is `{low, high}` (uniform;
@@ -87,6 +92,7 @@ _SWEEP_ALLOWED = frozenset(
         "cells",
         "model",
         "grid",
+        "sets",
         "random",
         "n_samples",
         "search_seed",
@@ -130,6 +136,10 @@ class SweepConfig:
     base_params: dict = field(default_factory=dict)
     #: param name -> candidate values ([grid]); cartesian product
     grid: dict[str, tuple] = field(default_factory=dict)
+    #: whole parameter dictionaries ([[sets]]), each a unit — the
+    #: param-set axis, crossed with [grid] / [random] and every other
+    #: axis (empty: one implicit empty set)
+    param_sets: tuple[dict, ...] = ()
     #: param name -> canonical distribution spec ([random]); one joint
     #: draw per sample, crossed with the grid and every other axis
     random: dict[str, dict] = field(default_factory=dict)
@@ -270,6 +280,14 @@ class SweepConfig:
                     f"sweep config {source}: grid.{key} must be a non-empty "
                     "list of candidate values"
                 )
+            if any(isinstance(v, dict) for v in values):
+                raise ConfigError(
+                    f"sweep config {source}: grid.{key} holds tables, not "
+                    "candidate values. Whole parameter dictionaries belong "
+                    "in a top-level `sets` — in TOML a bare `sets = [...]` "
+                    "written below a [grid] header lands inside [grid]; "
+                    "move it above the first table header or use [[sets]]"
+                )
             if key in base_params:
                 raise ConfigError(
                     f"sweep config {source}: {key!r} is both fixed in [model] "
@@ -277,12 +295,45 @@ class SweepConfig:
                 )
             grid[key] = tuple(values)
 
+        sets_raw = raw.get("sets", [])
+        if not isinstance(sets_raw, list) or not all(
+            isinstance(s, dict) for s in sets_raw
+        ):
+            raise ConfigError(
+                f"sweep config {source}: [[sets]] must be an array of "
+                "tables, each one whole parameter dictionary"
+            )
+        param_sets: list[dict] = []
+        for i, entry in enumerate(sets_raw):
+            if not entry:
+                raise ConfigError(
+                    f"sweep config {source}: [[sets]] entry {i} is empty"
+                )
+            fixed = sorted(set(entry) & set(base_params))
+            if fixed:
+                raise ConfigError(
+                    f"sweep config {source}: {fixed} both fixed in [model] "
+                    f"and given in [[sets]] entry {i}"
+                )
+            swept = sorted(set(entry) & set(grid))
+            if swept:
+                raise ConfigError(
+                    f"sweep config {source}: {swept} both swept in [grid] "
+                    f"and given in [[sets]] entry {i}; a parameter belongs "
+                    "to one axis"
+                )
+            param_sets.append(dict(entry))
+        canon = [json.dumps(s, sort_keys=True) for s in param_sets]
+        if len(set(canon)) != len(canon):
+            raise ConfigError(f"sweep config {source}: duplicate [[sets]] entries")
+        set_keys = set().union(*param_sets) if param_sets else set()
+
         random_raw = raw.get("random", {})
         if not isinstance(random_raw, dict):
             raise ConfigError(f"sweep config {source}: [random] must be a table")
         random: dict[str, dict] = {}
         for key, spec in random_raw.items():
-            if key in base_params or key in grid:
+            if key in base_params or key in grid or key in set_keys:
                 raise ConfigError(
                     f"sweep config {source}: {key!r} is both in [random] and "
                     "fixed/swept elsewhere"
@@ -423,6 +474,7 @@ class SweepConfig:
             model_name=str(model["name"]),
             base_params=base_params,
             grid=grid,
+            param_sets=tuple(param_sets),
             random=random,
             n_samples=n_samples,
             search_seed=int(raw.get("search_seed", 0)),
@@ -509,6 +561,10 @@ class SweepConfig:
             "precision_targets": list(self.precision_targets),
             "rank_metric": self.rank_metric,
         }
+        # like the other optional axes, only present when used, so
+        # set-free sweeps keep their hashes (and derived names)
+        if self.param_sets:
+            payload["sets"] = list(self.param_sets)
         if self.random:
             payload["random"] = {k: self.random[k] for k in sorted(self.random)}
             payload["n_samples"] = self.n_samples
@@ -525,6 +581,11 @@ class SweepConfig:
     def n_feature_variants(self) -> int:
         """Length of the sweep's feature axis, whichever style defines it."""
         return len(self.feature_specs) or len(self.feature_sets)
+
+    @property
+    def n_param_sets(self) -> int:
+        """Length of the param-set axis (1 when no [[sets]] are given)."""
+        return max(len(self.param_sets), 1)
 
     def _feature_fields(self, fs) -> dict:
         """ExperimentConfig field fragment for one feature-axis entry."""
@@ -552,9 +613,9 @@ class SweepConfig:
         return draws
 
     def expand(self) -> list["SweepRun"]:
-        """The full cartesian product: cells × feature sets × grid ×
-        random draws × seeds, each as an ordinary ExperimentConfig with a
-        deterministic name."""
+        """The full cartesian product: cells × feature sets × param sets
+        × grid × random draws × seeds, each as an ordinary
+        ExperimentConfig with a deterministic name."""
         grid_keys = sorted(self.grid)
         combos = [
             dict(zip(grid_keys, values))
@@ -562,16 +623,19 @@ class SweepConfig:
         ]
         draws = self.sample_draws()
         feature_axis = self.feature_specs or self.feature_sets
+        set_axis = self.param_sets or ({},)
         runs: list[SweepRun] = []
         for (
             (horizon, label, eval_label),
             (fs_idx, fs),
+            (set_idx, params),
             combo,
             (draw_idx, draw),
             seed,
         ) in itertools.product(
             self.cells,
             enumerate(feature_axis),
+            enumerate(set_axis),
             combos,
             enumerate(draws),
             self.seeds,
@@ -584,7 +648,7 @@ class SweepConfig:
                 label=label,
                 eval_label=eval_label,
                 model_name=self.model_name,
-                model_params={**self.base_params, **combo, **draw},
+                model_params={**self.base_params, **params, **combo, **draw},
                 **self._feature_fields(fs),
                 folds=self.folds,
                 seed=seed,
@@ -594,7 +658,9 @@ class SweepConfig:
                 calibration=self.calibration,
                 calibration_min_rows=self.calibration_min_rows,
             )
-            name = self._run_name(label, fs_idx, combo, draw_idx, seed, config)
+            name = self._run_name(
+                label, fs_idx, set_idx, combo, draw_idx, seed, config
+            )
             runs.append(
                 SweepRun(
                     config=replace(config, name=name),
@@ -604,6 +670,8 @@ class SweepConfig:
                     grid_params=combo,
                     sampled_params=draw,
                     seed=seed,
+                    param_set_index=set_idx,
+                    set_params=dict(params),
                 )
             )
         names = [r.config.name for r in runs]
@@ -622,12 +690,16 @@ class SweepConfig:
         return runs
 
     def _run_name(
-        self, label: str, fs_idx: int, combo: dict, draw_idx: int, seed: int,
-        config: ExperimentConfig,
+        self, label: str, fs_idx: int, set_idx: int, combo: dict,
+        draw_idx: int, seed: int, config: ExperimentConfig,
     ) -> str:
         parts = [self.name, label]
         if self.n_feature_variants > 1:
             parts.append(f"fs{fs_idx}")
+        if self.n_param_sets > 1:
+            # a set is a whole dictionary — its index names the run; the
+            # dictionary itself is in the summary's `set_params` column
+            parts.append(f"set{set_idx}")
         for key in sorted(combo):
             parts.append(f"{_sanitize(key)}-{_sanitize(combo[key])}")
         if self.random:
@@ -655,6 +727,10 @@ class SweepRun:
     seed: int
     #: the [random] draw this run carries (empty for pure-grid sweeps)
     sampled_params: dict = field(default_factory=dict)
+    #: index into the sweep's [[sets]] (0 when the sweep has none)
+    param_set_index: int = 0
+    #: the [[sets]] entry this run took as a unit ({} when none)
+    set_params: dict = field(default_factory=dict)
 
 
 def _sanitize(value) -> str:
@@ -789,6 +865,8 @@ def run_sweep(
             "eval_label": run.config.eval_label,
             "horizon_years": run.horizon_years,
             "feature_set": run.feature_set_index,
+            "param_set": run.param_set_index,
+            "set_params": run.set_params,
             "seed": run.seed,
             "grid_params": run.grid_params,
             "sampled_params": run.sampled_params,
@@ -854,6 +932,8 @@ def _write_sweep_summary(
                 "eval_label": o["eval_label"],
                 "horizon_years": o["horizon_years"],
                 "feature_set": o["feature_set"],
+                "param_set": o["param_set"],
+                "set_params": json.dumps(o["set_params"], sort_keys=True),
                 "seed": o["seed"],
                 "grid_params": json.dumps(o["grid_params"], sort_keys=True),
                 "sampled_params": json.dumps(
@@ -903,6 +983,8 @@ def _write_sweep_summary(
         if extra in df.columns and extra not in metric_cols:
             metric_cols.append(extra)
     id_cols = ["run", "status", "label", "seed", "grid_params"]
+    if sweep.param_sets:
+        id_cols.insert(4, "param_set")
     if sweep.random:
         id_cols.append("sampled_params")
     if sweep.n_feature_variants > 1:
@@ -918,6 +1000,15 @@ def _write_sweep_summary(
         f"- model family: `{sweep.model_name}`, fixed params "
         f"`{json.dumps(sweep.base_params, sort_keys=True)}`",
         f"- grid: `{json.dumps({k: list(v) for k, v in sweep.grid.items()}, sort_keys=True)}`",
+        *(
+            [f"- parameter sets ({len(sweep.param_sets)}, each taken as a unit):"]
+            + [
+                f"  - `set{i}`: `{json.dumps(s, sort_keys=True)}`"
+                for i, s in enumerate(sweep.param_sets)
+            ]
+            if sweep.param_sets
+            else []
+        ),
         *(
             [
                 f"- random search: `{json.dumps(sweep.random, sort_keys=True)}` "

@@ -1,0 +1,44 @@
+# Seed-stability pass on candidate parameter sets (TODO: "a config whose
+# ranking collapses across seeds is noise, not signal").
+#
+# `[[sets]]` is the follow-up to a wide search: each entry is a whole
+# parameter dictionary taken as a unit — the top candidates of an
+# earlier sweep (here: illustrative LightGBM points in the style of
+# lgbm_precision_grid_3y) — re-run across several seeds. Sets cross
+# with [grid] like any other axis, so parameters the sets leave open
+# (class_weight below) can still be swept alongside them; a parameter
+# may appear in only one of [model], [grid], [[sets]].
+#
+# Expanded: 1 cell x 4 sets x 2 class weights x 3 seeds = 24 runs, every
+# one logged to the trial ledger.
+# Run: vml-sweep experiments/sweeps/lgbm_candidate_sets_3y.toml
+name = "lgbm_candidate_sets_3y"
+dataset_version = "dataset_v1.0"
+scheme = "walkforward"
+folds = "all"
+feature_groups = ["ranks", "sector_ranks"]
+seeds = [7, 11, 13]
+top_k = [20, 50]
+precision_targets = [0.75, 0.9]
+rank_metric = "recall_at_prec_0.9"
+
+# one inline table per line: paste candidates straight from a summary
+# CSV. A bare `sets = [...]` must sit above the first table header —
+# below [grid] it would parse as grid.sets (the harness rejects that).
+sets = [
+  {n_estimators = 300, num_leaves = 7,  learning_rate = 0.05, subsample = 0.9, subsample_freq = 1, colsample_bytree = 0.8, reg_alpha = 0.0,  reg_lambda = 1.0},
+  {n_estimators = 100, num_leaves = 15, learning_rate = 0.05, subsample = 0.9, subsample_freq = 1, colsample_bytree = 0.6, reg_alpha = 0.5,  reg_lambda = 5.0},
+  {n_estimators = 500, num_leaves = 7,  learning_rate = 0.02, subsample = 0.7, subsample_freq = 1, colsample_bytree = 0.4, reg_alpha = 0.0,  reg_lambda = 20.0},
+  {n_estimators = 200, num_leaves = 31, learning_rate = 0.03, subsample = 0.8, subsample_freq = 1, colsample_bytree = 0.7, reg_alpha = 3.0,  reg_lambda = 0.2},
+]
+
+[[cells]]
+horizon_years = 3
+label = "label_3y_beat_spy"
+
+[model]
+name = "lightgbm"
+min_child_samples = 40
+
+[grid]
+class_weight = [1.0, 0.5]
