@@ -58,6 +58,11 @@ groups = ["ranks"]
 [model]
 name = "lightgbm"
 subsample_freq = 1
+# device = "cuda"  # opt-in GPU training: needs a CUDA build of
+# lightgbm (see models/gbm.py LGBM_DEVICES for the install command).
+# GPU histogram arithmetic differs slightly from CPU, so device is a
+# model param — CPU and GPU runs get distinct config hashes and are
+# never mixed in the trial ledger.
 
 [random]
 learning_rate = { low = 0.01, high = 0.2, log = true }

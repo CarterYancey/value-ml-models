@@ -59,6 +59,50 @@ def _lgbm_regressor():
     return LGBMRegressor
 
 
+#: LightGBM device_type values the `device` param accepts. "cuda" is
+#: the modern NVIDIA path; "gpu" is the legacy OpenCL build. Either
+#: requires a lightgbm compiled with that support — the stock PyPI
+#: wheel is CPU-only, so:
+#:   uv pip install --force-reinstall --no-binary lightgbm \
+#:       --config-setting cmake.define.USE_CUDA=ON "lightgbm>=4.3"
+#: (needs the CUDA toolkit + CMake; re-run after a `uv sync` replaces
+#: it with the CPU wheel). A non-cpu device changes low-level histogram
+#: arithmetic, so scores differ slightly from a CPU run of the same
+#: params — `device` sits in model_params, so the config hash keeps
+#: CPU and GPU runs apart in the trial ledger, as it must.
+LGBM_DEVICES = ("cpu", "cuda", "gpu")
+
+
+def _check_device(model_name: str, device: str) -> str:
+    if device not in LGBM_DEVICES:
+        raise ConfigError(
+            f"{model_name} device must be one of {list(LGBM_DEVICES)}, "
+            f"got {device!r}"
+        )
+    return device
+
+
+def _fit_or_explain_device(estimator, X, y, w, device: str):
+    """`estimator.fit`, turning the opaque LightGBMError of a CPU-only
+    build asked for cuda/gpu into an actionable ConfigError."""
+    try:
+        estimator.fit(X, y, sample_weight=w)
+    except Exception as exc:
+        message = str(exc).lower()
+        if device != "cpu" and any(
+            token in message for token in ("cuda", "gpu", "opencl", "device")
+        ):
+            raise ConfigError(
+                f"LightGBM was asked to train on device = {device!r} but "
+                "this lightgbm build does not support it (the stock PyPI "
+                "wheel is CPU-only). Build with CUDA support:\n"
+                "  uv pip install --force-reinstall --no-binary lightgbm "
+                '--config-setting cmake.define.USE_CUDA=ON "lightgbm>=4.3"\n'
+                f"(original error: {exc})"
+            ) from exc
+        raise
+
+
 def _gain_importances(estimator, n_features: int) -> np.ndarray | None:
     """Normalized gain importances from a fitted LightGBM estimator
     (fraction of total split gain per feature; sums to 1)."""
@@ -92,6 +136,7 @@ class LightGBMModel:
         reg_alpha: float = 0.0,
         reg_lambda: float = 0.0,
         class_weight: str | float | None = None,
+        device: str = "cpu",
         seed: int = 0,
     ):
         if not isinstance(n_estimators, int) or n_estimators < 1:
@@ -104,6 +149,7 @@ class LightGBMModel:
                 f"lightgbm num_leaves must be an integer >= 2, "
                 f"got {num_leaves!r}"
             )
+        self.device = _check_device("lightgbm", device)
         self.estimator_ = _lgbm_classifier()(
             n_estimators=n_estimators,
             learning_rate=learning_rate,
@@ -117,6 +163,7 @@ class LightGBMModel:
             reg_alpha=reg_alpha,
             reg_lambda=reg_lambda,
             class_weight=resolve_class_weight(class_weight),
+            device_type=self.device,
             random_state=seed,
             n_jobs=-1,
             verbosity=-1,
@@ -138,7 +185,7 @@ class LightGBMModel:
             self.constant_score_ = 1.0 if yb.all() and len(yb) else 0.0
             return self
         self.constant_score_ = None
-        self.estimator_.fit(X, yb, sample_weight=w)
+        _fit_or_explain_device(self.estimator_, X, yb, w, self.device)
         return self
 
     def predict_scores(self, X: pd.DataFrame) -> np.ndarray:
@@ -200,6 +247,7 @@ class LightGBMRegressorModel:
         objective: str = "regression",
         alpha: float = 0.9,
         winsorize: float = 0.0,
+        device: str = "cpu",
         seed: int = 0,
     ):
         if not isinstance(n_estimators, int) or n_estimators < 1:
@@ -227,6 +275,7 @@ class LightGBMRegressorModel:
                 f"got {winsorize!r}"
             )
         self.winsorize = float(winsorize)
+        self.device = _check_device("lightgbm_regressor", device)
         self.estimator_ = _lgbm_regressor()(
             n_estimators=n_estimators,
             learning_rate=learning_rate,
@@ -241,6 +290,7 @@ class LightGBMRegressorModel:
             reg_lambda=reg_lambda,
             objective=objective,
             alpha=float(alpha),
+            device_type=self.device,
             random_state=seed,
             n_jobs=-1,
             verbosity=-1,
@@ -269,7 +319,7 @@ class LightGBMRegressorModel:
             yf = np.clip(yf, lo, hi)
         else:
             self.winsor_bounds_ = None
-        self.estimator_.fit(X, yf, sample_weight=w)
+        _fit_or_explain_device(self.estimator_, X, yf, w, self.device)
         return self
 
     def predict_scores(self, X: pd.DataFrame) -> np.ndarray:

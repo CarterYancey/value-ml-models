@@ -65,8 +65,11 @@ invariants below are this repo's equivalents.
 
 ## Conventions
 
-- Python 3.12+, scikit-learn for trees, LightGBM for Phase 3, matplotlib for
-  reports, duckdb/pandas for data access. Keep the dependency list short.
+- Python 3.12+, scikit-learn for trees/forests, LightGBM and XGBoost for
+  boosted trees (XGBoost is the GPU path — `device = "cuda"` works from
+  the stock wheel; `device` is a model param, so CPU and GPU runs hash
+  as distinct configs), matplotlib for reports, duckdb/pandas for data
+  access. Keep the dependency list short.
 - One experiment = one config file in `experiments/`; the harness runs
   configs, code never hardcodes an experiment. Before writing a new
   config, check `vml-experiments list` for an existing/closest one — the
