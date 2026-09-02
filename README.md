@@ -238,6 +238,20 @@ every set. Exemplar:
 `experiments/sweeps/lgbm_candidate_sets_3y.toml` (candidate sets × a
 `class_weight` grid × three seeds).
 
+**Several seeds → one report per candidate.** When `seeds` lists more
+than one value, the sweep reports per *candidate* (cell × feature set ×
+parameter set × grid point × random draw — everything but the seed)
+rather than per run: `reports/sweeps/<name>/<candidate>.md` gives, for
+every pooled metric and for each test year, the `n` / `mean` / `std` /
+`min` / `max` / 95% t-interval across seeds, plus the per-seed values.
+The summary ranks candidates by the **mean** of `rank_metric` across
+seeds with its std / min / 95%-CI lower bound beside it
+(`_summary_seeds.csv` has every metric's statistics; `_summary.csv`
+still lists every run), and the per-seed run reports move to
+`reports/sweeps/<name>/seeds/`. A candidate is only as good as its
+worst seed — read `_min` before `_mean`; with two or three seeds the
+interval is wide by construction, which is the honest width.
+
 ### Deployment: train on everything, score today's stocks
 
 Development measures with purged walk-forward splits; the model that

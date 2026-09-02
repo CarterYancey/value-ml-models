@@ -3,12 +3,14 @@ configs, every expanded run is logged to the trial ledger, one failing
 run never stops the sweep, and the summary ranks pooled metrics."""
 
 import json
+import math
 
 import pandas as pd
 import pytest
 
 from harness.errors import ConfigError
 from harness.results import ResultsStore
+from harness.seed_report import seed_stats
 from harness.sweep import SweepConfig, run_sweep
 
 VERSION = "dataset_v0.0-test"
@@ -367,3 +369,116 @@ def test_sets_sweep_runs_end_to_end(data_root, tmp_path):
     # every run in the ledger: 2 sets x 2 seeds x 2 folds
     store = ResultsStore(results).load()
     assert len(store) == 8 and store["config_hash"].nunique() == 4
+
+
+# ------------------------------------------------ multi-seed aggregation
+
+
+def test_seed_stats_spread_and_t_interval():
+    st = seed_stats([0.5, 0.6, 0.7])
+    assert st["n"] == 3
+    assert st["mean"] == pytest.approx(0.6)
+    assert st["std"] == pytest.approx(0.1)
+    assert (st["min"], st["max"]) == (0.5, 0.7)
+    # t(0.975, df=2) = 4.303: half-width 4.303 * 0.1 / sqrt(3)
+    assert st["ci95_low"] == pytest.approx(0.6 - 4.302653 * 0.1 / 3 ** 0.5, rel=1e-5)
+    assert st["ci95_high"] == pytest.approx(0.6 + 4.302653 * 0.1 / 3 ** 0.5, rel=1e-5)
+    # one seed: a point, no spread
+    one = seed_stats([0.4])
+    assert one["n"] == 1 and one["mean"] == 0.4
+    assert all(math.isnan(one[k]) for k in ("std", "ci95_low", "ci95_high"))
+    # metrics that don't apply (NaN) or aren't numeric are dropped
+    assert seed_stats([float("nan"), 0.2, "balanced"])["n"] == 1
+
+
+def test_candidate_is_the_run_minus_its_seed():
+    sweep = SweepConfig.from_dict(_sweep_dict(seeds=[3, 4]))
+    runs = sweep.expand()
+    for r in runs:
+        assert r.config.name == f"{r.candidate}__s{r.seed}"
+    # 2 cells x 2 grid points = 4 candidates, each with both seeds
+    by_cand = {}
+    for r in runs:
+        by_cand.setdefault(r.candidate, set()).add(r.seed)
+    assert len(by_cand) == 4
+    assert all(seeds == {3, 4} for seeds in by_cand.values())
+    # single seed: candidate and run coincide, nothing to aggregate
+    single = SweepConfig.from_dict(_sweep_dict()).expand()
+    assert all(r.candidate == r.config.name for r in single)
+
+
+def test_single_seed_sweep_writes_no_candidate_reports(data_root, tmp_path):
+    raw = _sweep_dict()
+    raw["cells"] = raw["cells"][:1]
+    out = run_sweep(
+        SweepConfig.from_dict(raw),
+        data_root=data_root,
+        results_path=tmp_path / "results.csv",
+        reports_dir=tmp_path / "reports",
+    )
+    assert out["candidates"] == [] and out["candidate_reports"] == {}
+    assert out["summary_seeds_csv"] is None
+    sweep_dir = tmp_path / "reports" / "sweeps" / "mini_sweep"
+    assert not (sweep_dir / "seeds").exists()
+    assert all((sweep_dir / f"{o['run']}.md").exists() for o in out["runs"])
+
+
+def test_multi_seed_sweep_reports_per_candidate(data_root, tmp_path):
+    raw = _sweep_dict(seeds=[3, 4, 5])
+    raw["cells"] = raw["cells"][:1]
+    sweep = SweepConfig.from_dict(raw)
+    reports = tmp_path / "reports"
+    out = run_sweep(
+        sweep,
+        data_root=data_root,
+        results_path=tmp_path / "results.csv",
+        reports_dir=reports,
+        sweep_config_path="sweeps/seeds.toml",
+    )
+    assert out["n_failed"] == 0 and len(out["runs"]) == 6
+    sweep_dir = reports / "sweeps" / "mini_sweep"
+
+    # per-seed run reports are detail, under seeds/; the sweep directory
+    # holds one seed-stability report per candidate (2 grid points)
+    for o in out["runs"]:
+        assert (sweep_dir / "seeds" / f"{o['run']}.md").exists()
+        assert not (sweep_dir / f"{o['run']}.md").exists()
+    assert len(out["candidates"]) == 2
+    for cand in out["candidates"]:
+        assert cand["completed_seeds"] == [3, 4, 5]
+        path = out["candidate_reports"][cand["candidate"]]
+        assert path == sweep_dir / f"{cand['candidate']}.md"
+        md = path.read_text()
+        assert "# Seed stability" in md
+        assert "## Pooled metrics across seeds" in md
+        assert "## Per-seed pooled values" in md
+        assert "## Era slices across seeds" in md
+        assert "model selection on walk-forward folds" in md
+        # the rank metric's spread is computed over the three seeds
+        st = cand["pooled"]["recall_at_prec_0.5"]
+        assert st["n"] == 3
+        assert st["min"] <= st["mean"] <= st["max"]
+        vals = [r["pooled_metrics"]["recall_at_prec_0.5"] for r in cand["runs"]]
+        assert st["mean"] == pytest.approx(sum(vals) / 3)
+        # era slices: one row per walk-forward fold, each over 3 seeds
+        assert sorted(cand["era"]) == [2016, 2017]
+        assert cand["era"][2016]["recall_at_prec_0.5"]["n"] == 3
+
+    # the candidate-level CSV carries every metric's statistics ...
+    seeds_df = pd.read_csv(out["summary_seeds_csv"])
+    assert len(seeds_df) == 2
+    for stat in ("n", "mean", "std", "min", "max", "ci95_low", "ci95_high"):
+        assert f"recall_at_prec_0.5_{stat}" in seeds_df.columns
+    assert (seeds_df["recall_at_prec_0.5_n"] == 3).all()
+    assert (seeds_df["seeds_completed"] == "3/3").all()
+    means = seeds_df["recall_at_prec_0.5_mean"].tolist()
+    assert means == sorted(means, reverse=True)
+    # ... the per-run CSV still lists every run ...
+    runs_df = pd.read_csv(out["summary_csv"])
+    assert len(runs_df) == 6 and "candidate" in runs_df.columns
+    # ... and the markdown ranks candidates, not runs
+    md = out["summary_md"].read_text()
+    assert "## Ranked candidates" in md
+    assert "| candidate " in md
+    assert "recall_at_prec_0.5_mean" in md and "recall_at_prec_0.5_ci95_low" in md
+    assert "only as good as its worst seed" in md

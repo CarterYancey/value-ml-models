@@ -39,7 +39,12 @@ Nothing about the honesty machinery is bypassed:
   are never a final result (the sealed holdout exists for that).
 
 Per-run reports land in `reports/sweeps/<sweep name>/`; the ranked
-summary (markdown + CSV) lands next to them. Model bundles are not
+summary (markdown + CSV) lands next to them. A sweep over several
+`seeds` reports per *candidate* instead (everything but the seed): one
+seed-stability report each (`harness.seed_report`: mean / std / min /
+max / 95% t-interval across seeds, pooled and per era), the summary
+ranks candidates by their mean, and the per-seed run reports move to a
+`seeds/` subdirectory. Model bundles are not
 saved by default (a wide sweep would write hundreds) — pass
 `--save-models` / `models_dir=` and re-evaluate the winner, or simply
 re-run its expanded config through `vml-run`.
@@ -68,6 +73,13 @@ from harness.config import ExperimentConfig, FeatureSpec, infer_horizon_years
 from harness.errors import ConfigError
 from harness.report import _table
 from harness.results import ResultsStore, git_sha
+from harness.seed_report import (
+    STAT_COLUMNS,
+    aggregate_candidates,
+    candidate_frame,
+    headline_metrics,
+    write_candidate_report,
+)
 from harness.runner import (
     DEFAULT_DATA_ROOT,
     DEFAULT_REPORTS,
@@ -658,12 +670,13 @@ class SweepConfig:
                 calibration=self.calibration,
                 calibration_min_rows=self.calibration_min_rows,
             )
-            name = self._run_name(
+            candidate, name = self._run_names(
                 label, fs_idx, set_idx, combo, draw_idx, seed, config
             )
             runs.append(
                 SweepRun(
                     config=replace(config, name=name),
+                    candidate=candidate,
                     label=label,
                     horizon_years=horizon,
                     feature_set_index=fs_idx,
@@ -689,10 +702,13 @@ class SweepConfig:
             )
         return runs
 
-    def _run_name(
+    def _run_names(
         self, label: str, fs_idx: int, set_idx: int, combo: dict,
         draw_idx: int, seed: int, config: ExperimentConfig,
-    ) -> str:
+    ) -> tuple[str, str]:
+        """(candidate name, run name). The candidate is the run minus its
+        seed — what a multi-seed sweep aggregates over; with one seed the
+        two coincide."""
         parts = [self.name, label]
         if self.n_feature_variants > 1:
             parts.append(f"fs{fs_idx}")
@@ -707,12 +723,19 @@ class SweepConfig:
             # is stable (sampling is deterministic) and the summary CSV
             # carries the actual values
             parts.append(f"r{draw_idx}")
-        if len(self.seeds) > 1:
-            parts.append(f"s{seed}")
-        name = "__".join(parts)
+        candidate = "__".join(parts)
+        if len(candidate) > 120:
+            key = json.dumps(
+                [label, fs_idx, set_idx, combo, draw_idx], sort_keys=True
+            )
+            digest = hashlib.sha256(key.encode()).hexdigest()[:8]
+            candidate = f"{candidate[:96]}--{digest}"
+        if len(self.seeds) == 1:
+            return candidate, candidate
+        name = f"{candidate}__s{seed}"
         if len(name) > 120:
             name = f"{name[:96]}--{config.config_hash[:8]}"
-        return name
+        return candidate, name
 
 
 @dataclass(frozen=True)
@@ -731,6 +754,8 @@ class SweepRun:
     param_set_index: int = 0
     #: the [[sets]] entry this run took as a unit ({} when none)
     set_params: dict = field(default_factory=dict)
+    #: run name minus the seed — the unit a multi-seed sweep reports on
+    candidate: str = ""
 
 
 def _sanitize(value) -> str:
@@ -856,11 +881,17 @@ def run_sweep(
     """
     runs = sweep.expand()
     sweep_reports = Path(reports_dir) / "sweeps" / sweep.name
+    multi_seed = len(sweep.seeds) > 1
+    # per-seed run reports are detail under a multi-seed sweep; the
+    # sweep directory itself holds one report per candidate
+    run_reports = sweep_reports / "seeds" if multi_seed else sweep_reports
     outcomes: list[dict] = []
     for i, run in enumerate(runs, start=1):
         print(f"[{i}/{len(runs)}] {run.config.name}{_peak_rss_note()}")
         outcome = {
             "run": run.config.name,
+            "candidate": run.candidate or run.config.name,
+            "model_params": dict(run.config.model_params),
             "label": run.label,
             "eval_label": run.config.eval_label,
             "horizon_years": run.horizon_years,
@@ -877,7 +908,7 @@ def run_sweep(
                 run.config,
                 data_root=data_root,
                 results_path=results_path,
-                reports_dir=sweep_reports,
+                reports_dir=run_reports,
                 config_path=(
                     f"{sweep_config_path}#{run.config.name}"
                     if sweep_config_path
@@ -890,6 +921,9 @@ def run_sweep(
                 run_id=summary["run_id"],
                 report_path=summary["report_path"],
                 pooled_metrics=summary["pooled_metrics"],
+                fold_metrics={
+                    fr["fold"]: fr["metrics"] for fr in summary["fold_results"]
+                },
             )
         except Exception as exc:
             traceback.print_exc()
@@ -900,13 +934,24 @@ def run_sweep(
             )
         outcomes.append(outcome)
 
-    summary_md, summary_csv = _write_sweep_summary(
-        sweep, outcomes, sweep_reports, results_path, sweep_config_path
+    candidates = aggregate_candidates(outcomes) if multi_seed else []
+    candidate_reports = {
+        c["candidate"]: write_candidate_report(
+            sweep, c, sweep_reports, sweep_config_path=sweep_config_path
+        )
+        for c in candidates
+    }
+    summary_md, summary_csv, seeds_csv = _write_sweep_summary(
+        sweep, outcomes, candidates, sweep_reports, results_path,
+        sweep_config_path,
     )
     return {
         "runs": outcomes,
+        "candidates": candidates,
+        "candidate_reports": candidate_reports,
         "summary_md": summary_md,
         "summary_csv": summary_csv,
+        "summary_seeds_csv": seeds_csv,
         "n_failed": sum(1 for o in outcomes if o["status"] == "failed"),
     }
 
@@ -914,11 +959,15 @@ def run_sweep(
 def _write_sweep_summary(
     sweep: SweepConfig,
     outcomes: list[dict],
+    candidates: list[dict],
     sweep_reports: Path,
     results_path: str | Path,
     sweep_config_path: str,
-) -> tuple[Path, Path]:
-    """Ranked summary: markdown for reading, CSV with every pooled metric."""
+) -> tuple[Path, Path, Path | None]:
+    """Ranked summary: markdown for reading, CSV with every pooled metric
+    per run; under a multi-seed sweep the markdown ranks *candidates* by
+    their mean across seeds and a second CSV carries every metric's
+    across-seed statistics per candidate."""
     sweep_reports.mkdir(parents=True, exist_ok=True)
     store = ResultsStore(results_path)
 
@@ -927,6 +976,7 @@ def _write_sweep_summary(
         rows.append(
             {
                 "run": o["run"],
+                "candidate": o["candidate"],
                 "status": o["status"],
                 "label": o["label"],
                 "eval_label": o["eval_label"],
@@ -991,6 +1041,40 @@ def _write_sweep_summary(
         id_cols.insert(3, "feature_set")
     table_df = df[[c for c in id_cols + metric_cols if c in df.columns]]
 
+    # multi-seed: the reading table is per candidate — mean across seeds
+    # with its spread — and the per-run table lives in the CSV
+    seeds_csv: Path | None = None
+    if candidates:
+        all_metrics = list(
+            dict.fromkeys(m for c in candidates for m in c["pooled"])
+        )
+        cand_df = candidate_frame(candidates, all_metrics)
+        rank_mean = f"{sweep.rank_metric}_mean"
+        if rank_mean in cand_df.columns:
+            cand_df = cand_df.sort_values(
+                rank_mean, ascending=False, na_position="last"
+            ).reset_index(drop=True)
+        seeds_csv = sweep_reports / f"{sweep.name}_summary_seeds.csv"
+        cand_df.to_csv(seeds_csv, index=False)
+        cand_id = ["candidate", "seeds_completed", "label", "grid_params"]
+        if sweep.param_sets:
+            cand_id.insert(3, "param_set")
+        if sweep.random:
+            cand_id.append("sampled_params")
+        if sweep.n_feature_variants > 1:
+            cand_id.insert(3, "feature_set")
+        cand_metric_cols = [
+            f"{sweep.rank_metric}_{stat}"
+            for stat in ("mean", "std", "min", "max", "ci95_low")
+        ] + [
+            f"{m}_mean"
+            for m in headline_metrics(sweep, all_metrics)
+            if m != sweep.rank_metric
+        ]
+        table_df = cand_df[
+            [c for c in cand_id + cand_metric_cols if c in cand_df.columns]
+        ]
+
     lines = [
         f"# Sweep summary — {sweep.name}",
         "",
@@ -1020,24 +1104,55 @@ def _write_sweep_summary(
         ),
         f"- expanded runs: {len(outcomes)} ({n_failed} failed), "
         f"seeds {list(sweep.seeds)}",
-        f"- ranked by pooled `{sweep.rank_metric}` (higher is better)",
+        *(
+            [
+                f"- {len(candidates)} candidates × {len(sweep.seeds)} seeds: "
+                f"ranked by the **mean** pooled `{sweep.rank_metric}` across "
+                "seeds (higher is better), with its std / min / max / 95% "
+                "t-interval lower bound beside it; one seed-stability "
+                "report per candidate (`<candidate>.md`, pooled and per-era "
+                "spread), every metric's across-seed statistics in "
+                f"`{seeds_csv.name}`, per-seed run reports under `seeds/`"
+            ]
+            if candidates
+            else [f"- ranked by pooled `{sweep.rank_metric}` (higher is better)"]
+        ),
         "",
         "**This ranking is model selection on walk-forward folds.** The "
         "winner's numbers are selection-biased by every configuration "
         "tried below (and before); they are candidates for the sealed "
         "holdout, never final results. Pooled numbers here are for "
-        "ranking only — the per-run reports in this directory carry the "
-        "era-sliced tables that an honest read requires.",
+        "ranking only — "
+        + (
+            "the per-candidate reports in this directory carry the "
+            "era-sliced spread across seeds, and the per-seed reports "
+            "under `seeds/` the full era tables, that an honest read "
+            "requires."
+            if candidates
+            else "the per-run reports in this directory carry the "
+            "era-sliced tables that an honest read requires."
+        ),
         "",
         "## Trial ledger",
         "",
         *tried_lines,
         "",
-        "## Ranked runs (pooled over folds)",
+        (
+            "## Ranked candidates (mean over seeds of the pooled metrics)"
+            if candidates
+            else "## Ranked runs (pooled over folds)"
+        ),
         "",
         _table(table_df),
         "",
     ]
+    if candidates:
+        lines += [
+            "A candidate is only as good as its worst seed: read `_min` and "
+            "`_ci95_low` before `_mean`. With few seeds the t-interval is "
+            "wide by construction — that is the honest width.",
+            "",
+        ]
     failed = [o for o in outcomes if o["status"] == "failed"]
     if failed:
         lines += ["## Failures", ""]
@@ -1046,12 +1161,17 @@ def _write_sweep_summary(
     lines += [
         f"Full pooled metrics for every run: `{csv_path.name}`. Per-run "
         "reports (era slices, crash eras, calibration, baselines): "
-        "`<run name>.md` in this directory.",
+        + (
+            "`seeds/<run name>.md`; seed-stability reports: "
+            "`<candidate>.md` in this directory."
+            if candidates
+            else "`<run name>.md` in this directory."
+        ),
         "",
     ]
     md_path = sweep_reports / f"{sweep.name}_summary.md"
     md_path.write_text("\n".join(lines))
-    return md_path, csv_path
+    return md_path, csv_path, seeds_csv
 
 
 # ----------------------------------------------------------------------

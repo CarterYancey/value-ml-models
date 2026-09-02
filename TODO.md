@@ -332,6 +332,11 @@ in [PLAN.md](PLAN.md); check items off (and add new ones) as work proceeds.
       `[model]`, `[grid]`, `[random]`, `[[sets]]`. Summary carries
       `param_set` / `set_params`.
       (exemplar: `experiments/sweeps/lgbm_candidate_sets_3y.toml`)
+- [x] Multi-seed sweeps report per candidate: one seed-stability report
+      each (mean / std / min / max / 95% t-interval across seeds, pooled
+      and per test year), summary ranked by the mean with the spread
+      beside it (`_summary_seeds.csv`), per-seed run reports under
+      `seeds/`. (`src/harness/seed_report.py`)
 - [ ] Seed-stability pass on the sweep winner (multi-seed `[[sets]]`
       sweep over the top candidates; a config whose ranking collapses
       across seeds is noise, not signal).

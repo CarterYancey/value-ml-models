@@ -10,7 +10,11 @@
 # may appear in only one of [model], [grid], [[sets]].
 #
 # Expanded: 1 cell x 4 sets x 2 class weights x 3 seeds = 24 runs, every
-# one logged to the trial ledger.
+# one logged to the trial ledger. Three seeds make this a multi-seed
+# sweep: the summary ranks the 8 candidates (set x class_weight) by the
+# mean of the rank metric across seeds with its spread beside it, and
+# each candidate gets a seed-stability report (min/max/std/95% CI,
+# pooled and per test year); the 24 per-seed reports sit under seeds/.
 # Run: vml-sweep experiments/sweeps/lgbm_candidate_sets_3y.toml
 name = "lgbm_candidate_sets_3y"
 dataset_version = "dataset_v1.0"
