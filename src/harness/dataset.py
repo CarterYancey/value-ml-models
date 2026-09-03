@@ -365,6 +365,14 @@ class Dataset:
 
         for ref in spec.exclude_families:
             cols = set(self._family_columns(ref))
+            if not cols:
+                raise DatasetValidationError(
+                    f"exclude_families entry {ref!r} removes nothing: the "
+                    f"{self.version} manifest declares no columns for that "
+                    "family, so this dataset version does not provide it "
+                    "(see data/versions.md) — drop the entry, or use a "
+                    "dataset version that has it"
+                )
             if not cols & selected:
                 raise DatasetValidationError(
                     f"exclude_families entry {ref!r} removes nothing: no "

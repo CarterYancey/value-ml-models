@@ -5,7 +5,7 @@ leave an unwanted column in the model)."""
 
 import pytest
 
-from harness.config import ExperimentConfig
+from harness.config import ExperimentConfig, FeatureSpec
 from harness.dataset import Dataset
 from harness.errors import DatasetValidationError
 from harness.model_store import ModelBundle
@@ -44,6 +44,21 @@ def test_exclude_of_absent_column_is_an_error(dataset_dir):
     with pytest.raises(DatasetValidationError, match="excluded feature columns"):
         ds.feature_columns(
             ["features"], subset=["book_to_market"], exclude=["earnings_yield"]
+        )
+
+
+def test_exclude_family_absent_from_dataset_version_names_the_cause(dataset_dir):
+    ds = Dataset(dataset_dir)
+    # the fixture manifest has no trend columns at all (like dataset_v1.0)
+    with pytest.raises(DatasetValidationError, match="manifest declares no columns"):
+        ds.select_features(
+            FeatureSpec(groups=("ranks",), exclude_families=("ranks/trend",))
+        )
+    # a family the manifest does have, but whose parent group was never
+    # selected, keeps the parent-never-selected message
+    with pytest.raises(DatasetValidationError, match="parent was never selected"):
+        ds.select_features(
+            FeatureSpec(groups=("ranks",), exclude_families=("features/valuation",))
         )
 
 

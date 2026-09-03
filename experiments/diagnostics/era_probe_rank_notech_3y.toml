@@ -1,0 +1,33 @@
+# Era-identifiability probe, RANK arm WITHOUT the technical family: the
+# first real rank-arm run dated rows at 0.95 accuracy (majority-year 0.09)
+# with the trade-volume ranks on top. This arm drops the whole `technical`
+# family — momentum (mom_12_2, ret_6m, ret_1m), volatility (vol_12m,
+# vol_36m), dist_52w_high, log_marketcap, dollar_volume_3m, amihud_12m,
+# conservative_score — so what remains is the fundamentals' joint
+# structure and nullity. If this still dates a row far above 0.09, the
+# era is in the fundamentals, not the price/volume block. DIAGNOSTIC ONLY.
+#
+#   python scripts/run_diagnostic.py era-probe experiments/diagnostics/era_probe_rank_notech_3y.toml
+#
+# `ranks/trend` is not excluded here: dataset_v1.0 has no trend columns
+# (they arrive in v1.1 — data/versions.md), and an exclusion that removes
+# nothing is an error. A v1.1 variant adds "ranks/trend" to the list and
+# sets min_dataset_version = "1.1".
+diagnostic = "era_probe"
+name = "era_probe_rank_notech_3y"
+dataset_version = "dataset_v1.0"
+scheme = "entity_holdout"
+horizon_years = 3
+folds = "all"
+seed = 7
+report_min_year = 2000
+
+[features]
+groups = ["ranks"]
+exclude_families = ["ranks/technical"]
+
+[model]
+name = "lightgbm"
+n_estimators = 200
+learning_rate = 0.05
+num_leaves = 31
