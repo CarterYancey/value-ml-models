@@ -569,18 +569,45 @@ class Dataset:
             raise DatasetValidationError(
                 f"label {label!r} is not in the manifest labels group"
             )
-        weight_col = self.sample_weight_column(horizon_years)
         labeled = frame[frame[label].notna()]
-        w = labeled[weight_col]
+        w = self._weights_for(labeled, horizon_years)
+        return FitData(
+            X=labeled[list(feature_cols)],
+            y=_target_array(label, labeled[label], target),
+            sample_weight=w,
+            effective_size=float(w.sum()),
+        )
+
+    def observable_fit_rows(
+        self, frame: pd.DataFrame, horizon_years: int
+    ) -> tuple[pd.DataFrame, np.ndarray]:
+        """Rows whose horizon-H label window is observable
+        (`delisted_in_window_{H}y` not NULL — the marker
+        `_validate_test_rows` uses), with their mandatory weights.
+
+        This is the row set `fit_data` keeps for any H-horizon label,
+        without naming a label: for targets derived from `key_meta`
+        rather than the label matrix (the registered era probe predicts
+        `year(snapshot_date)`). The weight guardrail is the same one.
+        """
+        marker = f"delisted_in_window_{horizon_years}y"
+        if marker not in self.columns("labels"):
+            raise DatasetValidationError(
+                f"{marker!r} is not in the manifest labels group; cannot "
+                f"determine label observability for horizon {horizon_years}"
+            )
+        rows = frame[frame[marker].notna()]
+        return rows, self._weights_for(rows, horizon_years)
+
+    def _weights_for(self, rows: pd.DataFrame, horizon_years: int) -> np.ndarray:
+        """The horizon's `sample_weight_{H}y` for rows that must all carry
+        one (label-observable rows); a NULL anywhere is refused."""
+        weight_col = self.sample_weight_column(horizon_years)
+        w = rows[weight_col]
         if w.isna().any():
             raise MissingSampleWeightError(
                 f"{int(w.isna().sum())} labeled rows have NULL {weight_col}; "
                 "upstream guarantees weights exactly where the label is "
                 "observable — refusing to fit"
             )
-        return FitData(
-            X=labeled[list(feature_cols)],
-            y=_target_array(label, labeled[label], target),
-            sample_weight=w.to_numpy(dtype=float),
-            effective_size=float(w.sum()),
-        )
+        return w.to_numpy(dtype=float)

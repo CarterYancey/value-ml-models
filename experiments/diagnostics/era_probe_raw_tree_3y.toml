@@ -1,0 +1,29 @@
+# Era-identifiability probe, RAW arm with a depth-limited tree: the
+# rules artifact (reports/diagnostics/<name>_rules.md) names the feature
+# thresholds that identify each year — *what* leaks the era, not just how
+# much. Same feature selection as era_probe_raw_3y. DIAGNOSTIC ONLY.
+#
+#   python scripts/run_diagnostic.py era-probe experiments/diagnostics/era_probe_raw_tree_3y.toml
+diagnostic = "era_probe"
+name = "era_probe_raw_tree_3y"
+dataset_version = "dataset_v1.0"
+scheme = "entity_holdout"
+horizon_years = 3
+folds = "all"
+seed = 7
+report_min_year = 2000
+
+[features]
+groups = ["features"]
+exclude_columns = [
+  "fund_datekey", "fund_reportperiod",
+  "has_filing_183d", "has_filing_365d",
+  "negative_equity", "negative_ebitda", "negative_ev",
+  "two_year_loss", "liab_gt_assets",
+]
+exclude_families = ["features/classification"]
+
+[model]
+name = "decision_tree"
+max_depth = 4
+min_weight_fraction_leaf = 0.01

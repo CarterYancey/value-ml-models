@@ -122,6 +122,21 @@ def _scan_configs(experiments_dir: Path) -> list[dict]:
                 "dataset": raw.get("dataset_version", "?"),
             })
             continue
+        if "diagnostic" in raw:
+            # a registered-diagnostic config (scripts/run_diagnostic.py);
+            # not an ExperimentConfig, so parsed only for the listing
+            entries.append({
+                "path": path,
+                "kind": "sweep",  # rendered like a non-experiment row
+                "name": raw.get("name", path.stem),
+                "model": (raw.get("model", {}) or {}).get("name", "?"),
+                "label": (
+                    f"{raw['diagnostic']} (scripts/run_diagnostic.py)"
+                ),
+                "dataset": raw.get("dataset_version", "?"),
+                "tag": "diagnostic",
+            })
+            continue
         if set(raw) <= {"name", "top_k", "score_thresholds",
                         "precision_targets"}:
             entries.append({
@@ -180,7 +195,7 @@ def cmd_list(args) -> int:
             rows.append({
                 "config": str(entry["path"]),
                 "model": entry["model"],
-                "cell": f"[sweep] {entry['label']}",
+                "cell": f"[{entry.get('tag', 'sweep')}] {entry['label']}",
                 "dataset": entry["dataset"],
             })
             continue

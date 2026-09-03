@@ -105,9 +105,11 @@ invariants below are this repo's equivalents.
   SEP/SFP for the Phase-4 backtest — the labels' own price source. Nothing
   from the panel may become a feature or screen; any other raw read is
   still a bug.
-- Use of `entity_holdout`/`random_kfold` tags outside the registered
-  leakage-gap experiment, or any read of `holdout` tags outside the
-  final-eval script.
+- Use of `entity_holdout`/`random_kfold` tags outside
+  `scripts/run_diagnostic.py` (the only registered-diagnostic entry point;
+  it hosts the era probe and, when built, the leakage-gap experiment), or
+  any read of `holdout` tags outside `scripts/run_final_eval.py`. A
+  diagnostic's numbers are never model selection or reported performance.
 - Validation metrics dramatically above baseline: treat as suspected leakage
   first, breakthrough second. Check split application before celebrating.
 - Any comparison across experiments using different dataset versions.

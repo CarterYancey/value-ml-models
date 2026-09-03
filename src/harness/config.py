@@ -142,6 +142,31 @@ class FeatureSpec:
         return table
 
 
+def parse_feature_selection(raw: dict, source: str) -> dict:
+    """The feature-selection fields of a config mapping — the `[features]`
+    table (→ `features`) or the legacy trio, never both. Shared by
+    `ExperimentConfig` and the registered-diagnostic configs so any
+    experiment's selection can be probed verbatim."""
+    legacy_used = [k for k in _LEGACY_FEATURE_KEYS if k in raw]
+    features = None
+    if "features" in raw:
+        if legacy_used:
+            raise ConfigError(
+                f"config {source} mixes the [features] table with the "
+                f"legacy keys {legacy_used}; use one style"
+            )
+        features = FeatureSpec.from_table(raw["features"], source)
+    feature_columns = raw.get("feature_columns")
+    if feature_columns is not None:
+        feature_columns = tuple(feature_columns)
+    return {
+        "features": features,
+        "feature_groups": tuple(raw.get("feature_groups", ())),
+        "feature_columns": feature_columns,
+        "exclude_feature_columns": tuple(raw.get("exclude_feature_columns", ())),
+    }
+
+
 @dataclass(frozen=True)
 class ExperimentConfig:
     name: str
@@ -219,18 +244,7 @@ class ExperimentConfig:
         folds = raw.get("folds", "all")
         if folds != "all":
             folds = tuple(int(f) for f in folds)
-        legacy_used = [k for k in _LEGACY_FEATURE_KEYS if k in raw]
-        features = None
-        if "features" in raw:
-            if legacy_used:
-                raise ConfigError(
-                    f"config {source} mixes the [features] table with the "
-                    f"legacy keys {legacy_used}; use one style"
-                )
-            features = FeatureSpec.from_table(raw["features"], source)
-        feature_columns = raw.get("feature_columns")
-        if feature_columns is not None:
-            feature_columns = tuple(feature_columns)
+        selection = parse_feature_selection(raw, source)
         config = cls(
             name=str(raw.get("name", "")),
             dataset_version=raw["dataset_version"],
@@ -239,10 +253,7 @@ class ExperimentConfig:
             label=label,
             model_name=model["name"],
             model_params={k: v for k, v in model.items() if k != "name"},
-            feature_groups=tuple(raw.get("feature_groups", ())),
-            feature_columns=feature_columns,
-            exclude_feature_columns=tuple(raw.get("exclude_feature_columns", ())),
-            features=features,
+            **selection,
             folds=folds,
             seed=int(raw.get("seed", 0)),
             top_k=tuple(int(k) for k in raw.get("top_k", (20, 50))),

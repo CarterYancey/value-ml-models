@@ -117,8 +117,30 @@ in [PLAN.md](PLAN.md); check items off (and add new ones) as work proceeds.
 ### Registered diagnostics (from data/manual.md §7 — diagnostic only)
 - [ ] Leakage-gap experiment: identical model under `random_kfold`,
       `entity_holdout`, and purged `walkforward`; report the score gaps.
-- [ ] Era-identifiability probe: predict calendar year from features alone,
-      raw vs. rank sets.
+- [x] Era-identifiability probe: predict calendar year from features alone,
+      raw vs. rank sets. (`src/diagnostics/era_probe.py` + `era_metrics.py`
+      + `probe_models.py` (multiclass tree / forest / LightGBM / XGBoost,
+      weighted);
+      `scripts/run_diagnostic.py era-probe <config>` is the only place
+      that grants `REGISTERED_DIAGNOSTIC` access. Target = year of
+      `snapshot_date` under `entity_holdout` (entity-disjoint, so firm
+      memorisation can't help; `random_kfold` allowed as the leaky upper
+      bound). Reports in `reports/diagnostics/`: headline vs. uniform /
+      majority-year / train-prior baselines, per-year slice, post-burn-in
+      slice, confusion heatmap, importances, tree rules naming which
+      thresholds date a row. Exemplar configs in
+      `experiments/diagnostics/era_probe_{raw,rank,raw_tree}_3y.toml` —
+      the raw arm's non-numeric exclusion list is written from
+      data/features.md and must be confirmed on the first real run; needs
+      a real `dataset_v1.0` locally for real reports — verified end-to-end
+      on the test fixture.)
+- [ ] Further tests of the "entity_holdout learns the era, not the stock"
+      concern, once the leakage-gap experiment exists: (a) global top-K
+      vs. per-year top-K precision under `entity_holdout` — if pooled
+      picks beat per-year picks, the model is timing eras, not selecting
+      stocks; (b) share of an entity-holdout model's score variance
+      explained by year (one-way ANOVA R²), a cheap add-on to the
+      leakage-gap report.
 - [ ] Restated-variant ablation (needs a restated-dimension dataset variant
       from upstream; coordinate before starting).
 

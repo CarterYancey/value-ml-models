@@ -1,0 +1,41 @@
+# Era-identifiability probe, RAW arm (registered diagnostic, manual.md §7):
+# can the nominal-level `features` group predict the calendar year of a
+# snapshot? Entity-disjoint split, so firm memorisation can't help.
+# DIAGNOSTIC ONLY — never model selection, never reported performance.
+#
+#   python scripts/run_diagnostic.py era-probe experiments/diagnostics/era_probe_raw_3y.toml
+#
+# Expected reading: far above the majority-year baseline (nominal levels
+# such as log_marketcap/log_assets drift with the market and inflation;
+# nullity patterns date the burn-in years). Compare with the rank arm.
+diagnostic = "era_probe"
+name = "era_probe_raw_3y"
+dataset_version = "dataset_v1.0"
+scheme = "entity_holdout"
+horizon_years = 3        # selects the tag set and sample_weight_3y
+folds = "all"
+seed = 7
+report_min_year = 2000   # post-burn-in slice (manual.md §8: 1997–99 are thin)
+
+[features]
+groups = ["features"]
+# Non-numeric columns must be excluded (the probe refuses them by name):
+# the two filing-date fields are literal dates — trivial era leaks — and
+# the condition flags are Y/N strings today (TODO.md, categorical
+# encoding item). The classification family is current-state strings.
+# NOTE: this list is written against data/features.md, not verified
+# against a local dataset_v1.0 manifest; an exclusion that removes
+# nothing is an error, so adjust on the first real run.
+exclude_columns = [
+  "fund_datekey", "fund_reportperiod",
+  "has_filing_183d", "has_filing_365d",
+  "negative_equity", "negative_ebitda", "negative_ev",
+  "two_year_loss", "liab_gt_assets",
+]
+exclude_families = ["features/classification"]
+
+[model]
+name = "lightgbm"
+n_estimators = 200
+learning_rate = 0.05
+num_leaves = 31

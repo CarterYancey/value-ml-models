@@ -31,7 +31,9 @@ _ERA_TAIL = ("brier", "base_rate_brier", "pr_auc", "spearman_ic")
 
 
 def _fmt(v) -> str:
-    if v is None or (isinstance(v, float) and pd.isna(v)):
+    if v is None or (not isinstance(v, str) and pd.isna(v) is True):
+        # None, float NaN, and NaT alike (diagnostic-scheme folds carry
+        # NULL period boundaries: they are hash buckets, not periods)
         return "—"
     if isinstance(v, float):
         return str(int(v)) if v.is_integer() else f"{v:.4f}"
@@ -58,6 +60,11 @@ def _table(df: pd.DataFrame) -> str:
     ]
     lines += [line(r) for r in cells]
     return "\n".join(lines)
+
+
+#: Public alias: other report writers (the registered diagnostics) share
+#: the same aligned-markdown table.
+markdown_table = _table
 
 
 def _era_view(era_df: pd.DataFrame) -> pd.DataFrame:

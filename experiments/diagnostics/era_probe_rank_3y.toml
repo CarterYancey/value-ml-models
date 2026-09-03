@@ -1,0 +1,26 @@
+# Era-identifiability probe, RANK arm (registered diagnostic, manual.md §7):
+# percent ranks are uniform within every (quarter, kind) cross-section by
+# construction, so any era signal here is joint structure across features
+# or nullity (rank guard, tier gates) — not level drift. This is the
+# informative number: if the rank set still dates a row well above the
+# majority-year baseline, entity-holdout return models on ranks can be
+# scoring by era timing. DIAGNOSTIC ONLY.
+#
+#   python scripts/run_diagnostic.py era-probe experiments/diagnostics/era_probe_rank_3y.toml
+diagnostic = "era_probe"
+name = "era_probe_rank_3y"
+dataset_version = "dataset_v1.0"
+scheme = "entity_holdout"
+horizon_years = 3
+folds = "all"
+seed = 7
+report_min_year = 2000
+
+[features]
+groups = ["ranks"]
+
+[model]
+name = "lightgbm"
+n_estimators = 200
+learning_rate = 0.05
+num_leaves = 31
