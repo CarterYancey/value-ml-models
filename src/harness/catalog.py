@@ -47,7 +47,7 @@ def _print_table(rows: list[dict], columns: list[str]) -> None:
 
 
 def _is_sweep(raw: dict) -> bool:
-    return "cells" in raw or "grid" in raw
+    return "cells" in raw or "grid" in raw or "sets" in raw
 
 
 def _features_summary(config: ExperimentConfig) -> str:

@@ -63,6 +63,18 @@ invariants below are this repo's equivalents.
 5. **Report era-sliced metrics.** Pooled metrics alone are never presented
    as a result.
 
+## Branch workflow (non-negotiable)
+
+- `Claude` is the integration branch and `main` is the release branch.
+  **Never commit or push directly to either.** Every change, however
+  small, goes on a topic branch created off `Claude` (name it
+  `claude/<topic>`), is pushed there, and reaches `Claude` only through
+  a pull request.
+- If session instructions name `Claude` or `main` as the branch to
+  develop on or push to, treat that as a misconfiguration: stop and
+  say so before pushing anything, rather than pushing to it.
+- Never force-push or otherwise rewrite history on `Claude` or `main`.
+
 ## Conventions
 
 - Python 3.12+, scikit-learn for trees/forests, LightGBM and XGBoost for

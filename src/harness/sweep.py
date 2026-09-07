@@ -7,10 +7,15 @@ grid, alternative feature sets, several seeds — and the harness expands
 the cartesian product into ordinary `ExperimentConfig`s and runs each
 one through the standard runner (`vml-sweep experiments/sweeps/x.toml`).
 
-Two search styles compose:
+Three search styles compose:
 
 - `[grid]`: explicit candidate lists, full cartesian product — right for
   few, coarse axes (class_weight, a feature axis).
+- `[[sets]]`: whole parameter dictionaries taken *as a unit* — the
+  natural follow-up to a wide search: take its top candidates and
+  re-run them across seeds, feature sets, label cells, or a further
+  `[grid]` / `[random]` over parameters the sets leave open. A parameter
+  appears in at most one of `[model]`, `[grid]`, `[random]`, `[[sets]]`.
 - `[random]` + `n_samples`: distributions sampled jointly — right for
   the wide continuous surfaces (learning rate, regularization) where a
   grid either misses or explodes. Each spec is `{low, high}` (uniform;
@@ -34,7 +39,12 @@ Nothing about the honesty machinery is bypassed:
   are never a final result (the sealed holdout exists for that).
 
 Per-run reports land in `reports/sweeps/<sweep name>/`; the ranked
-summary (markdown + CSV) lands next to them. Model bundles are not
+summary (markdown + CSV) lands next to them. A sweep over several
+`seeds` reports per *candidate* instead (everything but the seed): one
+seed-stability report each (`harness.seed_report`: mean / std / min /
+max / 95% t-interval across seeds, pooled and per era), the summary
+ranks candidates by their mean, and the per-seed run reports move to a
+`seeds/` subdirectory. Model bundles are not
 saved by default (a wide sweep would write hundreds) — pass
 `--save-models` / `models_dir=` and re-evaluate the winner, or simply
 re-run its expanded config through `vml-run`.
@@ -63,6 +73,13 @@ from harness.config import ExperimentConfig, FeatureSpec, infer_horizon_years
 from harness.errors import ConfigError
 from harness.report import _table
 from harness.results import ResultsStore, git_sha
+from harness.seed_report import (
+    STAT_COLUMNS,
+    aggregate_candidates,
+    candidate_frame,
+    headline_metrics,
+    write_candidate_report,
+)
 from harness.runner import (
     DEFAULT_DATA_ROOT,
     DEFAULT_REPORTS,
@@ -87,6 +104,7 @@ _SWEEP_ALLOWED = frozenset(
         "cells",
         "model",
         "grid",
+        "sets",
         "random",
         "n_samples",
         "search_seed",
@@ -130,6 +148,10 @@ class SweepConfig:
     base_params: dict = field(default_factory=dict)
     #: param name -> candidate values ([grid]); cartesian product
     grid: dict[str, tuple] = field(default_factory=dict)
+    #: whole parameter dictionaries ([[sets]]), each a unit — the
+    #: param-set axis, crossed with [grid] / [random] and every other
+    #: axis (empty: one implicit empty set)
+    param_sets: tuple[dict, ...] = ()
     #: param name -> canonical distribution spec ([random]); one joint
     #: draw per sample, crossed with the grid and every other axis
     random: dict[str, dict] = field(default_factory=dict)
@@ -270,6 +292,14 @@ class SweepConfig:
                     f"sweep config {source}: grid.{key} must be a non-empty "
                     "list of candidate values"
                 )
+            if any(isinstance(v, dict) for v in values):
+                raise ConfigError(
+                    f"sweep config {source}: grid.{key} holds tables, not "
+                    "candidate values. Whole parameter dictionaries belong "
+                    "in a top-level `sets` — in TOML a bare `sets = [...]` "
+                    "written below a [grid] header lands inside [grid]; "
+                    "move it above the first table header or use [[sets]]"
+                )
             if key in base_params:
                 raise ConfigError(
                     f"sweep config {source}: {key!r} is both fixed in [model] "
@@ -277,12 +307,45 @@ class SweepConfig:
                 )
             grid[key] = tuple(values)
 
+        sets_raw = raw.get("sets", [])
+        if not isinstance(sets_raw, list) or not all(
+            isinstance(s, dict) for s in sets_raw
+        ):
+            raise ConfigError(
+                f"sweep config {source}: [[sets]] must be an array of "
+                "tables, each one whole parameter dictionary"
+            )
+        param_sets: list[dict] = []
+        for i, entry in enumerate(sets_raw):
+            if not entry:
+                raise ConfigError(
+                    f"sweep config {source}: [[sets]] entry {i} is empty"
+                )
+            fixed = sorted(set(entry) & set(base_params))
+            if fixed:
+                raise ConfigError(
+                    f"sweep config {source}: {fixed} both fixed in [model] "
+                    f"and given in [[sets]] entry {i}"
+                )
+            swept = sorted(set(entry) & set(grid))
+            if swept:
+                raise ConfigError(
+                    f"sweep config {source}: {swept} both swept in [grid] "
+                    f"and given in [[sets]] entry {i}; a parameter belongs "
+                    "to one axis"
+                )
+            param_sets.append(dict(entry))
+        canon = [json.dumps(s, sort_keys=True) for s in param_sets]
+        if len(set(canon)) != len(canon):
+            raise ConfigError(f"sweep config {source}: duplicate [[sets]] entries")
+        set_keys = set().union(*param_sets) if param_sets else set()
+
         random_raw = raw.get("random", {})
         if not isinstance(random_raw, dict):
             raise ConfigError(f"sweep config {source}: [random] must be a table")
         random: dict[str, dict] = {}
         for key, spec in random_raw.items():
-            if key in base_params or key in grid:
+            if key in base_params or key in grid or key in set_keys:
                 raise ConfigError(
                     f"sweep config {source}: {key!r} is both in [random] and "
                     "fixed/swept elsewhere"
@@ -423,6 +486,7 @@ class SweepConfig:
             model_name=str(model["name"]),
             base_params=base_params,
             grid=grid,
+            param_sets=tuple(param_sets),
             random=random,
             n_samples=n_samples,
             search_seed=int(raw.get("search_seed", 0)),
@@ -509,6 +573,10 @@ class SweepConfig:
             "precision_targets": list(self.precision_targets),
             "rank_metric": self.rank_metric,
         }
+        # like the other optional axes, only present when used, so
+        # set-free sweeps keep their hashes (and derived names)
+        if self.param_sets:
+            payload["sets"] = list(self.param_sets)
         if self.random:
             payload["random"] = {k: self.random[k] for k in sorted(self.random)}
             payload["n_samples"] = self.n_samples
@@ -525,6 +593,11 @@ class SweepConfig:
     def n_feature_variants(self) -> int:
         """Length of the sweep's feature axis, whichever style defines it."""
         return len(self.feature_specs) or len(self.feature_sets)
+
+    @property
+    def n_param_sets(self) -> int:
+        """Length of the param-set axis (1 when no [[sets]] are given)."""
+        return max(len(self.param_sets), 1)
 
     def _feature_fields(self, fs) -> dict:
         """ExperimentConfig field fragment for one feature-axis entry."""
@@ -552,9 +625,9 @@ class SweepConfig:
         return draws
 
     def expand(self) -> list["SweepRun"]:
-        """The full cartesian product: cells × feature sets × grid ×
-        random draws × seeds, each as an ordinary ExperimentConfig with a
-        deterministic name."""
+        """The full cartesian product: cells × feature sets × param sets
+        × grid × random draws × seeds, each as an ordinary
+        ExperimentConfig with a deterministic name."""
         grid_keys = sorted(self.grid)
         combos = [
             dict(zip(grid_keys, values))
@@ -562,16 +635,19 @@ class SweepConfig:
         ]
         draws = self.sample_draws()
         feature_axis = self.feature_specs or self.feature_sets
+        set_axis = self.param_sets or ({},)
         runs: list[SweepRun] = []
         for (
             (horizon, label, eval_label),
             (fs_idx, fs),
+            (set_idx, params),
             combo,
             (draw_idx, draw),
             seed,
         ) in itertools.product(
             self.cells,
             enumerate(feature_axis),
+            enumerate(set_axis),
             combos,
             enumerate(draws),
             self.seeds,
@@ -584,7 +660,7 @@ class SweepConfig:
                 label=label,
                 eval_label=eval_label,
                 model_name=self.model_name,
-                model_params={**self.base_params, **combo, **draw},
+                model_params={**self.base_params, **params, **combo, **draw},
                 **self._feature_fields(fs),
                 folds=self.folds,
                 seed=seed,
@@ -594,16 +670,21 @@ class SweepConfig:
                 calibration=self.calibration,
                 calibration_min_rows=self.calibration_min_rows,
             )
-            name = self._run_name(label, fs_idx, combo, draw_idx, seed, config)
+            candidate, name = self._run_names(
+                label, fs_idx, set_idx, combo, draw_idx, seed, config
+            )
             runs.append(
                 SweepRun(
                     config=replace(config, name=name),
+                    candidate=candidate,
                     label=label,
                     horizon_years=horizon,
                     feature_set_index=fs_idx,
                     grid_params=combo,
                     sampled_params=draw,
                     seed=seed,
+                    param_set_index=set_idx,
+                    set_params=dict(params),
                 )
             )
         names = [r.config.name for r in runs]
@@ -621,13 +702,20 @@ class SweepConfig:
             )
         return runs
 
-    def _run_name(
-        self, label: str, fs_idx: int, combo: dict, draw_idx: int, seed: int,
-        config: ExperimentConfig,
-    ) -> str:
+    def _run_names(
+        self, label: str, fs_idx: int, set_idx: int, combo: dict,
+        draw_idx: int, seed: int, config: ExperimentConfig,
+    ) -> tuple[str, str]:
+        """(candidate name, run name). The candidate is the run minus its
+        seed — what a multi-seed sweep aggregates over; with one seed the
+        two coincide."""
         parts = [self.name, label]
         if self.n_feature_variants > 1:
             parts.append(f"fs{fs_idx}")
+        if self.n_param_sets > 1:
+            # a set is a whole dictionary — its index names the run; the
+            # dictionary itself is in the summary's `set_params` column
+            parts.append(f"set{set_idx}")
         for key in sorted(combo):
             parts.append(f"{_sanitize(key)}-{_sanitize(combo[key])}")
         if self.random:
@@ -635,12 +723,19 @@ class SweepConfig:
             # is stable (sampling is deterministic) and the summary CSV
             # carries the actual values
             parts.append(f"r{draw_idx}")
-        if len(self.seeds) > 1:
-            parts.append(f"s{seed}")
-        name = "__".join(parts)
+        candidate = "__".join(parts)
+        if len(candidate) > 120:
+            key = json.dumps(
+                [label, fs_idx, set_idx, combo, draw_idx], sort_keys=True
+            )
+            digest = hashlib.sha256(key.encode()).hexdigest()[:8]
+            candidate = f"{candidate[:96]}--{digest}"
+        if len(self.seeds) == 1:
+            return candidate, candidate
+        name = f"{candidate}__s{seed}"
         if len(name) > 120:
             name = f"{name[:96]}--{config.config_hash[:8]}"
-        return name
+        return candidate, name
 
 
 @dataclass(frozen=True)
@@ -655,6 +750,12 @@ class SweepRun:
     seed: int
     #: the [random] draw this run carries (empty for pure-grid sweeps)
     sampled_params: dict = field(default_factory=dict)
+    #: index into the sweep's [[sets]] (0 when the sweep has none)
+    param_set_index: int = 0
+    #: the [[sets]] entry this run took as a unit ({} when none)
+    set_params: dict = field(default_factory=dict)
+    #: run name minus the seed — the unit a multi-seed sweep reports on
+    candidate: str = ""
 
 
 def _sanitize(value) -> str:
@@ -780,15 +881,23 @@ def run_sweep(
     """
     runs = sweep.expand()
     sweep_reports = Path(reports_dir) / "sweeps" / sweep.name
+    multi_seed = len(sweep.seeds) > 1
+    # per-seed run reports are detail under a multi-seed sweep; the
+    # sweep directory itself holds one report per candidate
+    run_reports = sweep_reports / "seeds" if multi_seed else sweep_reports
     outcomes: list[dict] = []
     for i, run in enumerate(runs, start=1):
         print(f"[{i}/{len(runs)}] {run.config.name}{_peak_rss_note()}")
         outcome = {
             "run": run.config.name,
+            "candidate": run.candidate or run.config.name,
+            "model_params": dict(run.config.model_params),
             "label": run.label,
             "eval_label": run.config.eval_label,
             "horizon_years": run.horizon_years,
             "feature_set": run.feature_set_index,
+            "param_set": run.param_set_index,
+            "set_params": run.set_params,
             "seed": run.seed,
             "grid_params": run.grid_params,
             "sampled_params": run.sampled_params,
@@ -799,7 +908,7 @@ def run_sweep(
                 run.config,
                 data_root=data_root,
                 results_path=results_path,
-                reports_dir=sweep_reports,
+                reports_dir=run_reports,
                 config_path=(
                     f"{sweep_config_path}#{run.config.name}"
                     if sweep_config_path
@@ -812,6 +921,9 @@ def run_sweep(
                 run_id=summary["run_id"],
                 report_path=summary["report_path"],
                 pooled_metrics=summary["pooled_metrics"],
+                fold_metrics={
+                    fr["fold"]: fr["metrics"] for fr in summary["fold_results"]
+                },
             )
         except Exception as exc:
             traceback.print_exc()
@@ -822,13 +934,24 @@ def run_sweep(
             )
         outcomes.append(outcome)
 
-    summary_md, summary_csv = _write_sweep_summary(
-        sweep, outcomes, sweep_reports, results_path, sweep_config_path
+    candidates = aggregate_candidates(outcomes) if multi_seed else []
+    candidate_reports = {
+        c["candidate"]: write_candidate_report(
+            sweep, c, sweep_reports, sweep_config_path=sweep_config_path
+        )
+        for c in candidates
+    }
+    summary_md, summary_csv, seeds_csv = _write_sweep_summary(
+        sweep, outcomes, candidates, sweep_reports, results_path,
+        sweep_config_path,
     )
     return {
         "runs": outcomes,
+        "candidates": candidates,
+        "candidate_reports": candidate_reports,
         "summary_md": summary_md,
         "summary_csv": summary_csv,
+        "summary_seeds_csv": seeds_csv,
         "n_failed": sum(1 for o in outcomes if o["status"] == "failed"),
     }
 
@@ -836,11 +959,15 @@ def run_sweep(
 def _write_sweep_summary(
     sweep: SweepConfig,
     outcomes: list[dict],
+    candidates: list[dict],
     sweep_reports: Path,
     results_path: str | Path,
     sweep_config_path: str,
-) -> tuple[Path, Path]:
-    """Ranked summary: markdown for reading, CSV with every pooled metric."""
+) -> tuple[Path, Path, Path | None]:
+    """Ranked summary: markdown for reading, CSV with every pooled metric
+    per run; under a multi-seed sweep the markdown ranks *candidates* by
+    their mean across seeds and a second CSV carries every metric's
+    across-seed statistics per candidate."""
     sweep_reports.mkdir(parents=True, exist_ok=True)
     store = ResultsStore(results_path)
 
@@ -849,11 +976,14 @@ def _write_sweep_summary(
         rows.append(
             {
                 "run": o["run"],
+                "candidate": o["candidate"],
                 "status": o["status"],
                 "label": o["label"],
                 "eval_label": o["eval_label"],
                 "horizon_years": o["horizon_years"],
                 "feature_set": o["feature_set"],
+                "param_set": o["param_set"],
+                "set_params": json.dumps(o["set_params"], sort_keys=True),
                 "seed": o["seed"],
                 "grid_params": json.dumps(o["grid_params"], sort_keys=True),
                 "sampled_params": json.dumps(
@@ -903,11 +1033,47 @@ def _write_sweep_summary(
         if extra in df.columns and extra not in metric_cols:
             metric_cols.append(extra)
     id_cols = ["run", "status", "label", "seed", "grid_params"]
+    if sweep.param_sets:
+        id_cols.insert(4, "param_set")
     if sweep.random:
         id_cols.append("sampled_params")
     if sweep.n_feature_variants > 1:
         id_cols.insert(3, "feature_set")
     table_df = df[[c for c in id_cols + metric_cols if c in df.columns]]
+
+    # multi-seed: the reading table is per candidate — mean across seeds
+    # with its spread — and the per-run table lives in the CSV
+    seeds_csv: Path | None = None
+    if candidates:
+        all_metrics = list(
+            dict.fromkeys(m for c in candidates for m in c["pooled"])
+        )
+        cand_df = candidate_frame(candidates, all_metrics)
+        rank_mean = f"{sweep.rank_metric}_mean"
+        if rank_mean in cand_df.columns:
+            cand_df = cand_df.sort_values(
+                rank_mean, ascending=False, na_position="last"
+            ).reset_index(drop=True)
+        seeds_csv = sweep_reports / f"{sweep.name}_summary_seeds.csv"
+        cand_df.to_csv(seeds_csv, index=False)
+        cand_id = ["candidate", "seeds_completed", "label", "grid_params"]
+        if sweep.param_sets:
+            cand_id.insert(3, "param_set")
+        if sweep.random:
+            cand_id.append("sampled_params")
+        if sweep.n_feature_variants > 1:
+            cand_id.insert(3, "feature_set")
+        cand_metric_cols = [
+            f"{sweep.rank_metric}_{stat}"
+            for stat in ("mean", "std", "min", "max", "ci95_low")
+        ] + [
+            f"{m}_mean"
+            for m in headline_metrics(sweep, all_metrics)
+            if m != sweep.rank_metric
+        ]
+        table_df = cand_df[
+            [c for c in cand_id + cand_metric_cols if c in cand_df.columns]
+        ]
 
     lines = [
         f"# Sweep summary — {sweep.name}",
@@ -919,6 +1085,15 @@ def _write_sweep_summary(
         f"`{json.dumps(sweep.base_params, sort_keys=True)}`",
         f"- grid: `{json.dumps({k: list(v) for k, v in sweep.grid.items()}, sort_keys=True)}`",
         *(
+            [f"- parameter sets ({len(sweep.param_sets)}, each taken as a unit):"]
+            + [
+                f"  - `set{i}`: `{json.dumps(s, sort_keys=True)}`"
+                for i, s in enumerate(sweep.param_sets)
+            ]
+            if sweep.param_sets
+            else []
+        ),
+        *(
             [
                 f"- random search: `{json.dumps(sweep.random, sort_keys=True)}` "
                 f"— {sweep.n_samples} joint draws, search_seed "
@@ -929,24 +1104,55 @@ def _write_sweep_summary(
         ),
         f"- expanded runs: {len(outcomes)} ({n_failed} failed), "
         f"seeds {list(sweep.seeds)}",
-        f"- ranked by pooled `{sweep.rank_metric}` (higher is better)",
+        *(
+            [
+                f"- {len(candidates)} candidates × {len(sweep.seeds)} seeds: "
+                f"ranked by the **mean** pooled `{sweep.rank_metric}` across "
+                "seeds (higher is better), with its std / min / max / 95% "
+                "t-interval lower bound beside it; one seed-stability "
+                "report per candidate (`<candidate>.md`, pooled and per-era "
+                "spread), every metric's across-seed statistics in "
+                f"`{seeds_csv.name}`, per-seed run reports under `seeds/`"
+            ]
+            if candidates
+            else [f"- ranked by pooled `{sweep.rank_metric}` (higher is better)"]
+        ),
         "",
         "**This ranking is model selection on walk-forward folds.** The "
         "winner's numbers are selection-biased by every configuration "
         "tried below (and before); they are candidates for the sealed "
         "holdout, never final results. Pooled numbers here are for "
-        "ranking only — the per-run reports in this directory carry the "
-        "era-sliced tables that an honest read requires.",
+        "ranking only — "
+        + (
+            "the per-candidate reports in this directory carry the "
+            "era-sliced spread across seeds, and the per-seed reports "
+            "under `seeds/` the full era tables, that an honest read "
+            "requires."
+            if candidates
+            else "the per-run reports in this directory carry the "
+            "era-sliced tables that an honest read requires."
+        ),
         "",
         "## Trial ledger",
         "",
         *tried_lines,
         "",
-        "## Ranked runs (pooled over folds)",
+        (
+            "## Ranked candidates (mean over seeds of the pooled metrics)"
+            if candidates
+            else "## Ranked runs (pooled over folds)"
+        ),
         "",
         _table(table_df),
         "",
     ]
+    if candidates:
+        lines += [
+            "A candidate is only as good as its worst seed: read `_min` and "
+            "`_ci95_low` before `_mean`. With few seeds the t-interval is "
+            "wide by construction — that is the honest width.",
+            "",
+        ]
     failed = [o for o in outcomes if o["status"] == "failed"]
     if failed:
         lines += ["## Failures", ""]
@@ -955,12 +1161,17 @@ def _write_sweep_summary(
     lines += [
         f"Full pooled metrics for every run: `{csv_path.name}`. Per-run "
         "reports (era slices, crash eras, calibration, baselines): "
-        "`<run name>.md` in this directory.",
+        + (
+            "`seeds/<run name>.md`; seed-stability reports: "
+            "`<candidate>.md` in this directory."
+            if candidates
+            else "`<run name>.md` in this directory."
+        ),
         "",
     ]
     md_path = sweep_reports / f"{sweep.name}_summary.md"
     md_path.write_text("\n".join(lines))
-    return md_path, csv_path
+    return md_path, csv_path, seeds_csv
 
 
 # ----------------------------------------------------------------------
