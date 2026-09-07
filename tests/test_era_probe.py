@@ -240,6 +240,43 @@ def test_config_defaults_scheme_and_derives_name():
     assert config.name.startswith("era_probe_decision_tree_ranks_3y_")
 
 
+def test_from_file_names_run_by_stem_and_hash(tmp_path):
+    body = TREE_CONFIG.replace('name = "probe_tree_test"\n', "")
+    path = tmp_path / "my_probe.toml"
+    path.write_text(body)
+    config = EraProbeConfig.from_file(path)
+    assert config.name == f"my_probe_{config.identity_hash}"
+    # an explicit name still wins
+    path.write_text(TREE_CONFIG)
+    assert EraProbeConfig.from_file(path).name == "probe_tree_test"
+    # the same content under another file name is another run
+    other = tmp_path / "copy.toml"
+    other.write_text(body)
+    assert EraProbeConfig.from_file(other).name == f"copy_{config.identity_hash}"
+
+
+def test_explicit_name_collision_between_configs_is_refused(data_root, tmp_path):
+    reports = tmp_path / "reports"
+    results = tmp_path / "results.csv"
+    first = tmp_path / "a.toml"
+    first.write_text(TREE_CONFIG)
+    run_era_probe_command(first, data_root=data_root, results_path=results,
+                          reports_dir=reports)
+    # same name, different content -> different hash -> refused
+    second = tmp_path / "b.toml"
+    second.write_text(TREE_CONFIG.replace("max_depth = 2", "max_depth = 3"))
+    with pytest.raises(ConfigError, match="different config"):
+        run_era_probe_command(second, data_root=data_root,
+                              results_path=results, reports_dir=reports)
+    report = (reports / "probe_tree_test.md").read_text()
+    assert '"max_depth": 2' in report  # the first report survived
+    store = ResultsStore(results).load()
+    assert list(store["status"]) == ["completed", "failed"]
+    # re-running the identical config is allowed
+    run_era_probe_command(first, data_root=data_root, results_path=results,
+                          reports_dir=reports)
+
+
 def test_probe_hash_distinct_from_experiment_hash():
     raw = _raw()
     probe = EraProbeConfig.from_dict(raw)

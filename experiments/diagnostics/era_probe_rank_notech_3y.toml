@@ -14,7 +14,8 @@
 # nothing is an error. A v1.1 variant adds "ranks/trend" to the list and
 # sets min_dataset_version = "1.1".
 diagnostic = "era_probe"
-name = "era_probe_rank_notech_3y"
+# no `name`: the run is named <file stem>_<content hash>, so copies
+# of this file never overwrite each other's reports
 dataset_version = "dataset_v1.0"
 scheme = "entity_holdout"
 horizon_years = 3

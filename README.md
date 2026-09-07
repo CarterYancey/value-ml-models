@@ -293,7 +293,11 @@ probe refuses them by name), a `[model]` table (`decision_tree`,
 `random_forest`, `lightgbm`, `xgboost` — multiclass, same params and
 `device` knob as the binary registry), and an optional
 `report_min_year` for the post-burn-in slice. `scheme = "random_kfold"`
-is accepted as the deliberately leaky upper bound. Reports go to
+is accepted as the deliberately leaky upper bound. Leave `name` out: the
+run is named `<config file stem>_<content hash>`, so two config files can
+never share a report path, and editing a file moves its artifacts instead
+of overwriting them; an explicit `name` that would overwrite a report
+written by a different config is refused. Reports go to
 `reports/diagnostics/<name>.md` with the confusion heatmap, importances,
 and (tree arm) rules alongside; promote one with
 `vml-promote reports/diagnostics/<name>.md`. Runs are logged to

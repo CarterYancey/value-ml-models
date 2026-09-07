@@ -38,6 +38,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 import tomllib
 from dataclasses import dataclass, field, replace
 from pathlib import Path
@@ -129,7 +130,15 @@ class EraProbeConfig:
                 raw = tomllib.load(fh)
         except (OSError, tomllib.TOMLDecodeError) as exc:
             raise ConfigError(f"cannot read config {path}: {exc}") from exc
-        return cls.from_dict(raw, source=str(path))
+        config = cls.from_dict(raw, source=str(path))
+        if not raw.get("name"):
+            # Default name = config file stem + content hash: two config
+            # files can never share a report path by accident, and editing
+            # a file's content moves its artifacts instead of overwriting.
+            # An explicit `name` overrides this (and is collision-checked
+            # against existing reports at run time).
+            config = replace(config, name=f"{path.stem}_{config.identity_hash}")
+        return config
 
     @classmethod
     def from_dict(cls, raw: dict, source: str = "<dict>") -> "EraProbeConfig":
@@ -394,6 +403,10 @@ def run_era_probe(
                 f"no folds for scheme={config.scheme!r} "
                 f"horizon={config.horizon_years}"
             )
+        reports_dir = Path(reports_dir)
+        # before any fit: a refused run costs one failed ledger row, not a
+        # training pass whose report then cannot be written
+        _refuse_report_collision(reports_dir / f"{config.name}.md", config)
 
         fold_results: list[dict] = []
         collected: list[dict] = []
@@ -507,7 +520,6 @@ def run_era_probe(
         )
         mean_importance.name = "importance"
 
-        reports_dir = Path(reports_dir)
         artifacts: dict = {
             "confusion": render_confusion_heatmap(
                 cm, path=reports_dir / f"{config.name}_confusion.png",
@@ -572,6 +584,28 @@ def run_era_probe(
             }
         )
         raise
+
+
+_REPORT_HASH = re.compile(r"^- config hash: `([0-9a-f]+)`", re.MULTILINE)
+
+
+def _refuse_report_collision(report_path: Path, config: EraProbeConfig) -> None:
+    """Two configs sharing a `name` share a report path; the later run
+    would silently overwrite the earlier report (and its figures). Refuse
+    when the existing report was produced by a different config hash.
+    Re-running the same config is fine, and a config without an explicit
+    `name` never collides (its name carries its content hash)."""
+    if not report_path.exists():
+        return
+    m = _REPORT_HASH.search(report_path.read_text())
+    if m is None or m.group(1) == config.config_hash:
+        return
+    raise ConfigError(
+        f"report {report_path} already exists for a different config "
+        f"(hash {m.group(1)}, this config {config.config_hash}); refusing to "
+        f"overwrite. Give this config another `name`, drop `name` so the "
+        "file stem + content hash names the run, or remove the old report."
+    )
 
 
 def _write_rules_file(

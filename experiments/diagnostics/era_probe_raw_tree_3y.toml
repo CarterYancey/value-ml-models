@@ -5,7 +5,8 @@
 #
 #   python scripts/run_diagnostic.py era-probe experiments/diagnostics/era_probe_raw_tree_3y.toml
 diagnostic = "era_probe"
-name = "era_probe_raw_tree_3y"
+# no `name`: the run is named <file stem>_<content hash>, so copies
+# of this file never overwrite each other's reports
 dataset_version = "dataset_v1.0"
 scheme = "entity_holdout"
 horizon_years = 3
