@@ -131,11 +131,26 @@ in [PLAN.md](PLAN.md); check items off (and add new ones) as work proceeds.
       thresholds date a row. Exemplar configs in
       `experiments/diagnostics/era_probe_{raw,rank,raw_tree}_3y.toml` —
       the raw arm's non-numeric exclusion list is written from
-      data/features.md and must be confirmed on the first real run; needs
-      a real `dataset_v1.0` locally for real reports — verified end-to-end
-      on the test fixture.)
+      data/features.md and must be confirmed on the first real run.)
+      **Findings** (`reports/promoted/era_probe_rank_fingerprints/`):
+      on `dataset_v1.0` the rank arm dated rows at 0.954 accuracy
+      (majority-year 0.09) because within-quarter percent ranks of
+      integer composites and zero-inflated ratios are quarter-specific
+      constants (four rank columns alone: 0.917; their raw values:
+      0.148). Reported upstream; `dataset_v1.2` un-ranked the
+      composites. On v1.2: all ranks 0.456, ranks minus technical/trend
+      0.322, misses on adjacent years — the residual is regime
+      recognition, tier nullity in 1997–2004, and secular drift, i.e.
+      point-in-time economics, not a leak. Walk-forward/holdout results
+      were never inflated by the fingerprint (unseen test quarters);
+      `entity_holdout` retains regime hindsight and stays diagnostic-only.
+- [ ] Boundary check on v1.2 zero-inflated rank columns (upstream brief
+      §8, second query): does the first non-zero rank still equal the
+      cell's zero share? A judgement call about a weak market-state
+      signal, not a leak; record the answer in the brief §10.
 - [ ] Further tests of the "entity_holdout learns the era, not the stock"
-      concern, once the leakage-gap experiment exists: (a) global top-K
+      concern, once the leakage-gap experiment exists (run it on v1.2 —
+      on v1.0 its gap would mostly be the fingerprint): (a) global top-K
       vs. per-year top-K precision under `entity_holdout` — if pooled
       picks beat per-year picks, the model is timing eras, not selecting
       stocks; (b) share of an entity-holdout model's score variance

@@ -251,30 +251,44 @@ SELECT count(*) FROM (
    WHERE scheme = 'entity_holdout' AND horizon_years = 3 AND role = 'test');
 ```
 
-Tie-mass audit, all rank columns at once (DuckDB; substitute the manifest's
-`ranks` list for the two columns shown):
+Tie-mass audit. Tie mass alone is *not* decisive: a zero-inflated column
+has a large tied group in every cell whether or not that group's value
+is quarter-specific. The decisive statistic restricts to the tied groups:
+how many distinct values do they take across all (quarter, kind) cells?
+One shared value (0.0) is harmless; one value per cell is a key. Per
+column (DuckDB):
 
 ```sql
-WITH long AS (
-  SELECT quarter, snapshot_kind, name, value
-  FROM (SELECT quarter, snapshot_kind, piotroski_f_rank, dividend_yield_rank
-        FROM 'dataset.parquet')
-  UNPIVOT (value FOR name IN (piotroski_f_rank, dividend_yield_rank))
-  WHERE value IS NOT NULL
-), grp AS (
-  SELECT name, quarter, snapshot_kind, value, count(*) AS n
-  FROM long GROUP BY ALL
+WITH grp AS (
+  SELECT quarter, snapshot_kind, dividend_yield_rank AS value, count(*) AS n
+  FROM 'dataset.parquet' WHERE dividend_yield_rank IS NOT NULL GROUP BY ALL
 )
-SELECT name,
-       sum(n) FILTER (WHERE n > 1) / sum(n)          AS tie_mass,
-       count(DISTINCT value)                          AS distinct_values,
-       count(DISTINCT (quarter, snapshot_kind, value)) AS quarter_value_pairs
-FROM grp GROUP BY name ORDER BY tie_mass DESC;
+SELECT count(*)              AS tied_groups,          -- one per (cell, tied value)
+       count(DISTINCT value) AS tied_distinct_values, -- 1 => shared bottom group, harmless
+       min(value), max(value)                         -- ~tied_groups => quarter keys
+FROM grp WHERE n > 1;
 ```
 
-A column with `tie_mass` near 0 and `quarter_value_pairs ≈ distinct_values`
-is continuous and safe; one with large tie mass whose pairs exceed its
-distinct values by roughly the number of (quarter, kind) cells is a key.
+For a discrete raw column the safe pattern is `distinct (cell, value)
+pairs ≈ distinct values × cells`: every level occurs in every cell, so the
+column carries no cell information.
+
+Boundary check for zero-inflated rank columns (does the first non-zero
+rank equal the cell's zero share, i.e. is the support's lower edge still a
+market-state quantity?):
+
+```sql
+SELECT quarter, snapshot_kind,
+       min(dividend_yield_rank) FILTER (WHERE dividend_yield_rank > 0) AS first_payer_rank,
+       avg(CASE WHEN dividend_yield_rank = 0 THEN 1.0 ELSE 0.0 END)   AS nonpayer_share
+FROM 'dataset.parquet'
+WHERE dividend_yield_rank IS NOT NULL
+GROUP BY ALL ORDER BY 1, 2 LIMIT 12;
+```
+
+`first_payer_rank` tracking `nonpayer_share` means the boundary is intact
+(option (b)/(c) in §6.2); `first_payer_rank` near 0 in every cell means
+option (a) was applied.
 
 ## 9. Suggested upstream task breakdown
 
@@ -303,4 +317,52 @@ distinct values by roughly the number of (quarter, kind) cells is a key.
 7. **Notify downstream**: the leakage-gap experiment (decision 0010) and
    any rank-fed model comparison should be re-run on the new version; no
    cross-version comparison of results.
+
+## 10. Outcome on `dataset_v1.2` (added after upstream's fix)
+
+Upstream shipped `dataset_v1.2`. Verified downstream:
+
+- **Integer composites are no longer ranked** [verified]: `piotroski_f_rank`
+  and `mohanram_g7_rank` are absent from the manifest (a config naming
+  them now fails at feature resolution). The raw `piotroski_f` audits as
+  the safe pattern: 10 distinct values, 3475 (cell, value) pairs over 348
+  cells — every score in every cell.
+- **The zero-inflated tie is harmless** [verified for `dividend_yield_rank`]:
+  348 tied groups (one per cell), a single distinct tied value, 0.0. The
+  boundary check (§8, second query) has not been run yet [pending]; the
+  probe results below make it a minor question.
+
+Probe, same configs as §4 (entity_holdout, 3y, LightGBM, seed 7):
+
+| arm | v1.0 accuracy | v1.2 accuracy | v1.2 ±1y | v1.2 MAE (y) |
+|---|---|---|---|---|
+| `ranks`, all (`491328e6f29d`) | 0.954 | 0.456 | 0.630 | 2.99 |
+| `ranks` minus `technical` and `trend` families, 65 columns (`fde42d1c985f`) | 0.926 (minus `technical` only) | 0.322 | 0.552 | 3.50 |
+| majority-year baseline | 0.091 | 0.092 | 0.188 | 9.17 |
+
+The lookup signature is gone: on v1.0 every year had recall ≈ 0.9 and MAE
+was 0.24 years; on v1.2 misses land on adjacent years and MAE is 3.5.
+The no-technicals per-year slice decomposes the residual 0.32 into three
+bands:
+
+| years | exact recall | driver |
+|---|---|---|
+| 1997–2004 | 0.30–0.63 | tier nullity: T1–T3 columns need 1–3 fiscal years of history, so the burn-in years and the post-1999 IPO wave carry a distinctive NULL share (`roa_variability_3y_rank` leads the importances) |
+| 2000–02, 2009–11, 2020 | 0.40–0.62 | crisis/recovery fundamentals: `roa_delta_1y`, `revenue_growth_*`, `asset_growth_1y`, `net_debt_to_ebitda`, `cash_to_assets` ranks; 2009 is confused with 2002, 2010–11 with 2004 — regime recognition, which a lookup key never does |
+| 2005–08, 2012–17 | 0.09–0.21 | steady state, ≈ 4× the train-prior share of 0.035; secular drift (e.g. `retearn_to_assets`) |
+
+Reading: what remains is point-in-time economics (regime and secular
+drift) plus dataset-start nullity — the signal a walk-forward model is
+entitled to see. Under `entity_holdout` it still grants *regime
+hindsight* (the model has seen the test rows' regime during training),
+which is why that scheme stays diagnostic-only; the leakage-gap
+experiment on v1.2 will now measure that effect without fingerprint
+contamination. No further upstream change is required from these
+results; §6.2's boundary policy remains a judgement call, not a leak.
+
+The residual is higher than the ≈ 0.15 anticipated in §6.5 because that
+figure was the four-column raw arm; 65 regime-bearing rank columns
+legitimately carry more. The acceptance criterion should be the
+*signature* (graded, adjacent-year confusion; burn-in and crash years
+high, calm years low) rather than a single accuracy threshold.
 
