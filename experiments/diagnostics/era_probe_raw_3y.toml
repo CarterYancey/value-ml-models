@@ -9,7 +9,8 @@
 # such as log_marketcap/log_assets drift with the market and inflation;
 # nullity patterns date the burn-in years). Compare with the rank arm.
 diagnostic = "era_probe"
-name = "era_probe_raw_3y"
+# no `name`: the run is named <file stem>_<content hash>, so copies
+# of this file never overwrite each other's reports
 dataset_version = "dataset_v1.0"
 scheme = "entity_holdout"
 horizon_years = 3        # selects the tag set and sample_weight_3y
