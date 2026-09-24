@@ -128,16 +128,20 @@ Full contract: [data/manual.md](data/manual.md). The load-bearing points:
 - Post-hoc calibration (isotonic / Platt on a purged validation fold).
 - SHAP values for global and per-prediction explanation; compare discovered
   structure against the single-tree rules from Phase 1.
-- **Historical analogues** (builds on per-prediction attributions): for one
-  stock scored by several deployment models (say the best 1y/3y/5y), take
-  each model's top contributing features and retrieve the labeled
-  historical rows nearest the stock in that subspace, using rank columns
-  so eras are comparable, or model leaf proximity. Show their realized
-  outcomes, delistings included. This answers "what happened to stocks
-  that looked like this, on the dimensions this model cares about". It
-  explains a ranking and does not measure the model: the deployment fit
-  trained on those same rows, so their outcome rate is in-sample.
-  Tasks: TODO.md → Deployment.
+- **Historical analogues via leaf co-membership**: for one stock scored by
+  several deployment models (say the best 1y/3y/5y), retrieve the labeled
+  historical rows that each model routes to the *same leaves* as the stock,
+  and show their realized outcomes, delistings included. With a single
+  tree this reads as a rule plus its members ("stocks with P/B rank < X
+  and … — here they are, and here is how they did"). With forests and
+  boosted trees it becomes a proximity: the share of trees where a row
+  shares the stock's leaf. Similarity is defined by the model's own splits
+  and NULL routing, so there is no distance metric or imputation to
+  invent, and it works before SHAP exists. Feature-space nearest neighbors
+  on rank columns are the fallback for leafless models. This explains a
+  ranking and does not measure the model: the fit chose those leaves from
+  those rows, so their outcome rate is in-sample. Tasks: TODO.md →
+  Deployment.
 - Feature ablations: raw vs. rank vs. sector-rank feature sets, with/without
   technicals, with/without classification columns (mind their current-state
   caveat — see [data/features.md](data/features.md)).
