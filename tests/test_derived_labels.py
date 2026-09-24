@@ -3,14 +3,11 @@ manifest's continuous outcomes, evaluated on the fly by the loader."""
 
 import json
 
-import numpy as np
-import pandas as pd
 import pytest
 
 from harness.config import ExperimentConfig, infer_horizon_years
-from harness.dataset import Dataset, cohort_percent_rank
+from harness.dataset import Dataset
 from harness.derived_labels import (
-    COHORT_KEYS,
     is_derived_label,
     label_slug,
     normalize_label,
@@ -39,14 +36,11 @@ def test_canonical_form_ignores_order_spacing_and_duplicates():
     assert normalize_label(a) == a  # idempotent: bundles re-parse it
 
 
-def test_cohort_and_boolean_terms():
+def test_boolean_terms():
     spec = parse_label_expression(
-        "cohort_pct( fwd_3y_cagr ) >= 0.9 & label_3y_beat_spy == TRUE"
+        "fwd_3y_cagr >= 0.0 & label_3y_beat_spy == TRUE"
     )
-    assert spec.name == (
-        "cohort_pct(fwd_3y_cagr) >= 0.9 & label_3y_beat_spy == true"
-    )
-    assert spec.cohort_columns == ("fwd_3y_cagr",)
+    assert spec.name == "fwd_3y_cagr >= 0.0 & label_3y_beat_spy == true"
     assert spec.horizon_years == 3
 
 
@@ -64,8 +58,7 @@ def test_horizon_inference():
         ("fwd_3y_cagr >= 0.1 | fwd_3y_cagr < 0", "cannot parse"),
         ("fwd_3y_cagr >= nan", "finite"),
         ("label_3y_beat_spy > true", "== or !="),
-        ("cohort_pct(fwd_3y_cagr) >= 90", r"\[0, 1\]"),
-        ("cohort_pct(label_3y_beat_spy) == true", "compare it to a number"),
+        ("cohort_pct(fwd_3y_cagr) >= 0.9", "cannot parse"),  # removed on purpose
         ("book_to_market >= 1", "horizon"),
     ],
 )
@@ -75,8 +68,8 @@ def test_malformed_expressions_are_refused(expr, match):
 
 
 def test_slug_is_filesystem_safe():
-    slug = label_slug("cohort_pct(fwd_3y_cagr) >= 0.9 & fwd_3y_cagr > -0.05")
-    assert slug == "label_3y_cagr_cpct_ge_0p9_and_3y_cagr_gt_m0p05"
+    slug = label_slug("fwd_3y_max_drawdown < 0.3 & fwd_3y_cagr > -0.05")
+    assert slug == "label_3y_cagr_gt_m0p05_and_3y_max_drawdown_lt_0p3"
     assert label_slug("label_3y_beat_spy") == "label_3y_beat_spy"
 
 
@@ -112,7 +105,7 @@ def test_config_normalizes_label_and_infers_horizon():
 
 def test_config_roundtrip_keeps_the_label():
     cfg = ExperimentConfig.from_dict(
-        _raw(label="cohort_pct(fwd_3y_cagr) >= 0.9")
+        _raw(label="fwd_3y_cagr >= 0.1 & label_3y_beat_spy == true")
     )
     again = ExperimentConfig.from_dict(cfg.to_raw_dict())
     assert again.label == cfg.label
@@ -180,68 +173,6 @@ def test_fit_data_needs_the_projected_label(dataset_dir):
         ds.fit_data(frame, "fwd_3y_cagr >= 0", ["book_to_market_rank"], 3)
 
 
-def test_cohort_percent_rank_matches_percent_rank_semantics():
-    data = pd.DataFrame(
-        {
-            "quarter": ["q1"] * 5 + ["q2"] * 2 + ["q3"],
-            "snapshot_kind": ["median"] * 8,
-            "x": [0.3, 0.1, 0.1, None, 0.5, 1.0, 2.0, 7.0],
-        }
-    )
-    pct = cohort_percent_rank(data, "x")
-    # q1 non-null: 0.1, 0.1, 0.3, 0.5 -> ranks 1, 1, 3, 4 of n=4
-    expected = [2 / 3, 0.0, 0.0, np.nan, 1.0, 0.0, 1.0, 0.0]
-    np.testing.assert_allclose(pct.to_numpy(dtype=float), expected)
-
-
-def test_cohort_label_ranks_within_quarter_and_kind(dataset_dir):
-    ds = Dataset(dataset_dir)
-    expr = "cohort_pct(fwd_3y_cagr) >= 0.5"
-    frame = ds.frame([expr, "fwd_3y_cagr", *COHORT_KEYS])
-    obs = frame[frame["fwd_3y_cagr"].notna()]
-    for _, cohort in obs.groupby(list(COHORT_KEYS)):
-        n = len(cohort)
-        rank = cohort["fwd_3y_cagr"].rank(method="min")
-        pct = (rank - 1) / (n - 1) if n > 1 else rank * 0
-        assert (cohort[expr].astype(bool) == (pct >= 0.5)).all()
-
-
-def test_cohort_purge_drops_train_labels_with_non_train_peers(dataset_dir):
-    ds = Dataset(dataset_dir)
-    expr = "cohort_pct(fwd_3y_cagr) >= 0.5"
-    split = ds.apply_split("walkforward", 2016, 3, columns=[expr])
-    # the fixture's cohorts share one snapshot date, so the upstream
-    # per-row purge already covers the cohort: nothing more to drop
-    assert split.cohort_purged == {expr: 0}
-
-    key = ["permaticker", "snapshot_date", "snapshot_kind"]
-    tags = ds._split_tags("walkforward", 3)
-    tags = tags[tags["fold"] == 2016].copy()
-    meta = ds.frame(list(COHORT_KEYS))
-    train_meta = split.train.merge(meta, on=key, how="left")
-    victim = train_meta[train_meta[expr].notna()].iloc[0]
-    in_cohort = (
-        (train_meta["quarter"] == victim["quarter"])
-        & (train_meta["snapshot_kind"] == victim["snapshot_kind"])
-    ).to_numpy()
-    # a cohort peer whose (later) snapshot got it purged upstream
-    peer = train_meta[
-        in_cohort & (train_meta["permaticker"] != victim["permaticker"]).to_numpy()
-    ].iloc[0]
-    hit = np.logical_and.reduce([tags[k] == peer[k] for k in key])
-    tags.loc[hit, "role"] = "purged"
-    keep = ~np.logical_and.reduce([split.train[k] == peer[k] for k in key])
-    train = split.train[keep].reset_index(drop=True)
-    before = train.copy()
-    in_cohort = in_cohort[keep]
-
-    n = ds._cohort_purge(train, tags, ds.derived_label(expr), expr)
-    assert n == int((in_cohort & before[expr].notna().to_numpy()).sum()) > 0
-    assert train.loc[in_cohort, expr].isna().all()
-    # rows of other cohorts keep their labels
-    assert train.loc[~in_cohort, expr].equals(before.loc[~in_cohort, expr])
-
-
 # --------------------------------------------------------------- runner
 
 
@@ -266,40 +197,3 @@ def test_derived_rung_runs_identically_to_the_stored_rung(data_root, tmp_path):
     assert set(store.loc[store["experiment"] == "derived", "label"]) == {
         "fwd_3y_cagr >= 0.08"
     }
-
-
-def test_cohort_label_run_discloses_the_purge(data_root, tmp_path):
-    cfg = ExperimentConfig.from_dict(
-        _raw(name="cohort", label="cohort_pct(fwd_3y_cagr) >= 0.9")
-    )
-    summary = run_experiment(
-        cfg, data_root=data_root, results_path=tmp_path / "results.csv",
-        reports_dir=tmp_path / "reports",
-    )
-    assert summary["status"] == "completed"
-    report = (tmp_path / "reports" / "cohort.md").read_text()
-    assert "derived label `cohort_pct(fwd_3y_cagr) >= 0.9`" in report
-    assert "cohort_purged_train_rows" in report
-
-
-def test_backtest_refit_waits_for_the_whole_cohort(dataset_dir):
-    from types import SimpleNamespace
-
-    from portfolio.signals import _refit_as_of_year
-
-    ds = Dataset(dataset_dir)
-    bundle = SimpleNamespace(
-        train_config=ExperimentConfig.from_dict(
-            _raw(label="cohort_pct(fwd_3y_cagr) >= 0.5")
-        ),
-        feature_columns=("book_to_market_rank",),
-    )
-    _, stats = _refit_as_of_year(bundle, ds, 2016, 45)
-    # a cohort's label is known once its latest peer's window has closed
-    frame = ds.frame(["fwd_3y_cagr", *COHORT_KEYS])
-    last = pd.to_datetime(frame["snapshot_date"]).groupby(
-        [frame[k] for k in COHORT_KEYS]
-    ).transform("max")
-    ready = last + pd.DateOffset(years=3) + pd.Timedelta(days=45)
-    eligible = frame[(ready <= pd.Timestamp(2016, 1, 1)) & frame["fwd_3y_cagr"].notna()]
-    assert stats["n_train_rows"] == len(eligible) > 0

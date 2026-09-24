@@ -149,14 +149,6 @@ def write_report(
             f"- derived label `{lab}`: evaluated on the fly from the "
             "manifest's continuous outcome columns (harness.derived_labels); "
             "NULL wherever a referenced column is NULL"
-            + (
-                ". `cohort_pct` ranks within (quarter, snapshot_kind) over "
-                "the whole dataset; train rows whose cohort holds a "
-                "non-train peer lose their label (the cohort purge — "
-                "counted per fold below)"
-                if "cohort_pct(" in lab
-                else ""
-            )
         )
     if getattr(config, "eval_label", ""):
         lines.append(
@@ -385,11 +377,6 @@ def write_report(
                 "train_rows": fr["n_train_rows"],
                 "effective_train_size": fr["effective_train_size"],
                 "test_rows": fr["n_test_rows"],
-                **(
-                    {"cohort_purged_train_rows": fr["cohort_purged_train_rows"]}
-                    if "cohort_purged_train_rows" in fr
-                    else {}
-                ),
             }
             for fr in fold_results
         ]

@@ -40,7 +40,6 @@ from pathlib import Path
 import pandas as pd
 
 from harness.dataset import SELECTION_SCHEME, Dataset
-from harness.derived_labels import COHORT_KEYS, is_derived_label
 from harness.errors import ConfigError, DatasetValidationError
 from harness.model_store import ModelBundle, ModelBundleError
 from models.registry import build_model
@@ -358,15 +357,6 @@ def _refit_as_of_year(
         + pd.DateOffset(years=config.horizon_years)
         + pd.Timedelta(days=label_lag_days)
     )
-    if is_derived_label(config.label):
-        spec = dataset.derived_label(config.label)
-        if spec.cohort_columns:
-            # a cohort-ranked label is known only once every peer's
-            # window has closed: the cohort's latest observable date
-            keys = dataset.frame(list(COHORT_KEYS))
-            observable_by = observable_by.groupby(
-                [keys[k].to_numpy() for k in COHORT_KEYS]
-            ).transform("max")
     eligible = data[(observable_by <= cutoff).to_numpy()]
     fit = dataset.fit_data(
         eligible,

@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import json
 import operator
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
 from typing import Sequence
@@ -22,7 +22,6 @@ import pandas as pd
 import pyarrow.parquet as pq
 
 from harness.derived_labels import (
-    COHORT_KEYS,
     DerivedLabel,
     is_derived_label,
     parse_label_expression,
@@ -88,10 +87,6 @@ class SplitFrames:
     horizon_years: int
     train: pd.DataFrame
     test: pd.DataFrame
-    #: per cohort-ranked derived label: train rows whose label was set to
-    #: NULL because a cohort peer is not a train row of this fold (see
-    #: `Dataset.apply_split`) — disclosed in the run report
-    cohort_purged: dict[str, int] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -162,27 +157,10 @@ _COMPARE = {
 }
 
 
-def cohort_percent_rank(data: pd.DataFrame, column: str) -> pd.Series:
-    """`percent_rank()` of `column` within each `(quarter, snapshot_kind)`
-    cohort, over the rows where it is not NULL — duckdb's semantics:
-    (rank − 1) / (n − 1) with ties at their lowest rank, 0 for a
-    single-row cohort, NULL where the column is NULL."""
-    vals = pd.to_numeric(data[column], errors="raise").astype(float)
-    groups = vals.groupby([data[k] for k in COHORT_KEYS], sort=False)
-    rank = groups.rank(method="min")
-    n = groups.transform("count")
-    pct = ((rank - 1) / (n - 1)).where(n > 1, 0.0)
-    return pct.where(vals.notna())
-
-
 def evaluate_derived_label(label: DerivedLabel, data: pd.DataFrame) -> pd.Series:
     """A derived label's values over `data` (which must carry the source
-    columns, plus the cohort keys for `cohort_pct` terms): nullable
-    boolean, NULL wherever any referenced column is NULL.
-
-    Cohort ranks are taken over *all* of `data` — the label's definition
-    is a property of the row, so callers pass the full dataset (as
-    `Dataset.frame` does), never a split's subset."""
+    columns): nullable boolean, NULL wherever any referenced column is
+    NULL. Row-wise — a row's label never depends on other rows."""
     result = pd.Series(True, index=data.index, dtype="boolean")
     unobservable = pd.Series(False, index=data.index)
     for cond in label.conditions:
@@ -202,11 +180,7 @@ def evaluate_derived_label(label: DerivedLabel, data: pd.DataFrame) -> pd.Series
                     f"label expression {label.name!r}: {cond.column!r} is "
                     "a boolean column; compare it with == true / == false"
                 )
-            vals = (
-                cohort_percent_rank(data, cond.column)
-                if cond.cohort
-                else pd.to_numeric(col, errors="raise").astype(float)
-            )
+            vals = pd.to_numeric(col, errors="raise").astype(float)
         hit = _COMPARE[cond.op](vals, cond.value)
         result &= pd.Series(hit, index=data.index).fillna(False).astype(bool)
     result[unobservable] = pd.NA
@@ -306,11 +280,7 @@ class Dataset:
             projected = self._read_columns(cols)
         else:
             stored = [c for c in cols if c not in derived]
-            extra: list[str] = []
-            for spec in derived.values():
-                extra += list(spec.source_columns)
-                if spec.cohort_columns:
-                    extra += list(COHORT_KEYS)
+            extra = [c for spec in derived.values() for c in spec.source_columns]
             base = self._read_columns(tuple(dict.fromkeys(stored + extra)))
             projected = base[stored].copy()
             for name, spec in derived.items():
@@ -507,9 +477,8 @@ class Dataset:
     def derived_label(self, expr: str) -> DerivedLabel:
         """Parse a label expression and validate it against the manifest:
         every column must be declared in the `labels` group (derived
-        labels re-threshold outcomes, never features), its horizon must
-        be one this dataset carries, and cohort ranks need the cohort
-        keys in `key_meta`."""
+        labels re-threshold outcomes, never features) and its horizon
+        must be one this dataset carries."""
         spec = parse_label_expression(expr)
         labels = set(self.columns("labels"))
         missing = [c for c in spec.source_columns if c not in labels]
@@ -520,13 +489,6 @@ class Dataset:
                 "data/versions.md for which version provides them)"
             )
         self._check_horizon(spec.horizon_years)
-        if spec.cohort_columns:
-            absent = [k for k in COHORT_KEYS if k not in self.columns("key_meta")]
-            if absent:
-                raise DatasetValidationError(
-                    f"cohort_pct() needs the cohort keys {list(COHORT_KEYS)} "
-                    f"in key_meta; the manifest lacks {absent}"
-                )
         return spec
 
     def check_label(self, label: str) -> None:
@@ -632,51 +594,13 @@ class Dataset:
             )
 
         self._validate_test_rows(test, horizon_years, scheme, fold)
-        cohort_purged = {}
-        for col in dict.fromkeys(columns or ()):
-            if is_derived_label(col):
-                spec = self.derived_label(col)
-                if spec.cohort_columns:
-                    cohort_purged[col] = self._cohort_purge(train, sel, spec, col)
         return SplitFrames(
             scheme=scheme,
             fold=int(fold),
             horizon_years=horizon_years,
             train=train,
             test=test,
-            cohort_purged=cohort_purged,
         )
-
-    def _cohort_purge(
-        self, train: pd.DataFrame, tags: pd.DataFrame, spec: DerivedLabel,
-        column: str,
-    ) -> int:
-        """NULL (in place) the cohort-ranked label of train rows whose
-        cohort contains a peer that is not a train row of this fold.
-
-        A `cohort_pct` label depends on every cohort peer's outcome. The
-        upstream purge/embargo is per row: a train row's own window
-        closes E days before the test period, but a peer's snapshot can
-        sit up to a quarter later, so its window — and hence this row's
-        label — can reach into the test period. Requiring the whole
-        cohort to be train-role extends the upstream purge to the
-        label's true window. Nothing is re-split: the peer roles are the
-        upstream tags, and the rows only lose their target (fit_data
-        drops NULL labels, as for any unobservable row)."""
-        peers = self.frame(list(spec.cohort_columns) + list(COHORT_KEYS))
-        peers = peers[peers[list(spec.cohort_columns)].notna().any(axis=1)]
-        key = SNAPSHOT_KEY
-        in_train = tags.loc[tags["role"] == "train", key].assign(_train=True)
-        peers = peers.merge(in_train, on=key, how="left")
-        peers["_train"] = peers["_train"].notna()
-        whole = peers.groupby(list(COHORT_KEYS), sort=False)["_train"].transform("all")
-        doomed = peers.loc[peers["_train"] & ~whole, key].assign(_doomed=True)
-        if doomed.empty:
-            return 0
-        flag = train[key].merge(doomed, on=key, how="left")["_doomed"]
-        mask = flag.notna().to_numpy() & train[column].notna().to_numpy()
-        train.loc[mask, column] = pd.NA
-        return int(mask.sum())
 
     def _check_scheme_access(self, scheme: str, access: SplitAccess) -> None:
         if scheme not in KNOWN_SCHEMES:

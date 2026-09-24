@@ -431,11 +431,14 @@ slice. All within the invariants: no local splits, no derived features.
       crash-era table.
 - [x] Derived labels: binary targets re-thresholded on the fly from the
       manifest's continuous outcomes — `label = "fwd_3y_cagr >= 0.1 &
-      fwd_3y_max_drawdown_from_entry < 0.3"`, cohort ranks via
-      `cohort_pct(fwd_3y_cagr) >= 0.9` — so new rungs never need a
-      dataset rebuild. (`src/harness/derived_labels.py`, evaluated by
-      `Dataset.frame`; cohort-ranked labels get a cohort purge in
-      `apply_split` and a cohort-complete cutoff in the backtest refit.)
+      fwd_3y_max_drawdown_from_entry < 0.3"` — so new rungs never need
+      a dataset rebuild. (`src/harness/derived_labels.py`, evaluated by
+      `Dataset.frame`; row-wise only. A cross-sectional `cohort_pct`
+      rank was built and removed: a cohort peer's label window can
+      close up to a quarter after the row's own, eroding the embargo,
+      and `beat_spy` / `excess_cagr` thresholds already give an
+      era-neutral target. If ever wanted, it is an upstream label so
+      the purge can see it.)
 - [x] Recorded in data/versions.md: `dataset_v1.3` first ships
       `fwd_{H}_max_drawdown{,_from_entry}` (upstream decision 0017);
       drawdown-label configs set `min_dataset_version = "1.3"`.

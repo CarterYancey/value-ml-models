@@ -8,13 +8,11 @@ wherever it would name a stored `label_*` column:
 
     label = "fwd_3y_cagr >= 0.12"
     label = "fwd_3y_cagr >= 0.1 & fwd_3y_max_drawdown < 0.3"
-    label = "cohort_pct(fwd_3y_cagr) >= 0.9"        # top cohort decile
 
 Grammar (deliberately tiny, parsed — never `eval`'d):
 
     expr      := condition ("&" condition)*
-    condition := operand op literal
-    operand   := column | "cohort_pct(" column ")"
+    condition := column op literal
     op        := ">=" | ">" | "<=" | "<" | "==" | "!="
     literal   := number | true | false
 
@@ -22,11 +20,13 @@ Grammar (deliberately tiny, parsed — never `eval`'d):
   `Dataset.derived_label`), and every column must carry the same `{H}y`
   horizon — the horizon's sample weight and split tags must fit the
   whole target.
-- `cohort_pct(c)` is `percent_rank()` of `c` within its cohort
-  `(quarter, snapshot_kind)` over every dataset row where `c` is not
-  NULL — the era-neutral "top decile of the cohort" of data/manual.md,
-  with duckdb's semantics ((rank − 1) / (n − 1), ties at their lowest
-  rank, a single-row cohort at 0).
+- Every label is a function of its own row only. Cross-sectional
+  outcome ranks (data/manual.md's "top decile of the cohort") are
+  deliberately not offered: such a label depends on cohort peers whose
+  windows close later than the row's own, which the upstream per-row
+  purge/embargo does not cover — an upstream label if ever wanted.
+  `label_{H}_beat_spy` / `fwd_{H}_excess_cagr` thresholds are the
+  era-neutral targets here.
 - NULL propagates: a row where any referenced column is NULL gets a NULL
   label (unobservable, not False — data/manual.md §3), so the row is
   dropped from the fit exactly like a stored label's NULL rows.
@@ -50,21 +50,17 @@ from dataclasses import dataclass
 
 from harness.errors import ConfigError
 
-#: the cohort a `cohort_pct` term ranks within — one calendar quarter's
-#: snapshots of one kind (data/manual.md's era-neutral rank label)
-COHORT_KEYS = ("quarter", "snapshot_kind")
-
 _OPS = (">=", "<=", "==", "!=", ">", "<")
 _OP_SLUG = {">=": "ge", ">": "gt", "<=": "le", "<": "lt", "==": "eq", "!=": "ne"}
 _IDENT = r"[A-Za-z_][A-Za-z0-9_]*"
 _CONDITION = re.compile(
-    rf"^\s*(?:cohort_pct\(\s*(?P<cohort>{_IDENT})\s*\)|(?P<column>{_IDENT}))"
+    rf"^\s*(?P<column>{_IDENT})"
     r"\s*(?P<op>>=|<=|==|!=|>|<)\s*(?P<literal>\S+)\s*$"
 )
 _HORIZON = re.compile(r"(?:^|_)(\d+)y(?:_|$)")
 #: characters no manifest column name contains — their presence is what
 #: marks a label as an expression rather than a stored column
-_EXPRESSION_CHARS = frozenset("<>=!&()")
+_EXPRESSION_CHARS = frozenset("<>=!&")
 
 
 def is_derived_label(label: str) -> bool:
@@ -75,15 +71,9 @@ def is_derived_label(label: str) -> bool:
 @dataclass(frozen=True)
 class Condition:
     column: str
-    #: the operand is `cohort_pct(column)` rather than the raw column
-    cohort: bool
     op: str
     #: float for numeric comparisons, bool for boolean label columns
     value: float | bool
-
-    @property
-    def operand(self) -> str:
-        return f"cohort_pct({self.column})" if self.cohort else self.column
 
     @property
     def literal(self) -> str:
@@ -92,12 +82,10 @@ class Condition:
         return repr(float(self.value))
 
     def canonical(self) -> str:
-        return f"{self.operand} {self.op} {self.literal}"
+        return f"{self.column} {self.op} {self.literal}"
 
     def slug(self) -> str:
         col = self.column.removeprefix("fwd_")
-        if self.cohort:
-            col = f"{col}_cpct"
         lit = self.literal.replace("-", "m").replace(".", "p")
         return f"{col}_{_OP_SLUG[self.op]}_{lit}"
 
@@ -117,15 +105,6 @@ class DerivedLabel:
     @property
     def source_columns(self) -> tuple[str, ...]:
         return tuple(dict.fromkeys(c.column for c in self.conditions))
-
-    @property
-    def cohort_columns(self) -> tuple[str, ...]:
-        """Columns ranked within a cohort — non-empty means the label of
-        one row depends on its cohort peers' outcomes (see
-        `Dataset.apply_split`'s cohort purge)."""
-        return tuple(
-            dict.fromkeys(c.column for c in self.conditions if c.cohort)
-        )
 
     @property
     def horizon_years(self) -> int:
@@ -181,31 +160,18 @@ def parse_label_expression(expr: str) -> DerivedLabel:
         if m is None:
             raise ConfigError(
                 f"label expression {expr!r}: cannot parse condition "
-                f"{part.strip()!r}; expected `column OP literal` or "
-                "`cohort_pct(column) OP literal` with OP in "
-                f"{list(_OPS)}, conditions joined by `&`"
+                f"{part.strip()!r}; expected `column OP literal` with OP "
+                f"in {list(_OPS)}, conditions joined by `&`"
             )
-        cohort = m.group("cohort") is not None
-        column = m.group("cohort") or m.group("column")
+        column = m.group("column")
         op = m.group("op")
         value = _parse_literal(m.group("literal"), expr)
-        if isinstance(value, bool):
-            if cohort:
-                raise ConfigError(
-                    f"label expression {expr!r}: cohort_pct() is a "
-                    "percentile in [0, 1]; compare it to a number"
-                )
-            if op not in ("==", "!="):
-                raise ConfigError(
-                    f"label expression {expr!r}: true/false only compare "
-                    "with == or !="
-                )
-        elif cohort and not 0.0 <= value <= 1.0:
+        if isinstance(value, bool) and op not in ("==", "!="):
             raise ConfigError(
-                f"label expression {expr!r}: cohort_pct() lies in [0, 1], "
-                f"so comparing it to {value!r} is constant"
+                f"label expression {expr!r}: true/false only compare "
+                "with == or !="
             )
-        conditions.append(Condition(column, cohort, op, value))
+        conditions.append(Condition(column, op, value))
     unique = tuple(sorted(set(conditions), key=lambda c: c.canonical()))
     label = DerivedLabel(unique)
     label.horizon_years  # mixed/missing horizons fail at parse time

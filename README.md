@@ -175,12 +175,11 @@ never needs a dataset rebuild (data/manual.md §3):
 label = "fwd_3y_cagr >= 0.12"                              # a custom rung
 label = "fwd_3y_cagr >= 0.1 & fwd_3y_max_drawdown < 0.3"   # compounded without a crash
 label = "fwd_3y_max_drawdown_from_entry < 0.2"             # never down >20% from entry
-label = "cohort_pct(fwd_3y_cagr) >= 0.9"                   # top decile of the cohort
+label = "fwd_3y_excess_cagr >= 0.08"                       # beat SPY by 8 pts
 label = "label_3y_beat_spy == true & fwd_3y_cagr >= 0"     # stored binaries combine too
 ```
 
-- Grammar: conditions `column OP literal` or `cohort_pct(column) OP
-  literal`, `OP` ∈ `>= > <= < == !=`, joined by `&`; literals are
+- Grammar: conditions `column OP literal`, `OP` ∈ `>= > <= < == !=`, joined by `&`; literals are
   numbers, or `true`/`false` for boolean columns. Parsed, never `eval`'d.
 - Columns must be in the manifest `labels` group (outcomes, never
   features) and share one `{H}y` horizon, which `horizon_years` is
@@ -188,12 +187,13 @@ label = "label_3y_beat_spy == true & fwd_3y_cagr >= 0"     # stored binaries com
   `min_dataset_version = "1.3"` (data/versions.md).
 - NULL propagates: a row with any referenced column NULL has a NULL
   (unobservable) label, never False.
-- `cohort_pct(c)` is `percent_rank()` of `c` within `(quarter,
-  snapshot_kind)` over the whole dataset (duckdb semantics). Because a
-  row's cohort label depends on its peers' outcomes, a train row whose
-  cohort holds any non-train peer in the fold loses its label (the
-  *cohort purge*, reported per fold); the backtest refit likewise waits
-  until the whole cohort's windows have closed.
+- Every label is a function of its own row, so the upstream purge and
+  embargo cover it exactly as they cover a stored label. Cross-sectional
+  outcome ranks ("top decile of the cohort") are deliberately not
+  offered: a peer's window can close up to a quarter later than the
+  row's own, eroding the embargo — that would be an upstream label.
+  `beat_spy` / `fwd_{H}_excess_cagr` thresholds are the era-neutral
+  targets.
 - Expressions are normalized (sorted conditions, canonical literals), so
   one target is one results-ledger cell whatever spelling a config used;
   `fwd_3y_cagr >= 0.1` reproduces `label_3y_cagr_ge_10` exactly (inclusive
