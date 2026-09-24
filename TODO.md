@@ -436,10 +436,9 @@ slice. All within the invariants: no local splits, no derived features.
       dataset rebuild. (`src/harness/derived_labels.py`, evaluated by
       `Dataset.frame`; cohort-ranked labels get a cohort purge in
       `apply_split` and a cohort-complete cutoff in the backtest refit.)
-- [ ] Record in data/versions.md the dataset version that first ships
-      `fwd_{H}_max_drawdown{,_from_entry}` (upstream decision 0017,
-      "built after v1.2") once it is built; drawdown-label configs set
-      `min_dataset_version` to it.
+- [x] Recorded in data/versions.md: `dataset_v1.3` first ships
+      `fwd_{H}_max_drawdown{,_from_entry}` (upstream decision 0017);
+      drawdown-label configs set `min_dataset_version = "1.3"`.
 - [ ] Once drawdown configs exist: consider asking upstream to drop the
       stored `label_{H}_cagr_ge_*` / `excess_ge_*` rungs (each is a
       one-line expression now — `fwd_{H}_cagr >= 0.1` reproduces

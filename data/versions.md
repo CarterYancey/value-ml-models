@@ -21,6 +21,7 @@ Two mechanisms enforce this:
 | `dataset_v1.0` | base feature set: fundamentals, ranks, sector ranks, labels (1/2/3/5y), walk-forward + holdout + diagnostic splits, uniqueness weights | no trend features |
 | `dataset_v1.1` | adds long-horizon trend/consistency columns (`revenue_trend_20q`, `tangibles_trend_20q`, `ocf_trend_20q`, `div_years_paid_10y`, `div_cuts_10y`; upstream decision 0015) | configs using trend columns need `min_dataset_version = "1.1"` |
 | `dataset_v1.2` | removes the rank columns of integer-valued composites (verified absent: `piotroski_f_rank`, `mohanram_g7_rank`; the raw scores remain) after the era-identifiability probe showed within-quarter ranks of discrete columns encode the calendar quarter — see `reports/promoted/era_probe_rank_fingerprints/upstream_brief.md` | breaking for configs naming those rank columns; rank-fed results are not comparable across the v1.1/v1.2 boundary; fill in the full upstream change list from its changelog |
+| `dataset_v1.3` | adds the continuous path labels `fwd_{H}_max_drawdown` and `fwd_{H}_max_drawdown_from_entry` (upstream decision 0017); stored continuous only — binary drawdown targets are label expressions here (README "Derived labels") | configs whose label expression reads a drawdown column need `min_dataset_version = "1.3"` |
 
 When upstream ships a new version: add a row here, note what it adds or
 changes, and set `min_dataset_version` in any new config that depends on

@@ -184,8 +184,8 @@ label = "label_3y_beat_spy == true & fwd_3y_cagr >= 0"     # stored binaries com
   numbers, or `true`/`false` for boolean columns. Parsed, never `eval`'d.
 - Columns must be in the manifest `labels` group (outcomes, never
   features) and share one `{H}y` horizon, which `horizon_years` is
-  inferred from. Drawdown columns exist only in datasets built after
-  v1.2 — set `min_dataset_version` (data/versions.md).
+  inferred from. Drawdown columns exist from `dataset_v1.3` — set
+  `min_dataset_version = "1.3"` (data/versions.md).
 - NULL propagates: a row with any referenced column NULL has a NULL
   (unobservable) label, never False.
 - `cohort_pct(c)` is `percent_rank()` of `c` within `(quarter,
