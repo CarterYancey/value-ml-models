@@ -185,6 +185,56 @@ in [PLAN.md](PLAN.md); check items off (and add new ones) as work proceeds.
       from the inference data into the output CSV (single and
       multi-bundle; missing columns are an error, and the sidecar
       records `extra_columns`).
+- [ ] Historical analogues ("stocks that looked like this before"): pick
+      one stock from an inference dataset, score it with several
+      deployment bundles (e.g. the best 1y/3y/5y configs), and for each
+      model list the features that drove its score and the labeled
+      historical rows closest to the stock *on those features*, with
+      what actually happened to them. Explanation, not evaluation (PLAN
+      §4 Phase 3, "Historical analogues"). Sketch:
+      - **Needs per-prediction attributions first**: the SHAP / reason-code
+        items in Phase 3 supply the top signed contributions per model.
+        Until then, fall back to the model's global importances (weaker:
+        the same dimensions for every stock).
+      - **Search space**: the model's top-k contributing feature columns
+        (selected from `manifest.json["columns"]`, never by name
+        pattern), weighted by |contribution|. Prefer the `_rank` /
+        `_secrank` form of each feature: ranks are cross-sectional
+        percentiles, so they compare across eras, while raw levels
+        (market cap, prices) drift. Inference ranks are pooled over one
+        cross-section rather than per snapshot date — note that in the
+        output.
+      - **Tree-proximity option**: rows landing in the same leaves as the
+        stock (forest proximity, LightGBM leaf-index overlap) — similar
+        *as the model sees it*, and it handles NULLs natively.
+      - **NULLs**: no imputation. A NULL matches a NULL and costs a fixed
+        penalty against a value, so "no filing" or "burn-in" analogues
+        stay distinct from filled-in ones.
+      - **Candidate pool**: labeled rows of the dataset the bundle was
+        trained on, median kind only (the three kinds of one
+        stock-quarter are near-duplicates), all eras. Never drop delisted
+        rows — a delisted analogue is exactly the kind of history this is
+        for. Exclude the query stock's own history by default (flag to
+        include). Keep one row per `permaticker` (the closest), and show
+        the era mix of the matches, so one stock's overlapping quarters
+        or one bull year cannot fill the list.
+      - **Output** per model: score + rank in today's cross-section, top
+        contributions, then N analogues with `ticker` (display only;
+        match on `permaticker`), `snapshot_date`, the matched feature
+        values next to the query's, and realized `fwd_{H}_*` /
+        `label_{H}_*` / `delisted_in_window_{H}` for every horizon. Add a
+        summary: the `sample_weight_{H}y`-weighted positive rate and
+        Σ weights of the analogues. CSV + markdown under `predictions/`
+        with a `.meta.json` sidecar (bundles, dataset + inference
+        versions, k, metric, git SHA). CLI: `vml-analogues --ticker XYZ
+        <bundles…>`, or `vml-predict --analogues XYZ`.
+      - **Guardrails**: the deployment fit trained on these analogues, so
+        their outcome rate is in-sample. The output must say it is not an
+        accuracy or probability estimate. Refuse if the inference and
+        training manifests differ in version/feature set. Analogue
+        distances or outcome rates must never become model features
+        (invariant 4). A kNN *classifier* is a separate walk-forward
+        experiment (PLAN §8, "Other classifier families").
 - [ ] Apply the investability filter (Phase 4) to deployment rankings
       before acting on them — microcaps dominate the universe and there is
       no upstream liquidity floor.

@@ -128,6 +128,16 @@ Full contract: [data/manual.md](data/manual.md). The load-bearing points:
 - Post-hoc calibration (isotonic / Platt on a purged validation fold).
 - SHAP values for global and per-prediction explanation; compare discovered
   structure against the single-tree rules from Phase 1.
+- **Historical analogues** (builds on per-prediction attributions): for one
+  stock scored by several deployment models (say the best 1y/3y/5y), take
+  each model's top contributing features and retrieve the labeled
+  historical rows nearest the stock in that subspace, using rank columns
+  so eras are comparable, or model leaf proximity. Show their realized
+  outcomes, delistings included. This answers "what happened to stocks
+  that looked like this, on the dimensions this model cares about". It
+  explains a ranking and does not measure the model: the deployment fit
+  trained on those same rows, so their outcome rate is in-sample.
+  Tasks: TODO.md → Deployment.
 - Feature ablations: raw vs. rank vs. sector-rank feature sets, with/without
   technicals, with/without classification columns (mind their current-state
   caveat — see [data/features.md](data/features.md)).
