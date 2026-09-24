@@ -185,6 +185,78 @@ in [PLAN.md](PLAN.md); check items off (and add new ones) as work proceeds.
       from the inference data into the output CSV (single and
       multi-bundle; missing columns are an error, and the sidecar
       records `extra_columns`).
+- [ ] Historical analogues ("stocks that looked like this before"): pick
+      one stock from an inference dataset, score it with several
+      deployment bundles (e.g. the best 1y/3y/5y configs), and for each
+      model show the labeled historical rows that **land in the same
+      leaves as the stock**, and what actually happened to them.
+      Explanation, not evaluation (PLAN §4 Phase 3, "Historical
+      analogues"). Sketch:
+      - **Primary method: leaf co-membership.** Every model in the zoo
+        except the baselines is trees, so "similar" can mean similar *as
+        the model sees it*: rows the model routes to the same leaves.
+        This uses the model's own split thresholds and NULL routing (no
+        distance metric to choose, no imputation, no feature scaling),
+        and it needs no SHAP.
+        - *Single tree*: the stock's leaf **is** a rule. Show the rule
+          (reuse `src/explain/rules.py`) plus the training rows in that
+          leaf: "stocks with P/B rank < X and … — here they are, and here
+          is how each one turned out." Build this first.
+        - *Forest*: proximity = share of trees in which a row shares the
+          stock's leaf (sklearn `apply()`). Rank analogues by proximity.
+        - *LightGBM / XGBoost*: leaf indices via `predict(pred_leaf=True)`.
+          Boosted trees fit residuals, so plain leaf-sharing counts are
+          weaker. Weight each tree by |leaf value| on the stock's path,
+          and report both weighted and unweighted proximity until one
+          proves more readable.
+        - *Why these leaves*: list the split features on the stock's
+          decision path(s), counted across trees for ensembles. That is
+          a cheap "what drove it" without SHAP. When the SHAP /
+          reason-code items land, show their signed contributions
+          alongside.
+        - *Scale*: rows × trees leaf matrices get big (≈1M rows × 500
+          trees). Stream `apply` over row chunks and accumulate only the
+          match counts against the query stock(s); never materialize the
+          full matrix.
+      - **Fallback: feature-space nearest neighbors**, only for models
+        without leaves (baselines, a future logistic). Use the model's
+        top-k features weighted by |contribution|, in `_rank` /
+        `_secrank` form so eras compare (raw levels drift; inference
+        ranks are pooled over one cross-section, so note that). A NULL
+        matches a NULL and costs a fixed penalty against a value. No
+        imputation.
+      - **Candidate pool**: the labeled rows the bundle was trained on
+        (same dataset version), all eras, delisted rows included — a
+        delisted analogue is exactly the history this is for. Leaf
+        statistics use the rows as the model saw them (all kinds,
+        `sample_weight_{H}y`-weighted). The displayed list keeps one row
+        per `permaticker` (highest proximity, median kind preferred), so
+        one stock's overlapping quarters can't fill it. Show the era mix
+        of the analogues. Exclude the query stock's own history by
+        default (flag to include).
+      - **Output** per model: score + rank in today's cross-section, the
+        leaf rule (single tree) or top path features (ensembles), then N
+        analogues with `ticker` (display only; match on `permaticker`),
+        `snapshot_date`, proximity, the path features' values next to
+        the query's, and realized `fwd_{H}_*` / `label_{H}_*` /
+        `delisted_in_window_{H}` for every horizon. Summary: weighted
+        positive rate and Σ weights of the analogues. CSV + markdown
+        under `predictions/` with a `.meta.json` sidecar (bundles,
+        dataset + inference versions, method, N, git SHA). CLI:
+        `vml-analogues --ticker XYZ <bundles…>`, or
+        `vml-predict --analogues XYZ`.
+      - **Guardrails**: the deployment fit chose those leaves *from*
+        these rows, so the leaf's outcome rate is in-sample by
+        construction. For a single tree it is essentially the score
+        itself. The output must say it is not an accuracy or probability
+        estimate. An honest leaf hit-rate would need walk-forward fold
+        models scored on their own test folds. That belongs on the
+        evaluation side and is a separate item, not part of this tool.
+        Refuse if the inference and training manifests differ in
+        version/feature set. Proximities and analogue outcome rates must
+        never become model features (invariant 4). A kNN *classifier* is
+        a separate walk-forward experiment (PLAN §8, "Other classifier
+        families").
 - [ ] Apply the investability filter (Phase 4) to deployment rankings
       before acting on them — microcaps dominate the universe and there is
       no upstream liquidity floor.
