@@ -17,6 +17,7 @@ from pathlib import Path
 import pandas as pd
 
 from eval.era import crash_label
+from harness.derived_labels import is_derived_label
 
 #: Metric families shown in the era table, in reading order. Anything
 #: logged but not listed here (roc_auc, recall_at_k, thr_for_prec_*,
@@ -139,6 +140,24 @@ def write_report(
                  f"params `{json.dumps(config.model_params, sort_keys=True)}`")
     lines.append(f"- label: `{config.label}` — horizon {config.horizon_years}y, "
                  f"scheme `{config.scheme}`")
+    derived = [
+        lab for lab in (config.label, getattr(config, "eval_label", ""))
+        if lab and is_derived_label(lab)
+    ]
+    for lab in derived:
+        lines.append(
+            f"- derived label `{lab}`: evaluated on the fly from the "
+            "manifest's continuous outcome columns (harness.derived_labels); "
+            "NULL wherever a referenced column is NULL"
+            + (
+                ". `cohort_pct` ranks within (quarter, snapshot_kind) over "
+                "the whole dataset; train rows whose cohort holds a "
+                "non-train peer lose their label (the cohort purge — "
+                "counted per fold below)"
+                if "cohort_pct(" in lab
+                else ""
+            )
+        )
     if getattr(config, "eval_label", ""):
         lines.append(
             f"- **regression reframe**: trained on the continuous target "
@@ -366,6 +385,11 @@ def write_report(
                 "train_rows": fr["n_train_rows"],
                 "effective_train_size": fr["effective_train_size"],
                 "test_rows": fr["n_test_rows"],
+                **(
+                    {"cohort_purged_train_rows": fr["cohort_purged_train_rows"]}
+                    if "cohort_purged_train_rows" in fr
+                    else {}
+                ),
             }
             for fr in fold_results
         ]

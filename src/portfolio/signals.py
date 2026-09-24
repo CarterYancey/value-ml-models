@@ -40,6 +40,7 @@ from pathlib import Path
 import pandas as pd
 
 from harness.dataset import SELECTION_SCHEME, Dataset
+from harness.derived_labels import COHORT_KEYS, is_derived_label
 from harness.errors import ConfigError, DatasetValidationError
 from harness.model_store import ModelBundle, ModelBundleError
 from models.registry import build_model
@@ -345,14 +346,28 @@ def _refit_as_of_year(
     deployment training."""
     config = bundle.train_config
     cutoff = pd.Timestamp(year, 1, 1)
-    data = dataset.data
+    # column-projected: the refit needs features + label + weight, and a
+    # label expression (harness.derived_labels) is evaluated by `frame`
+    data = dataset.frame(
+        list(bundle.feature_columns)
+        + [config.label, dataset.sample_weight_column(config.horizon_years)]
+    )
     snapshot = pd.to_datetime(data["snapshot_date"])
     observable_by = (
         snapshot
         + pd.DateOffset(years=config.horizon_years)
         + pd.Timedelta(days=label_lag_days)
     )
-    eligible = data[observable_by <= cutoff]
+    if is_derived_label(config.label):
+        spec = dataset.derived_label(config.label)
+        if spec.cohort_columns:
+            # a cohort-ranked label is known only once every peer's
+            # window has closed: the cohort's latest observable date
+            keys = dataset.frame(list(COHORT_KEYS))
+            observable_by = observable_by.groupby(
+                [keys[k].to_numpy() for k in COHORT_KEYS]
+            ).transform("max")
+    eligible = data[(observable_by <= cutoff).to_numpy()]
     fit = dataset.fit_data(
         eligible,
         config.label,

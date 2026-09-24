@@ -36,6 +36,12 @@ from harness.calibration import (
     CALIBRATION_METHODS,
     DEFAULT_CALIBRATION_MIN_ROWS,
 )
+from harness.derived_labels import (
+    is_derived_label,
+    label_slug,
+    normalize_label,
+    parse_label_expression,
+)
 from harness.errors import ConfigError
 from harness.families import FEATURE_GROUPS, parse_family_ref
 
@@ -70,7 +76,11 @@ def parse_dataset_version(version: str) -> tuple[int, ...]:
 
 
 def infer_horizon_years(label: str) -> int | None:
-    """The horizon a label name carries, or None when it carries none."""
+    """The horizon a label name carries, or None when it carries none.
+    A label expression (harness.derived_labels) carries the one horizon
+    all its columns share — mixing horizons is a ConfigError."""
+    if is_derived_label(label):
+        return parse_label_expression(label).horizon_years
     m = _HORIZON_IN_LABEL.search(label)
     return int(m.group(1)) if m else None
 
@@ -239,7 +249,8 @@ class ExperimentConfig:
         model = raw["model"]
         if not isinstance(model, dict) or "name" not in model:
             raise ConfigError(f"config {source}: [model] must be a table with a name")
-        label = raw["label"]
+        # label expressions are normalized so one target is one ledger cell
+        label = normalize_label(str(raw["label"]))
         horizon = _resolve_horizon(raw, label, source)
         folds = raw.get("folds", "all")
         if folds != "all":
@@ -264,7 +275,7 @@ class ExperimentConfig:
                 float(p) for p in raw.get("precision_targets", ())
             ),
             min_dataset_version=str(raw.get("min_dataset_version", "")),
-            eval_label=str(raw.get("eval_label", "")),
+            eval_label=normalize_label(str(raw.get("eval_label", ""))),
             calibration=str(raw.get("calibration", "")),
             calibration_min_rows=int(
                 raw.get("calibration_min_rows", DEFAULT_CALIBRATION_MIN_ROWS)
@@ -343,7 +354,7 @@ class ExperimentConfig:
             feat = "-".join(tags) if tags else "cols"
         else:
             feat = "-".join(self.feature_groups) or "cols"
-        label = self.label.removeprefix("label_")
+        label = label_slug(self.label).removeprefix("label_")
         return f"{self.model_name}_{feat}_{label}_{self.identity_hash}"
 
     def resolve_feature_columns(self, dataset) -> list[str]:

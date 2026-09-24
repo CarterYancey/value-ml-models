@@ -164,6 +164,42 @@ uv run vml-experiments show <config-or-name>   # one config + its run history
 Before writing a new config, `vml-experiments list --grep <something>`
 answers "have I done this already, and what's closest to edit from?".
 
+### Derived labels
+
+Anywhere a config names a label (`label`, `eval_label`, a sweep's
+`[[cells]]`) it may instead give a **label expression** over the
+manifest's `labels` columns, evaluated on the fly — so a new threshold
+never needs a dataset rebuild (data/manual.md §3):
+
+```toml
+label = "fwd_3y_cagr >= 0.12"                              # a custom rung
+label = "fwd_3y_cagr >= 0.1 & fwd_3y_max_drawdown < 0.3"   # compounded without a crash
+label = "fwd_3y_max_drawdown_from_entry < 0.2"             # never down >20% from entry
+label = "cohort_pct(fwd_3y_cagr) >= 0.9"                   # top decile of the cohort
+label = "label_3y_beat_spy == true & fwd_3y_cagr >= 0"     # stored binaries combine too
+```
+
+- Grammar: conditions `column OP literal` or `cohort_pct(column) OP
+  literal`, `OP` ∈ `>= > <= < == !=`, joined by `&`; literals are
+  numbers, or `true`/`false` for boolean columns. Parsed, never `eval`'d.
+- Columns must be in the manifest `labels` group (outcomes, never
+  features) and share one `{H}y` horizon, which `horizon_years` is
+  inferred from. Drawdown columns exist only in datasets built after
+  v1.2 — set `min_dataset_version` (data/versions.md).
+- NULL propagates: a row with any referenced column NULL has a NULL
+  (unobservable) label, never False.
+- `cohort_pct(c)` is `percent_rank()` of `c` within `(quarter,
+  snapshot_kind)` over the whole dataset (duckdb semantics). Because a
+  row's cohort label depends on its peers' outcomes, a train row whose
+  cohort holds any non-train peer in the fold loses its label (the
+  *cohort purge*, reported per fold); the backtest refit likewise waits
+  until the whole cohort's windows have closed.
+- Expressions are normalized (sorted conditions, canonical literals), so
+  one target is one results-ledger cell whatever spelling a config used;
+  `fwd_3y_cagr >= 0.1` reproduces `label_3y_cagr_ge_10` exactly (inclusive
+  thresholds) but is a separate ledger cell, since the cell is the label
+  string.
+
 ### Models
 
 `model.name` in a config selects from the registry: the baselines

@@ -185,6 +185,8 @@ def run_experiment(
                 "n_test_rows": len(test_fit.X),
                 "metrics": metrics,
             }
+            if config.label in split.cohort_purged:
+                fr["cohort_purged_train_rows"] = split.cohort_purged[config.label]
             fold_results.append(fr)
             probabilistic = model.probabilistic
             fold_models[fold] = model

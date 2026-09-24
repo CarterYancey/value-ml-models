@@ -70,6 +70,7 @@ from harness.calibration import (
     DEFAULT_CALIBRATION_MIN_ROWS,
 )
 from harness.config import ExperimentConfig, FeatureSpec, infer_horizon_years
+from harness.derived_labels import label_slug, normalize_label
 from harness.errors import ConfigError
 from harness.report import _table
 from harness.results import ResultsStore, git_sha
@@ -219,7 +220,7 @@ class SweepConfig:
                     f"sweep config {source}: [[cells]] entry has unknown "
                     f"fields {extra}"
                 )
-            label = str(c["label"])
+            label = normalize_label(str(c["label"]))
             inferred = infer_horizon_years(label)
             if "horizon_years" in c:
                 horizon = int(c["horizon_years"])
@@ -236,7 +237,7 @@ class SweepConfig:
                 )
             else:
                 horizon = inferred
-            eval_label = str(c.get("eval_label", ""))
+            eval_label = normalize_label(str(c.get("eval_label", "")))
             if eval_label:
                 if eval_label == label:
                     raise ConfigError(
@@ -533,7 +534,7 @@ class SweepConfig:
         else:
             feat = f"{len(self.feature_sets)}fs"
         if len(self.cells) == 1:
-            label = self.cells[0][1].removeprefix("label_")
+            label = label_slug(self.cells[0][1]).removeprefix("label_")
         else:
             label = f"{len(self.cells)}cells"
         return f"{self.model_name}_sweep_{feat}_{label}_{self.identity_hash}"
@@ -709,7 +710,7 @@ class SweepConfig:
         """(candidate name, run name). The candidate is the run minus its
         seed — what a multi-seed sweep aggregates over; with one seed the
         two coincide."""
-        parts = [self.name, label]
+        parts = [self.name, label_slug(label)]
         if self.n_feature_variants > 1:
             parts.append(f"fs{fs_idx}")
         if self.n_param_sets > 1:
