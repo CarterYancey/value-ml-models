@@ -1,0 +1,31 @@
+# Survival gate, stage 1 (PLAN §4 Phase 3.5): a depth-3 tree on a
+# *derived* label — no stored column, the loader evaluates the
+# expression from the manifest's continuous outcomes (README "Derived
+# labels"). Target: bought at the snapshot and never marked down more
+# than 30% from entry at any close over the 3y window, and not
+# underwater at the end. `fwd_3y_max_drawdown_from_entry` is the v1.3
+# path label (labels.md, decision 0017); v1.3 is the floor, stated so
+# an older dataset fails with the reason rather than "column missing".
+#
+# The extracted rules (reports/<name>_rules.md) are the deliverable: a
+# three-level gate you can read is what stage 2 ranks the survivors of.
+# `name` is derived, so a copy with edited values names itself.
+# Run: vml-run experiments/tree_depth3_3y_survive_dd30.toml
+dataset_version = "dataset_v1.4"
+min_dataset_version = "1.3"
+scheme = "walkforward"
+folds = "all"
+label = "fwd_3y_cagr >= 0 & fwd_3y_max_drawdown_from_entry < 0.3"
+seed = 7
+top_k = [20, 50]
+precision_targets = [0.75, 0.9]
+
+[features]
+groups = ["ranks", "sector_ranks"]
+
+[model]
+name = "decision_tree"
+max_depth = 3
+min_samples_leaf = 200
+# false positives (a "survivor" that crashed) cost twice a miss
+class_weight = 0.5

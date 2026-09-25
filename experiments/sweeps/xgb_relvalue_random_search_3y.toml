@@ -1,0 +1,63 @@
+# v1.4 relative-value ablation as a random search: does "cheap for
+# *this* stock" (ADR 0018) add to the cross-sectional ranks on the
+# primary relative cell? XGBoost (the GPU path; `device` is a model
+# param, so a CUDA run hashes as a distinct config from this CPU one).
+#
+# Three feature sets, same draws each (draws are a pure function of
+# search_seed + sweep content, so the axis is a paired comparison):
+#   fs0  cross-sectional ranks — the control
+#   fs1  + relvalue rank variants (`*_vs_5y_median_rank`)
+#   fs2  + the whole family incl. the raw `*_5y_pctile` shares — the
+#        upstream-preferred statistic for the sign-changing yields,
+#        whose median ratio is NULL when the history median is ≤ 0 —
+#        plus the ADR 0019 long-window anchors by column
+# Relative/long-window columns are NULL for the first ~3–4 years of a
+# listing; the trees route NULLs natively and nothing is imputed, so a
+# gain on fs1/fs2 is a gain *including* the missingness pattern.
+#
+# The cell is the derived excess-return rung of
+# forest_isotonic_3y_excess8_relvalue (beat SPY by ≥ 8 pts CAGR) so the
+# sweep's winner and that exemplar share a ledger cell.
+#
+# Expanded: 1 cell x 3 feature sets x 40 draws = 120 runs.
+# Run: vml-sweep experiments/sweeps/xgb_relvalue_random_search_3y.toml
+name = "xgb_relvalue_random_search_3y"
+dataset_version = "dataset_v1.4"
+min_dataset_version = "1.4"
+scheme = "walkforward"
+folds = "all"
+seeds = [7]
+top_k = [20, 50]
+precision_targets = [0.75, 0.9]
+rank_metric = "recall_at_prec_0.9"
+n_samples = 40
+search_seed = 11
+
+[[cells]]
+label = "fwd_3y_excess_cagr >= 0.08"
+
+[[features]]
+groups = ["ranks"]
+
+[[features]]
+groups = ["ranks"]
+families = ["ranks/relvalue"]
+
+[[features]]
+groups = ["ranks"]
+families = ["relvalue"]
+columns = ["dist_5y_high", "price_vs_5y_avg", "mom_36_12", "beta_12m"]
+
+[model]
+name = "xgboost"
+# device = "cuda"  # opt-in GPU training; hashes as a distinct config
+
+[random]
+learning_rate = { low = 0.01, high = 0.2, log = true }
+n_estimators = { low = 100, high = 1200, int = true, log = true }
+max_depth = { low = 3, high = 7, int = true }
+min_child_weight = { low = 20, high = 400, int = true, log = true }
+subsample = { low = 0.6, high = 1.0 }
+colsample_bytree = { low = 0.4, high = 1.0 }
+reg_lambda = { low = 1e-2, high = 30.0, log = true }
+class_weight = { choices = [1.0, 0.5, 0.25] }

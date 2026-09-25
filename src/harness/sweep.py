@@ -69,7 +69,12 @@ from harness.calibration import (
     CALIBRATION_METHODS,
     DEFAULT_CALIBRATION_MIN_ROWS,
 )
-from harness.config import ExperimentConfig, FeatureSpec, infer_horizon_years
+from harness.config import (
+    ExperimentConfig,
+    FeatureSpec,
+    infer_horizon_years,
+    parse_dataset_version,
+)
 from harness.derived_labels import label_slug, normalize_label
 from harness.errors import ConfigError
 from harness.report import _table
@@ -122,6 +127,7 @@ _SWEEP_ALLOWED = frozenset(
         "max_runs",
         "calibration",
         "calibration_min_rows",
+        "min_dataset_version",
     }
 )
 
@@ -178,6 +184,10 @@ class SweepConfig:
     #: prequential calibration applied to every expanded run ("" = off)
     calibration: str = ""
     calibration_min_rows: int = DEFAULT_CALIBRATION_MIN_ROWS
+    #: floor dataset version for every expanded run (see
+    #: ExperimentConfig.min_dataset_version) — a sweep over columns a
+    #: newer version introduced states it once, here
+    min_dataset_version: str = ""
 
     @classmethod
     def from_file(cls, path: str | Path) -> "SweepConfig":
@@ -467,6 +477,18 @@ class SweepConfig:
                 "predicted returns, not probabilities"
             )
 
+        min_dataset_version = str(raw.get("min_dataset_version", ""))
+        if min_dataset_version:
+            parse_dataset_version(min_dataset_version)  # fail early
+            if parse_dataset_version(str(raw["dataset_version"])) < (
+                parse_dataset_version(min_dataset_version)
+            ):
+                raise ConfigError(
+                    f"sweep config {source}: dataset_version "
+                    f"{raw['dataset_version']!r} is below this sweep's "
+                    f"min_dataset_version {min_dataset_version!r}"
+                )
+
         top_k = tuple(int(k) for k in raw.get("top_k", (20, 50)))
         precision_targets = tuple(
             float(p) for p in raw.get("precision_targets", ())
@@ -506,6 +528,7 @@ class SweepConfig:
             calibration_min_rows=int(
                 raw.get("calibration_min_rows", DEFAULT_CALIBRATION_MIN_ROWS)
             ),
+            min_dataset_version=min_dataset_version,
         )
         if not sweep.name:
             sweep = replace(sweep, name=sweep.derived_name())
@@ -585,6 +608,8 @@ class SweepConfig:
         if self.calibration:
             payload["calibration"] = self.calibration
             payload["calibration_min_rows"] = self.calibration_min_rows
+        if self.min_dataset_version:
+            payload["min_dataset_version"] = self.min_dataset_version
         blob = json.dumps(payload, sort_keys=True, separators=(",", ":"))
         return hashlib.sha256(blob.encode()).hexdigest()[:8]
 
@@ -670,6 +695,7 @@ class SweepConfig:
                 precision_targets=self.precision_targets,
                 calibration=self.calibration,
                 calibration_min_rows=self.calibration_min_rows,
+                min_dataset_version=self.min_dataset_version,
             )
             candidate, name = self._run_names(
                 label, fs_idx, set_idx, combo, draw_idx, seed, config

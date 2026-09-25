@@ -184,7 +184,11 @@ label = "label_3y_beat_spy == true & fwd_3y_cagr >= 0"     # stored binaries com
 - Columns must be in the manifest `labels` group (outcomes, never
   features) and share one `{H}y` horizon, which `horizon_years` is
   inferred from. Drawdown columns exist from `dataset_v1.3` — set
-  `min_dataset_version = "1.3"` (data/versions.md).
+  `min_dataset_version = "1.3"` (data/versions.md); a sweep states
+  `min_dataset_version` once and every expanded run carries it.
+  Exemplars: `experiments/tree_depth3_3y_survive_dd30.toml`,
+  `experiments/lgbm_3y_compounder_no_crash.toml`,
+  `experiments/sweeps/lgbm_drawdown_rungs_3y.toml`.
 - NULL propagates: a row with any referenced column NULL has a NULL
   (unobservable) label, never False.
 - Every label is a function of its own row, so the upstream purge and
