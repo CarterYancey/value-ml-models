@@ -1,0 +1,39 @@
+# Mixed-horizon derived label: beat SPY over 3 years AND be near a
+# near-term bottom at entry (never marked down more than 10% from the
+# entry price at any close in the first year) — the long-run winner you
+# could also have held through year one without a flinch. Alternatively
+# (the `|` branch) a 1y excess return so large that the entry timing is
+# moot.
+#
+# Horizon: every label window starts at the snapshot, so the 1y window
+# nests inside the 3y one and the union *is* the 3y window. The label
+# is therefore run as a 3y label — 3y split tags (purge/embargo for the
+# 1y part follow a fortiori), `sample_weight_3y`, the 3y fold calendar
+# — and `horizon_years` is inferred as 3 (harness/derived_labels.py;
+# the report states the mixed horizons). `&` binds tighter than `|`,
+# and the expression is normalized to a sorted sum of products, so any
+# equivalent spelling shares this ledger cell.
+# Run: vml-run experiments/lgbm_3y_excess_near_1y_bottom.toml
+dataset_version = "dataset_v1.4"
+min_dataset_version = "1.3"
+scheme = "walkforward"
+folds = "all"
+label = "fwd_3y_excess_cagr > 0 & fwd_1y_max_drawdown_from_entry < 0.1 | fwd_1y_excess_cagr >= 0.5"
+seed = 7
+top_k = [20, 50]
+precision_targets = [0.75, 0.9]
+
+[features]
+groups = ["ranks", "sector_ranks"]
+
+[model]
+name = "lightgbm"
+n_estimators = 300
+learning_rate = 0.05
+num_leaves = 15
+min_child_samples = 60
+subsample = 0.8
+subsample_freq = 1
+colsample_bytree = 0.8
+reg_lambda = 1.0
+class_weight = 0.5

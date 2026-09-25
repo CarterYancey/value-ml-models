@@ -177,20 +177,30 @@ label = "fwd_3y_cagr >= 0.1 & fwd_3y_max_drawdown < 0.3"   # compounded without 
 label = "fwd_3y_max_drawdown_from_entry < 0.2"             # never down >20% from entry
 label = "fwd_3y_excess_cagr >= 0.08"                       # beat SPY by 8 pts
 label = "label_3y_beat_spy == true & fwd_3y_cagr >= 0"     # stored binaries combine too
+label = "fwd_3y_excess_cagr > 0 & fwd_1y_max_drawdown_from_entry < 0.1"   # mixed horizons
+label = "(fwd_3y_cagr >= 0.15 | fwd_3y_excess_cagr >= 0.05) & fwd_3y_max_drawdown < 0.4"
 ```
 
-- Grammar: conditions `column OP literal`, `OP` ∈ `>= > <= < == !=`, joined by `&`; literals are
-  numbers, or `true`/`false` for boolean columns. Parsed, never `eval`'d.
+- Grammar: conditions `column OP literal`, `OP` ∈ `>= > <= < == !=`,
+  joined by `&` and `|` (`&` binds tighter; parentheses group);
+  literals are numbers, or `true`/`false` for boolean columns. Parsed,
+  never `eval`'d.
 - Columns must be in the manifest `labels` group (outcomes, never
-  features) and share one `{H}y` horizon, which `horizon_years` is
-  inferred from. Drawdown columns exist from `dataset_v1.3` — set
+  features). **Mixed horizons are allowed and the longest governs**:
+  every window starts at the snapshot, so a `1y & 3y` label's window
+  *is* the 3y window — `horizon_years` is inferred as 3, and the 3y
+  split tags, `sample_weight_3y` and fold calendar apply to the whole
+  label (purge/embargo for the 1y part follow a fortiori). The report
+  says so when a label mixes horizons. Drawdown columns exist from `dataset_v1.3` — set
   `min_dataset_version = "1.3"` (data/versions.md); a sweep states
   `min_dataset_version` once and every expanded run carries it.
   Exemplars: `experiments/tree_depth3_3y_survive_dd30.toml`,
   `experiments/lgbm_3y_compounder_no_crash.toml`,
   `experiments/sweeps/lgbm_drawdown_rungs_3y.toml`.
-- NULL propagates: a row with any referenced column NULL has a NULL
-  (unobservable) label, never False.
+- NULL propagates, under `|` too: a row with any referenced column
+  NULL has a NULL (unobservable) label, never False (within a horizon
+  all columns are NULL together, so the rows where three-valued `OR`
+  would differ are outside the label's window anyway).
 - Every label is a function of its own row, so the upstream purge and
   embargo cover it exactly as they cover a stored label. Cross-sectional
   outcome ranks ("top decile of the cohort") are deliberately not
@@ -198,8 +208,9 @@ label = "label_3y_beat_spy == true & fwd_3y_cagr >= 0"     # stored binaries com
   row's own, eroding the embargo — that would be an upstream label.
   `beat_spy` / `fwd_{H}_excess_cagr` thresholds are the era-neutral
   targets.
-- Expressions are normalized (sorted conditions, canonical literals), so
-  one target is one results-ledger cell whatever spelling a config used;
+- Expressions are normalized to a sorted sum of products (canonical
+  literals, duplicate conditions/clauses dropped), so one target is one
+  results-ledger cell whatever spelling or bracketing a config used;
   `fwd_3y_cagr >= 0.1` reproduces `label_3y_cagr_ge_10` exactly (inclusive
   thresholds) but is a separate ledger cell, since the cell is the label
   string.

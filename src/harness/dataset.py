@@ -160,9 +160,10 @@ _COMPARE = {
 def evaluate_derived_label(label: DerivedLabel, data: pd.DataFrame) -> pd.Series:
     """A derived label's values over `data` (which must carry the source
     columns): nullable boolean, NULL wherever any referenced column is
-    NULL. Row-wise — a row's label never depends on other rows."""
-    result = pd.Series(True, index=data.index, dtype="boolean")
+    NULL — under `|` too (harness.derived_labels). Row-wise — a row's
+    label never depends on other rows."""
     unobservable = pd.Series(False, index=data.index)
+    hits: dict[str, pd.Series] = {}
     for cond in label.conditions:
         col = data[cond.column]
         unobservable |= col.isna()
@@ -182,7 +183,16 @@ def evaluate_derived_label(label: DerivedLabel, data: pd.DataFrame) -> pd.Series
                 )
             vals = pd.to_numeric(col, errors="raise").astype(float)
         hit = _COMPARE[cond.op](vals, cond.value)
-        result &= pd.Series(hit, index=data.index).fillna(False).astype(bool)
+        hits[cond.canonical()] = (
+            pd.Series(hit, index=data.index).fillna(False).astype(bool)
+        )
+    result = pd.Series(False, index=data.index)
+    for clause in label.clauses:
+        conj = pd.Series(True, index=data.index)
+        for cond in clause:
+            conj &= hits[cond.canonical()]
+        result |= conj
+    result = result.astype("boolean")
     result[unobservable] = pd.NA
     return result
 

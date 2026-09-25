@@ -48,8 +48,10 @@ invariants below are this repo's equivalents.
   No global imputation; fold-internal only, and disclosed.
 - New binary targets are **label expressions** (`src/harness/derived_labels.py`,
   README "Derived labels"), e.g. `fwd_3y_cagr >= 0.12`,
-  `fwd_3y_max_drawdown_from_entry < 0.3`: row-wise thresholds over the
-  manifest's `labels` columns, evaluated by the loader. That is target
+  `fwd_3y_excess_cagr > 0 & fwd_1y_max_drawdown_from_entry < 0.1`:
+  row-wise thresholds over the manifest's `labels` columns (`&`, `|`,
+  parentheses), evaluated by the loader; a mixed-horizon label runs
+  under its *longest* horizon's tags and weight (the windows nest). That is target
   selection, not feature engineering (invariant 4) — expressions may never
   read feature columns, and never become model inputs. Don't hand-compute
   labels in pandas elsewhere. Cross-row labels (cohort outcome ranks)

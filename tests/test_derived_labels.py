@@ -44,10 +44,40 @@ def test_boolean_terms():
     assert spec.horizon_years == 3
 
 
-def test_horizon_inference():
+def test_horizon_inference_takes_the_longest_window():
     assert infer_horizon_years("fwd_5y_excess_cagr > 0") == 5
-    with pytest.raises(ConfigError, match="mixes horizons"):
-        parse_label_expression("fwd_3y_cagr >= 0.1 & fwd_5y_cagr >= 0.1")
+    mixed = parse_label_expression("fwd_3y_cagr >= 0.1 & fwd_1y_cagr >= 0")
+    assert mixed.horizons == (1, 3)
+    assert mixed.horizon_years == 3
+    assert infer_horizon_years("fwd_1y_cagr >= 0 | fwd_5y_cagr >= 0.1") == 5
+
+
+def test_or_and_parentheses_normalize_to_a_sum_of_products():
+    a = normalize_label(
+        "(fwd_3y_cagr >= 0.15 | fwd_3y_excess_cagr >= 0.05) "
+        "& fwd_3y_max_drawdown < 0.4"
+    )
+    b = normalize_label(
+        "fwd_3y_max_drawdown < .4 & fwd_3y_excess_cagr >= 0.05 "
+        "| fwd_3y_cagr>=0.15&fwd_3y_max_drawdown<0.40"
+    )
+    assert a == b == (
+        "fwd_3y_cagr >= 0.15 & fwd_3y_max_drawdown < 0.4 | "
+        "fwd_3y_excess_cagr >= 0.05 & fwd_3y_max_drawdown < 0.4"
+    )
+    assert normalize_label(a) == a
+    # & binds tighter than |
+    spec = parse_label_expression(
+        "fwd_3y_cagr >= 0 | fwd_3y_cagr < -0.5 & fwd_3y_max_drawdown > 0.9"
+    )
+    assert sorted(len(c) for c in spec.clauses) == [1, 2]
+    # duplicate clauses collapse
+    assert normalize_label("fwd_3y_cagr >= 0 | fwd_3y_cagr >= 0.0") == (
+        "fwd_3y_cagr >= 0.0"
+    )
+    assert ExperimentConfig.from_dict(_raw(label=a)).config_hash == (
+        ExperimentConfig.from_dict(_raw(label=b)).config_hash
+    )
 
 
 @pytest.mark.parametrize(
@@ -55,8 +85,13 @@ def test_horizon_inference():
     [
         ("fwd_3y_cagr >= ten", "not a number"),
         ("fwd_3y_cagr => 0.1", "cannot parse"),
-        ("fwd_3y_cagr >= 0.1 | fwd_3y_cagr < 0", "cannot parse"),
         ("fwd_3y_cagr >= nan", "finite"),
+        ("(fwd_3y_cagr >= 0", "unexpected end"),
+        ("(fwd_3y_cagr >= 0 fwd_3y_cagr < 1)", "cannot parse"),
+        ("fwd_3y_cagr >= 0)", "unexpected"),
+        ("fwd_3y_cagr >= 0 &", "unexpected end"),
+        ("| fwd_3y_cagr >= 0", "unexpected"),
+        ("fwd_3y_cagr >= 0 & & fwd_3y_cagr < 1", "unexpected"),
         ("label_3y_beat_spy > true", "== or !="),
         ("cohort_pct(fwd_3y_cagr) >= 0.9", "cannot parse"),  # removed on purpose
         ("book_to_market >= 1", "horizon"),
@@ -68,8 +103,12 @@ def test_malformed_expressions_are_refused(expr, match):
 
 
 def test_slug_is_filesystem_safe():
-    slug = label_slug("fwd_3y_max_drawdown < 0.3 & fwd_3y_cagr > -0.05")
-    assert slug == "label_3y_cagr_gt_m0p05_and_3y_max_drawdown_lt_0p3"
+    slug = label_slug(
+        "fwd_3y_max_drawdown < 0.3 & fwd_3y_cagr > -0.05 | fwd_1y_cagr >= 1"
+    )
+    assert slug == (
+        "label_1y_cagr_ge_1p0_or_3y_cagr_gt_m0p05_and_3y_max_drawdown_lt_0p3"
+    )
     assert label_slug("label_3y_beat_spy") == "label_3y_beat_spy"
 
 
@@ -197,3 +236,45 @@ def test_derived_rung_runs_identically_to_the_stored_rung(data_root, tmp_path):
     assert set(store.loc[store["experiment"] == "derived", "label"]) == {
         "fwd_3y_cagr >= 0.08"
     }
+
+
+def test_or_semantics_and_null_propagation(dataset_dir):
+    ds = Dataset(dataset_dir)
+    expr = "fwd_3y_cagr >= 0.3 | label_3y_beat_spy == true & fwd_3y_cagr < 0"
+    frame = ds.frame([expr, "fwd_3y_cagr", "label_3y_beat_spy"])
+    obs = frame[frame["fwd_3y_cagr"].notna()]
+    expected = (obs["fwd_3y_cagr"] >= 0.3) | (
+        obs["label_3y_beat_spy"].astype(bool) & (obs["fwd_3y_cagr"] < 0)
+    )
+    assert (obs[expr].astype(bool) == expected).all()
+    assert expected.any() and not expected.all()
+    assert frame.loc[frame["fwd_3y_cagr"].isna(), expr].isna().all()
+
+
+def test_mixed_horizon_label_runs_under_the_longest_horizon(
+    dataset_dir, data_root, tmp_path
+):
+    ds = Dataset(dataset_dir)
+    expr = "fwd_3y_cagr >= 0 & fwd_1y_cagr >= -0.1"
+    frame = ds.frame([expr, "fwd_3y_cagr", "fwd_1y_cagr"])
+    # 3y-observable rows are 1y-observable (the windows nest), so the
+    # label is NULL exactly where the governing horizon is
+    assert frame[expr].isna().equals(frame["fwd_3y_cagr"].isna())
+    # 1y-only rows (3y window past the data) carry no label, not False
+    only_1y = frame["fwd_1y_cagr"].notna() & frame["fwd_3y_cagr"].isna()
+    assert only_1y.any() and frame.loc[only_1y, expr].isna().all()
+
+    cfg = ExperimentConfig.from_dict(_raw(name="mixed", label=expr))
+    assert cfg.horizon_years == 3
+    with pytest.raises(ConfigError, match="contradicts"):
+        ExperimentConfig.from_dict(_raw(label=expr, horizon_years=1))
+    summary = run_experiment(
+        cfg, data_root=data_root, results_path=tmp_path / "results.csv",
+        reports_dir=tmp_path / "reports",
+    )
+    assert summary["status"] == "completed"
+    assert summary["folds"] == [2016, 2017]  # the 3y fold calendar
+    store = ResultsStore(tmp_path / "results.csv").load()
+    assert set(store["horizon_years"].astype(int)) == {3}
+    report = (tmp_path / "reports" / "mixed.md").read_text()
+    assert "Mixed horizons" in report and "sample_weight_3y" in report

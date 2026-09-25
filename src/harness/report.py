@@ -17,7 +17,7 @@ from pathlib import Path
 import pandas as pd
 
 from eval.era import crash_label
-from harness.derived_labels import is_derived_label
+from harness.derived_labels import is_derived_label, parse_label_expression
 
 #: Metric families shown in the era table, in reading order. Anything
 #: logged but not listed here (roc_auc, recall_at_k, thr_for_prec_*,
@@ -145,11 +145,22 @@ def write_report(
         if lab and is_derived_label(lab)
     ]
     for lab in derived:
-        lines.append(
+        spec = parse_label_expression(lab)
+        line = (
             f"- derived label `{lab}`: evaluated on the fly from the "
             "manifest's continuous outcome columns (harness.derived_labels); "
             "NULL wherever a referenced column is NULL"
         )
+        if len(spec.horizons) > 1:
+            windows = ", ".join(f"{h}y" for h in spec.horizons)
+            line += (
+                f". **Mixed horizons** ({windows}): every window starts at "
+                f"the snapshot, so the longest, {spec.horizon_years}y, "
+                "governs — its split tags, `sample_weight_"
+                f"{spec.horizon_years}y` and fold calendar apply to the "
+                "whole label"
+            )
+        lines.append(line)
     if getattr(config, "eval_label", ""):
         lines.append(
             f"- **regression reframe**: trained on the continuous target "
