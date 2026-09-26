@@ -517,24 +517,38 @@ validates it on load.
 The sealed `holdout` scheme and the diagnostic schemes (`entity_holdout`,
 `random_kfold`) are refused by the runner — they raise errors unless
 requested via the dedicated entry points: `scripts/run_final_eval.py`
-(holdout, once per phase) and `scripts/run_diagnostic.py` (the registered
+(holdout, one look per cell) and `scripts/run_diagnostic.py` (the registered
 diagnostics, see above).
 
 The final eval takes the config you selected on walk-forward as it is —
 no copied `*_holdout.toml`:
 
 ```sh
-uv run python scripts/run_final_eval.py experiments/<selected>.toml --phase phase3
+uv run python scripts/run_final_eval.py experiments/<selected>.toml
 ```
 
 The scheme is switched to `holdout` in memory; the run keeps the
 experiment's name (the report lands in `reports/final_eval/`, the row in
-`reports/final_evals.csv`, and `vml-experiments` shows `phase3 ✓` next
-to the config). `--phase` is the PLAN.md roadmap phase the evaluation
-concludes (`phase1`, `phase2`, `phase3`, `phase3.5`, `phase4`) — the seal
-is one completed evaluation per (phase, cell), so a fresh phase name per
-experiment would re-open the holdout every time; anything else is
-refused.
+`reports/final_evals.csv`, and `vml-experiments` shows `✓ look 1/1` next
+to the config). The holdout is the one number nobody selected on, and it
+stays that only while it is looked at **once per cell** — label, horizon
+and holdout window (the fold's test years from `split_folds.parquet`; a
+feature-only dataset bump re-uses the same rows and does not re-seal
+them). Run it when you would act on the model; choosing between
+candidates is walk-forward's job. A second evaluation in a consumed cell
+is refused unless you say why:
+
+```sh
+uv run python scripts/run_final_eval.py experiments/<other>.toml \
+    --reopen "new model family after the v1.4 relvalue features"
+```
+
+It then runs as look 2, the reason is logged, and the report, the ledger
+and the catalog (`✓ look 2/2`) all carry the count — N looks inflate the
+best number by roughly the top order statistic of N draws, so the count
+is part of the result, never hidden. Ledgers written under the older
+`phase` column are migrated in place; their rows count as looks in
+their cell.
 
 Before writing or reviewing any modeling code, read
 [data/manual.md](data/manual.md) — it is the contract that keeps validation

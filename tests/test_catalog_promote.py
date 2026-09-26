@@ -76,10 +76,12 @@ def workspace(data_root, tmp_path_factory):
         )
     final_evals = root / "final_evals.csv"
     final_evals.write_text(
-        "phase,dataset_version,horizon_years,label,experiment,config_hash,"
-        "run_id,git_sha,logged_utc,status\n"
-        "phase1,dataset_v0.0-test,3,label_3y_beat_spy,tree_d2_3y_beat_spy,"
-        "x,y,z,2026-01-01T00:00:00+00:00,completed\n"
+        "holdout_window,horizon_years,label,look,reopen_reason,experiment,"
+        "config_hash,dataset_version,run_id,git_sha,logged_utc,status,phase\n"
+        "2018-,3,label_3y_beat_spy,1,,tree_d2_3y_beat_spy,x,dataset_v0.0-test,"
+        "y,z,2026-01-01T00:00:00+00:00,completed,\n"
+        "2018-,3,label_3y_beat_spy,2,another go,other_model,x2,"
+        "dataset_v0.0-test,y2,z,2026-02-01T00:00:00+00:00,completed,\n"
     )
     return {
         "root": root,
@@ -108,7 +110,7 @@ def test_list_shows_headline_against_best_baseline(workspace, capsys):
     assert "p@5=" in tree_line
     assert "b2m_rank" in tree_line  # the best baseline, by short name
     assert "+0." in tree_line or "-0." in tree_line  # a signed lift
-    assert "phase1 ✓" in tree_line  # the final-eval record, by name
+    assert "✓ look 1/2" in tree_line  # the cell has been looked at twice
     base_line = next(ln for ln in out.splitlines() if "baseline_b2m.toml" in ln)
     assert "+0.000" in base_line  # a baseline's lift over itself
     # restricted schemes are flagged; the holdout config never ran
@@ -154,7 +156,7 @@ def test_show_prints_baselines_and_final_evals(workspace, capsys):
     out = capsys.readouterr().out
     assert "baselines in this cell" in out
     assert "baseline_b2m_rank_3y_beat_spy" in out
-    assert "final evals (sealed holdout): phase1 ✓" in out
+    assert "final evals (sealed holdout): ✓ look 1/2" in out
 
 
 def test_show_by_experiment_name(workspace, capsys):

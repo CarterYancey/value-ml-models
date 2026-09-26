@@ -73,7 +73,8 @@ Full contract: [data/manual.md](data/manual.md). The load-bearing points:
   to make the boundary cost measurable, not to be used.
 - **Schemes**: `walkforward` (expanding-window, one fold per test year) is
   where all model selection happens. `holdout` (final ~3 years) is sealed —
-  evaluated once per phase, after selection is frozen. `entity_holdout` and
+  looked at once per cell (label, horizon, holdout window), after
+  selection on that cell is frozen; any further look is disclosed. `entity_holdout` and
   `random_kfold` are diagnostic-only (§7); `random_kfold` is deliberately
   leaky.
 - **Delisted rows are labeled rows like any other** (final price carried at
@@ -272,8 +273,18 @@ the candidate funnel, and full provenance.
 
 ## 5. Anti-overfitting rules
 
-- The sealed `holdout` fold is touched once, at the end of a phase — never
-  during model selection. A consumed holdout cannot be re-sealed.
+- The sealed `holdout` fold answers one question walk-forward cannot: what
+  does the model score on rows nobody *selected on*? It keeps that meaning
+  only while it is looked at once per cell — (label, horizon, holdout
+  window; the window is the fold's test years in `split_folds.parquet`,
+  not the dataset version, so a feature-only dataset bump does not
+  re-seal the same rows). Run it when you would act on the model, never
+  to choose between candidates: that is walk-forward's job. A consumed
+  cell cannot be re-sealed; it can be *re-opened* with a stated reason,
+  and then every report in the cell says "holdout look k of N" — N looks
+  inflate the best number by roughly the top order statistic of N draws
+  (≈ 1.2 standard errors at N = 5, on the order of 0.1 in precision@20
+  over a 3-year holdout), so the count is part of the result.
 - Every experiment is logged; failed experiments count. If 40 configurations
   were tried, the reported result accounts for that (deflated expectations,
   not the max). `split_folds.parquet` is cited in every report so

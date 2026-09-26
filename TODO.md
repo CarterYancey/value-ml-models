@@ -108,11 +108,11 @@ in [PLAN.md](PLAN.md); check items off (and add new ones) as work proceeds.
       number of configurations tried. (`ResultsStore.model_comparison`;
       a report with no recorded baselines for the cell says so and is not
       reportable.)
-- [x] Final-eval script for the sealed `holdout` fold: runs once per phase,
+- [x] Final-eval script for the sealed `holdout` fold: one look per cell,
       logs the result whether good or bad. Nothing else may read holdout
       tags. (`scripts/run_final_eval.py` — the only FINAL_EVAL entry
-      point; a completed eval per (phase, cell) is recorded in
-      `reports/final_evals.csv` and cannot be repeated.)
+      point; a completed eval per cell is recorded in
+      `reports/final_evals.csv`; repeating one needs a disclosed reason.)
 
 ### Registered diagnostics (from data/manual.md §7 — diagnostic only)
 - [ ] Leakage-gap experiment: identical model under `random_kfold`,
@@ -285,8 +285,12 @@ in [PLAN.md](PLAN.md); check items off (and add new ones) as work proceeds.
       and regenerates the `reports/promoted/README.md` index.
 - [x] Final eval without a copied `*_holdout.toml`:
       `scripts/run_final_eval.py` takes the selected walk-forward config
-      and switches the scheme in memory; `--phase` must be a roadmap
-      phase (`phaseN[.M]`) so the seal is not re-opened per experiment.
+      and switches the scheme in memory. `--phase` is gone: the seal is
+      per cell (label, horizon, holdout window from `split_folds.parquet`
+      — not the dataset version, which re-used the same rows across
+      v1.1–v1.4); a further look needs `--reopen "reason"` and is then
+      counted in the report, the ledger and the catalog (`✓ look k/N`).
+      Old `phase` ledgers migrate in place and their rows count as looks.
 - [ ] Backfill notes on the tracked sample configs (what each one
       taught) so the catalog's `note` column is populated from day one.
 - [x] Upstream doc sync: `scripts/sync_data_docs.py` copies the dataset

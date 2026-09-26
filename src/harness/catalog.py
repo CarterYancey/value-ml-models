@@ -240,20 +240,36 @@ def load_final_evals(path: Path) -> list[dict]:
         return list(csv.DictReader(fh))
 
 
+def _same_holdout_cell(a: dict, b: dict) -> bool:
+    """Same (label, horizon, holdout window); a legacy row without a
+    window matches on label + horizon (scripts/run_final_eval.py)."""
+    if a.get("label") != b.get("label"):
+        return False
+    if str(a.get("horizon_years")) != str(b.get("horizon_years")):
+        return False
+    wa, wb = a.get("holdout_window", ""), b.get("holdout_window", "")
+    return not wa or not wb or wa == wb
+
+
 def final_eval_summary(final_evals: list[dict], config: ExperimentConfig) -> str:
-    """`phase1 ✓, phase2 ✗` — the completed/failed final evals of this
-    experiment's cell, matched by experiment name (the holdout variant
-    hashes differently from the walk-forward config it came from)."""
+    """`✓ look 2/3` — this experiment's completed holdout evaluations as
+    look k of N in their cell (N counts every experiment's looks there,
+    so a 2/3 says the cell's numbers are selection-biased); `✗` marks a
+    failed attempt. Matched by experiment name: the holdout variant
+    hashes differently from the walk-forward config it came from."""
+    mine = [r for r in final_evals if r.get("experiment") == config.name
+            and r.get("label") in (config.label, config.eval_label)]
+    if not mine:
+        return ""
+    completed = [r for r in final_evals if r.get("status") == "completed"]
     marks = []
-    for row in final_evals:
-        if row.get("experiment") != config.name:
+    for row in mine:
+        if row.get("status") != "completed":
+            marks.append("✗")
             continue
-        if row.get("dataset_version") != config.dataset_version:
-            continue
-        if row.get("label") not in (config.label, config.eval_label):
-            continue
-        mark = "✓" if row.get("status") == "completed" else "✗"
-        marks.append(f"{row.get('phase', '?')} {mark}")
+        cell = [r for r in completed if _same_holdout_cell(r, row)]
+        k = next((i + 1 for i, r in enumerate(cell) if r is row), len(cell))
+        marks.append(f"✓ look {k}/{len(cell)}")
     return ", ".join(marks)
 
 

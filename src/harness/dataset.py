@@ -69,7 +69,7 @@ class SplitAccess(Enum):
 
     STANDARD is all ordinary model-selection work and permits only
     `walkforward`. FINAL_EVAL is granted solely by the dedicated
-    final-eval script (once per phase); REGISTERED_DIAGNOSTIC solely by
+    final-eval script (one look per cell); REGISTERED_DIAGNOSTIC solely by
     the registered-experiment runner (data/manual.md §7).
     """
 
@@ -617,9 +617,10 @@ class Dataset:
             raise SplitApplicationError(f"unknown split scheme {scheme!r}")
         if scheme in SEALED_SCHEMES and access is not SplitAccess.FINAL_EVAL:
             raise HoldoutAccessError(
-                "the `holdout` scheme is sealed: it is evaluated once per "
-                "phase by the dedicated final-eval script, never during "
-                "development or model selection"
+                "the `holdout` scheme is sealed: it is evaluated by the "
+                "dedicated final-eval script (one look per cell, further "
+                "looks disclosed), never during development or model "
+                "selection"
             )
         if scheme in DIAGNOSTIC_SCHEMES and access is not SplitAccess.REGISTERED_DIAGNOSTIC:
             raise DiagnosticSchemeError(

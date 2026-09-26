@@ -35,7 +35,7 @@ invariants below are this repo's equivalents.
 - Train on `role = 'train'` rows only, all kinds. Test rows come from the
   tags and are median-kind, label-observable only.
 - Schemes: `walkforward` for all model selection; `holdout` is sealed (one
-  evaluation per phase, via a dedicated script); `entity_holdout` and
+  look per cell via the dedicated script, further looks disclosed); `entity_holdout` and
   `random_kfold` are diagnostic-only, and `random_kfold` is deliberately
   leaky.
 - `sample_weight_{H}y` is passed as a native sample weight in every fit;
@@ -64,8 +64,11 @@ invariants below are this repo's equivalents.
    dataset. Any local re-splitting, shuffling, or "quick random holdout" is
    a leakage bug.
 2. **Never touch the sealed holdout during development.** It is evaluated
-   once per phase, by a dedicated script, and the result is logged whether
-   good or bad.
+   by a dedicated script, once per cell (label, horizon, holdout window),
+   and the result is logged whether good or bad. A further look on a
+   consumed cell needs `--reopen "reason"` and is then counted: every
+   report and the catalog say "holdout look k of N in this cell". Run it
+   when you would act on the model, never to choose between candidates.
 3. **Every run is reproducible:** dataset version + config + git SHA + seed
    are logged for every experiment, including abandoned ones.
 4. **No feature engineering.** New features are upstream changes. This repo
@@ -104,9 +107,10 @@ invariants below are this repo's equivalents.
   `reports/promoted/README.md`. A config's `note` is its one-line
   conclusion (outside the config hash).
 - Final evals take the selected walk-forward config directly
-  (`scripts/run_final_eval.py <config> --phase phaseN`; scheme switched
-  to holdout in memory). `--phase` is the roadmap phase, never an
-  experiment name — a new phase name re-opens the sealed holdout.
+  (`scripts/run_final_eval.py <config>`; scheme switched to holdout in
+  memory, no copied `*_holdout.toml`). There is no phase argument: the
+  cell is the unit, and `--reopen "reason"` is the only way to look
+  again.
 - Metrics of record: precision@K (with `conf_at_K`, the mean score of the
   picks), the precision-floor family (`n_at_prec_*`, `recall_at_prec_*`),
   Brier against `base_rate_brier` (the no-skill reference), calibration
@@ -143,6 +147,9 @@ invariants below are this repo's equivalents.
   it hosts the era probe and, when built, the leakage-gap experiment), or
   any read of `holdout` tags outside `scripts/run_final_eval.py`. A
   diagnostic's numbers are never model selection or reported performance.
+- A holdout number presented without its look count, or two candidates
+  for the same cell compared on their holdout numbers: the holdout has
+  become a validation set and its numbers are selection-biased.
 - Validation metrics dramatically above baseline: treat as suspected leakage
   first, breakthrough second. Check split application before celebrating.
 - Any comparison across experiments using different dataset versions.
@@ -172,3 +179,6 @@ invariants below are this repo's equivalents.
 - [ ] Calibration curve included if probabilities are used downstream.
 - [ ] Effective sample size (Σ `sample_weight_{H}y`) reported, and
       `split_folds.parquet` cited.
+- [ ] For a holdout number: the look count in its cell is stated
+      (`reports/final_evals.csv`); look 2 or later is read against the
+      earlier looks, not on its own.
