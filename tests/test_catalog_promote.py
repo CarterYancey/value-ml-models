@@ -253,3 +253,42 @@ def test_index_handles_legacy_promoted_dirs(tmp_path):
     index = (promoted / "README.md").read_text()
     assert "| [old](old/old.md) | label_2y_cagr_ge_0 · 2y · walkforward | decision_tree | 1.0 |" in index
     assert "[brief_only](brief_only/upstream_brief.md)" in index
+
+
+def test_promote_sweep_by_name_takes_summary_and_csvs_only(tmp_path):
+    reports = tmp_path / "reports"
+    sweep = reports / "sweeps" / "grid_3y"
+    sweep.mkdir(parents=True)
+    (sweep / "grid_3y_summary.md").write_text("# Sweep grid_3y\n")
+    (sweep / "grid_3y_summary.csv").write_text("a,b\n1,2\n")
+    (sweep / "grid_3y_summary_seeds.csv").write_text("a,b\n1,2\n")
+    (sweep / "run_one.md").write_text("# run\n")
+    (sweep / "run_one_calibration.png").write_bytes(b"png")
+    experiments = tmp_path / "experiments" / "sweeps"
+    experiments.mkdir(parents=True)
+    (experiments / "grid_3y.toml").write_text(
+        'name = "grid_3y"\ndataset_version = "dataset_v0.0-test"\n'
+        '[[cells]]\nlabel = "label_3y_beat_spy"\n[model]\nname = "decision_tree"\n'
+    )
+    assert promote._promotable(reports) == [sweep / "grid_3y_summary.md"]
+    dest = promote.promote(
+        "grid_3y", reports_dir=reports, note="ranks beat raw at every depth",
+        experiments_dir=tmp_path / "experiments",
+        results_path=tmp_path / "none.csv", git=False,
+    )
+    assert dest.name == "sweep_grid_3y"
+    names = {p.name for p in dest.iterdir()}
+    assert names == {"grid_3y_summary.md", "grid_3y_summary.csv",
+                     "grid_3y_summary_seeds.csv", "config.toml", "promoted.json"}
+    meta = json.loads((dest / "promoted.json").read_text())
+    assert meta["config_path"].endswith("sweeps/grid_3y.toml")
+    assert meta["note"] == "ranks beat raw at every depth"
+    assert 'note = "ranks beat raw at every depth"' in (experiments / "grid_3y.toml").read_text()
+    index = (reports / "promoted" / "README.md").read_text()
+    assert "[sweep_grid_3y](sweep_grid_3y/grid_3y_summary.md)" in index
+    # a per-run report inside the sweep promotes on its own, by path
+    dest2 = promote.promote(str(sweep / "run_one.md"), reports_dir=reports,
+                            experiments_dir=tmp_path / "experiments",
+                            results_path=tmp_path / "none.csv", git=False)
+    assert {p.name for p in dest2.iterdir()} == {
+        "run_one.md", "run_one_calibration.png", "promoted.json"}

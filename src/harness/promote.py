@@ -26,7 +26,7 @@ local results ledger.
 
 Usage:
     vml-promote tree_depth3_2y_cagr_ge_0 --note "depth 3 beats b2m by 0.25"
-    vml-promote reports/sweeps/grid/_summary.md   # a sweep summary, by path
+    vml-promote lgbm_random_search_3y             # a sweep, by its name
     vml-promote --list                            # what could be promoted
     vml-promote --index                           # rebuild the index only
 """
@@ -78,6 +78,11 @@ def _artifact_set(report_md: Path) -> list[Path]:
     return files
 
 
+def _is_sweep_summary(report_md: Path) -> bool:
+    return (report_md.name.endswith("_summary.md")
+            and report_md.parent.parent.name == "sweeps")
+
+
 def _resolve_report(target: str, reports_dir: Path) -> Path:
     p = Path(target)
     if p.suffix == ".md" and p.exists():
@@ -85,9 +90,12 @@ def _resolve_report(target: str, reports_dir: Path) -> Path:
     candidate = reports_dir / f"{target}.md"
     if candidate.exists():
         return candidate
+    sweep = reports_dir / "sweeps" / target / f"{target}_summary.md"
+    if sweep.exists():
+        return sweep
     raise SystemExit(
-        f"no report found for {target!r} (looked for {candidate} and a "
-        "literal .md path)"
+        f"no report found for {target!r} (looked for {candidate}, {sweep} "
+        "and a literal .md path)"
     )
 
 
@@ -100,7 +108,7 @@ def _promotable(reports_dir: Path) -> list[Path]:
         if p.name.endswith("_rules.md"):
             continue
         out.append(p)
-    out += sorted(reports_dir.glob("sweeps/*/_summary.md"))
+    out += sorted(reports_dir.glob("sweeps/*/*_summary.md"))
     return [p for p in out if promoted not in p.parents]
 
 
@@ -204,13 +212,17 @@ def promote(
     git: bool = True,
 ) -> Path:
     report_md = _resolve_report(target, reports_dir)
-    # sweep summaries promote the whole sweep directory name
-    if report_md.name == "_summary.md":
-        name = f"sweep_{report_md.parent.name}"
+    if _is_sweep_summary(report_md):
+        # a sweep promotes its summary (ranking, configurations-tried
+        # counts) and the summary CSVs, not the per-run reports: those are
+        # candidates, and a candidate worth keeping is promoted by its own
+        # report path
         lookup_name = report_md.parent.name
+        name = f"sweep_{lookup_name}"
+        stem = report_md.stem
         files = [report_md, *(
             p for p in sorted(report_md.parent.iterdir())
-            if p.is_file() and p != report_md
+            if p.is_file() and p != report_md and p.stem.startswith(stem)
         )]
     else:
         name = lookup_name = report_md.stem

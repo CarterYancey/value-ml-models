@@ -160,8 +160,10 @@ stay tracked). Only two kinds of evaluation output are tracked:
   outside the config hash), stages the config (`git add -f`) and the
   promoted directory, and regenerates `reports/promoted/README.md` — the
   index of everything promoted, with cell, headline vs. baseline and
-  note per row. Sweep summaries promote too
-  (`vml-promote reports/sweeps/<name>/_summary.md`); `vml-promote --list`
+  note per row. Sweeps promote too, by name
+  (`vml-promote <sweep-name>` takes the summary and its CSVs, not the
+  per-run reports — a candidate worth keeping is promoted by its own
+  report path, `vml-promote reports/sweeps/<sweep>/<run>.md`); `vml-promote --list`
   shows what could be promoted, `--index` rebuilds the index. Everything
   else can be deleted whenever it stops being useful — the results ledger
   keeps the trial accounting either way.
