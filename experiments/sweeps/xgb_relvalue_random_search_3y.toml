@@ -50,7 +50,7 @@ columns = ["dist_5y_high", "price_vs_5y_avg", "mom_36_12", "beta_12m"]
 
 [model]
 name = "xgboost"
-# device = "cuda"  # opt-in GPU training; hashes as a distinct config
+device = "cuda"  # opt-in GPU training; hashes as a distinct config
 
 [random]
 learning_rate = { low = 0.01, high = 0.2, log = true }

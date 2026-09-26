@@ -44,12 +44,6 @@ experiments/results.csv
 # Secrets
 .env
 
-# Profiler dumps and local scratch databases
-memray-*.bin
-memray-*.html
-*.duckdb
-/duckdb
-
 # Python
 __pycache__/
 *.py[cod]
