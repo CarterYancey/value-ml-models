@@ -8,7 +8,8 @@ invariants below are this repo's equivalents.
 
 ## Orientation
 
-- **README.md** — overview + setup/usage only.
+- **README.md** — overview + setup/usage only; extended explanations go
+  in `docs/` (experiments, workflow, deployment, backtesting, diagnostics).
 - **PLAN.md** — architecture, design principles, phase roadmap.
 - **TODO.md** — the live task list; update it as tasks complete or appear.
 - **data/*.md** — the dataset docs, from upstream:
@@ -47,7 +48,7 @@ invariants below are this repo's equivalents.
 - NULLs are meaningful (no filing, burn-in, structural gaps, rank guards).
   No global imputation; fold-internal only, and disclosed.
 - New binary targets are **label expressions** (`src/harness/derived_labels.py`,
-  README "Derived labels"), e.g. `fwd_3y_cagr >= 0.12`,
+  docs/experiments.md "Derived labels"), e.g. `fwd_3y_cagr >= 0.12`,
   `fwd_3y_excess_cagr > 0 & fwd_1y_max_drawdown_from_entry < 0.1`:
   row-wise thresholds over the manifest's `labels` columns (`&`, `|`,
   parentheses), evaluated by the loader; a mixed-horizon label runs
