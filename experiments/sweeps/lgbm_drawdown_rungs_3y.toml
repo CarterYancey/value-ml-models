@@ -1,0 +1,67 @@
+# Where does the drawdown rung bite? LightGBM over four derived cells
+# that share the return threshold and tighten the path constraint:
+#
+#   ≥ 10% CAGR                                 (the stored rung, as an
+#                                              expression — control)
+#   ≥ 10% CAGR & max drawdown from entry < 40%
+#   ≥ 10% CAGR & max drawdown from entry < 30%
+#   ≥ 10% CAGR & max drawdown from entry < 20%
+#
+# Each cell is its own ledger cell (the normalized expression string),
+# so the per-cell configurations-tried counts stay honest as the rung
+# moves. The base rate falls with the rung; the precision-floor family
+# (`n_at_prec_*`, `recall_at_prec_*`) is the comparison that survives
+# that, precision@K alone is not. Expect the era table to move most in
+# 2000–02 / 2008–09 (PLAN §4 Phase 2 crash slices): a tight entry
+# drawdown is close to "did not exist in the crash".
+#
+# min_dataset_version is stated once for the whole sweep and lands on
+# every expanded run. The label alone would need 1.3 (the first version
+# carrying `fwd_3y_max_drawdown_from_entry`); the feature axis — with
+# and without the v1.4 relative-value ranks, the first cut of that
+# family's ablation on a path cell — is what raises the floor to 1.4.
+#
+# Expanded: 4 cells x 2 feature sets x 3 class weights = 24 runs.
+# Run: vml-sweep experiments/sweeps/lgbm_drawdown_rungs_3y.toml
+name = "lgbm_drawdown_rungs_3y"
+dataset_version = "dataset_v1.4"
+min_dataset_version = "1.4"
+scheme = "walkforward"
+folds = "all"
+seeds = [7]
+top_k = [20, 50]
+precision_targets = [0.75, 0.9]
+rank_metric = "recall_at_prec_0.9"
+
+[[cells]]
+label = "fwd_3y_cagr >= 0.1"
+
+[[cells]]
+label = "fwd_3y_cagr >= 0.1 & fwd_3y_max_drawdown_from_entry < 0.4"
+
+[[cells]]
+label = "fwd_3y_cagr >= 0.1 & fwd_3y_max_drawdown_from_entry < 0.3"
+
+[[cells]]
+label = "fwd_3y_cagr >= 0.1 & fwd_3y_max_drawdown_from_entry < 0.2"
+
+[[features]]
+groups = ["ranks", "sector_ranks"]
+
+[[features]]
+groups = ["ranks", "sector_ranks"]
+families = ["ranks/relvalue"]
+
+[model]
+name = "lightgbm"
+n_estimators = 300
+learning_rate = 0.05
+num_leaves = 15
+min_child_samples = 60
+subsample = 0.8
+subsample_freq = 1
+colsample_bytree = 0.8
+reg_lambda = 1.0
+
+[grid]
+class_weight = [1.0, 0.5, 0.25]

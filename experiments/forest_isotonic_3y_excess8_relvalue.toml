@@ -1,0 +1,47 @@
+# Relative label at a custom rung: beat SPY by ≥ 8 pts CAGR over 3y.
+# The stored rungs are excess ≥ 5 and ≥ 10 (labels.md); 8 sits between
+# them and is a one-line derived label — `fwd_3y_excess_cagr >= 0.08` —
+# which is the era-neutral target this project prefers over absolute
+# thresholds (PLAN §2) and over any cross-sectional outcome rank
+# (deliberately not offered; see harness/derived_labels.py).
+#
+# Random forest, prequentially isotonic-calibrated (fold Y's scores
+# mapped through an isotonic fit on the pooled out-of-sample history of
+# folds < Y; no local split), so `thr_for_prec_*` reads as an honest
+# probability. class_weight is absent on purpose — weighted losses and
+# calibration pull in opposite directions; this config thresholds a
+# calibrated score instead of forcing precision in training.
+#
+# Feature selection shows the v1.4 additions through every route the
+# `[features]` table offers: the cross-sectional rank group, the new
+# `relvalue` family (all groups it appears in), the raw ADR 0019
+# long-window price anchors by column, and the distress score by
+# column — minus the two 5y-percentile shares whose median-ratio twin is
+# already in (the exclusion must remove something selected, so a typo
+# here is an error, not a silent no-op).
+# Run: vml-run experiments/forest_isotonic_3y_excess8_relvalue.toml
+dataset_version = "dataset_v1.4"
+min_dataset_version = "1.4"
+scheme = "walkforward"
+folds = "all"
+label = "fwd_3y_excess_cagr >= 0.08"
+seed = 7
+top_k = [20, 50]
+precision_targets = [0.75, 0.9]
+calibration = "isotonic"
+calibration_min_rows = 5000
+
+[features]
+groups = ["ranks"]
+families = ["relvalue"]
+columns = ["dist_5y_high", "price_vs_5y_avg", "mom_36_12", "ohlson_o"]
+exclude_columns = ["earnings_yield_5y_pctile", "fcf_yield_5y_pctile"]
+
+[model]
+name = "random_forest"
+n_estimators = 400
+max_depth = 10
+min_samples_leaf = 100
+max_features = 0.2
+max_samples = 0.6
+n_jobs = 8

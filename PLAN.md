@@ -186,10 +186,11 @@ within the invariants (no local splits, no feature engineering):
   Phase 2; here it becomes the default for the specialist models).
 - **Two-stage survival gating.** Stage 1: a "survival" model predicting
   the *absence* of catastrophe over the horizon; stage 2: the return
-  model ranks only the survivors. Needs upstream labels to do properly —
-  e.g. `label_{H}_max_drawdown_le_{X}` or a delisting/large-loss outcome
-  label — file the request upstream (never derived here). Until then an
-  approximation is `{H}y_cagr_ge_0` as the stage-1 target.
+  model ranks only the survivors. Upstream now ships the continuous
+  path outcomes `fwd_{H}_max_drawdown{,_from_entry}` (decision 0017);
+  the stage-1 target is a derived label thresholding them (e.g.
+  `fwd_3y_max_drawdown_from_entry < 0.3`) — a re-threshold of a stored
+  outcome, not a new computation from prices.
 - **Regime-conditional evaluation, not regime prediction.** Predicting
   crashes themselves (market timing) is out of scope; the models must be
   *robust to* crashes, not forecast them. If a market-state feature ever

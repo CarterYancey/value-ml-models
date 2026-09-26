@@ -501,14 +501,35 @@ slice. All within the invariants: no local splits, no derived features.
       cell for downturn models; sweep tree/forest/lgbm under regime
       emphasis and compare against the unemphasized winners on the
       crash-era table.
-- [ ] Two-stage survival gating: stage-1 survival model
-      (interim target: `label_{H}_cagr_ge_0` until upstream ships a
-      max-drawdown/catastrophe label), stage-2 return model ranks
-      survivors only; evaluate the gate's precision cost outside crashes.
-- [ ] Upstream requests to file: catastrophe/max-drawdown label
-      (`label_{H}_max_drawdown_le_X` or similar); point-in-time
-      market-state context features (drawdown-from-high, index vol) if
-      regime-conditional models ever need them.
+- [x] Derived labels: binary targets re-thresholded on the fly from the
+      manifest's continuous outcomes — `label = "fwd_3y_cagr >= 0.1 &
+      fwd_3y_max_drawdown_from_entry < 0.3"` — so new rungs never need
+      a dataset rebuild. (`src/harness/derived_labels.py`, evaluated by
+      `Dataset.frame`; row-wise only. A cross-sectional `cohort_pct`
+      rank was built and removed: a cohort peer's label window can
+      close up to a quarter after the row's own, eroding the embargo,
+      and `beat_spy` / `excess_cagr` thresholds already give an
+      era-neutral target. If ever wanted, it is an upstream label so
+      the purge can see it.)
+- [x] Recorded in data/versions.md: `dataset_v1.3` first ships
+      `fwd_{H}_max_drawdown{,_from_entry}` (upstream decision 0017);
+      drawdown-label configs set `min_dataset_version = "1.3"`.
+- [ ] Once drawdown configs exist: consider asking upstream to drop the
+      stored `label_{H}_cagr_ge_*` / `excess_ge_*` rungs (each is a
+      one-line expression now — `fwd_{H}_cagr >= 0.1` reproduces
+      `label_{H}_cagr_ge_10` exactly, tested). Existing configs name the
+      stored columns, so this is a breaking version: migrate their
+      labels to expressions first (the ledger cell name changes with it).
+- [ ] Two-stage survival gating: stage-1 survival model (target e.g.
+      `fwd_{H}_max_drawdown_from_entry < 0.3`, a derived label, now that
+      upstream ships the continuous drawdowns), stage-2 return model
+      ranks survivors only; evaluate the gate's precision cost outside
+      crashes.
+- [ ] Upstream requests to file: point-in-time market-state context
+      features (drawdown-from-high, index vol) if regime-conditional
+      models ever need them. (~~max-drawdown label~~ — shipped upstream
+      as continuous `fwd_{H}_max_drawdown{,_from_entry}`, decision 0017;
+      binaries are derived labels here.)
 
 ## Model families to explore (PLAN §8)
 

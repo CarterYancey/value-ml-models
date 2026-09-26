@@ -482,3 +482,18 @@ def test_multi_seed_sweep_reports_per_candidate(data_root, tmp_path):
     assert "| candidate " in md
     assert "recall_at_prec_0.5_mean" in md and "recall_at_prec_0.5_ci95_low" in md
     assert "only as good as its worst seed" in md
+
+
+def test_min_dataset_version_lands_on_every_run():
+    sweep = SweepConfig.from_dict(
+        _sweep_dict(dataset_version="dataset_v1.4", min_dataset_version="1.3")
+    )
+    runs = sweep.expand()
+    assert runs and all(r.config.min_dataset_version == "1.3" for r in runs)
+    # part of the sweep's identity: the derived name changes with it
+    without = SweepConfig.from_dict(_sweep_dict(dataset_version="dataset_v1.4"))
+    assert sweep.identity_hash != without.identity_hash
+    with pytest.raises(ConfigError, match="below this sweep's min_dataset_version"):
+        SweepConfig.from_dict(
+            _sweep_dict(dataset_version="dataset_v1.2", min_dataset_version="1.3")
+        )

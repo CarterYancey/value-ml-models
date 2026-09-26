@@ -11,6 +11,7 @@ Implements the contract in data/manual.md:
 from __future__ import annotations
 
 import json
+import operator
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
@@ -20,6 +21,11 @@ import numpy as np
 import pandas as pd
 import pyarrow.parquet as pq
 
+from harness.derived_labels import (
+    DerivedLabel,
+    is_derived_label,
+    parse_label_expression,
+)
 from harness.errors import (
     DatasetValidationError,
     DiagnosticSchemeError,
@@ -141,6 +147,56 @@ def _target_array(label: str, vals: pd.Series, target: str) -> np.ndarray:
     return arr.astype(bool)
 
 
+_COMPARE = {
+    ">=": operator.ge,
+    ">": operator.gt,
+    "<=": operator.le,
+    "<": operator.lt,
+    "==": operator.eq,
+    "!=": operator.ne,
+}
+
+
+def evaluate_derived_label(label: DerivedLabel, data: pd.DataFrame) -> pd.Series:
+    """A derived label's values over `data` (which must carry the source
+    columns): nullable boolean, NULL wherever any referenced column is
+    NULL — under `|` too (harness.derived_labels). Row-wise — a row's
+    label never depends on other rows."""
+    unobservable = pd.Series(False, index=data.index)
+    hits: dict[str, pd.Series] = {}
+    for cond in label.conditions:
+        col = data[cond.column]
+        unobservable |= col.isna()
+        observed = col.dropna()
+        if isinstance(cond.value, bool):
+            if not _is_boolean_values(observed):
+                raise DatasetValidationError(
+                    f"label expression {label.name!r}: {cond.column!r} is "
+                    "not a boolean column; compare it to a number"
+                )
+            vals = col.where(col.notna(), False).astype(bool)
+        else:
+            if len(observed) and _is_boolean_values(observed):
+                raise DatasetValidationError(
+                    f"label expression {label.name!r}: {cond.column!r} is "
+                    "a boolean column; compare it with == true / == false"
+                )
+            vals = pd.to_numeric(col, errors="raise").astype(float)
+        hit = _COMPARE[cond.op](vals, cond.value)
+        hits[cond.canonical()] = (
+            pd.Series(hit, index=data.index).fillna(False).astype(bool)
+        )
+    result = pd.Series(False, index=data.index)
+    for clause in label.clauses:
+        conj = pd.Series(True, index=data.index)
+        for cond in clause:
+            conj &= hits[cond.canonical()]
+        result |= conj
+    result = result.astype("boolean")
+    result[unobservable] = pd.NA
+    return result
+
+
 class Dataset:
     """A pinned, immutable `dataset_vX.Y` directory."""
 
@@ -219,23 +275,41 @@ class Dataset:
         """A column projection of dataset.parquet (snapshot key always
         included). Reads only the requested columns — the string-heavy
         metadata columns are what make full-width frames cost tens of
-        GB on real data — and caches per projection."""
+        GB on real data — and caches per projection.
+
+        A requested column may be a label expression
+        (harness.derived_labels): it is evaluated over the full dataset
+        from its manifest source columns and returned under the name
+        requested, so every caller that projects its label column gets
+        derived labels for free."""
         cols = tuple(dict.fromkeys(list(SNAPSHOT_KEY) + list(columns)))
         if cols in self._projections:
             return self._projections[cols]
-        if self._data is not None:  # already paid for the full load
-            projected = self._data[list(cols)]
+        derived = {c: self.derived_label(c) for c in cols if is_derived_label(c)}
+        if not derived:
+            projected = self._read_columns(cols)
         else:
-            try:
-                projected = pd.read_parquet(
-                    self.root / "dataset.parquet", columns=list(cols)
-                )
-            except (KeyError, ValueError) as exc:
-                raise DatasetValidationError(
-                    f"dataset.parquet lacks requested columns: {exc}"
-                ) from exc
+            stored = [c for c in cols if c not in derived]
+            extra = [c for spec in derived.values() for c in spec.source_columns]
+            base = self._read_columns(tuple(dict.fromkeys(stored + extra)))
+            projected = base[stored].copy()
+            for name, spec in derived.items():
+                projected[name] = evaluate_derived_label(spec, base)
+            projected = projected[list(cols)]
         self._projections[cols] = projected
         return projected
+
+    def _read_columns(self, cols: Sequence[str]) -> pd.DataFrame:
+        if self._data is not None:  # already paid for the full load
+            return self._data[list(cols)]
+        try:
+            return pd.read_parquet(
+                self.root / "dataset.parquet", columns=list(cols)
+            )
+        except (KeyError, ValueError) as exc:
+            raise DatasetValidationError(
+                f"dataset.parquet lacks requested columns: {exc}"
+            ) from exc
 
     @property
     def splits(self) -> pd.DataFrame:
@@ -410,6 +484,33 @@ class Dataset:
             cols += [c for c in family_group_columns(family, g) if c in present]
         return cols
 
+    def derived_label(self, expr: str) -> DerivedLabel:
+        """Parse a label expression and validate it against the manifest:
+        every column must be declared in the `labels` group (derived
+        labels re-threshold outcomes, never features) and its horizon
+        must be one this dataset carries."""
+        spec = parse_label_expression(expr)
+        labels = set(self.columns("labels"))
+        missing = [c for c in spec.source_columns if c not in labels]
+        if missing:
+            raise DatasetValidationError(
+                f"label expression {spec.name!r} references columns not in "
+                f"the {self.version} manifest labels group: {missing} (see "
+                "data/versions.md for which version provides them)"
+            )
+        self._check_horizon(spec.horizon_years)
+        return spec
+
+    def check_label(self, label: str) -> None:
+        """Refuse a label that is neither a manifest `labels` column nor
+        a valid label expression over them."""
+        if is_derived_label(label):
+            self.derived_label(label)
+        elif label not in self.columns("labels"):
+            raise DatasetValidationError(
+                f"label {label!r} is not in the manifest labels group"
+            )
+
     def sample_weight_column(self, horizon_years: int) -> str:
         """The `sample_weight_{H}y` column for a horizon, verified against
         the manifest's sample_weights group."""
@@ -573,9 +674,12 @@ class Dataset:
         """
         if target not in ("binary", "continuous"):
             raise ValueError(f"target must be 'binary' or 'continuous', got {target!r}")
-        if label not in self.columns("labels"):
+        self.check_label(label)
+        if label not in frame.columns:
             raise DatasetValidationError(
-                f"label {label!r} is not in the manifest labels group"
+                f"label {label!r} is not a column of the frame; project it "
+                "with Dataset.frame / apply_split(columns=...), which "
+                "evaluate label expressions"
             )
         labeled = frame[frame[label].notna()]
         w = self._weights_for(labeled, horizon_years)

@@ -345,14 +345,19 @@ def _refit_as_of_year(
     deployment training."""
     config = bundle.train_config
     cutoff = pd.Timestamp(year, 1, 1)
-    data = dataset.data
+    # column-projected: the refit needs features + label + weight, and a
+    # label expression (harness.derived_labels) is evaluated by `frame`
+    data = dataset.frame(
+        list(bundle.feature_columns)
+        + [config.label, dataset.sample_weight_column(config.horizon_years)]
+    )
     snapshot = pd.to_datetime(data["snapshot_date"])
     observable_by = (
         snapshot
         + pd.DateOffset(years=config.horizon_years)
         + pd.Timedelta(days=label_lag_days)
     )
-    eligible = data[observable_by <= cutoff]
+    eligible = data[(observable_by <= cutoff).to_numpy()]
     fit = dataset.fit_data(
         eligible,
         config.label,

@@ -48,6 +48,7 @@ FEATURE_FAMILIES: dict[str, tuple[str, ...]] = {
         "net_payout_yield",
         "ncav_to_marketcap",
         "ev_to_marketcap",
+        "magic_formula_score",  # v1.4, ADR 0020 (assembly-stage)
     ),
     "profitability": (
         "gp_to_assets",
@@ -87,6 +88,20 @@ FEATURE_FAMILIES: dict[str, tuple[str, ...]] = {
         "div_cuts_10y",
         "div_history_years_10y",
     ),
+    # v1.4, ADR 0018: each marketcap yield against the stock's own 20q
+    # history — `_vs_5y_median` (ranked) and `_5y_pctile` (raw only)
+    "relvalue": tuple(
+        f"{yield_}_{stat}"
+        for yield_ in (
+            "earnings_yield",
+            "ocf_yield",
+            "fcf_yield",
+            "sales_yield",
+            "book_to_market",
+            "tangible_book_to_market",
+        )
+        for stat in ("vs_5y_median", "5y_pctile")
+    ),
     "solvency": (
         "wc_to_assets",
         "retearn_to_assets",
@@ -109,6 +124,7 @@ FEATURE_FAMILIES: dict[str, tuple[str, ...]] = {
         "altman_z",
         "altman_z_dd",
         "zmijewski",
+        "ohlson_o",  # v1.4, ADR 0020
     ),
     "quality": (
         "dsri",
@@ -128,14 +144,34 @@ FEATURE_FAMILIES: dict[str, tuple[str, ...]] = {
         "roa_variability_3y",
         "revenue_growth_variability_3y",
         "mohanram_g7",
+    )
+    # v1.4, ADR 0020: the nine F-score signals as flags (NULL = unknown)
+    + tuple(
+        f"piotroski_{signal}"
+        for signal in (
+            "roa_positive",
+            "cfo_positive",
+            "roa_up",
+            "cfo_gt_ni",
+            "leverage_down",
+            "liquidity_up",
+            "no_issuance",
+            "margin_up",
+            "turnover_up",
+        )
     ),
     "technical": (
         "mom_12_2",
+        "mom_36_12",  # v1.4, ADR 0019
         "ret_6m",
         "ret_1m",
+        "max_ret_21d",  # v1.4, ADR 0019
         "vol_12m",
         "vol_36m",
+        "beta_12m",  # v1.4, ADR 0019
         "dist_52w_high",
+        "dist_5y_high",  # v1.4, ADR 0019
+        "price_vs_5y_avg",  # v1.4, ADR 0019
         "log_marketcap",
         "dollar_volume_3m",
         "amihud_12m",
