@@ -4,9 +4,20 @@ This script is the ONLY entry point that is granted FINAL_EVAL split
 access (CLAUDE.md hard invariant 2). Everything else in the repo —
 runner, baselines, notebooks — is structurally refused the holdout tags.
 
+Point it at the experiment config you selected on walk-forward: the
+same config is evaluated on the holdout scheme, in memory — no copied
+`*_holdout.toml`. (A config that already says `scheme = "holdout"` runs as
+written; the diagnostic schemes are refused.)
+
+`--phase` is the roadmap phase the evaluation concludes (PLAN.md §4:
+`phase1`, `phase2`, `phase3`, `phase3.5`, `phase4`), not a name for the
+experiment. The seal is one completed evaluation per (phase, cell), so a
+new phase name is a new look at the holdout — naming phases after
+experiments quietly turns the sealed set into a validation set.
+
 Discipline enforced here, as errors:
 
-- the config must use scheme = "holdout"; nothing else is a final eval;
+- the phase must be a roadmap phase (`phaseN` or `phaseN.M`);
 - one completed evaluation per (phase, dataset version, horizon, label):
   a consumed holdout cannot be re-sealed, so a second attempt is refused
   and the number you already have is the number you report;
@@ -15,14 +26,16 @@ Discipline enforced here, as errors:
   a result, not a do-over.
 
 Usage:
-    python scripts/run_final_eval.py experiments/<config>.toml --phase phase1
+    python scripts/run_final_eval.py experiments/<config>.toml --phase phase3
 """
 
 from __future__ import annotations
 
 import argparse
 import csv
+import re
 import sys
+from dataclasses import replace
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -54,8 +67,47 @@ LEDGER_FIELDS = [
 ]
 
 
+#: a roadmap phase (PLAN.md §4): phase1, phase2, phase3, phase3.5, phase4
+PHASE_PATTERN = re.compile(r"^phase\d+(\.\d+)?$")
+
+#: the one scheme a final eval may substitute for holdout
+SELECTION_SCHEME = "walkforward"
+
+
 class HoldoutAlreadyConsumedError(HarnessError):
     """A completed final eval already exists for this (phase, cell)."""
+
+
+class PhaseNameError(HarnessError):
+    """`--phase` is not a roadmap phase."""
+
+
+def check_phase(phase: str) -> str:
+    if not PHASE_PATTERN.match(phase):
+        raise PhaseNameError(
+            f"--phase {phase!r} is not a roadmap phase. The phase is the "
+            "PLAN.md §4 phase this evaluation concludes (phase1, phase2, "
+            "phase3, phase3.5, phase4), not the experiment's name: the seal "
+            "is one holdout evaluation per (phase, cell), so a fresh phase "
+            "name per experiment would re-open the holdout every time"
+        )
+    return phase
+
+
+def holdout_variant(config: ExperimentConfig) -> ExperimentConfig:
+    """The config as it is evaluated: a walk-forward selection config is
+    switched to the holdout scheme in memory (same name, so the report
+    and ledger rows carry the experiment's name; the config hash differs
+    because the scheme is part of it). Diagnostic schemes are refused."""
+    if config.scheme == "holdout":
+        return config
+    if config.scheme != SELECTION_SCHEME:
+        raise HarnessError(
+            f"final eval takes a {SELECTION_SCHEME!r} config (or one already "
+            f"on 'holdout'); {config.scheme!r} is a diagnostic scheme — "
+            "scripts/run_diagnostic.py"
+        )
+    return replace(config, scheme="holdout")
 
 
 def _load_ledger(path: Path) -> list[dict]:
@@ -84,12 +136,8 @@ def run_final_eval(
     reports_dir: str | Path = DEFAULT_FINAL_REPORTS,
     ledger_path: str | Path = DEFAULT_LEDGER,
 ) -> dict:
-    config = ExperimentConfig.from_file(config_path)
-    if config.scheme != "holdout":
-        raise HarnessError(
-            f"final eval requires scheme='holdout', config has "
-            f"{config.scheme!r}; walk-forward runs go through vml-run"
-        )
+    check_phase(phase)
+    config = holdout_variant(ExperimentConfig.from_file(config_path))
 
     ledger_path = Path(ledger_path)
     cell = (phase, config.dataset_version, str(config.horizon_years), config.label)
@@ -143,9 +191,15 @@ def run_final_eval(
 
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("config", help="experiments/*.toml with scheme='holdout'")
     parser.add_argument(
-        "--phase", required=True, help="phase this eval concludes, e.g. phase1"
+        "config",
+        help="the selected experiment's config (walkforward; evaluated on "
+        "holdout in memory) or a config with scheme='holdout'",
+    )
+    parser.add_argument(
+        "--phase", required=True,
+        help="the PLAN.md roadmap phase this eval concludes: phase1, "
+        "phase2, phase3, phase3.5, phase4 (one eval per phase per cell)",
     )
     parser.add_argument("--data-root", default=str(DEFAULT_DATA_ROOT))
     parser.add_argument("--results", default=str(DEFAULT_RESULTS))

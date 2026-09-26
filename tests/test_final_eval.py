@@ -12,6 +12,8 @@ from harness.errors import HarnessError  # noqa: E402
 from harness.results import ResultsStore  # noqa: E402
 from run_final_eval import (  # noqa: E402
     HoldoutAlreadyConsumedError,
+    PhaseNameError,
+    check_phase,
     run_final_eval,
 )
 
@@ -71,11 +73,53 @@ def test_final_eval_runs_holdout_once(data_root, tmp_path, holdout_config):
     assert summary2["status"] == "completed"
 
 
-def test_final_eval_refuses_non_holdout_scheme(data_root, tmp_path):
+def test_final_eval_takes_the_walkforward_config_directly(data_root, tmp_path):
+    """No copied *_holdout.toml: the selection config is evaluated on the
+    holdout scheme in memory, under its own name."""
     cfg = tmp_path / "cfg.toml"
     cfg.write_text(CONFIG.replace('scheme = "holdout"', 'scheme = "walkforward"'))
-    with pytest.raises(HarnessError, match="holdout"):
+    kwargs = _paths(tmp_path)
+    summary = run_final_eval(cfg, "phase1", data_root=data_root, **kwargs)
+    assert summary["status"] == "completed"
+    assert summary["folds"] == [2018]
+    store = ResultsStore(kwargs["results_path"]).load()
+    assert (store["scheme"] == "holdout").all()
+    assert (store["experiment"] == "final_tree_3y_beat_spy").all()
+    ledger = kwargs["ledger_path"].read_text()
+    assert "final_tree_3y_beat_spy" in ledger
+    # and the cell is consumed for the phase, whichever spelling asks
+    with pytest.raises(HoldoutAlreadyConsumedError):
+        run_final_eval(cfg, "phase1", data_root=data_root, **kwargs)
+    holdout_cfg = tmp_path / "holdout.toml"
+    holdout_cfg.write_text(CONFIG)
+    with pytest.raises(HoldoutAlreadyConsumedError):
+        run_final_eval(holdout_cfg, "phase1", data_root=data_root, **kwargs)
+
+
+def test_final_eval_refuses_diagnostic_schemes(data_root, tmp_path):
+    cfg = tmp_path / "cfg.toml"
+    cfg.write_text(
+        CONFIG.replace('scheme = "holdout"', 'scheme = "entity_holdout"')
+    )
+    with pytest.raises(HarnessError, match="diagnostic"):
         run_final_eval(cfg, "phase1", data_root=data_root, **_paths(tmp_path))
+    assert not _paths(tmp_path)["ledger_path"].exists()
+
+
+@pytest.mark.parametrize("phase", ["ex13", "phaseii", "tree_depth3", ""])
+def test_final_eval_refuses_non_roadmap_phase_names(
+    data_root, tmp_path, holdout_config, phase
+):
+    with pytest.raises(PhaseNameError, match="roadmap phase"):
+        run_final_eval(
+            holdout_config, phase, data_root=data_root, **_paths(tmp_path)
+        )
+    assert not _paths(tmp_path)["ledger_path"].exists()
+
+
+@pytest.mark.parametrize("phase", ["phase1", "phase3.5", "phase10"])
+def test_roadmap_phase_names_accepted(phase):
+    assert check_phase(phase) == phase
 
 
 def test_failed_final_eval_is_logged_but_does_not_consume(

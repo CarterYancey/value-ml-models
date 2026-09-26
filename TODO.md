@@ -272,6 +272,23 @@ in [PLAN.md](PLAN.md); check items off (and add new ones) as work proceeds.
       `experiments/*.toml` with the results ledger — answers "have I run
       this?", "what's closest to edit from?", "what did it score?"
       without grepping. (`harness/catalog.py`)
+- [x] Catalog answers "did it beat the baseline, and what did I learn?":
+      headline shown against the best baseline in the same cell with a
+      signed lift; listing grouped by cell and ranked by lift inside it
+      (no cross-label sort); `note` column from the config; `final_eval`
+      column from the sealed ledger; `★` for promoted; restricted
+      schemes flagged; portfolio configs listed as their own kind.
+- [x] Config hygiene: new `experiments/**/*.toml` are git-ignored; a
+      config earns tracking through `vml-promote <name> --note "..."`,
+      which snapshots the config into the promoted directory, writes the
+      note into the config (outside the hash), stages both (`git add -f`)
+      and regenerates the `reports/promoted/README.md` index.
+- [x] Final eval without a copied `*_holdout.toml`:
+      `scripts/run_final_eval.py` takes the selected walk-forward config
+      and switches the scheme in memory; `--phase` must be a roadmap
+      phase (`phaseN[.M]`) so the seal is not re-opened per experiment.
+- [ ] Backfill notes on the tracked sample configs (what each one
+      taught) so the catalog's `note` column is populated from day one.
 - [x] Upstream doc sync: `scripts/sync_data_docs.py` copies the dataset
       docs from the local `radarash-dataset` checkout, records upstream
       commit + file hashes in `data/upstream.json`; `--check` detects

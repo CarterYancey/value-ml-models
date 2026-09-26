@@ -6,6 +6,16 @@ data/**
 # provenance record for the synced upstream docs (scripts/sync_data_docs.py)
 !data/upstream.json
 
+# Experiment configs are working material by default: most get written,
+# run once and forgotten. New *.toml under experiments/ are therefore
+# ignored, so an untracked config is never a nagging decision. Configs
+# already tracked stay tracked (an ignore rule never affects tracked
+# files). A config earns tracking when its result is promoted:
+# `vml-promote <name>` stages it (`git add -f`) together with its report
+# — or `git add -f experiments/<config>.toml` by hand for a sample worth
+# keeping without a report.
+experiments/**/*.toml
+
 # Saved model bundles: binaries are artifacts; the provenance to
 # recreate them (config + results store + git SHA) is what's committed.
 experiments/models/
@@ -33,6 +43,12 @@ experiments/results.csv
 
 # Secrets
 .env
+
+# Profiler dumps and local scratch databases
+memray-*.bin
+memray-*.html
+*.duckdb
+/duckdb
 
 # Python
 __pycache__/

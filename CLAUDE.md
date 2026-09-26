@@ -96,7 +96,17 @@ invariants below are this repo's equivalents.
 - One experiment = one config file in `experiments/`; the harness runs
   configs, code never hardcodes an experiment. Before writing a new
   config, check `vml-experiments list` for an existing/closest one — the
-  catalog joins configs with the run ledger.
+  catalog joins configs with the run ledger, shows each headline against
+  the best baseline in its cell, and groups by cell (never a global
+  sort across labels). New configs are git-ignored until promoted: a
+  result worth keeping goes through `vml-promote <name> --note "..."`,
+  which stages report, config and note together and rebuilds
+  `reports/promoted/README.md`. A config's `note` is its one-line
+  conclusion (outside the config hash).
+- Final evals take the selected walk-forward config directly
+  (`scripts/run_final_eval.py <config> --phase phaseN`; scheme switched
+  to holdout in memory). `--phase` is the roadmap phase, never an
+  experiment name — a new phase name re-opens the sealed holdout.
 - Metrics of record: precision@K (with `conf_at_K`, the mean score of the
   picks), the precision-floor family (`n_at_prec_*`, `recall_at_prec_*`),
   Brier against `base_rate_brier` (the no-skill reference), calibration
