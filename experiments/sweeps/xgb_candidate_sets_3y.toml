@@ -1,0 +1,44 @@
+# Carry-forward of the Aug/Sep 2026 XGBoost search on 3y beat_spy
+# (docs/findings.md, "3y beat_spy: model families"), re-validated on
+# dataset_v1.4.
+#
+# The three sets are the best 3y beat_spy candidates of
+# xgb_search_cells_features_params (itself the top-5 of
+# xgb_random_search_3y re-run over 3 seeds), dataset_v1.1, feature set
+# fs0: set2 p@20 0.560 +/- 0.018, set0 0.552 +/- 0.005, set1 0.549 +/-
+# 0.008 (base rate 0.35). XGBoost matched the forests in 2005-12 but
+# fell to ~0.38 p@20 in 2013-20 where forests held ~0.49 — this sweep
+# checks whether that gap survives on v1.4, against
+# forest_candidate_sets_3y (same cell, features, seeds).
+#
+# Expanded: 1 cell x 1 feature set x 3 sets x 3 seeds = 9 runs.
+# Run: uv run vml-sweep experiments/sweeps/xgb_candidate_sets_3y.toml
+# (device = "cuda"; set device = "cpu" on a GPU-less machine — it hashes
+# as a distinct config.)
+name = "xgb_candidate_sets_3y"
+dataset_version = "dataset_v1.4"
+min_dataset_version = "1.4"
+scheme = "walkforward"
+folds = "all"
+seeds = [23, 232, 1776]
+top_k = [20, 50]
+precision_targets = [0.75, 0.9]
+rank_metric = "precision_at_20"
+
+sets = [
+  {class_weight = 0.1, colsample_bytree = 0.638389, gamma = 0.00994761,  learning_rate = 0.0113265, max_depth = 6, min_child_weight = 59.9175, n_estimators = 195, reg_alpha = 0.000140183, reg_lambda = 0.418799, subsample = 0.887142},  # set2
+  {class_weight = 0.5, colsample_bytree = 0.407286, gamma = 0.000106243, learning_rate = 0.0118662, max_depth = 8, min_child_weight = 89.3656, n_estimators = 556, reg_alpha = 0.436331,    reg_lambda = 21.3796,  subsample = 0.6872},    # set0
+  {class_weight = 0.5, colsample_bytree = 0.825382, gamma = 4.79144,     learning_rate = 0.126577,  max_depth = 6, min_child_weight = 5.09555, n_estimators = 274, reg_alpha = 4.30687,     reg_lambda = 0.235585, subsample = 0.920096},  # set1
+]
+
+[[cells]]
+label = "label_3y_beat_spy"
+
+[[features]]
+groups = ["ranks"]
+exclude_families = ["ranks/technical", "ranks/trend"]
+families = ["features/trend", "features/technical"]
+
+[model]
+name = "xgboost"
+device = "cuda"

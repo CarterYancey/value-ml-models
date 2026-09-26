@@ -1,0 +1,53 @@
+# Carry-forward of the Aug/Sep 2026 random-forest search on 3y beat_spy
+# (docs/findings.md, "3y beat_spy: model families"), re-validated on
+# dataset_v1.4.
+#
+# The six sets are the top candidates by seed-mean p@20 from
+# forest_random_search_3y-2seeds (r30, r48) and -2seeds2 (r7, r9, r10,
+# r14), all on dataset_v1.1 with 2-4 seeds each (p@20 0.577-0.589, all
+# within noise of one another; family mean 0.55, base rate 0.35). Their
+# common shape: shallow trees (max_depth 3-4, one outlier at 13), no
+# positive down-weighting (class_weight 1). Re-run here because:
+#   - v1.2 removed piotroski_f_rank / mohanram_g7_rank (era
+#     fingerprints) which the v1.1 runs used, and v1.4 adds relvalue and
+#     long-window price columns that the same families now pick up;
+#   - results across dataset versions are never compared.
+# The same feature spec (fs0) as xgb_candidate_sets_3y, so the two
+# families compare like for like.
+#
+# Expanded: 1 cell x 1 feature set x 6 sets x 3 seeds = 18 runs.
+# Before reading the summary, run the v1.4 baselines for this cell:
+#   uv run python scripts/run_baselines.py dataset_v1.4
+# Run: uv run vml-sweep experiments/sweeps/forest_candidate_sets_3y.toml
+name = "forest_candidate_sets_3y"
+dataset_version = "dataset_v1.4"
+min_dataset_version = "1.4"
+scheme = "walkforward"
+folds = "all"
+seeds = [23, 232, 1776]
+top_k = [20, 50]
+precision_targets = [0.75, 0.9]
+rank_metric = "precision_at_20"
+
+sets = [
+  {criterion = "gini",    max_depth = 3,  max_features = 0.914775, max_samples = 0.441152, min_samples_leaf = 248, n_estimators = 126},  # 2seeds r30
+  {criterion = "entropy", max_depth = 4,  max_features = 0.205191, max_samples = 0.663781, min_samples_leaf = 72,  n_estimators = 490},  # 2seeds r48
+  {criterion = "gini",    max_depth = 3,  max_features = 0.205,    max_samples = 1.0,      min_samples_leaf = 123, n_estimators = 133},  # 2seeds2 r7
+  {criterion = "entropy", max_depth = 3,  max_features = 0.504,    max_samples = 0.589,    min_samples_leaf = 38,  n_estimators = 407},  # 2seeds2 r9
+  {criterion = "entropy", max_depth = 3,  max_features = 0.408,    max_samples = 1.0,      min_samples_leaf = 133, n_estimators = 300},  # 2seeds2 r10
+  {criterion = "entropy", max_depth = 13, max_features = 0.205,    max_samples = 0.281,    min_samples_leaf = 173, n_estimators = 389},  # 2seeds2 r14
+]
+
+[[cells]]
+label = "label_3y_beat_spy"
+
+[[features]]
+groups = ["ranks"]
+exclude_families = ["ranks/technical", "ranks/trend"]
+families = ["features/trend", "features/technical"]
+
+[model]
+name = "random_forest"
+bootstrap = true
+class_weight = 1.0
+n_jobs = 8

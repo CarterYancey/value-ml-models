@@ -1,0 +1,14 @@
+{
+  "name": "forest_random_search_3y-2seeds__label_3y_beat_spy__r30__s23",
+  "promoted_utc": "2026-09-26T19:52:23+00:00",
+  "source_report": "reports/sweeps/forest_random_search_3y-2seeds/forest_random_search_3y-2seeds__label_3y_beat_spy__r30__s23.md",
+  "run_id": "3434648edf55",
+  "config_hash": "8179beb03d295321",
+  "git_sha": "e587a6697b9761cc80a5ed9f6c71a4b906cdf210",
+  "dataset_version": "1.1",
+  "config_path": "",
+  "note": "Era table for the lead forest candidate (v1.1): p@20 0.95 in 2005/07/08 but 0.15/0.10 in 2017/18; Brier worse than base_rate_brier in most years (scores uncalibrated)",
+  "files": [
+    "forest_random_search_3y-2seeds__label_3y_beat_spy__r30__s23.md"
+  ]
+}

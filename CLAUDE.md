@@ -12,6 +12,9 @@ invariants below are this repo's equivalents.
   in `docs/` (experiments, workflow, deployment, backtesting, diagnostics).
 - **PLAN.md** — architecture, design principles, phase roadmap.
 - **TODO.md** — the live task list; update it as tasks complete or appear.
+- **docs/findings.md** — the lab notebook: conclusions by cell, the holdout
+  record, and a dated log. Read it at the start of a session; add a log
+  entry (what ran, trial counts, what it showed, next) before ending one.
 - **data/*.md** — the dataset docs, from upstream:
   [manual.md](data/manual.md) (how to consume the dataset — start here),
   [dataset.md](data/dataset.md) (directory layout, column groups),

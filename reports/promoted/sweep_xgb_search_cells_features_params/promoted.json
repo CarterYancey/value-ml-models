@@ -1,0 +1,14 @@
+{
+  "name": "sweep_xgb_search_cells_features_params",
+  "promoted_utc": "2026-09-26T19:52:10+00:00",
+  "source_report": "reports/sweeps/xgb_search_cells_features_params/xgb_search_cells_features_params_summary.md",
+  "run_id": "",
+  "config_hash": "",
+  "git_sha": "",
+  "dataset_version": "dataset_v1.1",
+  "config_path": "experiments/sweeps/xgb_search_cells_features_params.toml",
+  "note": "v1.1: top-5 xgb_random_search_3y draws x 3 seeds x 1/2/3y beat_spy; best 3y set2 p@20 0.560 +/- 0.018; seed spread <= 0.02; carried forward as xgb_candidate_sets_3y",
+  "files": [
+    "xgb_search_cells_features_params_summary.md"
+  ]
+}

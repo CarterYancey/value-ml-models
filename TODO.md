@@ -298,6 +298,20 @@ in [PLAN.md](PLAN.md); check items off (and add new ones) as work proceeds.
       rows without a horizon (backtest / deployment).
 - [ ] Backfill notes on the tracked sample configs (what each one
       taught) so the catalog's `note` column is populated from day one.
+- [ ] Keep docs/findings.md current: a dated log entry per session
+      (what ran, trial counts, what it showed, what's next).
+- [ ] `vml-experiments sweeps` ranks rows on different metrics (p@10 /
+      p@20 / p@50) in one table — rank within one metric, or group by
+      it.
+- [ ] `vml-promote`'s own `git add` failed for every promotion on
+      2026-09-26 (manual staging worked; not reproducible afterwards) —
+      surface the git stderr instead of a bare "staging failed".
+- [ ] Guard against editing a sweep TOML after it has run: warn in
+      `vml-sweep` when `reports/sweeps/<name>/` already exists under a
+      different sweep identity hash (forest_random_search_3y drifted
+      from its own summary this way).
+- [ ] `lgbm_candidate_sets_3y.toml` is pinned to dataset_v1.0 and never
+      ran — re-pin to v1.4 or drop it.
 - [x] Upstream doc sync: `scripts/sync_data_docs.py` copies the dataset
       docs from the local `radarash-dataset` checkout, records upstream
       commit + file hashes in `data/upstream.json`; `--check` detects
@@ -457,10 +471,23 @@ in [PLAN.md](PLAN.md); check items off (and add new ones) as work proceeds.
       `experiments/sweeps/forest_random_search_3y.toml`, both with a
       `[[features]]` axis so the feature set is searched, not
       hand-picked)
-- [ ] Run the real searches against `dataset_v1.1`
+- [x] Run the real searches against `dataset_v1.1`
       (`lgbm_random_search_3y`, `forest_random_search_3y`, plus the
       grid exemplars), commit the summaries, and pick Phase-3
-      candidates for the sealed holdout.
+      candidates for the sealed holdout. (Aug–Sep 2026: forest, xgb,
+      lgbm and quantile-regressor searches on 3y beat_spy; conclusions
+      in docs/findings.md, summaries promoted.)
+- [ ] Run the v1.4 baselines (`scripts/run_baselines.py dataset_v1.4`)
+      — no v1.1/v1.4 cell has a same-version baseline yet.
+- [ ] Run the carry-forward sweeps on v1.4:
+      `forest_candidate_sets_3y` and `xgb_candidate_sets_3y` (same cell,
+      features, seeds); compare the family era slices, especially
+      2013–20 where forests led on v1.1. Pick one 3y beat_spy finalist
+      for the (unopened) 3y holdout.
+- [ ] Multi-seed the drawdown-compounder labels on v1.4
+      (`fwd_3y_cagr >= 0.1 & fwd_3y_max_drawdown < 0.3` and the
+      from-entry rungs) with forests as well as LightGBM — the most
+      promising new target (docs/findings.md).
 - [x] `[[sets]]` axis: whole parameter dictionaries taken as units (the
       top candidates of a wide search), crossed with cells, feature sets,
       `[grid]`, `[random]` and seeds; a parameter lives in exactly one of
@@ -472,9 +499,11 @@ in [PLAN.md](PLAN.md); check items off (and add new ones) as work proceeds.
       and per test year), summary ranked by the mean with the spread
       beside it (`_summary_seeds.csv`), per-seed run reports under
       `seeds/`. (`src/harness/seed_report.py`)
-- [ ] Seed-stability pass on the sweep winner (multi-seed `[[sets]]`
+- [x] Seed-stability pass on the sweep winner (multi-seed `[[sets]]`
       sweep over the top candidates; a config whose ranking collapses
-      across seeds is noise, not signal).
+      across seeds is noise, not signal). (v1.1: xgb spread ≤ 0.02 over
+      3 seeds; forest top candidates over 2–4 seeds within noise of one
+      another. The v1.4 re-run is the item above.)
 - [x] GPU opt-in for LightGBM: `device = "cuda"` (or legacy-OpenCL
       `"gpu"`) on `lightgbm`/`lightgbm_regressor`, passed through as
       LightGBM's `device_type`. Requires a CUDA build of lightgbm (the
@@ -590,9 +619,11 @@ slice. All within the invariants: no local splits, no derived features.
       fit diagnostics only — R²≈0 on stock returns is normal and says
       nothing about the top of the ranking, so neither is ever
       headlined. (`eval/metrics.regression_diagnostics`, `eval/era.py`)
-- [ ] Run the regression-reframe spike against `dataset_v1.1`
+- [x] Run the regression-reframe spike against `dataset_v1.1`
       (`lgbm_cagr_quantile_3y`) and compare its summary against the
       classification sweeps on the same eval cells before going further.
+      (Did not beat the classifiers: 0.44 pooled vs 0.47–0.55;
+      docs/findings.md.)
 - [ ] Deep learning goes through upstream first: sequence-shaped dataset
       variant (per-quarter point-in-time history per stock) is a
       prerequisite; do not flatten history locally (invariant 4). Then a

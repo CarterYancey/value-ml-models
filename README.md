@@ -78,6 +78,7 @@ uv run pytest
 
 | file | contents |
 |---|---|
+| [docs/findings.md](docs/findings.md) | **what the experiments have shown so far** (lab notebook: read first, log each session) |
 | [docs/experiments.md](docs/experiments.md) | config format, feature selection, derived label expressions, models, sweeps |
 | [docs/workflow.md](docs/workflow.md) | what is tracked, promotion, the experiment catalog, the sealed final eval |
 | [docs/deployment.md](docs/deployment.md) | deployment refits and `vml-predict` |
