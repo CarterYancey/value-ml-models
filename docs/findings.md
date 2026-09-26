@@ -182,6 +182,10 @@ what's next. Record trial counts, not just winners.
 - Promoted 7 results (see `reports/promoted/README.md`), including 2
   negatives.
 - Wrote `forest_candidate_sets_3y` / `xgb_candidate_sets_3y` (v1.4).
+- Cleared the working tree (archived outside the repo first): 87
+  untracked configs, unpromoted reports, walk-forward bundles and cached
+  refits. Kept: the ledger, the holdout record, promoted reports, tracked
+  configs, and the 16 deployment bundles.
 - Next: v1.4 baselines → both carry-forward sweeps → compare the family
   era slices → multi-seed the drawdown-compounder label with a v1.4
   baseline.
