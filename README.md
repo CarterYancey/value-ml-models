@@ -178,7 +178,20 @@ uv run vml-experiments list --model lightgbm --label beat_spy
 uv run vml-experiments list --sort path   # the flat, path-ordered view
 uv run vml-experiments runs            # ledger view: everything ever run
 uv run vml-experiments show <config-or-name>   # one config, its runs, its cell's baselines
+uv run vml-experiments sweeps --out reports/sweep_digest.md   # every sweep, digested
 ```
+
+`sweeps` reads every `reports/sweeps/*/*_summary.csv` and writes one
+markdown digest: per cell, the top runs across *all* sweeps (sweep,
+model, feature set as the sweep config describes it, swept params,
+metric, lift over the cell's best baseline) and a "what wins" list —
+the mean metric by value for the feature set, the model and each swept
+parameter (continuous random-search axes are binned into quartiles).
+It is pooled and selection-biased, so it ranks candidates and settles
+hyperparameters; it never reports a result. `--metric` picks the pooled
+metric (default `precision_at_20`, falling back to the row's headline),
+`--label` filters cells. Reading the digest beats reading thirty
+summaries, for you and for anyone you paste it to.
 
 The listing groups configs by *cell* (label · horizon · scheme · dataset
 version) — numbers across cells are not comparable, so there is no global

@@ -291,6 +291,11 @@ in [PLAN.md](PLAN.md); check items off (and add new ones) as work proceeds.
       v1.1–v1.4); a further look needs `--reopen "reason"` and is then
       counted in the report, the ledger and the catalog (`✓ look k/N`).
       Old `phase` ledgers migrate in place and their rows count as looks.
+- [x] Cross-sweep digest: `vml-experiments sweeps` flattens every sweep
+      summary CSV into one per-cell markdown (top runs across sweeps with
+      lift, "what wins" per feature set / model / swept parameter,
+      continuous axes quartile-binned). Fixed `runs` crashing on ledger
+      rows without a horizon (backtest / deployment).
 - [ ] Backfill notes on the tracked sample configs (what each one
       taught) so the catalog's `note` column is populated from day one.
 - [x] Upstream doc sync: `scripts/sync_data_docs.py` copies the dataset

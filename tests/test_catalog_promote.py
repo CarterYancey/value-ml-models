@@ -292,3 +292,81 @@ def test_promote_sweep_by_name_takes_summary_and_csvs_only(tmp_path):
                             results_path=tmp_path / "none.csv", git=False)
     assert {p.name for p in dest2.iterdir()} == {
         "run_one.md", "run_one_calibration.png", "promoted.json"}
+
+
+def test_runs_view_tolerates_rows_without_horizon(workspace, capsys, tmp_path):
+    """Backtest / deployment ledger rows carry no horizon (their cell has no
+    baselines); `runs` must list them rather than crash."""
+    import shutil
+    ledger = tmp_path / "results.csv"
+    shutil.copy(workspace["results"], ledger)
+    with open(ledger, "a") as fh:
+        fh.write("bt1,2026-09-01T00:00:00+00:00,completed,allprob,hb,"
+                 "experiments/portfolios/x.toml,dataset_v0.0-test,g,0,backtest,"
+                 ",,product,,,,,{},\n")
+    assert catalog.main(["--results", str(ledger), "runs"]) == 0
+    out = capsys.readouterr().out
+    assert "allprob" in out and "tree_d2_3y_beat_spy" in out
+
+
+def test_sweep_digest_ranks_across_sweeps_and_says_what_wins(
+    data_root, tmp_path, capsys
+):
+    from harness.sweep import SweepConfig, run_sweep
+    root = tmp_path
+    experiments = root / "experiments" / "sweeps"
+    experiments.mkdir(parents=True)
+    results = root / "results.csv"
+    reports = root / "reports"
+    base = {
+        "dataset_version": "dataset_v0.0-test", "scheme": "walkforward",
+        "folds": "all", "seeds": [3], "top_k": [5],
+        "cells": [{"horizon_years": 3, "label": "label_3y_beat_spy"}],
+        "model": {"name": "decision_tree", "min_weight_fraction_leaf": 0.02},
+        "grid": {"max_depth": [2, 3]},
+    }
+    for name, fs in (("sw_ranks", [{"groups": ["ranks"]}]),
+                     ("sw_both", [{"groups": ["ranks"]},
+                                  {"groups": ["ranks"], "exclude": ["earnings_yield_rank"]}])):
+        raw = {**base, "name": name, "feature_sets": fs}
+        lines = [f'name = "{name}"', 'dataset_version = "dataset_v0.0-test"',
+                 'scheme = "walkforward"', 'folds = "all"', "seeds = [3]",
+                 "top_k = [5]", "", "[[cells]]", "horizon_years = 3",
+                 'label = "label_3y_beat_spy"', "", "[model]",
+                 'name = "decision_tree"', "min_weight_fraction_leaf = 0.02",
+                 "", "[grid]", "max_depth = [2, 3]"]
+        for f in fs:
+            lines += ["", "[[feature_sets]]", f"groups = {json.dumps(f['groups'])}"]
+            if "exclude" in f:
+                lines.append(f"exclude = {json.dumps(f['exclude'])}")
+        (experiments / f"{name}.toml").write_text("\n".join(lines) + "\n")
+        run_sweep(SweepConfig.from_dict(raw), data_root=data_root,
+                  results_path=results, reports_dir=reports,
+                  sweep_config_path=f"experiments/sweeps/{name}.toml")
+    # a baseline in the cell, so lifts appear
+    run_experiment(ExperimentConfig.from_dict({
+        "name": "baseline_b2m_rank_3y_beat_spy",
+        "dataset_version": "dataset_v0.0-test", "scheme": "walkforward",
+        "horizon_years": 3, "label": "label_3y_beat_spy",
+        "feature_groups": ["ranks"], "seed": 7, "top_k": [5],
+        "model": {"name": "rank_factor", "rank_column": "book_to_market_rank"},
+    }), data_root=data_root, results_path=results, reports_dir=reports)
+
+    out_md = root / "digest.md"
+    assert catalog.main([
+        "--experiments-dir", str(root / "experiments"), "--results", str(results),
+        "sweeps", "--sweep-reports", str(reports / "sweeps"),
+        "--metric", "precision_at_5", "--out", str(out_md),
+    ]) == 0
+    text = out_md.read_text()
+    assert "## label_3y_beat_spy · 3y · dataset_v0.0-test" in text
+    assert "6 runs from 2 sweep(s)." in text  # 2 + 4 expanded runs
+    assert "Best baseline on `p@5`" in text
+    assert "| sw_ranks |" in text and "| sw_both |" in text
+    assert "ranks -1" in text  # the exclude feature set, described from the config
+    assert "- **max_depth**: " in text and "(n=3)" in text
+    assert "- **features**: " in text
+    # printed form when --out is absent
+    catalog.main(["--experiments-dir", str(root / "experiments"), "--results",
+                  str(results), "sweeps", "--sweep-reports", str(reports / "sweeps")])
+    assert "# Sweep digest" in capsys.readouterr().out
