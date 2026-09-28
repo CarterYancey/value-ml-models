@@ -526,14 +526,20 @@ in [PLAN.md](PLAN.md); check items off (and add new ones) as work proceeds.
 - [ ] Run `forest_feature_sets_dd_entry_3y` (30 runs, about 2.5
       hours): five feature sets against the all-ranks reference in
       the primary cell. Predictions in the config.
-- [ ] Report-only secondary outcomes for a run's top-K picks, per
+- [ ] Label screen: report-only outcomes of a run's top-K picks, per
       test year: hit rate on `label_3y_beat_spy`, mean and median
-      `fwd_3y_excess_cagr` and `fwd_3y_max_drawdown_from_entry`
-      (manifest label columns only; never model inputs; the trial
-      stays counted in the training label's cell). The common
-      yardstick for comparing labels, which lift over a cell's own
-      base rate is not. `eval_label` is refused for classifiers
-      today.
+      `fwd_3y_excess_cagr` and `fwd_3y_max_drawdown_from_entry`.
+      Extend the `fwd_at_K` mechanism (continuous-target runs only
+      today) to classifier configs that name outcome columns from
+      the manifest's label group; never model inputs; the trial
+      stays counted in the training label's cell. The quick stand-in
+      for the backtest, which is the yardstick of record.
+- [ ] Label-comparison backtest template
+      (`experiments/portfolios/`): one bundle, monthly top-K buy and
+      hold, fixed `cost_bps` and investability filter, SPY leg,
+      `[window] end = 2020-12-31`. Parameters fixed before the first
+      label runs; backtests counted as trials. Needs fold bundles on
+      `dataset_v1.4` (`vml-sweep --save-models`).
 - [ ] Label rungs around the primary cell on that yardstick: CAGR
       floor 0.08 / 0.10 / 0.15 x drawdown-from-entry cap 0.15 /
       0.20 / 0.30, one forest configuration, 3 seeds.

@@ -72,32 +72,53 @@ Track 1, the primary cell (from entry, cell B):
    standard error of a pooled p@20 is about 0.03, so pooled p@20
    alone picks noise.
 
-Track 2, which label:
+Track 2, which label. The question a label has to answer (Carter,
+2026-09-28): can a model that predicts it with high precision and
+calibration be used to build a manageable portfolio that beats the
+market? Lift over a cell's own base rate does not answer that and
+cannot compare labels. `vml-backtest` is the instrument that does;
+it is too heavy to run on every candidate, so it gets a screen in
+front of it.
 
-3. **A yardstick that is the same for every label.** Lift over a
-   cell's own base rate cannot compare labels. What can: score the
-   same top-20 picks against outcomes that do not depend on the
-   training label, that is the hit rate on `label_3y_beat_spy` and
+3. **Screen, on every run: outcomes of the picks.** For the top-K
+   picks of each test year, the hit rate on `label_3y_beat_spy` and
    the mean and median `fwd_3y_excess_cagr` and
-   `fwd_3y_max_drawdown_from_entry` of the picks, per test year.
-   This is evaluation over the manifest's label columns, not a new
-   feature or label. It needs a harness change (report-only
-   secondary outcomes; today `eval_label` is refused for
-   classifiers), and the trial stays counted in the training
-   label's cell. To be built before the label comparison, not
-   after.
-4. **Label rungs around cell B,** once step 3 exists: CAGR floor
+   `fwd_3y_max_drawdown_from_entry`. It is the no-cost,
+   equal-weight, hold-three-years version of the backtest, read off
+   the label columns. The mechanism exists for continuous-target
+   runs (`fwd_at_K`, `eval/era.py`); the change is to let a
+   classifier config name report-only outcome columns from the
+   manifest's label group. Never model inputs, and the trial stays
+   counted in the training label's cell.
+4. **Label rungs around cell B,** read on the screen: CAGR floor
    0.08 / 0.10 / 0.15 × drawdown-from-entry cap 0.15 / 0.20 / 0.30,
-   one forest configuration, 3 seeds, read on the common yardstick.
-   `lgbm_drawdown_rungs_3y` ran part of this grid on one seed and
-   could only be read on lift.
+   one forest configuration, 3 seeds. `lgbm_drawdown_rungs_3y` ran
+   part of this grid on one seed and could only be read on lift.
+5. **Backtest, for the two or three labels that pass the screen.**
+   One portfolio template, identical for every label except the
+   bundle: one model, buy the top K monthly, buy and hold, stated
+   `cost_bps`, a stated investability filter, SPY leg. Needs
+   walk-forward fold bundles (`vml-sweep --save-models`) on
+   `dataset_v1.4`; `prices_v1.0` is on disk (through 2026-08-21).
+   Backtests have run before on v1.1 only (19 ledger rows, August).
+   Rules for using it to choose a label:
+   - **Buys end 2020-12-31** (`[window] end`), the last walk-forward
+     test year. Trade years after it are served by refits and
+     overlap the sealed holdout era; the report already calls them
+     context. A label chosen on them has spent the holdout.
+   - **Every backtest is a trial.** The template's parameters (K,
+     costs, filter, weighting) are fixed before the first label is
+     run and the number of backtests run is reported with the
+     result. Tuning the strategy per label is a second search on
+     the same test years.
+   - **One path is one draw.** Read the per-year table and the
+     seeds' spread, not the final XIRR alone.
 
 Then, for the one candidate that comes out:
 
-5. **Calibration** (prequential, TODO Phase 3): forest Brier beats
+6. **Calibration** (prequential, TODO Phase 3): forest Brier beats
    `base_rate_brier` in 5–10 of 16 years in these cells.
-6. **One holdout look** in its cell, then the backtest with costs
-   and the investability filter. Not before steps 1–5.
+7. **One holdout look** in its cell. Not before steps 1–6.
 
 Evaluation gaps to close on the way (TODO): p@K counts test *rows*,
 and a stock has up to four median rows per test year, so 20 picks
