@@ -15,6 +15,8 @@ data/**
 # — or `git add -f experiments/<config>.toml` by hand for a sample worth
 # keeping without a report.
 experiments/**/*.toml
+# the run queue (docs/agents.md) is a to-do list, not a config
+!experiments/queue.toml
 
 # Saved model bundles: binaries are artifacts; the provenance to
 # recreate them (config + results store + git SHA) is what's committed.
@@ -40,6 +42,11 @@ reports/**
 # configurations-tried counts; promoted reports carry the number even
 # though the raw ledger stays local.
 experiments/results.csv
+# Ledger shards: what an agent's runs append to (VML_RESULTS), tracked
+# so the trials travel with its branch and survive its sandbox. Every
+# reader of the ledger reads them too (harness.results).
+!experiments/ledger/
+!experiments/ledger/*.csv
 
 # Secrets
 .env

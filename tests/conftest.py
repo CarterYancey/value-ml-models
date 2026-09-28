@@ -380,3 +380,12 @@ def wf_bundle_dir(data_root, tmp_path_factory) -> Path:
         models_dir=tmp / "models",
     )
     return Path(summary["model_bundle"])
+
+
+@pytest.fixture(autouse=True)
+def _isolated_ledger(monkeypatch):
+    """Tests read and write the ledger files they name, nothing else:
+    a machine set up for unattended runs (docs/agents.md) exports
+    VML_RESULTS and VML_LEDGER_READ, and a test must not see its ledger."""
+    monkeypatch.delenv("VML_RESULTS", raising=False)
+    monkeypatch.delenv("VML_LEDGER_READ", raising=False)

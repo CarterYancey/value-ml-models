@@ -129,7 +129,8 @@ def _target_array(label: str, vals: pd.Series, target: str) -> np.ndarray:
                 "train on the continuous outcome columns (fwd_*), with "
                 "the binary cell named in eval_label instead"
             )
-        return vals.to_numpy(dtype=float)
+        # copied for the same reason as the weights (_weights_for)
+        return np.array(vals.to_numpy(dtype=float), dtype=float, copy=True)
     if _is_boolean_values(vals):
         return vals.astype(bool).to_numpy()
     try:
@@ -777,4 +778,9 @@ class Dataset:
                 "upstream guarantees weights exactly where the label is "
                 "observable — refusing to fit"
             )
-        return w.to_numpy(dtype=float)
+        # a copy, never a view: a view keeps the whole block of the frame
+        # it was cut from alive for as long as anything holds the weights,
+        # and a fitted scikit-learn forest holds them (`_sample_weight`).
+        # With fold models kept for the bundle that was one training
+        # frame, about 1 GB, retained per fold: 18 GB over 16 folds.
+        return np.array(w.to_numpy(dtype=float), dtype=float, copy=True)

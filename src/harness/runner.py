@@ -39,7 +39,13 @@ from harness.dataset import Dataset, SplitAccess
 from harness.errors import ConfigError
 from harness.model_store import ModelBundle
 from harness.report import write_report
-from harness.results import ResultsStore, RunLog, git_sha, new_run_id
+from harness.results import (
+    ResultsStore,
+    RunLog,
+    default_results_path,
+    git_sha,
+    new_run_id,
+)
 from models.registry import (
     BASELINE_MODELS,
     build_model,
@@ -48,7 +54,7 @@ from models.registry import (
 )
 
 DEFAULT_DATA_ROOT = Path("data/datasets")
-DEFAULT_RESULTS = Path("experiments/results.csv")
+DEFAULT_RESULTS = default_results_path()
 DEFAULT_REPORTS = Path("reports")
 #: Where the CLI saves trained model bundles (git-ignored). Library
 #: callers opt in via run_experiment(models_dir=...).

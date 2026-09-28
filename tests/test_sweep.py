@@ -583,3 +583,49 @@ def test_note_does_not_change_a_sweep(data_root, tmp_path):
         r.config.config_hash for r in before.expand()
     ]
     _run_toml(path, data_root, tmp_path)  # not refused
+
+
+def test_resume_skips_completed_runs(data_root, tmp_path, monkeypatch):
+    """An interrupted sweep, run again with resume, runs only what is
+    missing and adds no duplicate trials to the ledger."""
+    import harness.sweep as sweep_module
+
+    sweep = SweepConfig.from_dict(_sweep_dict(name="resume_sweep"))
+    kwargs = dict(
+        data_root=data_root,
+        results_path=tmp_path / "results.csv",
+        reports_dir=tmp_path / "reports",
+    )
+    first = run_sweep(sweep, **kwargs)
+    assert first["n_failed"] == 0
+    rows_before = len(ResultsStore(kwargs["results_path"]).load())
+
+    # lose one run's record: that run, and only that run, is run again
+    records = sorted((tmp_path / "reports").rglob("*_result.json"))
+    assert len(records) == len(first["runs"])
+    lost = json.loads(records[0].read_text())["run"]
+    records[0].unlink()
+
+    ran = []
+    real = sweep_module.run_experiment
+
+    def spy(config, **kw):
+        ran.append(config.name)
+        return real(config, **kw)
+
+    monkeypatch.setattr(sweep_module, "run_experiment", spy)
+    second = run_sweep(sweep, resume=True, **kwargs)
+    assert ran == [lost]
+    assert second["n_failed"] == 0
+    rows_after = ResultsStore(kwargs["results_path"]).load()
+    per_run = rows_before // len(first["runs"])
+    assert len(rows_after) == rows_before + per_run
+
+    a = pd.read_csv(first["summary_csv"]).set_index("run").sort_index()
+    b = pd.read_csv(second["summary_csv"]).set_index("run").sort_index()
+    pd.testing.assert_frame_equal(a, b)
+
+    # without resume, everything runs again
+    ran.clear()
+    run_sweep(sweep, **kwargs)
+    assert len(ran) == len(first["runs"])

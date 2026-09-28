@@ -21,7 +21,9 @@ def _require_weights(sample_weight) -> np.ndarray:
             "fit called without sample weights; pass the horizon's "
             "sample_weight_{H}y"
         )
-    w = np.asarray(sample_weight, dtype=float)
+    # copied: estimators may keep the weights (scikit-learn forests
+    # do), and a view would keep its whole source frame alive with them
+    w = np.array(sample_weight, dtype=float, copy=True)
     if len(w) == 0 or np.isnan(w).any():
         raise MissingSampleWeightError("sample weights are empty or contain NaN")
     return w

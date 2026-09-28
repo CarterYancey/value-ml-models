@@ -298,8 +298,26 @@ in [PLAN.md](PLAN.md); check items off (and add new ones) as work proceeds.
       rows without a horizon (backtest / deployment).
 - [ ] Backfill notes on the tracked sample configs (what each one
       taught) so the catalog's `note` column is populated from day one.
-- [ ] Keep docs/findings.md current: a dated log entry per session
-      (what ran, trial counts, what it showed, what's next).
+- [x] Split the lab notebook (2026-09-28): `docs/logbook.md` (one
+      short entry per sweep, `vml-logbook`), `docs/findings.md`
+      (current state, under ~150 lines), `docs/notes/` (detail).
+- [x] Unattended runs (2026-09-28, docs/agents.md): run queue
+      (`vml-queue`, `experiments/queue.toml`), `vml-sweep --resume`
+      from per-run result records, ledger shards
+      (`experiments/ledger/`, `VML_RESULTS`, `VML_LEDGER_READ`),
+      checkpoints on `claude/` branches, and
+      `scripts/check_tracked_configs.py` with the `pr-hygiene`
+      workflow for pull requests.
+- [x] Forest runs needed ~18 GB: fitted fold models kept their
+      training frame alive through the stored sample weights. Weights
+      and targets are now copied (2026-09-28).
+- [ ] Carter: machine user and token, branch rulesets, sandbox
+      resources (docs/agents.md, "Setting up").
+- [ ] First unattended session end to end in a sandbox: queue, stub,
+      checkpoint, push from the machine account.
+- [ ] Decide what to do with the unpromoted configs the branch
+      carries (`python scripts/check_tracked_configs.py` lists 11):
+      promote, name in `experiments/KEEP`, or untrack with `--fix`.
 - [ ] `vml-experiments sweeps` ranks rows on different metrics (p@10 /
       p@20 / p@50) in one table — rank within one metric, or group by
       it.

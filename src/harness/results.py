@@ -6,12 +6,29 @@ trial-count ledger for PBO/deflation accounting. Rows are never rewritten.
 A run's per-fold rows are `completed` rows, so they are written only once
 every fold has finished (`RunLog`): a run that stops part-way leaves one
 `failed` row and no fold rows.
+
+One ledger, several files. The ledger a machine writes to is one file
+(`experiments/results.csv` by default, git-ignored and local), but a
+run made elsewhere is a trial all the same: an agent in a sandbox
+writes to its own tracked *shard*, `experiments/ledger/<name>.csv`, so
+its rows travel with its branch and survive the sandbox. Every reader
+sees the union:
+
+- the file the store was opened on;
+- its family: `results.csv` and every `ledger/*.csv` beside it;
+- any file named in `VML_LEDGER_READ` (paths separated by `:`), for a
+  ledger that lives outside the checkout, e.g. the host's, mounted
+  read-only in a clone-mode sandbox.
+
+Rows present in more than one file count once. `VML_RESULTS` names the
+file to write to when no `--results` is given.
 """
 
 from __future__ import annotations
 
 import csv
 import json
+import os
 import subprocess
 import uuid
 from datetime import datetime, timezone
@@ -40,6 +57,19 @@ FIELDS = [
     "metrics_json",
     "error",
 ]
+
+
+#: where a machine's own ledger lives unless `VML_RESULTS` says otherwise
+LOCAL_LEDGER = Path("experiments/results.csv")
+
+#: directory of tracked ledger shards, beside the local ledger
+SHARD_DIR = "ledger"
+
+
+def default_results_path() -> Path:
+    """The ledger file runs write to by default: `VML_RESULTS` when
+    set (an agent's shard), else the local ledger."""
+    return Path(os.environ.get("VML_RESULTS") or LOCAL_LEDGER)
 
 
 def git_sha(repo_root: str | Path | None = None) -> str:
@@ -87,10 +117,43 @@ class ResultsStore:
                 writer.writeheader()
             writer.writerow(record)
 
+    def ledger_files(self) -> list[Path]:
+        """Every file this store reads, its own first (see the module
+        docstring): the family around `self.path`, then the files named
+        in `VML_LEDGER_READ`. Missing files are skipped."""
+        if self.path.parent.name == SHARD_DIR:
+            root, shard_dir = self.path.parent.parent, self.path.parent
+        else:
+            root, shard_dir = self.path.parent, self.path.parent / SHARD_DIR
+        family = [root / LOCAL_LEDGER.name, *sorted(shard_dir.glob("*.csv"))]
+        extra = [
+            Path(p)
+            for p in os.environ.get("VML_LEDGER_READ", "").split(os.pathsep)
+            if p
+        ]
+        files: list[Path] = []
+        seen: set[Path] = set()
+        for f in [self.path, *family, *extra]:
+            key = f.resolve()
+            if key not in seen and f.exists():
+                seen.add(key)
+                files.append(f)
+        return files
+
     def load(self) -> pd.DataFrame:
-        if not self.path.exists():
+        files = self.ledger_files()
+        if not files:
             return pd.DataFrame(columns=FIELDS)
-        return pd.read_csv(self.path, dtype=str, keep_default_na=False)
+        frames = [
+            pd.read_csv(f, dtype=str, keep_default_na=False) for f in files
+        ]
+        if len(frames) == 1:
+            return frames[0]
+        # the same rows can sit in two files (a shard merged into a
+        # local ledger, a host ledger that was also fetched): once each
+        return pd.concat(frames, ignore_index=True).drop_duplicates(
+            ignore_index=True
+        )
 
     def configurations_tried(
         self, dataset_version: str, scheme: str, horizon_years: int, label: str

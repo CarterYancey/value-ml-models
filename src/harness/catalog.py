@@ -37,11 +37,11 @@ import pandas as pd
 
 from harness.config import ExperimentConfig
 from harness.errors import ConfigError
-from harness.results import ResultsStore
+from harness.results import ResultsStore, default_results_path
 from models.registry import BASELINE_MODELS
 
 DEFAULT_EXPERIMENTS = Path("experiments")
-DEFAULT_RESULTS = Path("experiments/results.csv")
+DEFAULT_RESULTS = default_results_path()
 DEFAULT_FINAL_EVALS = Path("reports/final_evals.csv")
 DEFAULT_PROMOTED = Path("reports/promoted")
 

@@ -71,3 +71,34 @@ def test_manifest_effective_rows_cross_check(dataset_dir):
     assert total is not None
     weights = ds.data["sample_weight_3y"]
     assert weights.sum() == pytest.approx(total)
+
+
+def test_fit_arrays_do_not_pin_the_frame(dataset_dir):
+    """Weights and targets handed to a fit are copies. A view keeps the
+    block of the frame it was cut from alive for as long as the fitted
+    model holds it: about 1 GB per walk-forward fold on real data, which
+    is what made 16-fold forest runs need 18 GB."""
+    from harness.dataset import Dataset, SplitAccess
+
+    ds = Dataset(dataset_dir)
+    cols = ds.feature_columns(["ranks"])
+    split = ds.apply_split(
+        "walkforward", ds.folds("walkforward", 3)[0], 3,
+        access=SplitAccess.STANDARD,
+        columns=cols + ["label_3y_beat_spy", "fwd_3y_cagr", "sample_weight_3y"],
+    )
+    binary = ds.fit_data(split.train, "label_3y_beat_spy", cols, 3)
+    continuous = ds.fit_data(
+        split.train, "fwd_3y_cagr", cols, 3, target="continuous"
+    )
+    import numpy as np
+
+    blocks = [
+        split.train[c].to_numpy()
+        for c in ("sample_weight_3y", "fwd_3y_cagr", "label_3y_beat_spy")
+    ]
+    for arr in (binary.sample_weight, binary.y, continuous.sample_weight,
+                continuous.y):
+        assert not any(np.shares_memory(arr, b) for b in blocks)
+    # and the weights are their own array, not a slice of anything
+    assert binary.sample_weight.flags.owndata

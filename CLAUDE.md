@@ -12,9 +12,16 @@ invariants below are this repo's equivalents.
   in `docs/` (experiments, workflow, deployment, backtesting, diagnostics).
 - **PLAN.md** — architecture, design principles, phase roadmap.
 - **TODO.md** — the live task list; update it as tasks complete or appear.
-- **docs/findings.md** — the lab notebook: conclusions by cell, the holdout
-  record, and a dated log. Read it at the start of a session; add a log
-  entry (what ran, trial counts, what it showed, next) before ending one.
+- **docs/logbook.md** — what was done, newest first, one short entry
+  per sweep (did / got / concluded / next). Read it at the start of a
+  session; add an entry with `vml-logbook add` for every sweep read,
+  failures included, before starting the next thing.
+- **docs/findings.md** — what is known now, by cell, the holdout
+  record and the plan. Rewritten, not appended to, and kept under
+  about 150 lines: tables and reasoning go in a note under
+  `docs/notes/` that the logbook entry links to.
+- **docs/agents.md** — how an unattended session works (the run queue,
+  checkpoints, stop rules, lab branches) and what it needs set up.
 - **data/*.md** — the dataset docs, from upstream:
   [manual.md](data/manual.md) (how to consume the dataset — start here),
   [dataset.md](data/dataset.md) (directory layout, column groups),

@@ -922,6 +922,7 @@ def run_sweep(
     reports_dir: str | Path = DEFAULT_REPORTS,
     sweep_config_path: str = "",
     models_dir: str | Path | None = None,
+    resume: bool = False,
 ) -> dict:
     """Run every expanded config; one run failing never stops the sweep.
 
@@ -929,6 +930,14 @@ def run_sweep(
     Path, "n_failed": int}. Each run is logged to the results store by
     `run_experiment` itself (completed or failed), so the trial ledger
     sees the whole sweep regardless of what this function returns.
+
+    Every completed run leaves a result record beside its report
+    (`<run>_result.json`: config hash, run id, pooled and per-fold
+    metrics). With `resume`, a run whose record is there and carries
+    the run's config hash is not run again: its numbers are read back,
+    so a sweep that died (an OOM kill, a lost sandbox) costs the run
+    that was in flight and nothing else, and adds no duplicate trials
+    to the ledger. Failed runs leave no record and are run again.
     """
     runs = sweep.expand()
     sweep_reports = Path(reports_dir) / "sweeps" / sweep.name
@@ -939,7 +948,13 @@ def run_sweep(
     run_reports = sweep_reports / "seeds" if multi_seed else sweep_reports
     outcomes: list[dict] = []
     for i, run in enumerate(runs, start=1):
-        print(f"[{i}/{len(runs)}] {run.config.name}{_peak_rss_note()}")
+        record_path = run_reports / f"{run.config.name}_result.json"
+        done = _read_run_record(record_path, run) if resume else None
+        print(
+            f"[{i}/{len(runs)}] {run.config.name}"
+            + (" (resumed: already run)" if done else _peak_rss_note()),
+            flush=True,
+        )
         outcome = {
             "run": run.config.name,
             "candidate": run.candidate or run.config.name,
@@ -955,6 +970,10 @@ def run_sweep(
             "sampled_params": run.sampled_params,
             "config_hash": run.config.config_hash,
         }
+        if done is not None:
+            outcome.update(done)
+            outcomes.append(outcome)
+            continue
         try:
             summary = run_experiment(
                 run.config,
@@ -977,6 +996,7 @@ def run_sweep(
                     fr["fold"]: fr["metrics"] for fr in summary["fold_results"]
                 },
             )
+            _write_run_record(record_path, outcome)
         except Exception as exc:
             traceback.print_exc()
             outcome.update(
@@ -1005,6 +1025,49 @@ def run_sweep(
         "summary_csv": summary_csv,
         "summary_seeds_csv": seeds_csv,
         "n_failed": sum(1 for o in outcomes if o["status"] == "failed"),
+    }
+
+
+_RECORD_KEYS = ("status", "run_id", "report_path", "pooled_metrics", "fold_metrics")
+
+
+def _write_run_record(path: Path, outcome: dict) -> None:
+    """A completed run's result record, what `resume` reads back."""
+    record = {
+        "run": outcome["run"],
+        "config_hash": outcome["config_hash"],
+        **{k: outcome[k] for k in _RECORD_KEYS},
+    }
+    record["report_path"] = str(record["report_path"])
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_suffix(".json.tmp")
+    tmp.write_text(json.dumps(record, indent=1, sort_keys=True) + "\n")
+    tmp.replace(path)  # never a half-written record
+
+
+def _read_run_record(path: Path, run: "SweepRun") -> dict | None:
+    """The outcome fields of a run that already completed under this
+    exact config, or None (no record, unreadable, or another config's:
+    then the run is simply run)."""
+    try:
+        record = json.loads(path.read_text())
+    except (OSError, ValueError):
+        return None
+    if (
+        record.get("config_hash") != run.config.config_hash
+        or record.get("status") != "completed"
+    ):
+        return None
+    return {
+        "status": "completed",
+        "run_id": record["run_id"],
+        "report_path": Path(record["report_path"]),
+        "pooled_metrics": record["pooled_metrics"],
+        # JSON object keys are strings; folds are ints
+        "fold_metrics": {
+            int(fold): m for fold, m in record["fold_metrics"].items()
+        },
+        "resumed": True,
     }
 
 
@@ -1303,6 +1366,13 @@ def _main(argv=None) -> int:
         action="store_true",
         help="print the expanded run names and exit without training",
     )
+    parser.add_argument(
+        "--resume",
+        action="store_true",
+        help="skip runs that already completed under the same config "
+        "(their result records sit beside their reports) and run the "
+        "rest; for a sweep that was interrupted",
+    )
     args = parser.parse_args(argv)
     try:
         sweep = SweepConfig.from_file(args.config)
@@ -1317,6 +1387,7 @@ def _main(argv=None) -> int:
             reports_dir=args.reports_dir,
             sweep_config_path=str(args.config),
             models_dir=args.save_models,
+            resume=args.resume,
         )
     except Exception:
         traceback.print_exc()
