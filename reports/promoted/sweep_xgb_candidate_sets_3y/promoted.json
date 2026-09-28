@@ -1,0 +1,14 @@
+{
+  "name": "sweep_xgb_candidate_sets_3y",
+  "promoted_utc": "2026-09-27T23:36:19+00:00",
+  "source_report": "reports/sweeps/xgb_candidate_sets_3y/xgb_candidate_sets_3y_summary.md",
+  "run_id": "",
+  "config_hash": "",
+  "git_sha": "",
+  "dataset_version": "dataset_v1.4",
+  "config_path": "experiments/sweeps/xgb_candidate_sets_3y.toml",
+  "note": "NEGATIVE, v1.4 3y beat_spy: the three v1.1 xgb winners score p@20 0.36-0.38 over 3 seeds (v1.1: 0.55-0.56), at the random baseline (0.39); 0.54 in 2005-12, 0.20 in 2013-20 vs base 0.29; PR-AUC equals the forests' (0.41)",
+  "files": [
+    "xgb_candidate_sets_3y_summary.md"
+  ]
+}

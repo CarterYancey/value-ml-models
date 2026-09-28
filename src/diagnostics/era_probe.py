@@ -67,7 +67,7 @@ from harness.config import (
 )
 from harness.dataset import DIAGNOSTIC_SCHEMES, Dataset, SplitAccess
 from harness.errors import ConfigError, DiagnosticSchemeError
-from harness.results import ResultsStore, git_sha, new_run_id
+from harness.results import ResultsStore, RunLog, git_sha, new_run_id
 from harness.runner import DEFAULT_DATA_ROOT, DEFAULT_RESULTS
 
 #: Pseudo-label the probe logs under in the results store. Ledger queries
@@ -389,6 +389,7 @@ def run_era_probe(
         "label": SNAPSHOT_YEAR_LABEL,
         "model": config.model_name,
     }
+    run_log = RunLog(store, base_row)
     try:
         dataset = Dataset(Path(data_root) / config.dataset_version)
         config.check_dataset_version(dataset.version)
@@ -414,6 +415,7 @@ def run_era_probe(
         importance_kind = "impurity"
         fold_rules: list[tuple[int, str]] = []
         last_tree: tuple[int, DecisionTreeClassifier, list[str]] | None = None
+        run_log.n_folds = len(folds)
         for fold in folds:
             split = dataset.apply_split(
                 config.scheme, fold, config.horizon_years, access=access
@@ -476,10 +478,8 @@ def run_era_probe(
                     ))
                 )
                 last_tree = (fold, estimator, names)
-            store.append(
+            run_log.fold_done(
                 {
-                    **base_row,
-                    "status": "completed",
                     "fold": fold,
                     "n_train_rows": len(X_train),
                     "effective_train_size": f"{float(w_train.sum()):.4f}",
@@ -487,6 +487,7 @@ def run_era_probe(
                     "metrics_json": metrics,
                 }
             )
+        run_log.commit()
 
         # ------------------------------------------------ pooled view
         # each test row belongs to exactly one fold, so pooling is a
@@ -575,14 +576,10 @@ def run_era_probe(
             "report_path": report_path,
             "artifacts": artifacts,
         }
-    except Exception as exc:
-        store.append(
-            {
-                **base_row,
-                "status": "failed",
-                "error": f"{type(exc).__name__}: {exc}",
-            }
-        )
+    except BaseException as exc:
+        # BaseException: Ctrl-C and SystemExit stop a run too, and a
+        # stopped run is a failed trial, not a shorter completed one
+        run_log.fail(exc)
         raise
 
 

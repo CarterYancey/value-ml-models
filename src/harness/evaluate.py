@@ -30,7 +30,7 @@ from harness.config import EvalConfig
 from harness.dataset import Dataset, SplitAccess
 from harness.errors import DatasetValidationError
 from harness.model_store import ModelBundle
-from harness.results import ResultsStore, git_sha, new_run_id
+from harness.results import ResultsStore, RunLog, git_sha, new_run_id
 from harness.runner import (
     DEFAULT_DATA_ROOT,
     DEFAULT_REPORTS,
@@ -81,6 +81,7 @@ def evaluate_bundle(
         "label": config.eval_label or config.label,
         "model": config.model_name,
     }
+    run_log = RunLog(store, base_row)
 
     try:
         # Loaded from the directory the bundle was trained on
@@ -119,6 +120,7 @@ def evaluate_bundle(
                 + [dataset.sample_weight_column(config.horizon_years)]
             )
         )
+        run_log.n_folds = len(bundle.folds)
         for fold in bundle.folds:
             split = dataset.apply_split(
                 config.scheme, fold, config.horizon_years,
@@ -179,10 +181,8 @@ def evaluate_bundle(
             )
             if calib is not None:
                 calib.observe(raw_scores, test_fit.y, test_fit.sample_weight)
-            store.append(
+            run_log.fold_done(
                 {
-                    **base_row,
-                    "status": "completed",
                     "fold": fold,
                     "n_train_rows": stats["n_train_rows"],
                     "effective_train_size": (
@@ -192,6 +192,7 @@ def evaluate_bundle(
                     "metrics_json": metrics,
                 }
             )
+        run_log.commit()
 
         report_path, configurations_tried = finalize_run(
             config=config,
@@ -225,14 +226,10 @@ def evaluate_bundle(
             "source_bundle": Path(bundle_dir),
             "train_run_id": bundle.run_id,
         }
-    except Exception as exc:
-        store.append(
-            {
-                **base_row,
-                "status": "failed",
-                "error": f"{type(exc).__name__}: {exc}",
-            }
-        )
+    except BaseException as exc:
+        # BaseException: Ctrl-C and SystemExit stop a run too, and a
+        # stopped run is a failed trial, not a shorter completed one
+        run_log.fail(exc)
         raise
 
 

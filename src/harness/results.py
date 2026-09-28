@@ -2,6 +2,10 @@
 
 Every run appends — completed, failed, or abandoned — so the store is the
 trial-count ledger for PBO/deflation accounting. Rows are never rewritten.
+
+A run's per-fold rows are `completed` rows, so they are written only once
+every fold has finished (`RunLog`): a run that stops part-way leaves one
+`failed` row and no fold rows.
 """
 
 from __future__ import annotations
@@ -56,6 +60,10 @@ def new_run_id() -> str:
     return uuid.uuid4().hex[:12]
 
 
+def utc_now() -> str:
+    return datetime.now(timezone.utc).isoformat(timespec="seconds")
+
+
 class ResultsStore:
     def __init__(self, path: str | Path):
         self.path = Path(path)
@@ -67,9 +75,7 @@ class ResultsStore:
         record = {f: row.get(f, "") for f in FIELDS}
         record.setdefault("logged_utc", "")
         if not record["logged_utc"]:
-            record["logged_utc"] = datetime.now(timezone.utc).isoformat(
-                timespec="seconds"
-            )
+            record["logged_utc"] = utc_now()
         if isinstance(record["metrics_json"], dict):
             record["metrics_json"] = json.dumps(record["metrics_json"],
                                                 sort_keys=True)
@@ -141,3 +147,48 @@ class ResultsStore:
                 }
             )
         return pd.DataFrame(rows)
+
+
+class RunLog:
+    """One run's rows, held back until the run's folds have all finished.
+
+    Fold rows carry `status = "completed"`, and every reader takes that
+    to mean the run completed. Writing them as each fold finishes leaves
+    a stopped run looking like a finished one with fewer folds, so they
+    are collected here and written by `commit()` after the last fold.
+    `fail()` writes the run's single `failed` row instead and drops the
+    collected fold rows."""
+
+    def __init__(self, store: ResultsStore, base_row: dict, n_folds: int = 0):
+        self.store = store
+        self.base_row = dict(base_row)
+        self.n_folds = n_folds
+        self._fold_rows: list[dict] = []
+        self._committed = False
+
+    def fold_done(self, row: dict) -> None:
+        # stamped now, not at commit: per-fold timing stays readable
+        self._fold_rows.append(
+            {
+                **self.base_row,
+                "status": "completed",
+                "logged_utc": utc_now(),
+                **row,
+            }
+        )
+
+    def commit(self) -> None:
+        for row in self._fold_rows:
+            self.store.append(row)
+        self._fold_rows = []
+        self._committed = True
+
+    def fail(self, exc: BaseException) -> None:
+        error = f"{type(exc).__name__}: {exc}"
+        if not self._committed:
+            of = f" of {self.n_folds}" if self.n_folds else ""
+            error += f" (stopped after {len(self._fold_rows)}{of} folds)"
+            self._fold_rows = []
+        self.store.append(
+            {**self.base_row, "status": "failed", "error": error}
+        )

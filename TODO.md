@@ -303,9 +303,6 @@ in [PLAN.md](PLAN.md); check items off (and add new ones) as work proceeds.
 - [ ] `vml-experiments sweeps` ranks rows on different metrics (p@10 /
       p@20 / p@50) in one table — rank within one metric, or group by
       it.
-- [ ] `vml-promote`'s own `git add` failed for every promotion on
-      2026-09-26 (manual staging worked; not reproducible afterwards) —
-      surface the git stderr instead of a bare "staging failed".
 - [ ] Guard against editing a sweep TOML after it has run: warn in
       `vml-sweep` when `reports/sweeps/<name>/` already exists under a
       different sweep identity hash (forest_random_search_3y drifted
@@ -477,17 +474,41 @@ in [PLAN.md](PLAN.md); check items off (and add new ones) as work proceeds.
       candidates for the sealed holdout. (Aug–Sep 2026: forest, xgb,
       lgbm and quantile-regressor searches on 3y beat_spy; conclusions
       in docs/findings.md, summaries promoted.)
-- [ ] Run the v1.4 baselines (`scripts/run_baselines.py dataset_v1.4`)
-      — no v1.1/v1.4 cell has a same-version baseline yet.
-- [ ] Run the carry-forward sweeps on v1.4:
-      `forest_candidate_sets_3y` and `xgb_candidate_sets_3y` (same cell,
-      features, seeds); compare the family era slices, especially
-      2013–20 where forests led on v1.1. Pick one 3y beat_spy finalist
-      for the (unopened) 3y holdout.
+- [x] Run the v1.4 baselines (`scripts/run_baselines.py dataset_v1.4`).
+      (2026-09-26: 80 runs over the 20 stored-label cells. Derived-label
+      cells are not covered by the script.)
+- [x] Run the carry-forward sweeps on v1.4:
+      `forest_candidate_sets_3y` and `xgb_candidate_sets_3y`.
+      (2026-09-27: **did not replicate** — forests p@20 0.42 pooled but
+      0.22 in 2013–19 against a 0.28 base rate, xgb 0.37 / 0.17. No
+      3y beat_spy finalist; the 3y holdout stays unopened.
+      docs/findings.md, both summaries promoted as negatives.)
+- [ ] Run `forest_feature_ablation_3y` (24 runs): does dropping the
+      13 columns v1.4 added, or the raw technicals, bring back the
+      2013–20 edge on 3y beat_spy? A diagnosis, not a search for a
+      finalist.
 - [ ] Multi-seed the drawdown-compounder labels on v1.4
-      (`fwd_3y_cagr >= 0.1 & fwd_3y_max_drawdown < 0.3` and the
-      from-entry rungs) with forests as well as LightGBM — the most
-      promising new target (docs/findings.md).
+      (`fwd_3y_cagr >= 0.1 & fwd_3y_max_drawdown < 0.3` and
+      `… & fwd_3y_max_drawdown_from_entry < 0.2`) — configs written
+      2026-09-27, not yet run. Order: the three
+      `baseline_*_drawdown_compounder_3y` sweeps (12 runs), then
+      `lgbm_drawdown_compounder_seeds_3y` (12) and
+      `forest_drawdown_compounder_seeds_3y` (24). Read the era tables
+      first: the beat_spy lift was all 2005–12.
+- [ ] Baselines for derived-label cells: `scripts/run_baselines.py`
+      takes stored labels only, so each derived cell needs hand-written
+      baseline sweeps today. Give the script a `--label "<expression>"`
+      option.
+- [ ] Random-ranking baseline over several seeds in the standard grid:
+      one seed scored p@20 0.39 on 3y beat_spy against a 0.35 base
+      rate, and the catalog measures lift against it.
+- [x] Ledger: an interrupted run's fold rows were logged `completed`.
+      Fold rows are now held until every fold has finished and a
+      stopped run leaves one `failed` row (`RunLog`,
+      `src/harness/results.py`; runner, `vml-eval`, era probe).
+- [ ] Ledger: a run whose process is killed outright (OOM,
+      `kill -9`) leaves no row, so the trial goes uncounted. Log a
+      row when a run starts, once ledger readers can ignore it.
 - [x] `[[sets]]` axis: whole parameter dictionaries taken as units (the
       top candidates of a wide search), crossed with cells, feature sets,
       `[grid]`, `[random]` and seeds; a parameter lives in exactly one of

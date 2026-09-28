@@ -1,0 +1,14 @@
+{
+  "name": "sweep_forest_candidate_sets_3y",
+  "promoted_utc": "2026-09-27T23:36:18+00:00",
+  "source_report": "reports/sweeps/forest_candidate_sets_3y/forest_candidate_sets_3y_summary.md",
+  "run_id": "",
+  "config_hash": "",
+  "git_sha": "",
+  "dataset_version": "dataset_v1.4",
+  "config_path": "experiments/sweeps/forest_candidate_sets_3y.toml",
+  "note": "NON-REPLICATION, v1.4 3y beat_spy: the six v1.1 forest winners score p@20 0.40-0.44 over 3 seeds (v1.1: 0.58; base 0.35, random baseline 0.39); 0.59 in 2005-12 but 0.26 in 2013-20, below the 0.29 base rate; the post-2013 forest edge is gone",
+  "files": [
+    "forest_candidate_sets_3y_summary.md"
+  ]
+}

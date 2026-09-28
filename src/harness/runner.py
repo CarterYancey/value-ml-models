@@ -32,7 +32,7 @@ from harness.dataset import Dataset, SplitAccess
 from harness.errors import ConfigError
 from harness.model_store import ModelBundle
 from harness.report import write_report
-from harness.results import ResultsStore, git_sha, new_run_id
+from harness.results import ResultsStore, RunLog, git_sha, new_run_id
 from models.registry import (
     BASELINE_MODELS,
     build_model,
@@ -81,6 +81,7 @@ def run_experiment(
         "label": config.eval_label or config.label,
         "model": config.model_name,
     }
+    run_log = RunLog(store, base_row)
 
     try:
         check_target_labels(config)
@@ -129,6 +130,7 @@ def run_experiment(
         )
         fold_importances: list[tuple[int, np.ndarray]] = []
         raw_score_arrays: list[np.ndarray] = []
+        run_log.n_folds = len(folds)
         for fold in folds:
             split = dataset.apply_split(
                 config.scheme, fold, config.horizon_years, access=access,
@@ -216,10 +218,8 @@ def run_experiment(
                 imp = imp_fn()
                 if imp is not None:
                     fold_importances.append((fold, imp))
-            store.append(
+            run_log.fold_done(
                 {
-                    **base_row,
-                    "status": "completed",
                     "fold": fold,
                     "n_train_rows": len(fit.X),
                     "effective_train_size": f"{fit.effective_size:.4f}",
@@ -227,6 +227,7 @@ def run_experiment(
                     "metrics_json": metrics,
                 }
             )
+        run_log.commit()
 
         artifacts: dict[str, Path] = {}
         reports_dir = Path(reports_dir)
@@ -310,14 +311,10 @@ def run_experiment(
             "report_path": report_path,
             "model_bundle": bundle_path,
         }
-    except Exception as exc:
-        store.append(
-            {
-                **base_row,
-                "status": "failed",
-                "error": f"{type(exc).__name__}: {exc}",
-            }
-        )
+    except BaseException as exc:
+        # BaseException: Ctrl-C and SystemExit stop a run too, and a
+        # stopped run is a failed trial, not a shorter completed one
+        run_log.fail(exc)
         raise
 
 

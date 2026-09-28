@@ -14,25 +14,145 @@ version), `p@20` picks the top 20 per test year, and they are
 configurations were tried in the same cell (counts given). They rank
 candidates; none is a result of record.
 
-## State as of 2026-09-26
+## State as of 2026-09-27
 
-- **Ledger:** `experiments/results.csv` holds ~1,570 walk-forward runs
-  (≈25.8k fold rows) across `dataset_v1.0`, `v1.1` and `v1.4`. Results
-  are never compared across versions; the v1.1 work below has to be
-  re-validated on v1.4 before it counts for anything current.
-- **Baselines exist on `dataset_v1.0` only.** No v1.1 or v1.4 cell has a
-  same-version baseline, so the catalog shows `none run` and no lift for
-  every recent result. First action of the next session:
-  `uv run python scripts/run_baselines.py dataset_v1.4`.
+- **The 3y beat_spy carry-forward did not replicate on `dataset_v1.4`**
+  (next section). The Aug/Sep forest and xgb winners keep their
+  2005–12 edge and have none in 2013–19. No finalist exists for the
+  3y beat_spy holdout.
+- **Ledger:** `experiments/results.csv` holds the ~1,570 walk-forward
+  runs reviewed on 2026-09-26 (`dataset_v1.0`, `v1.1`, `v1.4`) plus
+  108 new `v1.4` runs: the baseline grid and the two carry-forward
+  sweeps. Results are never compared across versions.
+- **Baselines now exist on `dataset_v1.4`** for the 20 stored-label
+  cells (1/2/3/5y × cagr_ge_0/5/8/10 and beat_spy; 80 runs, seed 7).
+  Derived-label cells still have none: `scripts/run_baselines.py`
+  covers stored labels only.
 - **Sealed holdout:** 19 looks in `reports/final_evals.csv` (listed
-  below). **Every 3y cell is still unopened**, including 3y beat_spy,
-  where almost all Phase-3 work happened.
-- **Carry-forward configs:** `experiments/sweeps/forest_candidate_sets_3y.toml`
-  and `experiments/sweeps/xgb_candidate_sets_3y.toml` re-run the
-  Aug/Sep winners on v1.4 (18 + 9 runs), the same cell, features and
-  seeds for both, so the family comparison is like for like.
+  below), unchanged. **Every 3y cell is still unopened.**
+- **Next-step configs** (written 2026-09-27, not yet run):
+  `forest_feature_ablation_3y`, `lgbm_drawdown_compounder_seeds_3y`,
+  `forest_drawdown_compounder_seeds_3y` and three
+  `baseline_*_drawdown_compounder_3y` sweeps, all in
+  `experiments/sweeps/`.
+
+## 3y beat_spy on dataset_v1.4: the carry-forward did not replicate
+
+`forest_candidate_sets_3y` (6 candidates × 3 seeds) and
+`xgb_candidate_sets_3y` (3 × 3), the same cell, feature spec and seeds.
+31 configurations tried in this cell on v1.4 (27 models + 4 baselines),
+after 713 on v1.1 over the same test years. Mean effective training
+size 25.5k (12.7k in the 2005 fold to 37.2k in 2020, Σ
+`sample_weight_3y`); `split_folds.parquet` of `dataset_v1.4`.
+
+Fold-mean p@20 per family, averaged over every run of the family:
+
+| family | runs | 2005–12 | 2013–20 | 2013–19 | pooled | PR-AUC |
+|---|---|---|---|---|---|---|
+| random_forest | 18 | 0.59 | 0.26 | 0.22 | 0.42 | 0.41 |
+| xgboost | 9 | 0.54 | 0.20 | 0.17 | 0.37 | 0.41 |
+| random baseline (1 seed) | 1 | 0.45 | 0.33 | 0.32 | 0.39 | 0.35 |
+| earnings-yield rank | 1 | 0.24 | 0.19 | 0.16 | 0.22 | 0.38 |
+| book-to-market rank | 1 | 0.21 | 0.18 | 0.18 | 0.19 | 0.34 |
+| base rate | | 0.41 | 0.29 | 0.28 | 0.35 | |
+
+Per test year (p@20; forest and xgb are family means):
+
+| year | base rate | forest | xgb | random |
+|---|---|---|---|---|
+| 2005 | 0.41 | 0.64 | 0.57 | 0.45 |
+| 2006 | 0.46 | 0.68 | 0.68 | 0.50 |
+| 2007 | 0.46 | 0.61 | 0.58 | 0.40 |
+| 2008 (GFC) | 0.46 | 0.71 | 0.67 | 0.45 |
+| 2009 (GFC) | 0.44 | 0.60 | 0.56 | 0.45 |
+| 2010 | 0.36 | 0.49 | 0.40 | 0.45 |
+| 2011 | 0.32 | 0.56 | 0.55 | 0.45 |
+| 2012 | 0.34 | 0.41 | 0.32 | 0.45 |
+| 2013 | 0.32 | 0.30 | 0.23 | 0.20 |
+| 2014 | 0.30 | 0.10 | 0.15 | 0.40 |
+| 2015 | 0.30 | 0.34 | 0.26 | 0.40 |
+| 2016 | 0.31 | 0.38 | 0.31 | 0.30 |
+| 2017 | 0.24 | 0.15 | 0.02 | 0.20 |
+| 2018 | 0.26 | 0.11 | 0.06 | 0.40 |
+| 2019 | 0.27 | 0.18 | 0.16 | 0.35 |
+| 2020 (COVID) | 0.33 | 0.53 | 0.41 | 0.40 |
+
+Candidates, seed-mean pooled p@20 (std over 3 seeds): forest set3
+0.435 (0.010), set2 0.432 (0.021), set1 0.429 (0.002), set4 0.424
+(0.009), set0 0.418 (0.028), set5 0.401 (0.007); xgb set0 0.381
+(0.009), set1 0.369 (0.006), set2 0.357 (0.012).
+
+- **The post-2013 edge is gone.** On v1.1 forests held 0.49 in
+  2013–20. On v1.4 they score 0.26 against a 0.29 base rate, and 0.22
+  against 0.28 without 2020. Each forest candidate's top-20 picks were
+  worse than the base rate in four to six of the seven years 2013–19
+  (2015 and 2016 are the exceptions). xgb is lower still (0.17), with
+  3 hits in 180 picks in 2017 across its nine runs.
+- **The pooled lift is a 2005–12 lift.** Every forest candidate beat
+  the base rate in all eight of those years (0.59 against 0.41 for
+  the family) and again in 2020. A
+  pooled 0.42 hides that the model would have been useless, or
+  harmful, for the seven years in between.
+- **The whole ranking still carries signal; the top of it does not.**
+  PR-AUC beats the base rate in 15 of 16 years for forests and xgb
+  alike, 2018 being the miss (2013–20: 0.33 and 0.34 against 0.29),
+  though by 0.01–0.02 in 2017–19. So the scores order the
+  cross-section slightly better than chance, while the 20 highest
+  scores are the wrong names after 2013. The two families have the
+  same PR-AUC (0.41); the forests' p@20 advantage over xgb (+0.05) is
+  a top-of-ranking difference only.
+- **What the models lean on shifts over the folds.** In the forest
+  (set3), raw `vol_12m` + `beta_12m` carry 0.55 of the importance in
+  the 2005 fold and 0.12 in 2020; `ocf_yield_rank` +
+  `cfo_to_assets_rank` go from 0.07 to 0.32. xgb shows the same shift.
+  Impurity importances are a triage list, not an explanation, but the
+  shift lines up with the break in performance and is what
+  `forest_feature_ablation_3y` tests.
+- **The feature spec did not resolve to the v1.1 columns.** The same
+  spec selects 133 columns on v1.4, 13 of which v1.1 did not have:
+  raw `beta_12m`, `mom_36_12`, `max_ret_21d`, `dist_5y_high`,
+  `price_vs_5y_avg`, the six `*_vs_5y_median_rank` columns,
+  `ohlson_o_rank` and `magic_formula_score_rank`. Two of them
+  (`beta_12m`, `price_vs_5y_avg`) are in the forest's top ten. v1.1
+  also had `piotroski_f_rank` / `mohanram_g7_rank`, which are gone.
+  So three explanations stay open and this sweep cannot separate
+  them: the new columns hurt; the removed fingerprint ranks carried
+  part of the v1.1 result; or the v1.1 numbers were selection noise
+  from 713 configurations. The v1.1 and v1.4 numbers are from
+  different dataset versions and are set side by side only to say
+  "did not replicate", not to measure a difference.
+- **Against the baselines:** the catalog's reference is the best
+  baseline in the cell, which is the random ranking at 0.39. That
+  number is one seed, and 0.04 above the base rate by chance (the
+  standard error of p@20 over 320 picks is about 0.027). Read against
+  the base rate, forests are +0.07 pooled and xgb +0.02. Both
+  single-factor ranks are far *below* the base rate (0.19–0.22): the
+  cheapest stocks by book-to-market or earnings yield were poor
+  3-year bets against SPY in nearly every year.
+- **Seeds are stable, candidates are indistinguishable.** Seed std is
+  0.002–0.028, and the five shallow forest candidates span 0.42–0.44,
+  inside one standard error of each other. set5 (max_depth 13) is
+  last at 0.40, in line with the v1.1 finding that shallow trees do
+  best.
+- **Scores are still not calibrated.** Forest Brier is worse than
+  `base_rate_brier` in 11–13 of 16 years (0.239 against 0.222, fold
+  means). xgb set1 and set2 (class_weight 0.5) are level with it
+  (0.221–0.222, worse in 7–8 years); xgb set0 (class_weight 0.1) is
+  worse in all 16 (0.283).
+
+**Decision: no 3y beat_spy holdout look.** There is no candidate one
+would act on, and the rule is to look when one would act. The cell
+stays unopened.
+
+Promoted (2026-09-27): `sweep_forest_candidate_sets_3y`,
+`sweep_xgb_candidate_sets_3y` (both as negatives), and the era report
+of forest set3, seed 23. They are worth keeping because they overturn
+the main conclusion of the v1.1 section below.
 
 ## 3y beat_spy: model families (dataset_v1.1)
+
+**Superseded for current work: none of this replicated on v1.4 (section
+above).** Kept as the record of what the v1.1 searches showed.
 
 713 configurations tried in this cell (`label_3y_beat_spy`, 3y,
 walkforward, v1.1). Base rate 0.35 pooled (0.41 in 2005–12, 0.29 in
@@ -107,7 +227,11 @@ holdout, which is still unopened. Spend it on one finalist, once.
   their base rates by 1.5–3×, while "beat SPY by 8 points" sits at the
   base rate across 120 xgb configs and a forest. This is the most
   promising new direction, but everything here is one seed and has no
-  v1.4 baseline yet.
+  baseline in its cell (the v1.4 baseline grid covers stored labels
+  only). After the 3y beat_spy non-replication, read these as
+  unconfirmed: the seed-stability sweeps and cell baselines written on
+  2026-09-27 are the test, and the era table matters as much as the
+  pooled lift (beat_spy's lift was all 2005–12).
 - In `lgbm_drawdown_rungs_3y`, class_weight 0.25–0.5 beat 1.0. Its
   feature axis was a no-op: the `ranks` group already contains the
   `*_vs_5y_median_rank` columns, so `+ ranks/relvalue` added nothing
@@ -163,17 +287,62 @@ the relative (beat_spy) labels, and valuation/trend models kept some.**
   ledger only.
 - `vml-experiments sweeps` ranks rows that use different metrics (p@10,
   p@20, p@50) in one table. Read a row's metric before comparing it.
-- `vml-promote`'s own `git add` failed for all seven promotions on
-  2026-09-26 (staged by hand; not reproducible afterwards).
 - `reports/final_evals.csv` and `reports/final_eval/` were untracked
   despite being "always tracked". Now committed.
 - `lgbm_candidate_sets_3y.toml` is pinned to `dataset_v1.0` and was never
   run.
 
+Found on 2026-09-27:
+
+- An interrupted run was logged as `completed`: fold rows were written
+  as each fold finished, so the first attempt at forest set0 seed 23
+  (run `9f357ea6b798`, stopped after 5 of 16 folds) looks like a short
+  finished run. **Fixed 2026-09-28**: fold rows are now written only
+  once every fold has finished, and a stopped run (Ctrl-C included)
+  leaves a single `failed` row. That one old run stays in the ledger
+  (rows are never rewritten); the sweep summary used the full re-run,
+  but a ledger query that averages by experiment name should skip it.
+- The majority-class baseline's p@K is a tie-break over constant
+  scores (0.00 to 0.50 by year). Only its Brier means anything.
+- Forest set4 took about 78 minutes per run against 2–15 for the
+  other sets, for no gain. Check the cost of a set before giving it
+  three seeds.
+
 ## Log
 
 Newest first. One entry per working session: what ran, what it showed,
 what's next. Record trial counts, not just winners.
+
+### 2026-09-28: interrupted runs no longer log as completed
+
+- Code only, no experiments run. `RunLog` in `src/harness/results.py`
+  holds a run's fold rows until the last fold finishes; used by
+  `vml-run` / `vml-sweep`, `vml-eval` and the era probe. Regression
+  test in `tests/test_runner.py`. A process that is killed outright
+  (OOM, `kill -9`) still leaves no row at all.
+
+### 2026-09-27: v1.4 carry-forward sweeps reviewed
+
+- Ran (by Carter, 2026-09-26/27, git `b649c58`): the v1.4 baseline
+  grid (80 runs), `forest_candidate_sets_3y` (18 runs, plus one
+  interrupted) and `xgb_candidate_sets_3y` (9 runs). 31 configurations
+  in the 3y beat_spy cell on v1.4.
+- Showed: neither family replicates. Forests p@20 0.42 pooled, 0.59
+  in 2005–12, 0.22 in 2013–19 (base 0.28); xgb 0.37 / 0.54 / 0.17.
+  PR-AUC stays above the base rate every year. Details in "3y beat_spy
+  on dataset_v1.4".
+- Promoted 3 (two sweep summaries as negatives, one era report). No
+  holdout look.
+- Wrote six sweep configs (git-ignored until promoted), all dry-run
+  clean, none run: `forest_feature_ablation_3y` (24 runs),
+  `lgbm_drawdown_compounder_seeds_3y` (12),
+  `forest_drawdown_compounder_seeds_3y` (24), and the random /
+  rank-factor / majority baselines for the two drawdown-compounder
+  cells (6 + 4 + 2).
+- Next: run the three baseline sweeps, then the two compounder
+  sweeps, then the ablation. Read each era table before the pooled
+  number. If the compounder lift also sits in 2005–12 only, the
+  problem is the post-2013 regime and not the label.
 
 ### 2026-09-26: review after the August/September hiatus
 
