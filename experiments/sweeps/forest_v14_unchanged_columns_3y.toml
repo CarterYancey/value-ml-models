@@ -1,0 +1,66 @@
+# The v1.4 half of the column control on 3y beat_spy; read
+# forest_v11_column_control_3y first (docs/findings.md, "Results of
+# the two tests").
+#
+#   fs0  the 103 columns of the carry-forward spec whose values are the
+#        same on v1.1 and v1.4: the spec minus the 13 columns v1.4
+#        added and minus the 17 columns whose values upstream decision
+#        0016 changed (16 pinned ranks and conservative_score).
+#
+# Prediction, written before the run: the per-fold metrics equal arm
+# fs1 of forest_v11_column_control_3y (same rows, parameters, seeds
+# and columns; values equal to within 2e-10, so a rare split may
+# differ). If they do not, something besides the columns differs
+# between the two dataset versions and that comes before everything
+# else.
+#
+# Second reading, against arm fs0 of forest_feature_ablation_3y (120
+# columns, p@20 0.44, PR-AUC 0.42 for set1, seed 23): what the 17
+# pinned columns add on v1.4.
+#
+# Check each run's *_config.json: it must say 103 columns.
+#
+# Selection bias: 39 configurations tried in this cell on v1.4 and 717
+# on v1.1 over the same test years. This is a control, not a
+# candidate.
+#
+# Expanded: 1 cell x 1 feature set x 2 sets x 2 seeds = 4 runs.
+# Run: uv run vml-sweep experiments/sweeps/forest_v14_unchanged_columns_3y.toml
+name = "forest_v14_unchanged_columns_3y"
+dataset_version = "dataset_v1.4"
+min_dataset_version = "1.4"
+scheme = "walkforward"
+folds = "all"
+seeds = [23, 232]
+top_k = [20]
+rank_metric = "precision_at_20"
+
+sets = [
+  {criterion = "gini",    max_depth = 3, max_features = 0.914775, max_samples = 0.441152, min_samples_leaf = 248, n_estimators = 126},  # 2seeds r30
+  {criterion = "entropy", max_depth = 4, max_features = 0.205191, max_samples = 0.663781, min_samples_leaf = 72,  n_estimators = 490},  # 2seeds r48
+]
+
+[[cells]]
+label = "label_3y_beat_spy"
+
+[[features]]
+groups = ["ranks"]
+exclude_families = ["ranks/technical", "ranks/trend", "ranks/relvalue"]
+families = ["features/trend", "features/technical"]
+exclude_columns = [
+  "mom_36_12", "max_ret_21d", "beta_12m", "dist_5y_high", "price_vs_5y_avg",
+  "ohlson_o_rank", "magic_formula_score_rank",
+  "asset_turnover_delta_1y_rank", "asset_turnover_rank",
+  "capex_to_assets_rank", "conservative_score", "debt_to_equity_rank",
+  "dividend_yield_rank", "ev_to_marketcap_rank",
+  "ext_financing_to_assets_rank", "gmi_rank", "gp_to_assets_rank",
+  "gross_margin_delta_1y_rank", "gross_margin_delta_2y_rank",
+  "gross_margin_rank", "net_payout_yield_rank", "rnd_to_assets_rank",
+  "sales_yield_rank", "share_count_growth_1y_rank",
+]
+
+[model]
+name = "random_forest"
+bootstrap = true
+n_jobs = 8
+class_weight = 1

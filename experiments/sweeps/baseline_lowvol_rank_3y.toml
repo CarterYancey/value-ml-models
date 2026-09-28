@@ -1,0 +1,61 @@
+# Low-risk single-factor baselines for the two drawdown-compounder
+# cells and for 3y beat_spy (docs/findings.md, "Drawdown-compounder
+# cells").
+#
+# Why: the forests and LightGBM models in the compounder cells put
+# 0.31-0.53 of their importance on vol_12m_rank + vol_36m_rank, and
+# the baselines those cells have (book-to-market, earnings yield,
+# random) say nothing about that. "Buy the least volatile stocks" is
+# the trivial strategy these models have to beat; until it has run,
+# their lift over the base rate is not a lift over a baseline.
+#
+#   set0  lowest vol_12m_rank first
+#   set1  lowest vol_36m_rank first
+#   set2  lowest beta_12m_rank first
+#   set3  highest conservative_score_rank first (low vol + momentum +
+#         net payout, an upstream composite)
+#
+# Reading it, written before the run. Forest seed-mean p@20 to beat:
+# 0.50 in the from-entry cell (base rate 0.21), 0.37-0.39 in the
+# whole-path cell (0.11); in 2013-20, 0.53-0.54 and 0.39-0.44.
+#   - A baseline within 0.05 of the forests, pooled and in 2013-20:
+#     the models are a low-volatility screen and the other 100-odd
+#     columns add little. The search then is for what adds to low
+#     vol, not for forest parameters.
+#   - Baselines well below (say under 0.35 / 0.25): the models combine
+#     columns into something a single factor does not give.
+# Look at 2005-08 and 2019 as well: the models fall to the base rate
+# there, and a baseline that does not would say why.
+#
+# Expanded: 3 cells x 4 factors x 1 seed = 12 runs (seconds each).
+# Run: uv run vml-sweep experiments/sweeps/baseline_lowvol_rank_3y.toml
+name = "baseline_lowvol_rank_3y"
+dataset_version = "dataset_v1.4"
+min_dataset_version = "1.4"
+scheme = "walkforward"
+folds = "all"
+seeds = [7]
+top_k = [20, 50]
+rank_metric = "precision_at_20"
+
+sets = [
+  {rank_column = "vol_12m_rank", higher_is_better = false},
+  {rank_column = "vol_36m_rank", higher_is_better = false},
+  {rank_column = "beta_12m_rank", higher_is_better = false},
+  {rank_column = "conservative_score_rank", higher_is_better = true},
+]
+
+[[cells]]
+label = "fwd_3y_cagr >= 0.1 & fwd_3y_max_drawdown < 0.3"
+
+[[cells]]
+label = "fwd_3y_cagr >= 0.1 & fwd_3y_max_drawdown_from_entry < 0.2"
+
+[[cells]]
+label = "label_3y_beat_spy"
+
+[[features]]
+groups = ["ranks"]
+
+[model]
+name = "rank_factor"

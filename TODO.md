@@ -490,17 +490,48 @@ in [PLAN.md](PLAN.md); check items off (and add new ones) as work proceeds.
       added and 4 dropped columns; the cause is open, so the v1.1
       findings are unconfirmed, not refuted. No 3y beat_spy finalist;
       the 3y holdout stays unopened. docs/findings.md.)
-- [ ] Run `forest_v11_code_control_3y` (4 runs, needs
-      `dataset_v1.1`): do r30 and r48 still give their August per-fold
-      numbers with today's code? First, because every v1.4 reading
-      depends on it.
-- [ ] Run `forest_feature_ablation_3y` (24 runs). Arm fs0 (the 13
-      added columns removed) is the test of why v1.4 scores lower;
-      its prediction is written in the config and in docs/findings.md.
-- [ ] Ask upstream (or check locally with both datasets): do the 120
-      columns shared by the v1.1 and v1.4 feature sets hold identical
-      values? `data/versions.md` says v1.4 is additive; it has not
-      been checked.
+- [x] Run `forest_v11_code_control_3y` (4 runs, needs
+      `dataset_v1.1`). (2026-09-28: all 64 fold rows equal the August
+      ledger rows; the code is not the cause.)
+- [x] Run `forest_feature_ablation_3y`. (2026-09-28: 8 runs, one
+      seed, not the 24 in its header. Arm fs0, the v1.1 column set,
+      scored p@20 0.44 against the predicted 0.58: the 13 added
+      columns are not the cause, though removing them raises PR-AUC
+      by 0.01-0.02. The arms cannot be ranked. docs/findings.md.)
+- [x] Do the 120 columns shared by the v1.1 and v1.4 feature sets
+      hold identical values? (2026-09-28: no. 17 changed at v1.2,
+      upstream decision 0016; 103 are equal. `data/versions.md`
+      updated.)
+- [ ] Run `forest_v11_column_control_3y` (8 runs, `dataset_v1.1`)
+      and `forest_v14_unchanged_columns_3y` (4 runs): was the v1.1
+      edge in the four dropped columns or in the v1.1 values of the
+      17 changed ones? Predictions are in the configs.
+- [ ] If the edge was in the 17 changed columns: per-quarter picks
+      on v1.1 (p@K within each test quarter) to tell a quarter
+      identifier from stock information, and a note upstream, since
+      decision 0016 expects walk-forward not to be inflated by the
+      keys.
+- [ ] Run `baseline_lowvol_rank_3y` (12 runs, seconds): lowest
+      `vol_12m_rank` / `vol_36m_rank` / `beta_12m_rank` and highest
+      `conservative_score_rank` in the two compounder cells and 3y
+      beat_spy. First in the queue: the compounder models put
+      0.31-0.53 of their importance on the two volatility ranks.
+- [ ] Choose the primary cell (proposed: cagr >= 10% & drawdown from
+      entry < 20%; Carter's call), then, in it: the feature-set
+      ablation, the per-family parameter search, calibration, one
+      holdout look. Steps and selection rule in docs/findings.md,
+      "Plan as of 2026-09-28".
+- [ ] Report the number of distinct `permaticker`s among the top-K
+      picks per test year, next to p@K: p@K counts test rows, a
+      stock has up to four median rows a year, and the standard
+      error of p@K is quoted as if the rows were independent.
+- [ ] A crash-window line in the era table for path labels: entry
+      years whose window holds a market crash (2005-08, 2019 at 3y)
+      are where the compounder models fall to the base rate.
+- [ ] A config hash that leaves the sweep name out (the
+      `identity_hash` exists for single configs), recorded in the
+      ledger, so a re-run under another sweep name can be matched to
+      the original by hash.
 - [ ] `vml-experiments verify`: expand each config under
       `experiments/` and compare its config hashes with the ledger's,
       so a config that no longer matches its own runs is reported
@@ -508,14 +539,14 @@ in [PLAN.md](PLAN.md); check items off (and add new ones) as work proceeds.
       `forest_random_search_3y`).
 - [ ] `vml-experiments columns <run> <run>`: diff the resolved feature
       columns of two runs from their `*_config.json` records.
-- [ ] Multi-seed the drawdown-compounder labels on v1.4
+- [x] Multi-seed the drawdown-compounder labels on v1.4
       (`fwd_3y_cagr >= 0.1 & fwd_3y_max_drawdown < 0.3` and
-      `… & fwd_3y_max_drawdown_from_entry < 0.2`) — configs written
-      2026-09-27, not yet run. Order: the three
-      `baseline_*_drawdown_compounder_3y` sweeps (12 runs), then
-      `lgbm_drawdown_compounder_seeds_3y` (12) and
-      `forest_drawdown_compounder_seeds_3y` (24). Read the era tables
-      first: the beat_spy lift was all 2005–12.
+      `… & fwd_3y_max_drawdown_from_entry < 0.2`). (2026-09-28: three
+      baseline sweeps, `lgbm_drawdown_compounder_seeds_3y` and
+      `forest_drawdown_compounder_seeds_3y`, 48 runs. Held over
+      seeds and in 2013-20; forests p@20 0.50 against a 0.21 base
+      rate and 0.37-0.39 against 0.11, ahead of LightGBM; no lift
+      for entry years 2005-08 and 2019. docs/findings.md.)
 - [ ] Baselines for derived-label cells: `scripts/run_baselines.py`
       takes stored labels only, so each derived cell needs hand-written
       baseline sweeps today. Give the script a `--label "<expression>"`
