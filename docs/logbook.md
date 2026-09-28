@@ -14,6 +14,13 @@ read** stub; a correction is a new entry that names the old one.
 
 <!-- entries -->
 
+### 2026-09-28 · harness: forest memory
+git `feb0b55`
+- **Did:** Profiled forest runs in the sandbox (14 GB, no swap) after Carter measured up to 18 GB on the host. Found that a fitted scikit-learn forest stores its sample weights, which were a view into the fold's training frame, so every fold model kept about 1 GB alive. Weights and targets are now copied.
+- **Got:** Before: resident memory grew about 1.0 GB per fold (6.6 GB after two folds). After: a full 16-fold run of forest set1 in the from-entry cell peaks at 6.4 to 6.7 GB and takes 470 s with n_jobs 8. All 16 fold rows equal the ledger rows of the same configuration (forest_drawdown_compounder_seeds_3y, seed 23): counts, p@20, PR-AUC, ROC-AUC and Brier, difference 0.
+- **Concluded:** Forest sweeps fit in the 14 GB sandbox. About 5 GB of the footprint is the dataset frame and split tags, loaded before any model is fitted. Probe runs used a scratch ledger and are not trials.
+- **Next:** First unattended session end to end once the machine account can push.
+
 ### 2026-09-28 · forest_feature_sets_dd_entry_3y
 30 runs · `dataset_v1.4` · from-entry cell · started on the host 14:48, 13 of 30 done at 15:40
 - **not yet read**: the sweep is running. Five feature sets against the all-ranks reference; predictions are in the config.
@@ -22,7 +29,7 @@ read** stub; a correction is a new entry that names the old one.
 git `HEAD` of `claude/sweep-review-2026-09-28` · [how it works](agents.md)
 - **Did:** Built the run queue (`vml-queue`), this logbook (`vml-logbook`), sweep resume (`vml-sweep --resume`), ledger shards (`experiments/ledger/`), checkpoints, and the pull-request check for working material. Split `findings.md` (1,165 lines) into this logbook, a 137-line findings file and notes.
 - **Got:** 446 tests pass. No experiment run.
-- **Concluded:** An agent can work a queue without polling and lose at most the run in flight. Not yet tried end to end in a sandbox: forests need about 18 GB and the sandbox has 14.
+- **Concluded:** An agent can work a queue without polling and lose at most the run in flight. Not yet tried end to end in a sandbox.
 - **Next:** Carter: sandbox memory, machine user, branch rules ([agents.md](agents.md), "Setting up").
 
 ### 2026-09-28 · harness: pick_outcomes

@@ -113,8 +113,9 @@ export VML_LEDGER_READ="/run/sandbox/source/experiments/results.csv"
 
 A 16-fold forest run used to need about 18 GB: every fitted fold model
 kept its whole training frame alive through the sample weights it
-stored. Fixed 2026-09-28 (weights and targets are copied). See the
-logbook for the measured footprint since. A sweep that is killed is
+stored. Fixed 2026-09-28 (weights and targets are copied): a full
+16-fold forest run now peaks at 6.4–6.7 GB, measured in a 14 GB
+sandbox, with identical fold metrics. A sweep that is killed is
 resumed by running it again (`vml-queue run-next`, or
 `vml-sweep --resume`): completed runs are read back from their result
 records and only the rest is run.
@@ -195,10 +196,12 @@ With both in place the worst an agent can do is make a mess under
 ### 3. Sandbox resources
 
 The sandbox this was written in has 24 cores, 14 GB of memory, no swap
-and a 20 GB disk. After the memory fix a forest run fits; check the
-logbook entry for the number before sizing. Leave headroom for the
-dataset frame (about 5 GB resident before any model is fitted), and
-keep `n_jobs` at or below the cores the sandbox really has.
+and a 20 GB disk. After the memory fix a 16-fold forest run peaks at
+6.4–6.7 GB there, so 14 GB is enough for one sweep at a time; about
+5 GB of that is the dataset frame, resident before any model is
+fitted. LightGBM and XGBoost have not been measured. Two sweeps at
+once need twice the memory: the queue runs one. Keep `n_jobs` at or
+below the cores the sandbox really has.
 
 ### 4. Starting a session
 
