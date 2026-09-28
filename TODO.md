@@ -502,25 +502,49 @@ in [PLAN.md](PLAN.md); check items off (and add new ones) as work proceeds.
       hold identical values? (2026-09-28: no. 17 changed at v1.2,
       upstream decision 0016; 103 are equal. `data/versions.md`
       updated.)
-- [ ] Run `forest_v11_column_control_3y` (8 runs, `dataset_v1.1`)
-      and `forest_v14_unchanged_columns_3y` (4 runs): was the v1.1
-      edge in the four dropped columns or in the v1.1 values of the
-      17 changed ones? Predictions are in the configs.
-- [ ] If the edge was in the 17 changed columns: per-quarter picks
-      on v1.1 (p@K within each test quarter) to tell a quarter
-      identifier from stock information, and a note upstream, since
-      decision 0016 expects walk-forward not to be inflated by the
-      keys.
-- [ ] Run `baseline_lowvol_rank_3y` (12 runs, seconds): lowest
-      `vol_12m_rank` / `vol_36m_rank` / `beta_12m_rank` and highest
-      `conservative_score_rank` in the two compounder cells and 3y
-      beat_spy. First in the queue: the compounder models put
-      0.31-0.53 of their importance on the two volatility ranks.
-- [ ] Choose the primary cell (proposed: cagr >= 10% & drawdown from
-      entry < 20%; Carter's call), then, in it: the feature-set
-      ablation, the per-family parameter search, calibration, one
-      holdout look. Steps and selection rule in docs/findings.md,
-      "Plan as of 2026-09-28".
+- [x] Run `forest_v11_column_control_3y` and
+      `forest_v14_unchanged_columns_3y`. (2026-09-28: the v1.1 edge
+      is in the v1.1 values of the 17 columns decision 0016
+      re-mapped: p@20 0.57-0.58 with them, 0.43-0.47 without. The
+      four dropped columns change nothing, and v1.1 and v1.4 give
+      identical fold rows on the other 103 columns.)
+- [ ] Quarter identifier or stock information? Per-quarter picks on
+      v1.1 (p@K within each test quarter, or the spread of the
+      picks over a year's quarters) for the runs with and without
+      the 17 columns. Needs per-quarter metrics or saved
+      predictions. Then a note upstream: decision 0016 expects
+      walk-forward not to be inflated by the keys. Low priority, it
+      changes nothing about what to run on v1.4.
+- [x] Run `baseline_lowvol_rank_3y`. (2026-09-28: best single
+      factor is `conservative_score_rank`. From-entry cell: 0.39
+      against forests 0.50 and LightGBM 0.39-0.40. Whole-path cell:
+      0.34 against forests 0.37-0.39. 3y beat_spy: 0.49, level with
+      the best forest arm on v1.4.)
+- [x] Choose the primary cell. (2026-09-28, Carter: cagr >= 10% &
+      drawdown from entry < 20%. The choice of label stays part of
+      the experiments.)
+- [ ] Run `forest_feature_sets_dd_entry_3y` (30 runs, about 2.5
+      hours): five feature sets against the all-ranks reference in
+      the primary cell. Predictions in the config.
+- [ ] Report-only secondary outcomes for a run's top-K picks, per
+      test year: hit rate on `label_3y_beat_spy`, mean and median
+      `fwd_3y_excess_cagr` and `fwd_3y_max_drawdown_from_entry`
+      (manifest label columns only; never model inputs; the trial
+      stays counted in the training label's cell). The common
+      yardstick for comparing labels, which lift over a cell's own
+      base rate is not. `eval_label` is refused for classifiers
+      today.
+- [ ] Label rungs around the primary cell on that yardstick: CAGR
+      floor 0.08 / 0.10 / 0.15 x drawdown-from-entry cap 0.15 /
+      0.20 / 0.30, one forest configuration, 3 seeds.
+- [ ] Parameter search per family in the primary cell on the
+      feature set the ablation picks: equal budgets for
+      random_forest, lightgbm, xgboost, then the top five of each
+      on 3 seeds; rank on PR-AUC and worst-seed 2013-20 p@20. Then
+      calibration, then one holdout look. docs/findings.md, "Plan".
+- [ ] Investability filter before any top-K number in the path-label
+      cells is acted on: the lowest-`vol_12m_rank` top 20 scores
+      0.09 where the whole ranking has PR-AUC 0.31.
 - [ ] Report the number of distinct `permaticker`s among the top-K
       picks per test year, next to p@K: p@K counts test rows, a
       stock has up to four median rows a year, and the standard

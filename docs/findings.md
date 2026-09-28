@@ -14,85 +14,95 @@ version), `p@20` picks the top 20 per test year, and they are
 configurations were tried in the same cell (counts given). They rank
 candidates; none is a result of record.
 
-## State as of 2026-09-28 (evening, after the seven sweeps)
+## State as of 2026-09-28 (night, after ten sweeps)
 
-- **3y beat_spy, v1.1 against v1.4: the code and the added columns
-  are both ruled out as the cause of the lower scores.** Today's code
-  reproduces the August v1.1 numbers exactly, and the v1.1 column set
-  scores 0.44 on v1.4 against 0.60 on v1.1. What is left: 17 of the
-  shared columns hold different values on v1.4 (the ranks that
-  upstream decision 0016 pinned in v1.2), and four columns were
-  dropped. Which of the two carried the v1.1 edge is not tested yet;
-  two control sweeps are written ("Results of the two tests").
-- **No feature set gives a 3y beat_spy edge on v1.4 that can be told
-  from noise.** Four ablation arms, one seed each: p@20 0.44–0.54
-  pooled, PR-AUC 0.42 in every arm. No finalist for that cell.
-- **The drawdown-compounder cells hold over seeds and after 2013**
-  ("Drawdown-compounder cells"). Forests: p@20 0.50 against a 0.21
-  base rate in the from-entry cell, 0.37 against 0.11 in the
-  whole-path cell, seed std at most 0.03, and 2013–20 no weaker than
-  2005–12. They fall to the base rate for entry years whose window
-  holds a crash (2005–08, 2019). **The models lean on the volatility
-  ranks and no low-volatility baseline has run**, so the lift is over
-  the base rate, not yet over the obvious single factor.
-- **Ledger:** `experiments/results.csv` holds 1,875 runs (by run id)
-  on `dataset_v1.0`, `v1.1` and `v1.4`; 60 are from the seven sweeps
-  reviewed on 2026-09-28 (56 on v1.4, 4 on v1.1). Results are never
-  compared across versions.
+- **3y beat_spy, v1.1 against v1.4: located.** The v1.1 forest edge
+  sat in the v1.1 values of 17 rank columns that upstream decision
+  0016 re-mapped in v1.2. Without those 17 columns the v1.1 and v1.4
+  datasets give identical fold rows (p@20 0.43–0.47); with them in
+  their v1.1 form, 0.57–0.58. Code, added columns and dropped columns
+  are each ruled out by a run. Whether the v1.1 form carried a
+  quarter identifier or stock information is not separated ("Results
+  of the two tests").
+- **On v1.4 no forest beats a single factor on 3y beat_spy.**
+  `conservative_score_rank` alone scores p@20 0.49 (0.44 in
+  2013–20); forests 0.43–0.54 across every feature set tried. No
+  finalist for that cell; it is parked.
+- **Primary cell, chosen by Carter 2026-09-28:**
+  `fwd_3y_cagr >= 0.1 & fwd_3y_max_drawdown_from_entry < 0.2`
+  ("from entry", cell B). Forests score p@20 0.50 there against a
+  0.21 base rate and 0.39 for the best single factor, stable over
+  seeds, no weaker after 2013, and at the base rate for entry years
+  whose window holds a crash (2005–08, 2019). Which label serves
+  best for beating the market is itself an open experiment (plan,
+  step 3).
+- **Ledger:** `experiments/results.csv` holds 1,899 runs (by run id)
+  on `dataset_v1.0`, `v1.1` and `v1.4`; 84 are from the ten sweeps
+  reviewed on 2026-09-28. Trial counts: 3y beat_spy 47 on v1.4 and
+  725 on v1.1; cell A 29; cell B 34. Results are never compared
+  across versions.
 - **Baselines on `dataset_v1.4`:** the 20 stored-label cells (80
-  runs, seed 7), and now the two compounder cells (random × 3 seeds,
-  book-to-market, earnings yield, majority).
+  runs, seed 7); the two compounder cells and 3y beat_spy also have
+  four low-risk single factors (`baseline_lowvol_rank_3y`).
 - **Sealed holdout:** 19 looks in `reports/final_evals.csv` (listed
   below), unchanged. **Every 3y cell is still unopened.**
-- **Next-step configs** (written 2026-09-28, dry-run clean, not yet
-  run): `baseline_lowvol_rank_3y`, `forest_v11_column_control_3y`,
-  `forest_v14_unchanged_columns_3y`. The plan is the next section.
+- **Next-step config** (written 2026-09-28, dry-run clean, not yet
+  run): `forest_feature_sets_dd_entry_3y` (30 runs).
 
-## Plan as of 2026-09-28
+## Plan as of 2026-09-28 (night)
 
-The goal is the best model + parameters + feature set. That is a
-question per cell, and the cell comes first: a search in a cell with
-no signal returns selection noise (3y beat_spy on v1.4: 39
-configurations, nothing separable).
+The goal is the best model + parameters + feature set, and the label
+is one of the things being searched. A high lift over the base rate
+says a label is learnable; it does not say that picking by it beats
+the market. So the plan has two tracks.
 
-1. **`baseline_lowvol_rank_3y`** (12 runs, seconds). Decides whether
-   the compounder models are more than a low-volatility screen. Its
-   reading is written in the config. Everything below depends on it.
-2. **The two column controls** (12 runs, about 40 minutes):
-   `forest_v11_column_control_3y`, then
-   `forest_v14_unchanged_columns_3y`. Closes the v1.1 question. It
-   does not block step 3: whatever it shows, `dataset_v1.1` is
-   superseded and its candidates are not carried forward.
-3. **Choose the primary cell.** Proposed:
-   `fwd_3y_cagr >= 0.1 & fwd_3y_max_drawdown_from_entry < 0.2`
-   (largest absolute lift, base rate 0.21 so p@20 is less granular
-   than in the 0.11 cell), with the whole-path cell as the second.
-   3y beat_spy is parked until a feature set shows PR-AUC above 0.43.
-   This is Carter's call: it is a choice of what to predict.
-4. **Feature-set ablation in the primary cell** (forest, the two
-   sets already run, 3 seeds): all ranks (the reference, already
-   run); ranks minus `ranks/technical`; `ranks/technical` alone;
-   ranks plus sector ranks; ranks plus raw `features/technical` and
-   `features/trend`. With step 1 this says how much of the signal is
-   volatility and what adds to it.
-5. **Parameter search in the primary cell, per family**, on the
-   feature set step 4 picks. The forest sets so far were tuned on
-   beat_spy. Random search, one seed, equal budgets for
-   random_forest, lightgbm and xgboost (about 40 draws each), then
-   the top five of each on 3 seeds. Rank on the 2013–20 half and on
-   the worst seed, with PR-AUC as the tie-break: the standard error
-   of a pooled p@20 is about 0.03, so pooled p@20 alone picks noise.
-6. **Calibration** for the family that wins (prequential, TODO
-   Phase 3): forest Brier beats `base_rate_brier` in only 5–10 of 16
-   years in these cells.
-7. **One finalist, one holdout look** in that cell (both 3y
-   compounder cells are unopened), then the backtest with costs and
-   the investability filter. Not before steps 1–6.
+Track 1, the primary cell (from entry, cell B):
 
-Two evaluation gaps to close on the way (TODO): p@K counts test
-*rows*, and a stock has up to four median rows per test year, so 20
-picks can be a handful of stocks; and the crash-window years need
-their own line in every report for these labels.
+1. **Feature sets:** `forest_feature_sets_dd_entry_3y` (30 runs,
+   about 2.5 hours). Five arms against the all-ranks reference;
+   predictions in the config. Bar to clear: the forest reference
+   (p@20 0.50, PR-AUC 0.327), itself 0.11 above the best single
+   factor.
+2. **Parameter search per family** on the feature set step 1 picks.
+   The forest sets so far were tuned on beat_spy; LightGBM ran one
+   untuned set and is level with the single factor. Random search,
+   one seed, equal budgets for random_forest, lightgbm and xgboost
+   (about 40 draws each), then the top five of each on 3 seeds.
+   Rank on PR-AUC and on 2013–20 p@20 of the worst seed: the
+   standard error of a pooled p@20 is about 0.03, so pooled p@20
+   alone picks noise.
+
+Track 2, which label:
+
+3. **A yardstick that is the same for every label.** Lift over a
+   cell's own base rate cannot compare labels. What can: score the
+   same top-20 picks against outcomes that do not depend on the
+   training label, that is the hit rate on `label_3y_beat_spy` and
+   the mean and median `fwd_3y_excess_cagr` and
+   `fwd_3y_max_drawdown_from_entry` of the picks, per test year.
+   This is evaluation over the manifest's label columns, not a new
+   feature or label. It needs a harness change (report-only
+   secondary outcomes; today `eval_label` is refused for
+   classifiers), and the trial stays counted in the training
+   label's cell. To be built before the label comparison, not
+   after.
+4. **Label rungs around cell B,** once step 3 exists: CAGR floor
+   0.08 / 0.10 / 0.15 × drawdown-from-entry cap 0.15 / 0.20 / 0.30,
+   one forest configuration, 3 seeds, read on the common yardstick.
+   `lgbm_drawdown_rungs_3y` ran part of this grid on one seed and
+   could only be read on lift.
+
+Then, for the one candidate that comes out:
+
+5. **Calibration** (prequential, TODO Phase 3): forest Brier beats
+   `base_rate_brier` in 5–10 of 16 years in these cells.
+6. **One holdout look** in its cell, then the backtest with costs
+   and the investability filter. Not before steps 1–5.
+
+Evaluation gaps to close on the way (TODO): p@K counts test *rows*,
+and a stock has up to four median rows per test year, so 20 picks
+can be a handful of stocks; the crash-window entry years need their
+own line in every report for path labels.
 
 ## 3y beat_spy on dataset_v1.4: same spec, different columns, lower scores
 
@@ -290,9 +300,10 @@ sweep name; the match is on the numbers. The v1.1 cell now counts 717
 configurations.
 
 **2. Ablation: the 13 added columns are not the cause.**
-`forest_feature_ablation_3y`, `dataset_v1.4`, **8 runs, not the 24
-its header describes**: the config carried `seeds = [23]`, so every
-arm is one seed. 39 configurations tried in this cell on v1.4 (717 on
+`forest_feature_ablation_3y`, `dataset_v1.4`, 8 runs on one seed.
+Carter cut the config from three seeds to one on purpose: the
+question was the comparison with v1.1, which one seed answers (the
+header comment still describes 24 runs). 39 configurations tried in this cell on v1.4 (717 on
 v1.1 over the same test years). Resolved columns checked from each
 run's `*_config.json`: fs0 120, fs1 118, fs2 73, fs3 112. fs0 is
 exactly the v1.1 column set less the four dropped columns. The
@@ -394,8 +405,107 @@ not: `asset_turnover_rank`, `asset_turnover_delta_1y_rank`,
   columns the era probe found to identify the quarter. In fs0 on
   v1.4 the 17 hold 5.5–6.6%.
 
-What is left, and what would separate it. Between the v1.1 runs and
-fs0 two things differ, and nothing else that was checked (rows, code,
+**4. Column controls: the edge is in the v1.1 values of the 17
+changed columns.** Added 2026-09-28 (night).
+`forest_v11_column_control_3y` (8 runs, `dataset_v1.1`) and
+`forest_v14_unchanged_columns_3y` (4 runs, `dataset_v1.4`), git
+`3f2bfdf`, seeds 23 and 232, r30 and r48. The report directories'
+config copies are identical to the committed files, and each run's
+`*_config.json` gives the expected column count (120, 103, 103).
+Trial counts after them: 725 on v1.1, 47 on v1.4.
+
+Seed-mean fold-mean p@20 (two seeds; the v1.4 120-column row is arm
+fs0 of the ablation, seed 23 only, and exists for r48 alone):
+
+| set | dataset, columns | pooled | 2005–12 | 2013–20 | 2013–19 | PR-AUC |
+|---|---|---|---|---|---|---|
+| r30 | v1.1, all 124 | 0.589 | 0.694 | 0.484 | 0.446 | 0.427 |
+| r30 | v1.1, 120 (four dropped columns out) | 0.583 | 0.678 | 0.488 | 0.450 | 0.427 |
+| r30 | v1.1, 103 (17 changed columns out too) | 0.430 | 0.587 | 0.272 | 0.257 | 0.418 |
+| r30 | v1.4, the same 103 | 0.430 | 0.587 | 0.272 | 0.257 | 0.418 |
+| r30 | v1.4, carry-forward spec (133) | 0.427 | 0.569 | 0.284 | 0.254 | 0.403 |
+| r48 | v1.1, all 124 | 0.583 | 0.659 | 0.506 | 0.464 | 0.429 |
+| r48 | v1.1, 120 | 0.570 | 0.647 | 0.494 | 0.450 | 0.429 |
+| r48 | v1.1, 103 | 0.466 | 0.625 | 0.306 | 0.300 | 0.420 |
+| r48 | v1.4, the same 103 | 0.466 | 0.625 | 0.306 | 0.300 | 0.420 |
+| r48 | v1.4, 120 (the 17 in pinned form; seed 23) | 0.441 | 0.562 | 0.319 | 0.293 | 0.424 |
+| r48 | v1.4, carry-forward spec (133) | 0.430 | 0.597 | 0.262 | 0.225 | 0.413 |
+| | base rate | 0.35 | 0.41 | 0.29 | 0.28 | |
+
+Per test year, v1.1, seed-mean p@20 with and without the 17:
+
+| year | base | r30, 120 | r30, 103 | r48, 120 | r48, 103 |
+|---|---|---|---|---|---|
+| 2005 | 0.41 | 0.82 | 0.75 | 0.70 | 0.95 |
+| 2006 | 0.46 | 0.60 | 0.80 | 0.60 | 0.70 |
+| 2007 | 0.46 | 0.78 | 0.73 | 0.85 | 0.75 |
+| 2008 (GFC) | 0.46 | 0.85 | 0.77 | 0.92 | 0.60 |
+| 2009 (GFC) | 0.44 | 0.52 | 0.57 | 0.57 | 0.50 |
+| 2010 | 0.36 | 0.68 | 0.20 | 0.52 | 0.38 |
+| 2011 | 0.32 | 0.60 | 0.45 | 0.48 | 0.60 |
+| 2012 | 0.34 | 0.57 | 0.42 | 0.52 | 0.52 |
+| 2013 | 0.32 | 0.52 | 0.43 | 0.60 | 0.55 |
+| 2014 | 0.30 | 0.55 | 0.20 | 0.57 | 0.18 |
+| 2015 | 0.30 | 0.68 | 0.32 | 0.65 | 0.43 |
+| 2016 | 0.31 | 0.72 | 0.35 | 0.52 | 0.43 |
+| 2017 | 0.24 | 0.18 | 0.30 | 0.10 | 0.05 |
+| 2018 | 0.26 | 0.12 | 0.02 | 0.30 | 0.18 |
+| 2019 | 0.27 | 0.38 | 0.18 | 0.40 | 0.30 |
+| 2020 (COVID) | 0.33 | 0.75 | 0.38 | 0.80 | 0.35 |
+
+Against the predictions written in the configs:
+
+- **The four dropped columns are not the cause.** Without them the
+  v1.1 runs score 0.583 and 0.570 against 0.589 and 0.583 with them,
+  inside the seed spread, and PR-AUC is the same to 0.002 in every
+  year. Reading (a) is ruled out.
+- **Nothing else differs between the versions.** On the 103
+  unchanged columns all 64 fold rows of the v1.1 runs equal those of
+  the v1.4 runs: counts, base rates, p@20, PR-AUC and ROC-AUC
+  exactly, Brier to within 1e-16. As predicted.
+- **Taking the 17 out of the v1.1 runs takes the edge out:** 0.583 →
+  0.430 (r30) and 0.570 → 0.466 (r48) pooled, 0.49 → 0.27–0.31 in
+  2013–20, higher with the 17 in 12–13 of 16 years, PR-AUC 0.427 →
+  0.418 and 0.429 → 0.420. The difference is after 2009: over
+  2005–09 the two are level on average.
+- **In their pinned v1.4 form the 17 add nothing at the top of the
+  ranking** (r48, seed 23: 0.441 with them, 0.469 without) and
+  0.004 of PR-AUC.
+
+So what was measured: the v1.1 forest results on 3y beat_spy depend
+on the v1.1 form of 17 rank columns, the form decision 0016 removed
+because it lets a model identify the calendar quarter. The same
+columns that let `entity_holdout` models date a row are the ones
+whose removal costs the walk-forward forests 0.10–0.15 of p@20.
+
+What that means is a hypothesis, with two readings that no run has
+separated:
+
+- *Quarter information.* A v1.1 rank of a mass-point feature mixes
+  the stock's standing with the share of the quarter's cross-section
+  sitting on the mass point, for every row and not only the tied
+  ones. That share is a market-state variable. A walk-forward test
+  quarter is unseen, so the model cannot look its base rate up, but
+  it can have learned how the state relates to outcomes, and top-20
+  per *year* rewards choosing the right quarter of the year. On
+  this reading the v1.1 p@20 was partly market timing, and decision
+  0016's note that walk-forward is not inflated by the keys is too
+  strong.
+- *Stock information.* The re-mapping changed how the non-tied
+  stocks are spread (mean absolute change up to 0.23 of rank), and
+  the v1.1 spread may have suited shallow trees better.
+
+What would separate them: p@K within each test quarter on v1.1 (an
+edge that came from choosing the quarter disappears; one that came
+from choosing the stock stays), or the distribution of the v1.1
+picks over the four quarters of each test year. Both need per-row
+predictions or per-quarter metrics from the harness. Worth a note
+upstream either way, because it bears on decision 0016. It does not
+bear on what to run next: the v1.1 form is gone from every dataset
+after v1.1, including the inference datasets.
+
+Written before the column controls ran (evening): between the v1.1
+runs and fs0 two things differ, and nothing else that was checked (rows, code,
 parameters, seeds):
 
 - **(a) the four dropped columns**, 0.05% of the importance in the
@@ -410,13 +520,32 @@ parameters, seeds):
 
 `forest_v11_column_control_3y` and `forest_v14_unchanged_columns_3y`
 separate (a) from (b); their predictions are written in the configs.
-Separating the two readings of (b) needs per-quarter picks (p@K
-within each test quarter on v1.1: an edge that came from choosing
-the quarter disappears), which the harness does not report today.
+(They have run: item 4 above. It is (b).)
+
+**5. A single factor matches the forests on v1.4.**
+`baseline_lowvol_rank_3y`, beat_spy cell, one deterministic run per
+factor. Fold-mean p@20:
+
+| factor | pooled | 2005–12 | 2013–20 | years above base (of 16) | PR-AUC |
+|---|---|---|---|---|---|
+| highest `conservative_score_rank` | 0.491 | 0.544 | 0.438 | 12 | 0.415 |
+| lowest `vol_36m_rank` | 0.378 | 0.462 | 0.294 | 9 | 0.418 |
+| lowest `beta_12m_rank` | 0.231 | 0.262 | 0.200 | 3 | 0.324 |
+| lowest `vol_12m_rank` | 0.178 | 0.256 | 0.100 | 1 | 0.411 |
+| forests, carry-forward spec (18 runs) | 0.42 | 0.59 | 0.26 | | 0.41 |
+| forest ablation arms (8 runs, one seed) | 0.44–0.54 | 0.56–0.65 | 0.28–0.44 | | 0.42 |
+| base rate | 0.35 | 0.41 | 0.29 | | |
+
+`conservative_score_rank` on its own is level with the best
+ablation arm in 2013–20 (0.438) and above the other seven; it is
+0.60–0.80 in 2013–16 and 0.10–0.20 in 2017, 2019 and 2020. It is an
+upstream composite of low volatility, momentum and net payout. 47
+configurations on v1.4 have not produced a forest that is clearly
+better than it.
 
 **What this changes.** The v1.1 forest numbers cannot be reproduced
-on any dataset from v1.2 on with the same columns, whatever (a)/(b)
-shows, because the columns no longer exist in that form. The v1.1
+on any dataset from v1.2 on, because the columns no longer exist in
+that form. The v1.1
 findings stay as found on v1.1. Candidates for 3y beat_spy have to
 be found on v1.4, and on v1.4 nothing tried so far has an edge after
 2013 that holds across parameter sets.
@@ -612,15 +741,87 @@ Measured:
   0.45–0.56 in the 2013–20 folds, so it does not fade. Next in B: `ret_1m_rank`, `conservative_score_rank`,
   `ocf_yield_rank`.
 
+### Against low-risk single factors (added 2026-09-28, night)
+
+`baseline_lowvol_rank_3y`, git `3f2bfdf`, one deterministic run per
+factor and cell. Trial counts after it: cell A 29, cell B 34.
+"Crash" is the mean over entry years 2005–08 and 2019:
+
+| cell | candidate | p@20 | 2005–12 | 2013–20 | 2009–18 | crash | p@50 | PR-AUC |
+|---|---|---|---|---|---|---|---|---|
+| B | forests (4 candidates, 3 seeds) | 0.48–0.50 | 0.43–0.47 | 0.53–0.54 | 0.68–0.71 | 0.09–0.15 | 0.48–0.49 | 0.327 |
+| B | lightgbm (2 candidates, 3 seeds) | 0.39–0.40 | 0.37–0.39 | 0.40–0.43 | 0.60–0.61 | 0.04 | 0.39–0.40 | 0.303 |
+| B | highest `conservative_score_rank` | 0.388 | 0.356 | 0.419 | 0.560 | 0.100 | 0.392 | 0.301 |
+| B | lowest `vol_36m_rank` | 0.325 | 0.294 | 0.356 | 0.490 | 0.060 | 0.416 | 0.318 |
+| B | lowest `vol_12m_rank` | 0.094 | 0.125 | 0.062 | 0.135 | 0.020 | 0.190 | 0.311 |
+| B | lowest `beta_12m_rank` | 0.050 | 0.050 | 0.050 | 0.060 | 0.030 | 0.046 | 0.194 |
+| B | base rate | 0.207 | 0.216 | 0.199 | 0.261 | 0.097 | | |
+| A | forests | 0.37–0.39 | 0.31–0.36 | 0.39–0.44 | 0.54–0.59 | 0.04–0.06 | 0.37–0.38 | 0.268 |
+| A | lightgbm | 0.33–0.35 | 0.29–0.32 | 0.36–0.38 | 0.51–0.54 | 0.02 | 0.34–0.36 | 0.258 |
+| A | highest `conservative_score_rank` | 0.344 | 0.319 | 0.369 | 0.510 | 0.070 | 0.319 | 0.221 |
+| A | lowest `vol_36m_rank` | 0.316 | 0.306 | 0.325 | 0.470 | 0.070 | 0.395 | 0.259 |
+| A | lowest `vol_12m_rank` | 0.075 | 0.106 | 0.044 | 0.110 | 0.020 | 0.181 | 0.250 |
+| A | lowest `beta_12m_rank` | 0.009 | 0.000 | 0.019 | 0.005 | 0.010 | 0.010 | 0.110 |
+| A | base rate | 0.112 | 0.124 | 0.100 | 0.149 | 0.046 | | |
+
+Per test year, cell B, p@20:
+
+| year | base | conservative score | low vol_36m | forest family |
+|---|---|---|---|---|
+| 2005 | 0.21 | 0.35 | 0.10 | 0.14 |
+| 2006 | 0.09 | 0.05 | 0.05 | 0.16 |
+| 2007 | 0.04 | 0.00 | 0.00 | 0.13 |
+| 2008 (GFC) | 0.05 | 0.05 | 0.10 | 0.16 |
+| 2009 (GFC) | 0.36 | 0.55 | 0.50 | 0.84 |
+| 2010 | 0.32 | 0.55 | 0.55 | 0.74 |
+| 2011 | 0.27 | 0.60 | 0.55 | 0.70 |
+| 2012 | 0.37 | 0.70 | 0.50 | 0.75 |
+| 2013 | 0.28 | 0.65 | 0.65 | 0.57 |
+| 2014 | 0.21 | 0.75 | 0.40 | 0.66 |
+| 2015 | 0.18 | 0.65 | 0.55 | 0.66 |
+| 2016 | 0.30 | 0.80 | 0.70 | 0.79 |
+| 2017 | 0.18 | 0.20 | 0.35 | 0.50 |
+| 2018 | 0.13 | 0.15 | 0.15 | 0.69 |
+| 2019 | 0.09 | 0.05 | 0.05 | 0.01 |
+| 2020 (COVID) | 0.22 | 0.10 | 0.00 | 0.41 |
+
+The config stated two readings before the run: a baseline within
+0.05 of the forests means a low-volatility screen, baselines under
+0.35 (B) / 0.25 (A) mean more than a single factor.
+
+- **Cell B falls between the two readings.** The best single factor
+  scores 0.388, which is 0.11 below the forests and above the 0.35
+  line. The forest family is higher than it in 11 of 16 years on
+  p@20 and in 15 of 16 on PR-AUC (0.327 against 0.301), and the gap
+  is widest in 2017, 2018 and 2020 (0.50 / 0.69 / 0.41 against
+  0.20 / 0.15 / 0.10). So in B the forests add to the single factor,
+  and about 60% of their lift over the base rate (0.18 of 0.29) is
+  available from one column.
+- **LightGBM, as configured, adds nothing to the single factor in
+  B:** 0.39–0.40 against 0.388, PR-AUC 0.303 against 0.301.
+- **Cell A is a screen by the stated reading.** The best factor
+  (0.344) is within 0.05 of the forests (0.37–0.39), and the forest
+  family is higher in only 7 of 16 years. Its PR-AUC is higher
+  (0.268 against 0.221 and 0.259), so the forests order the whole
+  cross-section better and the top 20 about equally.
+- **Nothing escapes the crash windows.** Over 2005–08 and 2019 every
+  factor is within 0.03 of the base rate (B: 0.02–0.10 against
+  0.10; A: 0.01–0.07 against 0.05), like the models.
+- **The lowest `vol_12m_rank` is a bad top-20 and a good ranking:**
+  p@20 0.09 in B with PR-AUC 0.311. The few calmest stocks over 12
+  months are rarely compounders. Explanation, untested: prices
+  pinned by a pending acquisition or by illiquidity. It argues for
+  having the investability filter in place before any top-K number
+  in these cells is acted on.
+
 Open, and what would close it:
 
-- **Is this more than a low-volatility screen?** No baseline in
-  these cells ranks on volatility. Lift over book-to-market or over
-  random is not evidence against "buy the calmest stocks".
-  `baseline_lowvol_rank_3y` is written to test it, with its reading
-  stated in the config.
-- **Treat the size of the lift as suspect until that baseline has
-  run** (a result far above baseline is leakage first). What was
+- **Is this more than a low-volatility screen?** Answered above for
+  the top 20: yes in B (by 0.11), barely in A.
+- **Treat the size of the lift as suspect** (a result far above
+  baseline is leakage first). The single factors reach 0.39 with no
+  model at all, which leakage in the fitting cannot explain, so most
+  of the lift is a property of the label. What was
   checked: tags, rows and effective sizes are the beat_spy cell's,
   which shows no such lift with the same code; labels are loader
   expressions over the manifest's label columns. What was not: that
@@ -751,11 +952,11 @@ Found on 2026-09-27:
 
 Found on 2026-09-28 (evening):
 
-- `forest_feature_ablation_3y` ran 8 runs, not 24: its header says
-  three seeds and its body `seeds = [23]`. The summary is right about
-  what ran. The missing seeds need a new config (a config that has
-  run is not edited). **Read the `expanded runs` line of a summary
-  against the config's header before reading its table.**
+- `forest_feature_ablation_3y` ran 8 runs on one seed where its
+  header comment describes 24 on three. The cut was deliberate
+  (Carter: one seed answers the v1.1 comparison), and this file
+  first reported it as a mismatch. **The `expanded runs` line of a
+  summary, not a config's header comment, says what ran.**
 - The two ledger hashes of a re-run differ from the original's when
   the sweep name differs, because the name is inside the config
   hash. "Same configuration" across sweeps has to be shown on the
@@ -775,6 +976,32 @@ Found on 2026-09-28 (evening):
 
 Newest first. One entry per working session: what ran, what it showed,
 what's next. Record trial counts, not just winners.
+
+### 2026-09-28 (night): column controls and low-risk baselines; primary cell chosen
+
+- Ran (by Carter, git `3f2bfdf`), 24 runs, no failures:
+  `baseline_lowvol_rank_3y` (12), `forest_v11_column_control_3y` (8,
+  `dataset_v1.1`), `forest_v14_unchanged_columns_3y` (4). All three
+  report directories hold the configs as committed. Trial counts:
+  3y beat_spy 47 on v1.4 and 725 on v1.1; cell A 29; cell B 34.
+- Showed: (1) the v1.1 forest edge on 3y beat_spy is in the v1.1
+  values of the 17 columns decision 0016 re-mapped (0.57–0.58 with
+  them, 0.43–0.47 without; the four dropped columns change nothing;
+  v1.1 and v1.4 are identical on the other 103); (2) on v1.4,
+  `conservative_score_rank` alone matches the forests on beat_spy;
+  (3) in cell B forests are 0.11 above the best single factor and
+  LightGBM is level with it; in cell A the forests are within 0.05
+  of it.
+- Decided (Carter): the from-entry cell is the primary cell, for its
+  precision and because the label is the more intuitive one. The
+  choice of label stays part of the experiments.
+- Corrected: the ablation's single seed was deliberate, not a
+  mismatch.
+- Wrote `forest_feature_sets_dd_entry_3y` (30 runs), dry-run clean,
+  resolved columns 97 / 15 / 109 / 125 / 172, not run.
+- Nothing promoted, no holdout look.
+- Next: run that sweep; build the report-only secondary outcomes
+  (plan, step 3) before comparing labels.
 
 ### 2026-09-28 (evening): seven sweeps reviewed; code and added columns ruled out; compounder cells hold
 
@@ -801,8 +1028,8 @@ what's next. Record trial counts, not just winners.
   `forest_v11_column_control_3y` (8),
   `forest_v14_unchanged_columns_3y` (4).
 - Nothing promoted, no holdout look.
-- Next: "Plan as of 2026-09-28" at the top. First the low-volatility
-  baseline, then the column controls.
+- Next (as planned that evening; both have since run): the
+  low-volatility baseline, then the column controls.
 
 ### 2026-09-28: the non-replication claim withdrawn; configs now travel with reports
 
