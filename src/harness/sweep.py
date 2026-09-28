@@ -75,6 +75,7 @@ from harness.config import (
     FeatureSpec,
     infer_horizon_years,
     parse_dataset_version,
+    parse_pick_outcomes,
 )
 from harness.derived_labels import label_slug, normalize_label
 from harness.errors import ConfigError
@@ -85,6 +86,7 @@ from harness.seed_report import (
     aggregate_candidates,
     candidate_frame,
     headline_metrics,
+    pick_outcome_headline,
     write_candidate_report,
 )
 from harness.runner import (
@@ -129,6 +131,7 @@ _SWEEP_ALLOWED = frozenset(
         "calibration",
         "calibration_min_rows",
         "min_dataset_version",
+        "pick_outcomes",
         # the one-line conclusion `vml-promote --note` writes into a
         # config; not part of the sweep's identity or of any run's hash
         "note",
@@ -192,6 +195,9 @@ class SweepConfig:
     #: ExperimentConfig.min_dataset_version) — a sweep over columns a
     #: newer version introduced states it once, here
     min_dataset_version: str = ""
+    #: report-only outcomes of every run's top-K picks (eval.picks,
+    #: ExperimentConfig.pick_outcomes)
+    pick_outcomes: tuple[str, ...] = ()
 
     @classmethod
     def from_file(cls, path: str | Path) -> "SweepConfig":
@@ -505,6 +511,14 @@ class SweepConfig:
                 else f"precision_at_{top_k[0]}"
             )
 
+        # checked against every cell's horizon: an outcome whose window
+        # outlives a cell's is not observable on that cell's test rows
+        pick_outcomes: tuple[str, ...] = ()
+        for horizon, _label, _eval in cells:
+            pick_outcomes = parse_pick_outcomes(
+                raw.get("pick_outcomes", ()), horizon, f"sweep {source}"
+            )
+
         sweep = cls(
             name=str(raw.get("name", "")),
             dataset_version=str(raw["dataset_version"]),
@@ -533,6 +547,7 @@ class SweepConfig:
                 raw.get("calibration_min_rows", DEFAULT_CALIBRATION_MIN_ROWS)
             ),
             min_dataset_version=min_dataset_version,
+            pick_outcomes=pick_outcomes,
         )
         if not sweep.name:
             sweep = replace(sweep, name=sweep.derived_name())
@@ -614,6 +629,8 @@ class SweepConfig:
             payload["calibration_min_rows"] = self.calibration_min_rows
         if self.min_dataset_version:
             payload["min_dataset_version"] = self.min_dataset_version
+        if self.pick_outcomes:
+            payload["pick_outcomes"] = list(self.pick_outcomes)
         blob = json.dumps(payload, sort_keys=True, separators=(",", ":"))
         return hashlib.sha256(blob.encode()).hexdigest()[:8]
 
@@ -700,6 +717,9 @@ class SweepConfig:
                 calibration=self.calibration,
                 calibration_min_rows=self.calibration_min_rows,
                 min_dataset_version=self.min_dataset_version,
+                pick_outcomes=parse_pick_outcomes(
+                    self.pick_outcomes, horizon, f"sweep {self.name}"
+                ),
             )
             candidate, name = self._run_names(
                 label, fs_idx, set_idx, combo, draw_idx, seed, config
@@ -1102,6 +1122,10 @@ def _write_sweep_summary(
     ):
         if extra in df.columns and extra not in metric_cols:
             metric_cols.append(extra)
+    metric_cols += [
+        c for c in pick_outcome_headline(sweep, df.columns)
+        if c not in metric_cols
+    ]
     id_cols = ["run", "status", "label", "seed", "grid_params"]
     if sweep.param_sets:
         id_cols.insert(4, "param_set")

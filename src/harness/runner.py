@@ -26,6 +26,11 @@ from eval.era import (
     pooled_metrics,
 )
 from eval.metrics import compute_all, regression_diagnostics
+from eval.picks import (
+    has_pick_outcomes,
+    pick_outcome_metrics,
+    pick_outcome_table,
+)
 from eval.plots import render_calibration_plot, render_pr_curve, render_roc_curve
 from explain.rules import render_tree_diagram, rules_text
 from harness.calibration import PrequentialCalibration
@@ -131,9 +136,11 @@ def run_experiment(
                 list(feature_cols)
                 + [config.label]
                 + ([config.eval_label] if config.eval_label else [])
+                + list(config.pick_outcomes)
                 + [dataset.sample_weight_column(config.horizon_years)]
             )
         )
+        dataset.check_pick_outcomes(config.pick_outcomes, feature_cols)
         fold_importances: list[tuple[int, np.ndarray]] = []
         raw_score_arrays: list[np.ndarray] = []
         run_log.n_folds = len(folds)
@@ -205,10 +212,17 @@ def run_experiment(
             test_years = pd.to_datetime(
                 split.test.loc[test_fit.X.index, "snapshot_date"]
             ).dt.year.to_numpy()
-            prediction_frames.append(
-                collect_predictions(
-                    fold, test_years, test_fit.y, scores,
-                    test_fit.sample_weight, outcome=outcome,
+            fold_predictions = collect_predictions(
+                fold, test_years, test_fit.y, scores,
+                test_fit.sample_weight, outcome=outcome,
+                **_pick_outcome_columns(dataset, config, split.test, test_fit),
+            )
+            prediction_frames.append(fold_predictions)
+            # report-only outcomes of this fold's picks; same top-K rows
+            # as the fold's precision@K
+            metrics.update(
+                pick_outcome_metrics(
+                    fold_predictions, top_k=config.top_k, per_year=False
                 )
             )
             if calib is not None:
@@ -307,6 +321,7 @@ def run_experiment(
             precision_targets=config.precision_targets,
             probabilistic=probabilistic,
         )
+        pooled_block.update(pick_outcome_metrics(pooled, top_k=config.top_k))
         return {
             "run_id": run_id,
             "status": "completed",
@@ -322,6 +337,21 @@ def run_experiment(
         # stopped run is a failed trial, not a shorter completed one
         run_log.fail(exc)
         raise
+
+
+def _pick_outcome_columns(dataset: Dataset, config, test, test_fit) -> dict:
+    """The `collect_predictions` arguments that carry a run's pick
+    outcomes (eval.picks) for one fold's scored test rows; empty when
+    the config names none."""
+    if not config.pick_outcomes:
+        return {}
+    rows = test.loc[test_fit.X.index]
+    return {
+        "stocks": rows["permaticker"].to_numpy(),
+        "pick_outcomes": dataset.pick_outcome_values(
+            rows, config.pick_outcomes
+        ),
+    }
 
 
 def finalize_run(
@@ -373,6 +403,10 @@ def finalize_run(
         probabilistic=probabilistic,
     )
     confidence_df = confidence_profile(predictions, probabilistic=probabilistic)
+    pick_outcome_tables = {
+        k: pick_outcome_table(predictions, k)
+        for k in (config.top_k if has_pick_outcomes(predictions) else ())
+    }
 
     calibration_path = pr_curve_path = roc_curve_path = None
     if render_score_figures:
@@ -417,6 +451,7 @@ def finalize_run(
         era_df=era_df,
         crash_df=crash_df,
         confidence_df=confidence_df,
+        pick_outcome_tables=pick_outcome_tables,
         baseline_df=baseline_df,
         calibration_path=calibration_path,
         pr_curve_path=pr_curve_path,

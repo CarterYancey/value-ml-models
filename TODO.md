@@ -526,23 +526,26 @@ in [PLAN.md](PLAN.md); check items off (and add new ones) as work proceeds.
 - [ ] Run `forest_feature_sets_dd_entry_3y` (30 runs, about 2.5
       hours): five feature sets against the all-ranks reference in
       the primary cell. Predictions in the config.
-- [ ] Label screen: report-only outcomes of a run's top-K picks, per
-      test year: hit rate on `label_3y_beat_spy`, mean and median
-      `fwd_3y_excess_cagr` and `fwd_3y_max_drawdown_from_entry`.
-      Extend the `fwd_at_K` mechanism (continuous-target runs only
-      today) to classifier configs that name outcome columns from
-      the manifest's label group; never model inputs; the trial
-      stays counted in the training label's cell. The quick stand-in
-      for the backtest, which is the yardstick of record.
+- [x] Label screen: report-only outcomes of a run's top-K picks
+      (`pick_outcomes`, `src/eval/picks.py`, docs/experiments.md;
+      2026-09-28). Hit rate for binary outcomes, mean and median for
+      continuous ones, beside the same over all test rows, plus the
+      distinct stocks among the picks; in run reports, the ledger's
+      per-fold metrics and sweep summaries; settable from an eval
+      config for saved bundles.
+- [ ] Run `baseline_pick_outcomes_3y` (2 runs): the single-factor
+      bar for the screen, through the ledger.
 - [ ] Label-comparison backtest template
       (`experiments/portfolios/`): one bundle, monthly top-K buy and
       hold, fixed `cost_bps` and investability filter, SPY leg,
       `[window] end = 2020-12-31`. Parameters fixed before the first
-      label runs; backtests counted as trials. Needs fold bundles on
-      `dataset_v1.4` (`vml-sweep --save-models`).
-- [ ] Label rungs around the primary cell on that yardstick: CAGR
-      floor 0.08 / 0.10 / 0.15 x drawdown-from-entry cap 0.15 /
-      0.20 / 0.30, one forest configuration, 3 seeds.
+      label runs; backtests counted as trials. The bundle comes from
+      the candidate's own `vml-run`, not from a sweep.
+- [ ] Run `forest_label_rungs_dd_entry_3y` (27 runs, about 2
+      hours): CAGR floor 0.08 / 0.10 / 0.15 x drawdown-from-entry
+      cap 0.15 / 0.20 / 0.30, one forest configuration, 3 seeds,
+      read on pick outcomes. Predictions and pass rule in the
+      config.
 - [ ] Parameter search per family in the primary cell on the
       feature set the ablation picks: equal budgets for
       random_forest, lightgbm, xgboost, then the top five of each
@@ -551,10 +554,9 @@ in [PLAN.md](PLAN.md); check items off (and add new ones) as work proceeds.
 - [ ] Investability filter before any top-K number in the path-label
       cells is acted on: the lowest-`vol_12m_rank` top 20 scores
       0.09 where the whole ranking has PR-AUC 0.31.
-- [ ] Report the number of distinct `permaticker`s among the top-K
-      picks per test year, next to p@K: p@K counts test rows, a
-      stock has up to four median rows a year, and the standard
-      error of p@K is quoted as if the rows were independent.
+- [x] Report the number of distinct `permaticker`s among the top-K
+      picks per test year (`n_stocks_at_K`, part of `pick_outcomes`;
+      2026-09-28). Runs without `pick_outcomes` do not carry it.
 - [ ] A crash-window line in the era table for path labels: entry
       years whose window holds a market crash (2005-08, 2019 at 3y)
       are where the compounder models fall to the base rate.

@@ -83,8 +83,28 @@ def headline_metrics(sweep, available) -> list[str]:
     for k in sweep.top_k:
         order += [f"precision_at_{k}", f"conf_at_{k}", f"recall_at_{k}"]
     order += ["pr_auc", "brier", "base_rate_brier", "base_rate"]
+    order += pick_outcome_headline(sweep, available)
     avail = set(available)
     return list(dict.fromkeys(m for m in order if m in avail))
+
+
+def pick_outcome_headline(sweep, available) -> list[str]:
+    """The pick-outcome columns (eval.picks) a sweep's tables show: for
+    the first K, distinct stocks among the picks and each outcome's
+    statistics over the picks, then over all test rows. Report-only:
+    they follow the metrics of record and never lead."""
+    k = sweep.top_k[0]
+    avail = list(available)
+    picks = [
+        m for m in avail
+        if m.startswith(("pick_mean_", "pick_median_"))
+        and m.endswith(f"_at_{k}")
+    ]
+    if not picks:
+        return []
+    stocks = [m for m in avail if m == f"n_stocks_at_{k}"]
+    reference = [m for m in avail if m.startswith(("all_mean_", "all_median_"))]
+    return stocks + picks + reference
 
 
 def aggregate_candidates(outcomes: list[dict]) -> list[dict]:

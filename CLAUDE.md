@@ -120,6 +120,11 @@ invariants below are this repo's equivalents.
   Brier against `base_rate_brier` (the no-skill reference), calibration
   plot, PR-AUC. ROC-AUC and recall@K may be logged but never headline
   (base rates are extreme in some label cells).
+- `pick_outcomes` (docs/experiments.md) reports what the top-K picks
+  went on to do on outcomes other than the training label: the screen
+  for comparing labels, with `vml-backtest` as the yardstick of record.
+  Report-only: label-group columns, never features, never the default
+  `rank_metric`, and a label is not chosen on them without a backtest.
 - Pooled ranking metrics pick per year (eval.era) — per-fold model scores
   are not comparable, so a global top-K over pooled scores is a bug, not
   a metric.

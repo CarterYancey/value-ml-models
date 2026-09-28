@@ -46,8 +46,12 @@ candidates; none is a result of record.
   four low-risk single factors (`baseline_lowvol_rank_3y`).
 - **Sealed holdout:** 19 looks in `reports/final_evals.csv` (listed
   below), unchanged. **Every 3y cell is still unopened.**
-- **Next-step config** (written 2026-09-28, dry-run clean, not yet
-  run): `forest_feature_sets_dd_entry_3y` (30 runs).
+- **Running** (started on the host 2026-09-28 14:48):
+  `forest_feature_sets_dd_entry_3y` (30 runs).
+- **Next-step configs** (written 2026-09-28, dry-run clean, not yet
+  run; both need the harness of this branch for `pick_outcomes`):
+  `baseline_pick_outcomes_3y` (2 runs),
+  `forest_label_rungs_dd_entry_3y` (27 runs).
 
 ## Plan as of 2026-09-28 (night)
 
@@ -80,28 +84,39 @@ cannot compare labels. `vml-backtest` is the instrument that does;
 it is too heavy to run on every candidate, so it gets a screen in
 front of it.
 
-3. **Screen, on every run: outcomes of the picks.** For the top-K
-   picks of each test year, the hit rate on `label_3y_beat_spy` and
-   the mean and median `fwd_3y_excess_cagr` and
-   `fwd_3y_max_drawdown_from_entry`. It is the no-cost,
-   equal-weight, hold-three-years version of the backtest, read off
-   the label columns. The mechanism exists for continuous-target
-   runs (`fwd_at_K`, `eval/era.py`); the change is to let a
-   classifier config name report-only outcome columns from the
-   manifest's label group. Never model inputs, and the trial stays
-   counted in the training label's cell.
-4. **Label rungs around cell B,** read on the screen: CAGR floor
-   0.08 / 0.10 / 0.15 × drawdown-from-entry cap 0.15 / 0.20 / 0.30,
-   one forest configuration, 3 seeds. `lgbm_drawdown_rungs_3y` ran
-   part of this grid on one seed and could only be read on lift.
-5. **Backtest, for the two or three labels that pass the screen.**
-   One portfolio template, identical for every label except the
+3. **Screen: outcomes of the picks. Built 2026-09-28**
+   (`pick_outcomes`, docs/experiments.md). For the top-K picks of
+   each test year, the hit rate on `label_3y_beat_spy` and the mean
+   and median of `fwd_3y_excess_cagr`, `fwd_3y_cagr` and
+   `fwd_3y_max_drawdown_from_entry`, beside the same statistic over
+   all test rows, and the number of distinct stocks among the picks.
+   It is the no-cost, equal-weight, hold-three-years reading of the
+   picks. Report-only: never model inputs, and the run stays counted
+   in its own label's cell.
+4. **The bar and the rungs.** `baseline_pick_outcomes_3y` (2 runs,
+   a minute) puts the single-factor bar in the ledger;
+   `forest_label_rungs_dd_entry_3y` (27 runs, about 2 hours) runs
+   CAGR floor 0.08 / 0.10 / 0.15 × drawdown-from-entry cap 0.15 /
+   0.20 / 0.30 with one forest configuration on 3 seeds. Predictions
+   and the pass rule are in the config.
+5. **From a sweep to a deployed model** (Carter's workflow; sweeps
+   do not save their models unless they are small):
+   1. the sweeps narrow to one candidate per label that passed the
+      screen;
+   2. the candidate becomes a regular experiment config and runs
+      through `vml-run`, which saves its walk-forward fold bundle;
+   3. if the report is worth keeping, `vml-promote`;
+   4. `vml-backtest` on that bundle, one portfolio template for
+      every label (below);
+   5. if the backtest holds, one final eval in the cell;
+   6. if that holds, `vml-train-deploy`.
+
+   The backtest template is identical for every label except the
    bundle: one model, buy the top K monthly, buy and hold, stated
-   `cost_bps`, a stated investability filter, SPY leg. Needs
-   walk-forward fold bundles (`vml-sweep --save-models`) on
-   `dataset_v1.4`; `prices_v1.0` is on disk (through 2026-08-21).
-   Backtests have run before on v1.1 only (19 ledger rows, August).
-   Rules for using it to choose a label:
+   `cost_bps`, a stated investability filter, SPY leg.
+   `prices_v1.0` is on disk (through 2026-08-21); backtests have run
+   before on v1.1 only (19 ledger rows, August). Rules for using it
+   to choose a label:
    - **Buys end 2020-12-31** (`[window] end`), the last walk-forward
      test year. Trade years after it are served by refits and
      overlap the sealed holdout era; the report already calls them
@@ -111,10 +126,8 @@ front of it.
      run and the number of backtests run is reported with the
      result. Tuning the strategy per label is a second search on
      the same test years.
-   - **One path is one draw.** Read the per-year table and the
-     seeds' spread, not the final XIRR alone.
-
-Then, for the one candidate that comes out:
+   - **One path is one draw.** Read the per-year table, not the
+     final XIRR alone.
 
 6. **Calibration** (prequential, TODO Phase 3): forest Brier beats
    `base_rate_brier` in 5–10 of 16 years in these cells.
@@ -993,10 +1006,46 @@ Found on 2026-09-28 (evening):
   and the three new configs are committed with `git add -f` so that
   they travel with the branch.
 
+Found on 2026-09-28 (night), from the first pick-outcome table:
+
+- **The all-rows mean of `fwd_3y_excess_cagr` is −0.11 and its median
+  −0.07** over the walk-forward test rows (unweighted; 36% of rows
+  beat SPY). The universe a top-K is drawn from loses to SPY by a
+  wide margin on average, so "better than the average test row" is a
+  low bar, and an excess-return number for picks is read against
+  zero, not against the universe. Smoke-test numbers, scratch
+  ledger.
+
 ## Log
 
 Newest first. One entry per working session: what ran, what it showed,
 what's next. Record trial counts, not just winners.
+
+### 2026-09-28 (late): pick outcomes built
+
+- Code: `pick_outcomes` in experiment, sweep and eval configs;
+  `src/eval/picks.py`; a "Pick outcomes" section in run reports and
+  the columns in sweep summaries. 17 new tests, 423 pass. Configs
+  without the key keep their hashes (the key is in the hash when
+  set, like `top_k`).
+- Smoke test on `dataset_v1.4`, scratch ledger, not a logged trial:
+  highest `conservative_score_rank` in the primary cell. p@20 0.3875,
+  equal to the ledger's run of the same baseline; the picks' hit
+  rate on `label_3y_beat_spy` 0.4906, equal to the same factor's
+  p@20 in the beat_spy cell (0.491, a separate run). Two independent
+  runs agreeing is the check that the outcomes describe the right
+  rows. The picks: median excess CAGR −0.002, mean −0.021, median
+  drawdown from entry 0.19, 15.4 distinct stocks per 20 picks.
+- Decided (Carter): the label comparison of record is
+  `vml-backtest`; sweeps do not save models; a candidate goes sweep →
+  `vml-run` → promote → backtest → final eval → `vml-train-deploy`.
+- Wrote `baseline_pick_outcomes_3y` (2 runs) and
+  `forest_label_rungs_dd_entry_3y` (27 runs), dry-run clean, not
+  run. `forest_feature_sets_dd_entry_3y` was started by Carter at
+  14:48 and carries no pick outcomes (written before they existed,
+  and a config that has run is not edited).
+- Next: the two new sweeps; read the feature-set sweep when it
+  finishes; then the backtest template.
 
 ### 2026-09-28 (night): column controls and low-risk baselines; primary cell chosen
 

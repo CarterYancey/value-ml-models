@@ -86,6 +86,42 @@ def _era_view(era_df: pd.DataFrame) -> pd.DataFrame:
     return df[ordered]
 
 
+def _pick_outcome_views(table: pd.DataFrame) -> list[tuple[str, pd.DataFrame]]:
+    """A pick-outcome table (eval.picks.pick_outcome_table) as
+    reported: one narrow table per outcome, crash years tagged inline
+    like the era table. The wide frame has four columns per continuous
+    outcome and reads badly past two outcomes."""
+    df = table.copy()
+    def tag(era):
+        if str(era) == "pooled":
+            return "pooled*"
+        label = crash_label(int(era)) if str(era).isdigit() else None
+        return f"{era} ({label})" if label else str(era)
+    df["era"] = df["era"].map(tag)
+    lead = [c for c in ("era", "picks", "stocks") if c in df.columns]
+    outcomes = list(
+        dict.fromkeys(
+            c.split(" ", 1)[0] for c in df.columns if c not in lead
+        )
+    )
+    views = []
+    for outcome in outcomes:
+        cols = [c for c in df.columns if c.split(" ", 1)[0] == outcome
+                and c not in lead]
+        view = df[lead + cols].rename(
+            columns={c: c.split(" ", 1)[1] for c in cols}
+        )
+        view = view.rename(
+            columns={
+                "hit rate": "picks hit rate",
+                "mean": "picks mean",
+                "median": "picks median",
+            }
+        )
+        views.append((outcome, view))
+    return views
+
+
 def _baseline_view(baseline_df: pd.DataFrame) -> pd.DataFrame:
     """Baseline comparison trimmed to the columns that get read."""
     drop = [c for c in baseline_df.columns
@@ -106,6 +142,7 @@ def write_report(
     era_df: pd.DataFrame | None = None,
     crash_df: pd.DataFrame | None = None,
     confidence_df: pd.DataFrame | None = None,
+    pick_outcome_tables: dict[int, pd.DataFrame] | None = None,
     baseline_df: pd.DataFrame | None = None,
     calibration_path: Path | None = None,
     pr_curve_path: Path | None = None,
@@ -253,6 +290,33 @@ def write_report(
         lines.append("")
         lines.append(_table(confidence_df))
         lines.append("")
+
+    if pick_outcome_tables:
+        lines.append("## Pick outcomes (what the picks went on to do)")
+        lines.append("")
+        lines.append(
+            "Report-only outcomes of the top-K picks of each test year "
+            f"(`pick_outcomes`: {', '.join(f'`{o}`' for o in config.pick_outcomes)}), "
+            "from the manifest's label columns; none is a model input or "
+            "the training target, and the run is counted in its own "
+            "label's cell. For a binary outcome the picks' hit rate, for "
+            "a continuous one their mean and median, each beside the "
+            "same statistic over **all** test rows of the era "
+            "(unweighted, like the picks: one row, one pick). `stocks` "
+            "is the number of distinct `permaticker`s among the picks (a "
+            "stock has up to four test rows a year); in the pooled row "
+            "it is the mean per year and the statistics run over every "
+            "year's picks. NULL outcomes are left out, not counted as "
+            "misses. This is a no-cost, equal-weight reading of the "
+            "picks, a screen for `vml-backtest` and not a substitute."
+        )
+        lines.append("")
+        for k, table in pick_outcome_tables.items():
+            for outcome, view in _pick_outcome_views(table):
+                lines.append(f"### Top {k} per test year: `{outcome}`")
+                lines.append("")
+                lines.append(_table(view))
+                lines.append("")
 
     source_bundle = artifacts.get("source_bundle") if artifacts else None
     if not score_figures_rendered:

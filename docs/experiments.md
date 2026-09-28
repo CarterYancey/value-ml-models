@@ -103,6 +103,57 @@ label = "(fwd_3y_cagr >= 0.15 | fwd_3y_excess_cagr >= 0.05) & fwd_3y_max_drawdow
   thresholds) but is a separate ledger cell, since the cell is the label
   string.
 
+## Pick outcomes: a yardstick shared by every label
+
+Lift over a cell's own base rate says a label is learnable. It cannot
+compare two labels, and it does not say that picking by a label beats
+the market. `vml-backtest` answers that (docs/backtesting.md) and is
+the yardstick of record; `pick_outcomes` is the screen in front of it,
+cheap enough to put on every run:
+
+```toml
+label = "fwd_3y_cagr >= 0.1 & fwd_3y_max_drawdown_from_entry < 0.2"
+top_k = [20, 50]
+pick_outcomes = [
+  "label_3y_beat_spy",               # binary: the picks' hit rate
+  "fwd_3y_excess_cagr",              # continuous: mean and median
+  "fwd_3y_max_drawdown_from_entry",
+  "fwd_1y_cagr >= 0",                # a label expression: hit rate
+]
+```
+
+For the top-K picks of each test year the report gains a "Pick
+outcomes" section, one table per outcome and K, with the statistic over
+the picks beside the same statistic over all test rows of the year, and
+the number of distinct stocks among the picks (a stock has up to four
+median rows per test year, so 20 picks can be fewer than 20 stocks).
+The same numbers are logged per fold and pooled: `pick_mean_<o>_at_K`,
+`pick_median_<o>_at_K`, `all_mean_<o>`, `all_median_<o>`,
+`n_stocks_at_K`. Sweeps take the same key and show the first K's
+columns after the metrics of record.
+
+Rules:
+
+- Outcomes are columns of the manifest's `labels` group or label
+  expressions over them, at a horizon no longer than the run's (a
+  shorter window lies inside the run's, so it is observable on the
+  run's test rows; a longer one is refused).
+- Report-only. They are never model inputs (an outcome whose source
+  column is also a feature is refused), they do not change a fit, and
+  the run is counted in the trial-ledger cell of its own label.
+  `rank_metric` stays a metric of record unless a sweep names an
+  outcome key on purpose, which makes the outcome a selection target
+  and has to be said in the write-up.
+- The picks are precision@K's picks: unweighted, one row one pick, same
+  ordering and ties. The all-rows reference is unweighted too.
+- NULL outcomes are left out of a statistic, never counted as misses.
+- `pick_outcomes` is part of the config hash when set, like `top_k`;
+  configs without it keep their hashes. An eval config may set it, so
+  `vml-eval` adds outcomes to a saved bundle without refitting.
+- It reads the picks with no costs, no investability filter, equal
+  weights and one entry date per row. A label that looks good here has
+  earned a backtest, nothing more.
+
 ## Models
 
 `model.name` in a config selects from the registry: the baselines
