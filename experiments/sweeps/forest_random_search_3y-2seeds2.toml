@@ -1,0 +1,41 @@
+# Follow-up to forest_random_search_3y-2seeds: the values of its best
+# draws, resampled as choices over four seeds. Interrupted after 76 of
+# 120 runs (74 configs), so it has no summary; its runs are in the
+# ledger.
+#
+# Checked 2026-09-28: this file expands to 120 runs, and the 74 that
+# ran have exactly the names and config hashes the ledger recorded, so
+# it is the config that ran (dataset_v1.1, git e587a66, 2026-09-01).
+#
+# Do not re-run under this name.
+name = "forest_random_search_3y-2seeds2"
+dataset_version = "dataset_v1.1"
+scheme = "walkforward"
+folds = "all"
+seeds = [42, 300, 323, 1776]
+top_k = [20]
+rank_metric = "precision_at_20"
+n_samples = 30
+search_seed = 96
+
+[[cells]]
+label = "label_3y_beat_spy"
+
+[[features]]
+groups = ["ranks"]
+exclude_families = ["ranks/technical", "ranks/trend"]
+families = ["features/trend", "features/technical"]
+
+[model]
+name = "random_forest"
+bootstrap = true
+n_jobs = 10
+class_weight = 1
+
+[random]
+criterion = {"choices" = ["gini", "entropy"]}
+max_depth = {"choices" = [3, 4, 13, 5, 12, 9, 7, 6, 11]}
+max_features = {"choices" = [1, 0.915, 0.205, 0.504, 0.364, 0.663, 0.408, 0.867]}
+max_samples = {"choices" = [1, 0.441, 0.664, 0.313, 0.281, 0.589]}
+min_samples_leaf = {"choices" = [248, 72, 173, 100, 457, 50, 29, 107, 187, 133, 134, 38, 220, 123, 98]}
+n_estimators = {"choices" = [126, 490, 477, 389, 300, 295, 352, 440, 407, 418, 470, 247, 145, 133]}

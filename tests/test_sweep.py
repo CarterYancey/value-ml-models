@@ -497,3 +497,89 @@ def test_min_dataset_version_lands_on_every_run():
         SweepConfig.from_dict(
             _sweep_dict(dataset_version="dataset_v1.2", min_dataset_version="1.3")
         )
+
+
+# ------------------------------------------- config copy in the report dir
+
+_MINI_TOML = """\
+name = "mini_sweep"
+dataset_version = "%s"
+scheme = "walkforward"
+feature_groups = ["ranks"]
+seeds = [3]
+top_k = [5]
+[[cells]]
+label = "label_3y_beat_spy"
+[model]
+name = "decision_tree"
+min_weight_fraction_leaf = 0.02
+[grid]
+max_depth = %s
+"""
+
+
+def _run_toml(path, data_root, tmp_path):
+    return run_sweep(
+        SweepConfig.from_file(path),
+        data_root=data_root,
+        results_path=tmp_path / "results.csv",
+        reports_dir=tmp_path / "reports",
+        sweep_config_path=str(path),
+    )
+
+
+def test_sweep_copies_its_config_into_the_report_dir(data_root, tmp_path):
+    """The summary must not depend on the file under experiments/: the
+    sweep file is copied as written, and every run records its full
+    config and the columns its feature spec resolved to."""
+    path = tmp_path / "mini_sweep.toml"
+    text = "# why this sweep exists\n" + _MINI_TOML % (VERSION, "[2, 3]")
+    path.write_text(text)
+    out = _run_toml(path, data_root, tmp_path)
+    sweep_dir = tmp_path / "reports" / "sweeps" / "mini_sweep"
+    assert (sweep_dir / "mini_sweep_config.toml").read_text() == text
+    assert "mini_sweep_config.toml" in out["summary_md"].read_text()
+
+    run = out["runs"][0]
+    record = json.loads((sweep_dir / f"{run['run']}_config.json").read_text())
+    assert record["config_hash"] == run["config_hash"]
+    assert record["config"]["model_params"]["max_depth"] == 2
+    assert record["n_feature_columns"] == len(record["feature_columns"]) > 0
+    assert all(c.endswith("_rank") for c in record["feature_columns"])
+    assert f"{run['run']}_config.json" in run["report_path"].read_text()
+
+
+def test_edited_sweep_cannot_reuse_its_report_dir(data_root, tmp_path):
+    """Editing a sweep file in place and re-running it would overwrite
+    the old summary with another config's numbers."""
+    path = tmp_path / "mini_sweep.toml"
+    path.write_text(_MINI_TOML % (VERSION, "[2, 3]"))
+    _run_toml(path, data_root, tmp_path)
+    sweep_dir = tmp_path / "reports" / "sweeps" / "mini_sweep"
+    summary = (sweep_dir / "mini_sweep_summary.md").read_text()
+
+    path.write_text(_MINI_TOML % (VERSION, "[4]"))
+    with pytest.raises(ConfigError, match="different sweep config"):
+        _run_toml(path, data_root, tmp_path)
+    assert (sweep_dir / "mini_sweep_summary.md").read_text() == summary
+    assert "[2, 3]" in (sweep_dir / "mini_sweep_config.toml").read_text()
+
+
+def test_note_does_not_change_a_sweep(data_root, tmp_path):
+    """`vml-promote --note` writes `note` into the sweep file; the sweep
+    must still load, expand to the same configs, and re-run in place."""
+    path = tmp_path / "mini_sweep.toml"
+    body = _MINI_TOML % (VERSION, "[2]")
+    path.write_text(body)
+    before = SweepConfig.from_file(path)
+    _run_toml(path, data_root, tmp_path)
+
+    path.write_text(body.replace(
+        'name = "mini_sweep"\n', 'name = "mini_sweep"\nnote = "what it showed"\n'
+    ))
+    after = SweepConfig.from_file(path)
+    assert after.identity_hash == before.identity_hash
+    assert [r.config.config_hash for r in after.expand()] == [
+        r.config.config_hash for r in before.expand()
+    ]
+    _run_toml(path, data_root, tmp_path)  # not refused

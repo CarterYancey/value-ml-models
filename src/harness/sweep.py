@@ -56,6 +56,7 @@ import hashlib
 import itertools
 import json
 import re
+import shutil
 import tomllib
 import traceback
 from dataclasses import dataclass, field, replace
@@ -128,6 +129,9 @@ _SWEEP_ALLOWED = frozenset(
         "calibration",
         "calibration_min_rows",
         "min_dataset_version",
+        # the one-line conclusion `vml-promote --note` writes into a
+        # config; not part of the sweep's identity or of any run's hash
+        "note",
     }
 )
 
@@ -908,6 +912,7 @@ def run_sweep(
     """
     runs = sweep.expand()
     sweep_reports = Path(reports_dir) / "sweeps" / sweep.name
+    config_copy = _snapshot_sweep_config(sweep, sweep_config_path, sweep_reports)
     multi_seed = len(sweep.seeds) > 1
     # per-seed run reports are detail under a multi-seed sweep; the
     # sweep directory itself holds one report per candidate
@@ -970,7 +975,7 @@ def run_sweep(
     }
     summary_md, summary_csv, seeds_csv = _write_sweep_summary(
         sweep, outcomes, candidates, sweep_reports, results_path,
-        sweep_config_path,
+        sweep_config_path, config_copy,
     )
     return {
         "runs": outcomes,
@@ -983,6 +988,43 @@ def run_sweep(
     }
 
 
+def sweep_config_copy_path(sweep_reports: Path) -> Path:
+    """Where a sweep's report directory keeps its copy of the config."""
+    return sweep_reports / f"{sweep_reports.name}_config.toml"
+
+
+def _snapshot_sweep_config(
+    sweep: SweepConfig, sweep_config_path: str, sweep_reports: Path
+) -> Path | None:
+    """Copy the sweep file, as written, into the sweep's report
+    directory before anything runs.
+
+    The summary used to name the file under `experiments/` and nothing
+    more, so a sweep file edited in place after its run left results
+    whose config no longer existed anywhere. For the same reason a
+    report directory that already holds a *different* sweep's copy is
+    refused: running an edited sweep under its old name would overwrite
+    the old summary with numbers from another config. Re-running the
+    same sweep (resuming, or after only its `note` changed) is fine.
+    """
+    if not sweep_config_path or not Path(sweep_config_path).is_file():
+        return None  # built from a dict: there is no file to copy
+    copy = sweep_config_copy_path(sweep_reports)
+    if copy.exists():
+        earlier = SweepConfig.from_file(copy)
+        if earlier.identity_hash != sweep.identity_hash:
+            raise ConfigError(
+                f"{sweep_reports} holds the results of a different sweep "
+                f"config (identity {earlier.identity_hash}, copied in "
+                f"{copy.name}); {sweep_config_path} now has identity "
+                f"{sweep.identity_hash}. Copy the sweep to a new file with "
+                "a new `name` instead of editing it in place."
+            )
+    sweep_reports.mkdir(parents=True, exist_ok=True)
+    shutil.copyfile(sweep_config_path, copy)
+    return copy
+
+
 def _write_sweep_summary(
     sweep: SweepConfig,
     outcomes: list[dict],
@@ -990,6 +1032,7 @@ def _write_sweep_summary(
     sweep_reports: Path,
     results_path: str | Path,
     sweep_config_path: str,
+    config_copy: Path | None = None,
 ) -> tuple[Path, Path, Path | None]:
     """Ranked summary: markdown for reading, CSV with every pooled metric
     per run; under a multi-seed sweep the markdown ranks *candidates* by
@@ -1105,7 +1148,14 @@ def _write_sweep_summary(
     lines = [
         f"# Sweep summary — {sweep.name}",
         "",
-        f"- sweep config: `{sweep_config_path or '<inline>'}`",
+        f"- sweep config: `{sweep_config_path or '<inline>'}`"
+        + (
+            f" — copied as run to [{config_copy.name}]({config_copy.name}) "
+            f"(sweep identity `{sweep.identity_hash}`); the copy, not the "
+            "file under `experiments/`, is the record"
+            if config_copy is not None
+            else ""
+        ),
         f"- dataset version: `{sweep.dataset_version}` (pinned, immutable)",
         f"- scheme: `{sweep.scheme}`, folds: `{sweep.folds}`, git `{git_sha()}`",
         f"- model family: `{sweep.model_name}`, fixed params "

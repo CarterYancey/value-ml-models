@@ -173,6 +173,53 @@ invariants below are this repo's equivalents.
   the resulting fit has no test set: `vml-predict` output is a ranking,
   never an evaluation result.
 
+## Before writing a conclusion
+
+A conclusion in `docs/findings.md`, a promoted note or a TODO outlives
+the session that wrote it and steers the next one. On 2026-09-27 a
+comparison of v1.4 runs with v1.1 runs was written up as "did not
+replicate" and the v1.1 findings were marked superseded. The runs
+shared a feature *spec* but not a column set, the v1.1 config had been
+lost, and neither had been checked. These rules come from that.
+
+- **Say what was measured, then what it might mean, separately.**
+  "The same spec scores 0.42 on v1.4" is a measurement. "The edge is
+  gone" is an explanation. Write the measurement as fact and the
+  explanation as a hypothesis until a run has tested it.
+- **Before comparing two runs, prove what each one ran.** Expand the
+  config and match its config hashes against the ledger or the summary
+  CSV. A comment in a config, a file name, or a summary header naming a
+  path is not proof: files get edited. If it can't be proven, say so in
+  the sentence that makes the comparison.
+- **A feature spec is not a column set.** Groups and families resolve
+  against the manifest, so one spec selects different columns on
+  different dataset versions. Compare the resolved columns
+  (`*_config.json`, or the importances CSV) and state the difference
+  next to any cross-version number.
+- **List what differs between the two runs before naming a cause:**
+  dataset version, resolved columns, rows (train/test counts, effective
+  sizes, base rates per fold), parameters, seeds, git SHA. Every
+  difference left unchecked is a live explanation and is named as one.
+- **Write down the rival explanations and what would separate them,**
+  and write the prediction into the config before the run. If no
+  available evidence separates them, the finding is "open", and the
+  next experiment is the one that would.
+- **A surprising negative gets the same suspicion as a surprising
+  positive.** A result far below a previous one is a bug or a changed
+  input first, a finding second, exactly as a result far above
+  baseline is leakage first.
+- **Never mark earlier findings superseded, and never label a promoted
+  result NEGATIVE or NON-REPLICATION, on a comparison whose inputs
+  weren't verified.** Corrections are dated and added; the earlier
+  text is reworded, and the log says what changed and why.
+- **Check numbers in a draft against the ledger before saving it,**
+  including counts ("in all 16 years"), and never write a parameter
+  value, column name or count from memory.
+- **Never edit a config that has run.** Copy it to a new file with a
+  new `name`. The report directory's copy is the record of what ran;
+  `vml-sweep` refuses a report directory that holds another config's
+  copy.
+
 ## Honest-evaluation checklist for any reported result
 
 - [ ] Walk-forward, purged, embargoed (upstream tags applied correctly).
@@ -183,6 +230,9 @@ invariants below are this repo's equivalents.
 - [ ] Calibration curve included if probabilities are used downstream.
 - [ ] Effective sample size (Σ `sample_weight_{H}y`) reported, and
       `split_folds.parquet` cited.
+- [ ] For a comparison between runs: both configs verified by hash,
+      and every difference between them (dataset version, resolved
+      columns, rows, git SHA) stated.
 - [ ] For a holdout number: the look count in its cell is stated
       (`reports/final_evals.csv`); look 2 or later is read against the
       earlier looks, not on its own.

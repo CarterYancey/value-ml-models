@@ -61,6 +61,8 @@ DEFAULT_REPORTS = Path("reports")
 PROMOTED_DIRNAME = "promoted"
 META_FILENAME = "promoted.json"
 CONFIG_SNAPSHOT = "config.toml"
+#: the copy the run itself made in its report directory, when it has one
+CONFIG_AS_RUN = "config_as_run.toml"
 INDEX_FILENAME = "README.md"
 
 _REPORT_FIELD = re.compile(r"^- (?P<key>[^:]+): `(?P<value>[^`]*)`")
@@ -76,6 +78,19 @@ def _artifact_set(report_md: Path) -> list[Path]:
         if p.name.startswith(f"{stem}_"):
             files.append(p)
     return files
+
+
+def _config_as_run(report_md: Path) -> Path | None:
+    """The sweep config copy a sweep left in its report directory
+    (`<sweep>_config.toml`), for a sweep summary or one of its run
+    reports. That copy is what ran; the file under `experiments/` may
+    have been edited since. A single run's own copies share its report's
+    name stem and travel with the artifact set."""
+    for folder in (report_md.parent, report_md.parent.parent):
+        if folder.parent.name == "sweeps":
+            copy = folder / f"{folder.name}_config.toml"
+            return copy if copy.is_file() else None
+    return None
 
 
 def _is_sweep_summary(report_md: Path) -> bool:
@@ -237,6 +252,9 @@ def promote(
     dest.mkdir(parents=True)
     for f in files:
         shutil.copy2(f, dest / f.name)
+    as_run = _config_as_run(report_md)
+    if as_run is not None:
+        shutil.copy2(as_run, dest / CONFIG_AS_RUN)
 
     header = _report_header(report_md)
     store = ResultsStore(results_path)

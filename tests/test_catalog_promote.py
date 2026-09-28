@@ -370,3 +370,29 @@ def test_sweep_digest_ranks_across_sweeps_and_says_what_wins(
     catalog.main(["--experiments-dir", str(root / "experiments"), "--results",
                   str(results), "sweeps", "--sweep-reports", str(reports / "sweeps")])
     assert "# Sweep digest" in capsys.readouterr().out
+
+
+def test_promote_sweep_takes_the_config_copy_made_at_run_time(tmp_path):
+    """The file under experiments/ may have been edited since the sweep
+    ran; the copy in the sweep's report directory is what ran."""
+    from harness import promote
+
+    reports = tmp_path / "reports"
+    sweep = reports / "sweeps" / "grid_3y"
+    (sweep / "seeds").mkdir(parents=True)
+    (sweep / "grid_3y_summary.md").write_text("# Sweep grid_3y\n")
+    (sweep / "grid_3y_config.toml").write_text('name = "grid_3y"\n# as run\n')
+    (sweep / "seeds" / "run_one.md").write_text("# run\n")
+    (sweep / "seeds" / "run_one_config.json").write_text("{}\n")
+
+    dest = promote.promote("grid_3y", reports_dir=reports, git=False,
+                           experiments_dir=tmp_path / "experiments",
+                           results_path=tmp_path / "results.csv")
+    assert "# as run" in (dest / promote.CONFIG_AS_RUN).read_text()
+
+    dest2 = promote.promote(str(sweep / "seeds" / "run_one.md"),
+                            reports_dir=reports, git=False,
+                            experiments_dir=tmp_path / "experiments",
+                            results_path=tmp_path / "results.csv")
+    assert (dest2 / promote.CONFIG_AS_RUN).is_file()
+    assert (dest2 / "run_one_config.json").is_file()

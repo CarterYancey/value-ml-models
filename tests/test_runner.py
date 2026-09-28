@@ -158,3 +158,32 @@ def test_run_stopped_midway_logs_no_completed_rows(
     assert ResultsStore(results).configurations_tried(
         "dataset_v0.0-test", "walkforward", 3, "label_3y_beat_spy"
     ) == 1
+
+
+def test_run_from_a_file_copies_the_file_beside_the_report(data_root, tmp_path):
+    from harness.runner import run_config_file
+
+    path = tmp_path / "exp.toml"
+    text = (
+        "# why this run exists\n"
+        'name = "copied_cfg"\n'
+        'dataset_version = "dataset_v0.0-test"\n'
+        'scheme = "walkforward"\n'
+        "horizon_years = 3\n"
+        'label = "label_3y_beat_spy"\n'
+        'feature_groups = ["ranks"]\n'
+        "seed = 7\n"
+        "top_k = [5]\n"
+        "[model]\n"
+        'name = "majority_class"\n'
+    )
+    path.write_text(text)
+    reports = tmp_path / "reports"
+    run_config_file(
+        path, data_root=data_root, results_path=tmp_path / "results.csv",
+        reports_dir=reports,
+    )
+    assert (reports / "copied_cfg_config.toml").read_text() == text
+    record = json.loads((reports / "copied_cfg_config.json").read_text())
+    assert record["config"]["label"] == "label_3y_beat_spy"
+    assert record["feature_columns"]

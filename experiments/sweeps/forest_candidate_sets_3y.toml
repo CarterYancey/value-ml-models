@@ -20,7 +20,7 @@
 #   uv run python scripts/run_baselines.py dataset_v1.4
 # Run: uv run vml-sweep experiments/sweeps/forest_candidate_sets_3y.toml
 name = "forest_candidate_sets_3y"
-note = "NON-REPLICATION, v1.4 3y beat_spy: the six v1.1 forest winners score p@20 0.40-0.44 over 3 seeds (v1.1: 0.58; base 0.35, random baseline 0.39); 0.59 in 2005-12 but 0.26 in 2013-20, below the 0.29 base rate; the post-2013 forest edge is gone"
+note = "v1.4 3y beat_spy, the v1.1 forest winners re-run: p@20 0.40-0.44 over 3 seeds (base 0.35); 0.59 in 2005-12, 0.26 in 2013-20 (base 0.29). Same params, spec and rows as the v1.1 runs (0.58), but the spec resolves to 13 more and 4 fewer columns; cause of the lower score not isolated (forest_feature_ablation_3y, forest_v11_code_control_3y)"
 dataset_version = "dataset_v1.4"
 min_dataset_version = "1.4"
 scheme = "walkforward"

@@ -354,6 +354,19 @@ def write_report(
     )
     lines.append("")
 
+    if artifacts and "config_record" in artifacts:
+        name = Path(artifacts["config_record"]).name
+        lines.append("### Configuration as run")
+        lines.append("")
+        lines.append(
+            f"[{name}]({name}) is this run's own copy of its full config "
+            "and of the feature columns the feature spec resolved to on "
+            "this dataset version. Compare two runs on those columns, not "
+            "on their feature specs: one spec selects different columns "
+            "on different dataset versions."
+        )
+        lines.append("")
+
     lines.append("### Fold definition (cited from `split_folds.parquet`)")
     lines.append("")
     lines.append(

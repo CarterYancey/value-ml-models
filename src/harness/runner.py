@@ -9,6 +9,8 @@ structurally out of its reach.
 
 from __future__ import annotations
 
+import json
+import shutil
 import traceback
 from pathlib import Path
 
@@ -102,6 +104,10 @@ def run_experiment(
                 f"no folds for scheme={config.scheme!r} "
                 f"horizon={config.horizon_years}"
             )
+        config_record = _write_config_record(
+            Path(reports_dir) / f"{config.name}_config.json",
+            config, run_id, sha, dataset.version, feature_cols,
+        )
         calib = None
         if config.calibration:
             calib = PrequentialCalibration(
@@ -229,7 +235,7 @@ def run_experiment(
             )
         run_log.commit()
 
-        artifacts: dict[str, Path] = {}
+        artifacts: dict[str, Path] = {"config_record": config_record}
         reports_dir = Path(reports_dir)
         if fold_rules:
             artifacts["rules"] = _write_rules_file(
@@ -421,6 +427,39 @@ def finalize_run(
     return report_path, configurations_tried
 
 
+def _write_config_record(
+    path: Path,
+    config: ExperimentConfig,
+    run_id: str,
+    sha: str,
+    dataset_version: str,
+    feature_cols: list[str],
+) -> Path:
+    """The run's own copy of what it ran, written next to its report
+    before the first fold is fitted: the full config (the payload the
+    config hash is taken over) and the feature columns the feature spec
+    resolved to *on this dataset version*.
+
+    A report that only names its config file cannot be checked once that
+    file is edited or lost, and a feature spec does not pin a column
+    set: the same spec selects different columns on another dataset
+    version. Its name shares the report's stem, so promotion carries it.
+    """
+    path.parent.mkdir(parents=True, exist_ok=True)
+    record = {
+        "experiment": config.name,
+        "run_id": run_id,
+        "config_hash": config.config_hash,
+        "git_sha": sha,
+        "dataset_version": dataset_version,
+        "config": json.loads(config.canonical_json()),
+        "n_feature_columns": len(feature_cols),
+        "feature_columns": list(feature_cols),
+    }
+    path.write_text(json.dumps(record, indent=2) + "\n")
+    return path
+
+
 def _write_rules_file(
     path: Path,
     config: ExperimentConfig,
@@ -476,6 +515,10 @@ def _write_importances_file(
 
 def run_config_file(path: str | Path, **kwargs) -> dict:
     config = ExperimentConfig.from_file(path)
+    # the config file as written (comments included), beside the report
+    reports_dir = Path(kwargs.get("reports_dir", DEFAULT_REPORTS))
+    reports_dir.mkdir(parents=True, exist_ok=True)
+    shutil.copyfile(path, reports_dir / f"{config.name}_config.toml")
     return run_experiment(config, config_path=str(path), **kwargs)
 
 

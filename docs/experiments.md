@@ -149,6 +149,20 @@ is always an explicit decision. The summary's ranking is model selection
 on walk-forward folds — candidates for the sealed holdout, never final
 results.
 
+**What ran is recorded with the results, not by reference.** A sweep
+copies its TOML, as written, to
+`reports/sweeps/<name>/<name>_config.toml` before the first run, and
+every run (in a sweep or through `vml-run`) writes
+`<run>_config.json` beside its report: the full config its hash is
+taken over, and the feature columns its feature spec resolved to on
+that dataset version. `vml-run` also copies its TOML there.
+`vml-promote` carries the sweep copy along as `config_as_run.toml`.
+To change a sweep that has run, copy it to a new file with a new
+`name`: `vml-sweep` refuses a report directory that holds the copy of
+a different sweep (a changed `note` is not a different sweep). Compare
+runs on their resolved columns: one feature spec selects different
+columns on different dataset versions.
+
 `[[sets]]` is the follow-up to a wide `[grid]` search: paste its top
 candidates in as whole parameter dictionaries and re-run them across
 seeds, feature sets, label cells, or a further `[grid]` / `[random]`

@@ -303,10 +303,15 @@ in [PLAN.md](PLAN.md); check items off (and add new ones) as work proceeds.
 - [ ] `vml-experiments sweeps` ranks rows on different metrics (p@10 /
       p@20 / p@50) in one table — rank within one metric, or group by
       it.
-- [ ] Guard against editing a sweep TOML after it has run: warn in
-      `vml-sweep` when `reports/sweeps/<name>/` already exists under a
-      different sweep identity hash (forest_random_search_3y drifted
-      from its own summary this way).
+- [x] Guard against editing a sweep TOML after it has run:
+      `vml-sweep` copies the sweep file into `reports/sweeps/<name>/`
+      and refuses to run when that directory holds the copy of a
+      different sweep identity. Every run also writes
+      `<run>_config.json` (full config, resolved feature columns)
+      beside its report, `vml-run` copies its TOML there, and
+      `vml-promote` carries the as-run copy (`config_as_run.toml`).
+      `note` is now accepted in sweep files, so promoted sweep configs
+      load again.
 - [ ] `lgbm_candidate_sets_3y.toml` is pinned to dataset_v1.0 and never
       ran — re-pin to v1.4 or drop it.
 - [x] Upstream doc sync: `scripts/sync_data_docs.py` copies the dataset
@@ -479,14 +484,30 @@ in [PLAN.md](PLAN.md); check items off (and add new ones) as work proceeds.
       cells are not covered by the script.)
 - [x] Run the carry-forward sweeps on v1.4:
       `forest_candidate_sets_3y` and `xgb_candidate_sets_3y`.
-      (2026-09-27: **did not replicate** — forests p@20 0.42 pooled but
-      0.22 in 2013–19 against a 0.28 base rate, xgb 0.37 / 0.17. No
-      3y beat_spy finalist; the 3y holdout stays unopened.
-      docs/findings.md, both summaries promoted as negatives.)
-- [ ] Run `forest_feature_ablation_3y` (24 runs): does dropping the
-      13 columns v1.4 added, or the raw technicals, bring back the
-      2013–20 edge on 3y beat_spy? A diagnosis, not a search for a
-      finalist.
+      (2026-09-27: forests p@20 0.42 pooled, 0.22 in 2013–19 against a
+      0.28 base rate; xgb 0.37 / 0.17. Lower than the same
+      configurations on v1.1, on a column set that differs by 13
+      added and 4 dropped columns; the cause is open, so the v1.1
+      findings are unconfirmed, not refuted. No 3y beat_spy finalist;
+      the 3y holdout stays unopened. docs/findings.md.)
+- [ ] Run `forest_v11_code_control_3y` (4 runs, needs
+      `dataset_v1.1`): do r30 and r48 still give their August per-fold
+      numbers with today's code? First, because every v1.4 reading
+      depends on it.
+- [ ] Run `forest_feature_ablation_3y` (24 runs). Arm fs0 (the 13
+      added columns removed) is the test of why v1.4 scores lower;
+      its prediction is written in the config and in docs/findings.md.
+- [ ] Ask upstream (or check locally with both datasets): do the 120
+      columns shared by the v1.1 and v1.4 feature sets hold identical
+      values? `data/versions.md` says v1.4 is additive; it has not
+      been checked.
+- [ ] `vml-experiments verify`: expand each config under
+      `experiments/` and compare its config hashes with the ledger's,
+      so a config that no longer matches its own runs is reported
+      (today: `lgbm_random_search_3y`, `lgbm_cagr_quantile_3y`,
+      `forest_random_search_3y`).
+- [ ] `vml-experiments columns <run> <run>`: diff the resolved feature
+      columns of two runs from their `*_config.json` records.
 - [ ] Multi-seed the drawdown-compounder labels on v1.4
       (`fwd_3y_cagr >= 0.1 & fwd_3y_max_drawdown < 0.3` and
       `… & fwd_3y_max_drawdown_from_entry < 0.2`) — configs written
