@@ -1,0 +1,82 @@
+# Parameter search in the from-entry compounder cell, forest arm
+# (docs/findings.md, "Plan", step 3; docs/notes/2026-09-28-plan.md,
+# track 1 step 2). One of three searches with equal budgets: 40 draws,
+# one seed, for random_forest, lightgbm and xgboost
+# (lgbm_random_search_dd_entry_3y, xgb_random_search_dd_entry_3y).
+#
+# Cell: fwd_3y_cagr >= 0.1 & fwd_3y_max_drawdown_from_entry < 0.2, the
+# primary cell. Base rate 0.21; 64 configurations tried in it before
+# the queue of 2026-09-29 started.
+#
+# Features: the ranks group, 112 columns on dataset_v1.4, chosen by
+# forest_feature_sets_dd_entry_3y
+# (docs/notes/2026-09-29-feature-sets-dd-entry.md): no arm beat it.
+#
+# The bar, seed-mean fold-mean, three seeds
+# (forest_drawdown_compounder_seeds_3y, class weight 1.0; both sets
+# were tuned on beat_spy, not here):
+#   set0  depth 3, leaf 38, max_features 0.504: p@20 0.499, 2013-20
+#         0.544, PR-AUC 0.3273
+#   set1  depth 4, leaf 72, max_features 0.205: p@20 0.500, 2013-20
+#         0.535, PR-AUC 0.3267
+# Best single factor, conservative_score_rank: p@20 0.388, PR-AUC
+# 0.301.
+#
+# Ranges: those of forest_random_search_3y, with max_depth lowered to
+# 3-12 because both sets that lead this cell are depth 3 and 4, below
+# that search's range (6-16). class_weight is fixed at 1.0: in this
+# cell 0.5 gave the same p@20 and PR-AUC and a worse Brier.
+#
+# Predictions, written before the run:
+#   - Hyperparameters barely matter inside the family (findings,
+#     conclusion 11): at least 30 of the 40 draws land within 0.010 of
+#     0.327 on fold-mean PR-AUC, and no draw exceeds 0.335.
+#   - Depth is the parameter that shows: draws with max_depth >= 9 and
+#     min_samples_leaf under 50 have the lowest PR-AUC.
+#   - No draw beats the base rate on p@20 for 2019 entries.
+#   If a draw exceeds 0.335 it is a candidate for the three-seed
+#   round and the first thing to check is its era table, not its
+#   pooled number. If most draws fall below 0.317, the two sets in use
+#   sit on a narrow ridge and the search ranges were wrong.
+#
+# How to read it: the summary ranks on POOLED pr_auc, which is not the
+# fold mean (the reference's pooled PR-AUC is 0.274-0.275 against a
+# fold mean of 0.327). Rank on the fold mean of pr_auc from the ledger
+# rows, and on p@20 over 2013-20. One seed: p@20 differences under
+# 0.03 are noise. The top five go to three seeds.
+#
+# Expanded: 1 cell x 1 feature set x 40 draws x 1 seed = 40 runs.
+# The two known sets take 4-8 minutes a run with n_jobs 8; deeper
+# draws take longer.
+# Run: uv run vml-sweep experiments/sweeps/forest_random_search_dd_entry_3y.toml
+name = "forest_random_search_dd_entry_3y"
+dataset_version = "dataset_v1.4"
+min_dataset_version = "1.4"
+scheme = "walkforward"
+folds = "all"
+seeds = [23]
+top_k = [20, 50]
+precision_targets = [0.75, 0.9]
+rank_metric = "pr_auc"
+n_samples = 40
+search_seed = 29
+
+[[cells]]
+label = "fwd_3y_cagr >= 0.1 & fwd_3y_max_drawdown_from_entry < 0.2"
+
+[[features]]
+groups = ["ranks"]
+
+[model]
+name = "random_forest"
+bootstrap = true
+class_weight = 1.0
+n_jobs = 8
+
+[random]
+n_estimators = { low = 150, high = 500, int = true }
+max_depth = { low = 3, high = 12, int = true }
+min_samples_leaf = { low = 20, high = 500, int = true, log = true }
+max_features = { low = 0.05, high = 0.6 }
+max_samples = { low = 0.3, high = 1.0 }
+criterion = { choices = ["gini", "entropy"] }

@@ -14,16 +14,19 @@ read** stub; a correction is a new entry that names the old one.
 
 <!-- entries -->
 
+### 2026-09-28 · forest_feature_sets_dd_entry_3y
+30 runs · `dataset_v1.4` · `fwd_3y_cagr >= 0.1 & fwd_3y_max_drawdown_from_entry < 0.2` · run on the host at git `00ba3ec`, read 2026-09-29 · [note](notes/2026-09-29-feature-sets-dd-entry.md)
+- **Did:** Read the feature-set sweep (run on the host): five arms against the 112 rank columns, two parameter sets, three seeds. All 30 config hashes matched to the ledger (480 fold rows); rows, effective sizes and base rates per fold equal the reference's; resolved column counts 97 / 15 / 109 / 125 / 172.
+- **Got:** Fold-mean PR-AUC, reference 0.327: ranks + sector ranks 0.327; technical ranks alone 0.322; ranks + raw technical and trend 0.313–0.315; ranks without technical 0.311–0.312; ranks without the two volatility ranks and the conservative score 0.305–0.309. p@20 in the same order: 0.49–0.50 (reference 0.50), 0.46, 0.44–0.45, 0.40–0.42, 0.39. 2019 entries score 0.00–0.05 in every arm (base 0.09). The summary's pooled PR-AUC (0.24–0.27) is not the fold mean and is not comparable with 0.327.
+- **Concluded:** No arm beats the 112 rank columns, which stay the feature set for the parameter search. Most of the signal is three columns: 15 technical ranks alone come within 0.005 PR-AUC, and removing vol_12m_rank, vol_36m_rank and conservative_score_rank costs as much as removing all 15. Predictions: matched for sector ranks and for PR-AUC of technical-alone; missed for p@20 of technical-alone (0.043 below, 0.03 predicted) and for the raw columns (PR-AUC 0.011–0.015 lower in 13 of 16 years, 0.005 predicted). Neither miss changes the feature set. Code differs from the reference (00ba3ec against 86ef0c4) and the reference was not re-run.
+- **Next:** Queue as it stood (pick-outcome baseline, label rungs), then the parameter search per family in the primary cell on the 112 ranks, 40 draws each. Proposed, not queued: raw technical and raw trend as separate arms, to say which lowers PR-AUC.
+
 ### 2026-09-28 · harness: forest memory
 git `feb0b55`
 - **Did:** Profiled forest runs in the sandbox (14 GB, no swap) after Carter measured up to 18 GB on the host. Found that a fitted scikit-learn forest stores its sample weights, which were a view into the fold's training frame, so every fold model kept about 1 GB alive. Weights and targets are now copied.
 - **Got:** Before: resident memory grew about 1.0 GB per fold (6.6 GB after two folds). After: a full 16-fold run of forest set1 in the from-entry cell peaks at 6.4 to 6.7 GB and takes 470 s with n_jobs 8. All 16 fold rows equal the ledger rows of the same configuration (forest_drawdown_compounder_seeds_3y, seed 23): counts, p@20, PR-AUC, ROC-AUC and Brier, difference 0.
 - **Concluded:** Forest sweeps fit in the 14 GB sandbox. About 5 GB of the footprint is the dataset frame and split tags, loaded before any model is fitted. Probe runs used a scratch ledger and are not trials.
 - **Next:** First unattended session end to end once the machine account can push.
-
-### 2026-09-28 · forest_feature_sets_dd_entry_3y
-30 runs · `dataset_v1.4` · from-entry cell · started on the host 14:48, 13 of 30 done at 15:40
-- **not yet read**: the sweep is running. Five feature sets against the all-ranks reference; predictions are in the config.
 
 ### 2026-09-28 · harness: unattended runs
 git `HEAD` of `claude/sweep-review-2026-09-28` · [how it works](agents.md)

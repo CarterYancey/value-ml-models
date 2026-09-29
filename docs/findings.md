@@ -16,17 +16,18 @@ picks the top 20 per test year, and they are **selection-biased** by
 the trial counts given. They rank candidates; none is a result of
 record. Results are never compared across dataset versions.
 
-## State (2026-09-28)
+## State (2026-09-29)
 
 | cell (3y, `dataset_v1.4`) | trials | best so far, p@20 | bar | status |
 |---|---|---|---|---|
-| `fwd_3y_cagr >= 0.1 & fwd_3y_max_drawdown_from_entry < 0.2` ("from entry", **primary**) | 34 | forests 0.48–0.50 (2013–20: 0.53–0.54) | single factor 0.39, base rate 0.21 | feature-set sweep running |
+| `fwd_3y_cagr >= 0.1 & fwd_3y_max_drawdown_from_entry < 0.2` ("from entry", **primary**) | 64 | forests 0.48–0.50 (2013–20: 0.53–0.54), fold-mean PR-AUC 0.327, on the 112 rank columns | single factor 0.39, base rate 0.21 | feature set chosen; label rungs and parameter searches queued |
 | `fwd_3y_cagr >= 0.1 & fwd_3y_max_drawdown < 0.3` ("whole path") | 29 | forests 0.37–0.39 | single factor 0.34, base rate 0.11 | close to a screen; second choice |
 | `label_3y_beat_spy` | 47 (725 on v1.1) | forests 0.40–0.54, not separable | single factor 0.49, base rate 0.35 | parked |
 
 - **Sealed holdout:** 19 looks, all at 1y/2y/5y (below). Every 3y cell
   is unopened.
-- **Ledger:** 1,899 runs by run id at the last count (2026-09-28).
+- **Ledger:** 1,929 runs by run id on the host at the last count
+  (2026-09-29), before the sandbox's shard.
 
 ## Conclusions that stand
 
@@ -66,7 +67,15 @@ Each with the note that carries its evidence.
    zero, not against the average row.
 10. **Scores are not probabilities.** Forest Brier beats the no-skill
     reference in 5–10 of 16 years in the compounder cells.
-11. **Hyperparameters barely matter inside a family; p@20 differences
+11. **In the primary cell no feature set beats the 112 rank columns,
+    and most of the signal is three of them.** Sector ranks add
+    nothing; the 15 technical ranks alone come within 0.005 PR-AUC;
+    without `vol_12m_rank`, `vol_36m_rank` and
+    `conservative_score_rank` forests fall to the single factor's
+    p@20 (0.39); 60 raw technical and trend columns lower PR-AUC by
+    0.011–0.015. Every arm is at the base rate for 2019 entries.
+    [note](notes/2026-09-29-feature-sets-dd-entry.md)
+12. **Hyperparameters barely matter inside a family; p@20 differences
     under 0.03 are noise** (standard error of a pooled p@20 over 320
     picks). Rank on PR-AUC and the 2013–20 half.
     [note](notes/2026-08-beat-spy-v11-families.md)
@@ -80,8 +89,11 @@ Found on v1.0/v1.1 and not re-run since:
 - Which label serves best for beating the market? Lift over a cell's
   own base rate cannot say. `pick_outcomes` is the screen,
   `vml-backtest` the yardstick of record.
-- Which feature set in the primary cell, and how much of the signal is
-  the technical family?
+- Do the volatility ranks measure calmness itself or stand in for
+  something the fundamentals measure worse? And which of the raw
+  technical and raw trend columns lowers PR-AUC? Neither changes the
+  feature set; the second has a proposed two-arm sweep (note of
+  2026-09-29).
 - Are 20 picks 20 stocks? About 15, for the one baseline measured.
 - Quarter identifier or stock information in the v1.1 ranks (5 above)?
   Low priority: it changes nothing about what runs on v1.4.
@@ -91,12 +103,15 @@ Found on v1.0/v1.1 and not re-run since:
 In full, with the reasoning: [notes/2026-09-28-plan.md](notes/2026-09-28-plan.md).
 The queue an agent works from is `experiments/queue.toml`.
 
-1. Read `forest_feature_sets_dd_entry_3y` (running): pick the feature
-   set for the primary cell.
+1. Done 2026-09-29: the feature set for the primary cell is the
+   `ranks` group (112 columns).
 2. `baseline_pick_outcomes_3y`, then `forest_label_rungs_dd_entry_3y`:
    the single-factor bar and nine label rungs, read on pick outcomes.
 3. Parameter search per family in the primary cell, equal budgets,
-   ranked on PR-AUC and worst-seed 2013–20 p@20.
+   ranked on fold-mean PR-AUC (a sweep summary's `pr_auc` is pooled
+   and reads about 0.05 lower) and worst-seed 2013–20 p@20. Queued:
+   `{forest,lgbm,xgb}_random_search_dd_entry_3y`, 40 draws each, one
+   seed; then the top five of each on three seeds.
 4. One candidate per surviving label: a regular config through
    `vml-run` (saves the fold bundle), `vml-promote`, `vml-backtest`
    with one portfolio template and buys ending 2020-12-31, then one
