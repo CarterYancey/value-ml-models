@@ -18,13 +18,10 @@ record. Results are never compared across dataset versions.
 
 ## The goal (Carter, 2026-09-29)
 
-A model that makes a manageable number of high-precision selections
-with low risk and upside. The thesis: high precision on a modest
-target beats the market over time by avoiding big losers, depending
-on the precision, the era and the variance of the picks' returns.
-Results are judged on what the picks and a portfolio of them went on
-to do, then on precision, then on PR-AUC.
-[Decision log](notes/2026-09-29-decisions.md).
+A manageable number of high-precision, low-risk selections with
+upside. Results are judged on what a portfolio of the picks went on
+to do, then on precision, then on PR-AUC
+([decision log](notes/2026-09-29-decisions.md)).
 
 ## State (2026-09-29)
 
@@ -102,22 +99,20 @@ Each with the note that carries its evidence.
     `vol_36m_rank`, `conservative_score_rank`). Sector ranks add
     nothing; 60 raw columns lower PR-AUC by 0.011–0.015.
     [feature sets](notes/2026-09-29-feature-sets-dd-entry.md)
-11. **Forests are ahead of LightGBM as configured in the compounder
-    cells, and the lift holds after 2013.**
-    [compounder cells](notes/2026-09-28-drawdown-compounder-cells.md)
-12. **On v1.4 no forest beats a single factor on 3y beat_spy; the
-    v1.1 edge sat in the v1.1 form of 17 rank columns.**
-    [v1.1 to v1.4](notes/2026-09-beat-spy-v11-to-v14.md)
-13. **Hyperparameters barely matter inside a family; p@20
+11. **Hyperparameters barely matter inside a family; p@20
     differences under 0.03 are noise. The forest's seed moves a
     backtest by about half a point a year.** A sweep summary's
     `pr_auc` is pooled and reads about 0.05 below the fold mean.
     [v1.1 families](notes/2026-08-beat-spy-v11-families.md),
     factor-combinations note.
 
-Found on v1.0/v1.1 and not re-run since:
-[earlier work](notes/2026-08-earlier-work.md),
-[derived labels](notes/2026-09-derived-label-cells.md).
+Earlier, and standing: forests ahead of LightGBM in the compounder
+cells, lift holding after 2013
+([note](notes/2026-09-28-drawdown-compounder-cells.md)); no forest
+beats a single factor on 3y beat_spy on v1.4
+([note](notes/2026-09-beat-spy-v11-to-v14.md)); v1.0/v1.1 work
+([earlier](notes/2026-08-earlier-work.md),
+[derived labels](notes/2026-09-derived-label-cells.md)).
 
 ## Open questions
 
@@ -128,8 +123,6 @@ Found on v1.0/v1.1 and not re-run since:
   is not allowed: an upstream request.
 - Would a sell discipline or a shorter horizon raise the return
   without giving the losers back? Not tried.
-- Why 134 delistings with momentum against 52 without: takeover
-  targets? Not checked.
 - Does another family rank the safe stocks better? Queued.
 
 ## Plan
