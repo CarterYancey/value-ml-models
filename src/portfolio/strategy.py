@@ -8,8 +8,9 @@ rules, position caps) is a new `Strategy`, not a new engine.
 
 Strategies see candidates as a DataFrame sorted by `combined_score`
 descending with at least: `asset` (permaticker or benchmark symbol),
-`combined_score`, `price`. They never see labels, and they never see the
-future — the engine hands them one date at a time.
+`combined_score`, `price`, and `group` when a group cap is configured.
+They never see labels, and they never see the future — the engine hands
+them one date at a time.
 """
 
 from __future__ import annotations
@@ -34,24 +35,63 @@ class Order:
     reason: str = "rebalance"
 
 
+#: the group a candidate without one is counted in
+UNKNOWN_GROUP = "unknown"
+
+
+def capped_top_k(
+    candidates: pd.DataFrame, top_k: int, max_per_group: int | None
+) -> pd.DataFrame:
+    """The first `top_k` candidates in the order given, skipping a
+    candidate once `max_per_group` of the picks already share its
+    `group`. With no cap this is `head(top_k)`. Fewer than `top_k` rows
+    come back when the groups run out, never a pick over the cap."""
+    if max_per_group is None:
+        return candidates.head(top_k)
+    if "group" not in candidates.columns:
+        raise ConfigError(
+            "max_per_group is set but the candidates carry no `group` "
+            "column"
+        )
+    groups = candidates["group"].astype(object)
+    groups = groups.where(groups.notna(), UNKNOWN_GROUP)
+    taken: dict = {}
+    keep = []
+    for idx, group in groups.items():
+        if len(keep) >= top_k:
+            break
+        if taken.get(group, 0) >= max_per_group:
+            continue
+        taken[group] = taken.get(group, 0) + 1
+        keep.append(idx)
+    return candidates.loc[keep]
+
+
 class BuyAndHoldTopK:
     """Deposit-driven accumulation: at every rebalance date, invest all
     available cash across the top-K candidates, weighted by combined
     score (or equally); never sell. Delisting proceeds land back in cash
     and are reinvested at the next date. Months with no qualifying
     candidates hold cash — that drag is real strategy behavior and is
-    reported, not hidden."""
+    reported, not hidden. `max_per_group` caps how many of one date's
+    buys share a group (`capped_top_k`); it looks at that date's buys
+    only, not at what is already held."""
 
-    def __init__(self, top_k: int, weighting: str):
+    def __init__(
+        self, top_k: int, weighting: str, max_per_group: int | None = None
+    ):
         self.top_k = int(top_k)
         self.weighting = weighting
+        self.max_per_group = max_per_group
 
     def orders(
         self, date, candidates: pd.DataFrame, cash: float, positions: dict
     ) -> list[Order]:
         if cash <= 0 or candidates.empty:
             return []
-        picks = candidates.head(self.top_k)
+        picks = capped_top_k(candidates, self.top_k, self.max_per_group)
+        if picks.empty:
+            return []
         if self.weighting == "score":
             raw = picks["combined_score"].to_numpy(dtype=float)
             if (raw < 0).any():
@@ -116,9 +156,13 @@ STRATEGIES = {
 }
 
 
-def build_strategy(name: str, top_k: int, weighting: str):
+def build_strategy(
+    name: str, top_k: int, weighting: str, max_per_group: int | None = None
+):
     if name not in STRATEGIES:
         raise ConfigError(
             f"unknown strategy {name!r}; available: {sorted(STRATEGIES)}"
         )
-    return STRATEGIES[name](top_k=top_k, weighting=weighting)
+    return STRATEGIES[name](
+        top_k=top_k, weighting=weighting, max_per_group=max_per_group
+    )

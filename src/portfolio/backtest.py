@@ -125,7 +125,17 @@ class CandidateFeed:
         priced = rows.loc[kept].copy()
         priced["price"] = prices
         priced = priced.rename(columns={"permaticker": "asset"})
-        keep = ["asset", "ticker", "combined_score", "price"] + cols
+        # the group travels with every candidate, capped or not, so the
+        # trade log and the report can say what was bought
+        if config.group_column in priced.columns:
+            priced["group"] = priced[config.group_column]
+        elif config.max_per_group is not None:
+            raise ConfigError(
+                f"group_column {config.group_column!r} is not a column "
+                "of the cross-section (key_meta, features, ranks, "
+                "sector_ranks)"
+            )
+        keep = ["asset", "ticker", "group", "combined_score", "price"] + cols
         priced = priced[[c for c in keep if c in priced.columns]]
         priced = priced.sort_values(
             ["combined_score", "asset"], ascending=[False, True],
@@ -265,7 +275,8 @@ def run_backtest(
             )
 
         strategy = build_strategy(
-            config.strategy, config.top_k, config.weighting
+            config.strategy, config.top_k, config.weighting,
+            config.max_per_group,
         )
         sells = hasattr(strategy, "sell_orders")
         if config.has_sell_criteria and not sells:
