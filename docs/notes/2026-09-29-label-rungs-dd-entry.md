@@ -140,7 +140,7 @@ Three predictions failed, so by the stop rule in
 6. **Everything depends on the entry year.** Entry years 2013–16:
    hit rate 0.61–0.68 in the six lower-floor cells, median excess
    +0.02 to +0.03. Entry years 2017–20: 0.28–0.32 and −0.04 to −0.06,
-   at or below the hit rate of all rows (0.29). 2008 entries: 0.80–
+   at or below the hit rate of all rows (0.29). 2008 entries, all nine cells: 0.77–
    0.87. The single factor shows the same pattern.
 
 ## What it might mean (hypotheses, not tested)
