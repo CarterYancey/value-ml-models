@@ -15,12 +15,18 @@ read** stub; a correction is a new entry that names the old one.
 <!-- entries -->
 
 ### 2026-09-29 · forest_pick_anatomy_3y
-18 runs · `dataset_v1.4` · 3 cells · git `f4fe2a9` · [summary](../reports/sweeps/forest_pick_anatomy_3y/forest_pick_anatomy_3y_summary.md)
-- **not yet read**: the sweep ended, its numbers are unread.
+18 runs · `dataset_v1.4` · 3 cells · git `320894b` · [summary](../reports/sweeps/forest_pick_anatomy_3y/forest_pick_anatomy_3y_summary.md) · [note](notes/2026-09-29-pick-anatomy.md)
+- **Did:** One forest configuration, three seeds, in three cells (A primary; B excess CAGR above 0 with drawdown from entry under 0.2; C 'not a loser': CAGR of 0 or more with drawdown from entry under 0.3) × two feature sets (112 ranks; 97 without technical), with the tails of the picks' returns. 18 hashes, 288 fold rows; A with ranks reproduces the reference (p@20 0.500, PR-AUC 0.3267).
+- **Got:** Top 20, ranks. A: losers 0.20, big losers 0.10, big winners 0.06 (all rows 0.45 / 0.32 / 0.15), beat SPY 0.50, median CAGR 0.088. C: p@20 0.782 (base 0.39; 2013–20 0.84; 0.83 or more in 11 of 16 years; under 0.60 for 2006–08 and 2019), losers 0.13, big losers 0.06, median drawdown 0.13, median CAGR 0.091, median excess +0.001, beat SPY 0.46. B: p@20 0.28 (base 0.20; 2013–20 0.18), beat SPY 0.38. Fundamentals only: beat SPY 0.63 for 2005–12 entries in A and 0.28 for 2013–20. p@5 0.51, p@10 0.51, p@50 0.48 in A.
+- **Concluded:** Carter's reading holds: the picks have under half the losers and 40% of the big winners of the universe. The modest target is predicted with a precision of 0.78, and its picks match SPY on the median with a third of the average stock's drawdown; they beat it in and after market falls and lose to it in the long rise. A relative label makes the picks worse at beating the market. Predictions: 1, 5 and 6 matched; 2 on direction, not level (0.20, predicted under 0.15); 3 half (no pattern in big winners or losers); 4 missed (B 0.12 below A on beat SPY).
+- **Next:** Carry cell C with ranks forward: vml-run bundle, selection by score, backtest against A's forest and the single factor. Separately, sweeps for the upside.
 
 ### 2026-09-29 · baseline_pick_anatomy_3y
-4 runs · `dataset_v1.4` · `fwd_3y_cagr >= 0.1 & fwd_3y_max_drawdown_from_entry < 0.2` · git `603c440` · [summary](../reports/sweeps/baseline_pick_anatomy_3y/baseline_pick_anatomy_3y_summary.md)
-- **not yet read**: the sweep ended, its numbers are unread.
+4 runs · `dataset_v1.4` · `fwd_3y_cagr >= 0.1 & fwd_3y_max_drawdown_from_entry < 0.2` · git `320894b` · [summary](../reports/sweeps/baseline_pick_anatomy_3y/baseline_pick_anatomy_3y_summary.md) · [note](notes/2026-09-29-pick-anatomy.md)
+- **Did:** Four single factors in the primary cell with the tails of the picks' returns and top 5 / 10 / 20 / 50: highest conservative score, earnings yield, book to market, magic-formula score. Deterministic; 4 hashes, 64 fold rows in the shard.
+- **Got:** Top 20, all years, against all test rows (losers 0.45, big losers 0.32, big winners 0.15, beat SPY 0.36). Conservative score: losers 0.27, big losers 0.12, big winners 0.13, beat SPY 0.49, median drawdown 0.26. The three value factors: losers 0.61–0.63, big losers 0.48–0.52, big winners 0.08–0.12, beat SPY 0.19–0.25, median excess CAGR −0.20 to −0.22.
+- **Concluded:** The cheapest stocks are the worst picks on every measure, with fewer big winners than the universe (predicted: more). The conservative score halves the big losers and keeps most of the big winners; its losers are 0.60 of the all-row rate (predicted: under half). It fails for entry years 2017–20 (losers 0.35, beat SPY 0.20).
+- **Next:** Read with forest_pick_anatomy_3y.
 
 ### 2026-09-29 · decisions: stop rules lifted, decision log opened
 git `f5e064f` · [note](notes/2026-09-29-decisions.md)
