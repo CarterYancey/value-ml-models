@@ -14,6 +14,13 @@ read** stub; a correction is a new entry that names the old one.
 
 <!-- entries -->
 
+### 2026-09-29 · bt_nonloser_dd30_top10_cap2, bt_cagr10_dd20_top10_cap2, bt_nonloser_dd30_top10_cap1 (vml-backtest)
+git `499884b` · [note](notes/2026-09-29-sector-cap-backtests.md)
+- **Did:** Built a sector cap at selection (max_per_group, branch claude/backtest-sector-cap, 458 tests pass) and a report of what was bought by sector. Re-ran the uncapped cell C backtest: same hash, same figures. Ran cell C with at most 2 and at most 1 buys per sector a month, and cell A with at most 2; the template is otherwise unchanged. Six backtest configurations tried on dataset_v1.4 in all.
+- **Got:** Cell C, cap 2: final value 633,757 on 192,000 deposited (uncapped 518,612; SPY 732,110), time-weighted CAGR 9.74% (SPY 9.58%), money-weighted 10.4% (11.6%), worst drawdown −46.1% (uncapped −63.4%; SPY −52.9%). 2007 −4.5% and 2008 −29.8% (SPY +7.3% and −43.2%). Cap 1: 650,980, 9.69%, −42.8%. Cell A, cap 2: 605,182, 8.73%, −49.0%. Behind SPY by 9 points or more in 2007, 2013, 2020, 2021 and 2023; ahead in both of SPY's down years.
+- **Concluded:** Sector concentration was the reason for the deep drawdown. Capped, the portfolio compounds at SPY's rate with a shallower drawdown and ends 11–13% below it in money, because its good years were early and most of the deposits were at work late. Less lost in falls, less gained in strong rises. Predictions matched except 2007 (11.8 and 14.4 points behind, predicted within 10) and cap 1's drawdown (better than predicted). In-sample to these sixteen years: the cap was chosen after the first three backtests.
+- **Next:** Decision 8: cell C's forest combined by mean rank with a value, a momentum and a quality factor, cap 2.
+
 ### 2026-09-29 · bt_nonloser_dd30_top10, bt_cagr10_dd20_top10, bt_nonloser_and_cagr10_top10 (vml-backtest)
 git `319144c` · [note](notes/2026-09-29-first-backtests.md)
 - **Did:** Backtested cell C's forest, cell A's and the two by mean rank under one template fixed beforehand: top 10 a month, equal weights, buy and hold, 35 bps a side, dollar_volume_3m >= 100000, buys 2005–2020, valued end of 2023. Three backtest configurations on dataset_v1.4, all reported. Read the sectors of the buys from the dataset.

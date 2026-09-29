@@ -189,3 +189,33 @@ deriving one here is not allowed.
 *Values:* cap of 2 per sector among 10 monthly buys, fixed before
 the run. One alternative, 1 per sector, is run beside it and both
 are reported. The template is otherwise decision 6's.
+
+### 8. A second ranking beside the forest's
+
+*Decided (2026-09-29, after the
+[capped backtests](2026-09-29-sector-cap-backtests.md)):* three
+backtests of cell C's forest combined by mean rank with one single
+factor each, under the template of decision 6 with a cap of 2 per
+sector:
+
+| factor | column, highest first | why this one |
+|---|---|---|
+| value | `earnings_yield_rank` | the goal is value picks; alone, the cheapest stocks were the worst picks, so this tests whether cheapness helps *among calm stocks* |
+| momentum | `mom_12_2_rank` | the usual source of upside; the forests use `ret_1m_rank` and `ret_6m_rank` but little of the 12-month momentum |
+| quality | `roc_greenblatt_rank` | return on capital: the other half of the magic formula, without the cheapness |
+
+The factors were chosen before any of them was run in a backtest,
+one per family, and no others are tried on this template. Each
+factor is a `rank_factor` config run through `vml-run` so that it
+has a fold bundle; a rank factor fits nothing.
+
+*Why mean rank:* the forest's score level moves from 0.65 to 0.85
+between years, so a fixed floor on it selects years, not stocks
+([first backtests](2026-09-29-first-backtests.md), measured 5). A
+rank is relative to the month's cross-section.
+
+*What would count:* a combination that keeps cell C's drawdown
+(within 5 points of −46%) and raises the time-weighted CAGR by a
+point or more, with the gain not confined to 2005–12. Nine backtest
+configurations will then have been tried on these years; the number
+goes with every figure.

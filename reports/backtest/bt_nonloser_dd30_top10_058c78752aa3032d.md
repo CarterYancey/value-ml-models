@@ -1,6 +1,6 @@
 # Portfolio backtest — bt_nonloser_dd30_top10
 
-- run `2864ecbeeeff`, git `319144c0016b771eeeb57b9d17f1cb63915225d3`, backtest config `058c78752aa3032d`
+- run `f9c5ed7f2cf9`, git `499884bdad9045e076ea5f4cef753aa1cbb4473f`, backtest config `058c78752aa3032d`
 - dataset `1.4`, price panel `prices_v1.0` (benchmark `SPY`)
 - buy window: 2005–2020 (last buy 2020-12-31), valuation through 2023-12-29; trade years past a bundle's walk-forward folds are served by `model_update = "refit"` (see the bundle list below)
 - deposits: 1,000.00 on the first trading day of each month, identically into both legs
@@ -53,6 +53,43 @@ Money-weighted (MWR/XIRR) is what the deposits earned; time-weighted (TWR) is th
 - selection: top 10 by combined score, `equal`-weighted; strategy `buy_and_hold`
 - costs: 35.0 bps per side (benchmark 0.0 bps)
 
+## What was bought, by `sector`
+
+Shares of the number of buys. A portfolio whose buys sit in one group is one bet, however many stocks it holds.
+
+| group                  | buys | share  |
+| ---------------------- | ---- | ------ |
+| Utilities              | 924  | 48.84% |
+| Real Estate            | 515  | 27.22% |
+| Consumer Defensive     | 138  | 7.29%  |
+| Energy                 | 116  | 6.13%  |
+| Industrials            | 111  | 5.87%  |
+| Healthcare             | 47   | 2.48%  |
+| Consumer Cyclical      | 21   | 1.11%  |
+| Technology             | 9    | 0.48%  |
+| Communication Services | 6    | 0.32%  |
+| Financial Services     | 3    | 0.16%  |
+| Basic Materials        | 2    | 0.11%  |
+
+| year | buys | stocks | groups | largest_group      | largest_share |
+| ---- | ---- | ------ | ------ | ------------------ | ------------- |
+| 2005 | 120  | 23     | 1      | Real Estate        | 100.00%       |
+| 2006 | 120  | 28     | 1      | Real Estate        | 100.00%       |
+| 2007 | 118  | 29     | 4      | Real Estate        | 92.37%        |
+| 2008 | 118  | 21     | 4      | Real Estate        | 45.76%        |
+| 2009 | 120  | 25     | 3      | Utilities          | 77.50%        |
+| 2010 | 120  | 20     | 4      | Utilities          | 80.00%        |
+| 2011 | 120  | 24     | 4      | Utilities          | 65.00%        |
+| 2012 | 120  | 27     | 4      | Utilities          | 57.50%        |
+| 2013 | 120  | 29     | 8      | Utilities          | 55.00%        |
+| 2014 | 120  | 24     | 5      | Utilities          | 65.00%        |
+| 2015 | 118  | 30     | 7      | Consumer Defensive | 27.97%        |
+| 2016 | 118  | 28     | 6      | Utilities          | 61.02%        |
+| 2017 | 112  | 20     | 6      | Utilities          | 45.54%        |
+| 2018 | 119  | 26     | 6      | Utilities          | 73.11%        |
+| 2019 | 115  | 23     | 3      | Utilities          | 83.48%        |
+| 2020 | 114  | 25     | 5      | Utilities          | 61.40%        |
+
 ## Coverage & diagnostics
 
 - rebalance months: 192; months with **no** qualifying picks (cash held): 0; months with fewer than top_k=10 picks: 25
@@ -73,7 +110,7 @@ Money-weighted (MWR/XIRR) is what the deposits earned; time-weighted (TWR) is th
 
 ## Provenance
 
-- backtest configurations tried against dataset `1.4`: 1 (this one included; every run is logged, failures too)
+- backtest configurations tried against dataset `1.4`: 3 (this one included; every run is logged, failures too)
 - fold definitions: `data/datasets/dataset_v1.4/split_folds.parquet` (frozen upstream; the buy window is the intersection of every bundle's fold years)
 - model bundles:
 - `forest_nonloser_dd30_3y` — label `fwd_3y_cagr >= 0.0 & fwd_3y_max_drawdown_from_entry < 0.3` (3y), model `random_forest`, config `087f2d7dfea489b2`, train run `53ceedd93e6d`, folds 2005–2020 (from `experiments/models/forest_nonloser_dd30_3y_53ceedd93e6d`)
