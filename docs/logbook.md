@@ -15,8 +15,11 @@ read** stub; a correction is a new entry that names the old one.
 <!-- entries -->
 
 ### 2026-09-29 · forest_random_search_nonloser_3y
-20 runs · `dataset_v1.4` · `fwd_3y_cagr >= 0.0 & fwd_3y_max_drawdown_from_entry < 0.3` · git `829d6c3` · [summary](../reports/sweeps/forest_random_search_nonloser_3y/forest_random_search_nonloser_3y_summary.md)
-- **not yet read**: the sweep ended, its numbers are unread.
+20 runs · `dataset_v1.4` · `fwd_3y_cagr >= 0.0 & fwd_3y_max_drawdown_from_entry < 0.3` · git `fd131d3` · [summary](../reports/sweeps/forest_random_search_nonloser_3y/forest_random_search_nonloser_3y_summary.md)
+- **Did:** Random search over forest parameters in cell C ('not a loser'), 20 draws, one seed, the 112 ranks, with pick outcomes (decision 11). 20 hashes, 320 fold rows in the shard. Read on fold-mean PR-AUC from the ledger.
+- **Got:** Fold-mean PR-AUC 0.5806 to 0.5853 over the 20 draws; the reference forest has 0.585. p@20 0.72–0.78 (reference 0.78–0.79), 2013–20 0.77–0.84. Picks' losers 0.12–0.20, big winners 0.03–0.08, median drawdown 0.13–0.19. The six highest PR-AUCs include five of the seven entropy draws; the six lowest are all gini. Depth 3 to 12 appears at both ends.
+- **Concluded:** No draw exceeds the reference, so none goes to three seeds or to a backtest: the candidate's forest stays as it is. Predictions: matched that the draws land within 0.010 of 0.585 (all 20, within 0.005) and none exceeds 0.600; missed on the picks' losers staying within 0.10–0.18 (three draws at 0.19–0.20); not supported that deep draws with small leaves are the lowest (criterion orders the draws, depth does not). Forest parameters are not where a better model is.
+- **Next:** lgbm_random_search_nonloser_3y, then xgb_random_search_nonloser_3y.
 
 ### 2026-09-29 · bt_nonloser_{dd30,mom}_top10_cap2_s{232,1776} (vml-backtest); forest_nonloser_dd30_3y_s{232,1776} (vml-run)
 git `6708518` · [note](notes/2026-09-29-factor-combinations.md)
