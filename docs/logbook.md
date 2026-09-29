@@ -15,12 +15,18 @@ read** stub; a correction is a new entry that names the old one.
 <!-- entries -->
 
 ### 2026-09-29 · xgb_random_search_nonloser_3y
-20 runs · `dataset_v1.4` · `fwd_3y_cagr >= 0.0 & fwd_3y_max_drawdown_from_entry < 0.3` · git `68d3a2b` · [summary](../reports/sweeps/xgb_random_search_nonloser_3y/xgb_random_search_nonloser_3y_summary.md)
-- **not yet read**: the sweep ended, its numbers are unread.
+20 runs · `dataset_v1.4` · `fwd_3y_cagr >= 0.0 & fwd_3y_max_drawdown_from_entry < 0.3` · git `7e4ca71` · [summary](../reports/sweeps/xgb_random_search_nonloser_3y/xgb_random_search_nonloser_3y_summary.md) · [note](notes/2026-09-29-searches-nonloser.md)
+- **Did:** Random search over XGBoost parameters in cell C on CPU, 20 draws, one seed, the 112 ranks, with pick outcomes. 20 hashes, 320 fold rows.
+- **Got:** Fold-mean PR-AUC 0.567–0.581. p@20 0.63–0.75. Picks' losers 0.16–0.24, picks beat SPY 0.27–0.40, median excess CAGR −0.07 to −0.02. Brier beats the no-skill reference in 2 to 10 of 16 years (forest draws: 10–11).
+- **Concluded:** XGBoost lands where LightGBM lands, as predicted (best draws 0.581 and 0.581), and below the forest. The best draws are not the shallow ones (depths 5, 7, 3, 9, 6; predicted 3–5). Across the three searches no draw exceeds the reference forest, so the candidate's model stays. Inside the boosted families PR-AUC and p@20 order the draws in opposite directions.
+- **Next:** The queue is empty. The candidate (decision 10) waits for Carter: holdout look, promotion, pull request for the sector cap. Proposed in the decision log: a sell discipline and a 1y horizon, not run.
 
 ### 2026-09-29 · lgbm_random_search_nonloser_3y
-20 runs · `dataset_v1.4` · `fwd_3y_cagr >= 0.0 & fwd_3y_max_drawdown_from_entry < 0.3` · git `f2caa98` · [summary](../reports/sweeps/lgbm_random_search_nonloser_3y/lgbm_random_search_nonloser_3y_summary.md)
-- **not yet read**: the sweep ended, its numbers are unread.
+20 runs · `dataset_v1.4` · `fwd_3y_cagr >= 0.0 & fwd_3y_max_drawdown_from_entry < 0.3` · git `7e4ca71` · [summary](../reports/sweeps/lgbm_random_search_nonloser_3y/lgbm_random_search_nonloser_3y_summary.md) · [note](notes/2026-09-29-searches-nonloser.md)
+- **Did:** Random search over LightGBM parameters in cell C, 20 draws, one seed, the 112 ranks, with pick outcomes. 20 hashes, 320 fold rows.
+- **Got:** Fold-mean PR-AUC 0.566–0.581 (reference forest 0.585). p@20 0.64–0.75 (forest 0.78–0.79). Picks' losers 0.15–0.25, picks beat SPY 0.25–0.36, median excess CAGR −0.07 to −0.03 (forest: 0.13, 0.46, about zero). The most boosted draws have the lowest PR-AUC and the highest p@20.
+- **Concluded:** LightGBM does not reach the forest on PR-AUC and its picks are worse on every outcome; no draw goes further. Predictions: best draw in 0.565–0.590 matched; no draw with fewer losers than the forest matched; a span of 0.03 or more missed (0.015).
+- **Next:** Read with xgb_random_search_nonloser_3y.
 
 ### 2026-09-29 · forest_random_search_nonloser_3y
 20 runs · `dataset_v1.4` · `fwd_3y_cagr >= 0.0 & fwd_3y_max_drawdown_from_entry < 0.3` · git `fd131d3` · [summary](../reports/sweeps/forest_random_search_nonloser_3y/forest_random_search_nonloser_3y_summary.md)

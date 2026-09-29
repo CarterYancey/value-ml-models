@@ -27,7 +27,7 @@ to do, then on precision, then on PR-AUC
 
 | cell (3y, `dataset_v1.4`) | trials | forests on the 112 ranks, p@20 | bar | status |
 |---|---|---|---|---|
-| C, "not a loser": `fwd_3y_cagr >= 0 & fwd_3y_max_drawdown_from_entry < 0.3` | 12 | 0.78–0.79 (2013–20: 0.84), PR-AUC 0.585 | base rate 0.39 | **the candidate's cell**; parameter searches queued |
+| C, "not a loser": `fwd_3y_cagr >= 0 & fwd_3y_max_drawdown_from_entry < 0.3` | 72 | 0.78–0.79 (2013–20: 0.84), PR-AUC 0.585 | base rate 0.39 | **the candidate's cell**; searched, 20 draws per family, nothing better |
 | A, "from entry": `fwd_3y_cagr >= 0.1 & fwd_3y_max_drawdown_from_entry < 0.2` | 80 | 0.48–0.50 (2013–20: 0.53–0.54), PR-AUC 0.327 | single factor 0.39, base rate 0.21 | same picks as C, more winners, more losers |
 | B: `fwd_3y_excess_cagr > 0 & fwd_3y_max_drawdown_from_entry < 0.2` | 6 | 0.28 (2013–20: 0.18) | base rate 0.20 | no skill after 2013; dropped |
 | `fwd_3y_cagr >= 0.1 & fwd_3y_max_drawdown < 0.3` ("whole path") | 29 | 0.37–0.39 | single factor 0.34, base rate 0.11 | not pursued |
@@ -123,20 +123,22 @@ beats a single factor on 3y beat_spy on v1.4
   is not allowed: an upstream request.
 - Would a sell discipline or a shorter horizon raise the return
   without giving the losers back? Not tried.
-- Does another family rank the safe stocks better? Queued.
 
 ## Plan
 
 The queue is `experiments/queue.toml`; decisions and their reasons
 are in the [decision log](notes/2026-09-29-decisions.md).
 
-1. Parameter searches in cell C, 20 draws per family, read on
-   fold-mean PR-AUC and on the picks' losers and winners. A winner
-   needs +0.01 PR-AUC on three seeds to earn one backtest.
+1. Done 2026-09-30: parameter searches in cell C. No draw of
+   forests, LightGBM or XGBoost exceeds the candidate's forest
+   (PR-AUC 0.585); boosted families pick worse at nearly the same
+   PR-AUC. [note](notes/2026-09-29-searches-nonloser.md)
 2. Carter's, when he would act on the candidate: one holdout look
    in cell C's 3y cell, promotion, the pull request for the sector
    cap, deployment.
 3. Calibration before any rule that reads a score as a probability.
+4. Proposed and not run (decision 12): a sell discipline, a shorter
+   horizon, a within-sector volatility rank upstream.
 
 ## Sealed holdout record
 

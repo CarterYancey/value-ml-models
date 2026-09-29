@@ -271,3 +271,33 @@ far, and what decides is the three-seed round and the backtest that
 follow, not the search. A search winner is backtested once, under
 the candidate's template, and only if its fold-mean PR-AUC is above
 the forest's 0.585 by 0.01 or more on three seeds.
+
+### 12. The searches are closed; what is proposed and not run
+
+*Decided (2026-09-30, after the
+[three searches](2026-09-29-searches-nonloser.md)):* no draw of any
+family exceeded the reference forest, so no three-seed round and no
+further backtest follow. The queue is empty and is left empty.
+
+*Why nothing else is launched:* the experiments that remain would
+change the portfolio's rules (a sell discipline, the number of
+picks, the rebalance period) or the horizon, and would be read on
+the same sixteen buy years that thirteen backtests have already
+been read on. Each further variant makes the best figure less
+believable, not more. The evidence that would add something is of
+another kind: years the choices were not made on.
+
+*Proposed, for Carter to choose from:*
+
+1. **One holdout look** in cell C's 3y cell with the candidate's
+   forest, when he would act on it.
+2. **A sell discipline** (`sell_below_criteria`): the portfolio
+   holds for ever what it bought. One backtest, criteria fixed
+   beforehand; it would be the fourteenth.
+3. **A 1y or 2y version of the label**, for a model whose picks
+   turn over faster. A new cell, new sweeps.
+4. **Upstream:** a within-sector rank of volatility (and of the
+   conservative score), so that the models can be made
+   sector-neutral instead of capped.
+5. **Ranking metric for boosted families:** if they are searched
+   again, rank on p@K over 2013–20 of the worst seed, not on PR-AUC.
