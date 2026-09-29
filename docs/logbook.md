@@ -14,6 +14,10 @@ read** stub; a correction is a new entry that names the old one.
 
 <!-- entries -->
 
+### 2026-09-29 · forest_pick_anatomy_3y
+18 runs · `dataset_v1.4` · 3 cells · git `f4fe2a9` · [summary](../reports/sweeps/forest_pick_anatomy_3y/forest_pick_anatomy_3y_summary.md)
+- **not yet read**: the sweep ended, its numbers are unread.
+
 ### 2026-09-29 · baseline_pick_anatomy_3y
 4 runs · `dataset_v1.4` · `fwd_3y_cagr >= 0.1 & fwd_3y_max_drawdown_from_entry < 0.2` · git `603c440` · [summary](../reports/sweeps/baseline_pick_anatomy_3y/baseline_pick_anatomy_3y_summary.md)
 - **not yet read**: the sweep ended, its numbers are unread.
