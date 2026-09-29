@@ -14,6 +14,10 @@ read** stub; a correction is a new entry that names the old one.
 
 <!-- entries -->
 
+### 2026-09-29 · forest_label_rungs_dd_entry_3y
+27 runs · `dataset_v1.4` · 9 cells · git `cbb03f9` · [summary](../reports/sweeps/forest_label_rungs_dd_entry_3y/forest_label_rungs_dd_entry_3y_summary.md)
+- **not yet read**: the sweep ended, its numbers are unread.
+
 ### 2026-09-28 · baseline_pick_outcomes_3y
 2 runs · `dataset_v1.4` · `fwd_3y_cagr >= 0.1 & fwd_3y_max_drawdown_from_entry < 0.2` · git `6146e5f` · [summary](../reports/sweeps/baseline_pick_outcomes_3y/baseline_pick_outcomes_3y_summary.md)
 - **Did:** Ran the two low-risk single factors in the primary cell with pick outcomes, through the ledger (sandbox shard): the bar for the pick-outcome screen. Deterministic, one run each; the cell now has 66 configurations.
