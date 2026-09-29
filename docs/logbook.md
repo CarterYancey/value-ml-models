@@ -15,8 +15,11 @@ read** stub; a correction is a new entry that names the old one.
 <!-- entries -->
 
 ### 2026-09-29 · forest_label_rungs_dd_entry_3y
-27 runs · `dataset_v1.4` · 9 cells · git `cbb03f9` · [summary](../reports/sweeps/forest_label_rungs_dd_entry_3y/forest_label_rungs_dd_entry_3y_summary.md)
-- **not yet read**: the sweep ended, its numbers are unread.
+27 runs · `dataset_v1.4` · 9 cells · git `6711efd` · [summary](../reports/sweeps/forest_label_rungs_dd_entry_3y/forest_label_rungs_dd_entry_3y_summary.md) · [note](notes/2026-09-29-label-rungs-dd-entry.md)
+- **Did:** Ran one forest configuration on three seeds in nine cells, CAGR floor 0.08 / 0.10 / 0.15 × drawdown-from-entry cap 0.15 / 0.20 / 0.30, with pick outcomes. 27 hashes matched to the ledger shard (432 fold rows), 112 columns. The centre cell reproduces the reference (p@20 0.500, fold-mean PR-AUC 0.3267).
+- **Got:** Picks' beat_spy hit rate 0.43–0.50 across the nine cells (bar 0.49, all rows 0.36); mean of yearly median excess CAGR −0.015 to +0.001 (bar −0.004); 2013–20: 0.42–0.48 (bar 0.44) and −0.008 to −0.022 (bar −0.019). Median drawdown of the picks 0.19–0.25 (bar 0.26). p@20 runs from 0.23 (floor 0.15) to 0.57 (0.08 / 0.30). Entry years 2013–16: hit rate 0.51–0.68; 2017–20: 0.28–0.36. No cell passes the rule on every seed: 0.08 / 0.20 and 0.10 / 0.20 pass on two seeds of three.
+- **Concluded:** The label's thresholds move p@20 and PR-AUC and leave the picks' outcomes where they were; the forests' picks match the single factor's on excess return and SPY on the median, with a lower drawdown. Predictions: matched for the hit rate across caps, the 0.15 floor's p@20 and drawdown, and no cell above +0.03; missed for the cap lowering the picks' drawdown (flat at floors 0.08 and 0.10), for the cap lowering mean excess CAGR (not monotone) and for the 0.15 floor raising mean excess CAGR (it lowers it). Stopped by the stop rule: predictions contradicted.
+- **Next:** Carter: whether the three parameter searches run as queued, and whether pick_outcomes goes into them first. Proposed, not run: overlap of picks between two cells from vml-run bundles; a backtest of the centre forest against the single factor once cost_bps and the filter are set.
 
 ### 2026-09-28 · baseline_pick_outcomes_3y
 2 runs · `dataset_v1.4` · `fwd_3y_cagr >= 0.1 & fwd_3y_max_drawdown_from_entry < 0.2` · git `6146e5f` · [summary](../reports/sweeps/baseline_pick_outcomes_3y/baseline_pick_outcomes_3y_summary.md)

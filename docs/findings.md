@@ -20,7 +20,7 @@ record. Results are never compared across dataset versions.
 
 | cell (3y, `dataset_v1.4`) | trials | best so far, p@20 | bar | status |
 |---|---|---|---|---|
-| `fwd_3y_cagr >= 0.1 & fwd_3y_max_drawdown_from_entry < 0.2` ("from entry", **primary**) | 64 | forests 0.48–0.50 (2013–20: 0.53–0.54), fold-mean PR-AUC 0.327, on the 112 rank columns | single factor 0.39, base rate 0.21 | feature set chosen; label rungs and parameter searches queued |
+| `fwd_3y_cagr >= 0.1 & fwd_3y_max_drawdown_from_entry < 0.2` ("from entry", **primary**) | 69 | forests 0.48–0.50 (2013–20: 0.53–0.54), fold-mean PR-AUC 0.327, on the 112 rank columns | single factor 0.39, base rate 0.21 | feature set chosen; no label rung beats it on pick outcomes; parameter searches queued, waiting for Carter |
 | `fwd_3y_cagr >= 0.1 & fwd_3y_max_drawdown < 0.3` ("whole path") | 29 | forests 0.37–0.39 | single factor 0.34, base rate 0.11 | close to a screen; second choice |
 | `label_3y_beat_spy` | 47 (725 on v1.1) | forests 0.40–0.54, not separable | single factor 0.49, base rate 0.35 | parked |
 
@@ -75,7 +75,14 @@ Each with the note that carries its evidence.
     p@20 (0.39); 60 raw technical and trend columns lower PR-AUC by
     0.011–0.015. Every arm is at the base rate for 2019 entries.
     [note](notes/2026-09-29-feature-sets-dd-entry.md)
-12. **Hyperparameters barely matter inside a family; p@20 differences
+12. **Nine label rungs around the primary cell give the same pick
+    outcomes, and none passes the screen on every seed.** Picks beat
+    SPY 0.47–0.50 of the time (single factor 0.49, all rows 0.36)
+    with a median excess CAGR of about zero; the forests' 0.11 of
+    p@20 over the single factor shows as a lower drawdown (0.19–0.20
+    against 0.26), not as return. Entry years 2017–20 lose to SPY.
+    [note](notes/2026-09-29-label-rungs-dd-entry.md)
+13. **Hyperparameters barely matter inside a family; p@20 differences
     under 0.03 are noise** (standard error of a pooled p@20 over 320
     picks). Rank on PR-AUC and the 2013–20 half.
     [note](notes/2026-08-beat-spy-v11-families.md)
@@ -94,7 +101,10 @@ Found on v1.0/v1.1 and not re-run since:
   technical and raw trend columns lowers PR-AUC? Neither changes the
   feature set; the second has a proposed two-arm sweep (note of
   2026-09-29).
-- Are 20 picks 20 stocks? About 15, for the one baseline measured.
+- Do the rungs' forests pick the same rows? Needs two `vml-run`
+  bundles. 20 picks are 13–16 stocks in every cell measured.
+- Is a better predictor of the label a better portfolio? The rungs
+  say p@20 can move without the picks' outcomes moving.
 - Quarter identifier or stock information in the v1.1 ranks (5 above)?
   Low priority: it changes nothing about what runs on v1.4.
 
@@ -105,8 +115,8 @@ The queue an agent works from is `experiments/queue.toml`.
 
 1. Done 2026-09-29: the feature set for the primary cell is the
    `ranks` group (112 columns).
-2. `baseline_pick_outcomes_3y`, then `forest_label_rungs_dd_entry_3y`:
-   the single-factor bar and nine label rungs, read on pick outcomes.
+2. Done 2026-09-29: the single-factor bar and nine label rungs. No
+   rung displaces the primary cell; none earned a backtest.
 3. Parameter search per family in the primary cell, equal budgets,
    ranked on fold-mean PR-AUC (a sweep summary's `pr_auc` is pooled
    and reads about 0.05 lower) and worst-seed 2013–20 p@20. Queued:
@@ -119,7 +129,9 @@ The queue an agent works from is `experiments/queue.toml`.
 5. Calibration for the family that wins, before the final eval.
 
 Decisions waiting for Carter: `cost_bps` and the investability filter
-for the backtest template.
+for the backtest template; whether the parameter searches run as
+queued and whether `pick_outcomes` goes into them first (the queue
+stopped on 2026-09-29, predictions contradicted).
 
 ## Sealed holdout record
 
