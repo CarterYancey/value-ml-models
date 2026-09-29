@@ -14,6 +14,17 @@ why = "the single-factor bar for the pick-outcome screen; 2 runs, a minute"
 config = "experiments/sweeps/forest_label_rungs_dd_entry_3y.toml"
 why = "nine label rungs around the primary cell, read on pick outcomes; 27 runs, about 2 hours"
 
+# Added 2026-09-29 (docs/notes/2026-09-29-decisions.md, decision 1),
+# ahead of the parameter searches.
+
+[[item]]
+config = "experiments/sweeps/baseline_pick_anatomy_3y.toml"
+why = "the tails of the picks' returns for four single factors; 4 runs, minutes"
+
+[[item]]
+config = "experiments/sweeps/forest_pick_anatomy_3y.toml"
+why = "three kinds of label x two feature sets, read on the tails of the picks' returns; 18 runs, about 2.5 hours"
+
 # Added 2026-09-29, after forest_feature_sets_dd_entry_3y was read
 # (docs/notes/2026-09-29-feature-sets-dd-entry.md): plan step 3, the
 # parameter search per family on the 112 rank columns, equal budgets.

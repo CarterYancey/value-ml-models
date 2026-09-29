@@ -42,6 +42,10 @@
 # (docs/agents.md). A killed run is resumed by running the sweep
 # again.
 #
+# Pick outcomes and top_k 5 and 10 were added on 2026-09-29, before the
+# first run (docs/notes/2026-09-29-decisions.md, decision 2): read them
+# beside PR-AUC, which stays the ranking metric.
+#
 # Expanded: 1 cell x 1 feature set x 40 draws x 1 seed = 40 runs.
 # Run: uv run vml-sweep experiments/sweeps/lgbm_random_search_dd_entry_3y.toml
 name = "lgbm_random_search_dd_entry_3y"
@@ -50,9 +54,21 @@ min_dataset_version = "1.4"
 scheme = "walkforward"
 folds = "all"
 seeds = [23]
-top_k = [20, 50]
+top_k = [20, 10, 5, 50]
 precision_targets = [0.75, 0.9]
 rank_metric = "pr_auc"
+pick_outcomes = [
+  "label_3y_beat_spy",
+  "fwd_3y_excess_cagr",
+  "fwd_3y_cagr",
+  "fwd_3y_max_drawdown_from_entry",
+  "fwd_3y_cagr < 0",
+  "fwd_3y_cagr < -0.1",
+  "fwd_3y_max_drawdown_from_entry >= 0.4",
+  "fwd_3y_cagr >= 0.15",
+  "fwd_3y_cagr >= 0.25",
+  "fwd_3y_excess_cagr >= 0.05",
+]
 n_samples = 40
 search_seed = 29
 

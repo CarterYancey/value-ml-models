@@ -45,6 +45,10 @@
 # rows, and on p@20 over 2013-20. One seed: p@20 differences under
 # 0.03 are noise. The top five go to three seeds.
 #
+# Pick outcomes and top_k 5 and 10 were added on 2026-09-29, before the
+# first run (docs/notes/2026-09-29-decisions.md, decision 2): read them
+# beside PR-AUC, which stays the ranking metric.
+#
 # Expanded: 1 cell x 1 feature set x 40 draws x 1 seed = 40 runs.
 # The two known sets take 4-8 minutes a run with n_jobs 8; deeper
 # draws take longer.
@@ -55,9 +59,21 @@ min_dataset_version = "1.4"
 scheme = "walkforward"
 folds = "all"
 seeds = [23]
-top_k = [20, 50]
+top_k = [20, 10, 5, 50]
 precision_targets = [0.75, 0.9]
 rank_metric = "pr_auc"
+pick_outcomes = [
+  "label_3y_beat_spy",
+  "fwd_3y_excess_cagr",
+  "fwd_3y_cagr",
+  "fwd_3y_max_drawdown_from_entry",
+  "fwd_3y_cagr < 0",
+  "fwd_3y_cagr < -0.1",
+  "fwd_3y_max_drawdown_from_entry >= 0.4",
+  "fwd_3y_cagr >= 0.15",
+  "fwd_3y_cagr >= 0.25",
+  "fwd_3y_excess_cagr >= 0.05",
+]
 n_samples = 40
 search_seed = 29
 

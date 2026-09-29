@@ -14,6 +14,13 @@ read** stub; a correction is a new entry that names the old one.
 
 <!-- entries -->
 
+### 2026-09-29 · decisions: stop rules lifted, decision log opened
+git `f5e064f` · [note](notes/2026-09-29-decisions.md)
+- **Did:** Carter lifted the stop rules of agents.md for now (2026-09-29), restated the goal (a few high-precision, low-risk selections with upside; precision 0.65 or more on a modest target) and asked for every decision to be logged. Opened the decision log. Decisions 1 to 3: measure the tails of the picks' returns before searching parameters; add pick outcomes and top_k 5 and 10 to the three parameter searches, which had not run; keep the searches queued behind the new sweeps.
+- **Got:** No run. Queue: baseline_pick_anatomy_3y (4 runs), forest_pick_anatomy_3y (18), then the three searches (40 each).
+- **Concluded:** The hard invariants, the branch workflow and the holdout rules are not part of what was lifted and are kept.
+- **Next:** baseline_pick_anatomy_3y.
+
 ### 2026-09-29 · forest_label_rungs_dd_entry_3y
 27 runs · `dataset_v1.4` · 9 cells · git `6711efd` · [summary](../reports/sweeps/forest_label_rungs_dd_entry_3y/forest_label_rungs_dd_entry_3y_summary.md) · [note](notes/2026-09-29-label-rungs-dd-entry.md)
 - **Did:** Ran one forest configuration on three seeds in nine cells, CAGR floor 0.08 / 0.10 / 0.15 × drawdown-from-entry cap 0.15 / 0.20 / 0.30, with pick outcomes. 27 hashes matched to the ledger shard (432 fold rows), 112 columns. The centre cell reproduces the reference (p@20 0.500, fold-mean PR-AUC 0.3267).
