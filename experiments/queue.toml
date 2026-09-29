@@ -25,18 +25,19 @@ why = "the tails of the picks' returns for four single factors; 4 runs, minutes"
 config = "experiments/sweeps/forest_pick_anatomy_3y.toml"
 why = "three kinds of label x two feature sets, read on the tails of the picks' returns; 18 runs, about 2.5 hours"
 
-# Added 2026-09-29, after forest_feature_sets_dd_entry_3y was read
-# (docs/notes/2026-09-29-feature-sets-dd-entry.md): plan step 3, the
-# parameter search per family on the 112 rank columns, equal budgets.
+# The three searches queued here for the primary cell
+# ({forest,lgbm,xgb}_random_search_dd_entry_3y) were taken off the
+# queue unrun on 2026-09-29 (docs/notes/2026-09-29-decisions.md,
+# decision 11). In their place, the candidate's cell:
 
 [[item]]
-config = "experiments/sweeps/forest_random_search_dd_entry_3y.toml"
-why = "parameter search in the primary cell, forests; 40 runs, one seed, 4 hours or more"
+config = "experiments/sweeps/forest_random_search_nonloser_3y.toml"
+why = "parameter search in cell C, forests; 20 runs, one seed, 2 to 4 hours"
 
 [[item]]
-config = "experiments/sweeps/lgbm_random_search_dd_entry_3y.toml"
-why = "parameter search in the primary cell, LightGBM; 40 runs, one seed, duration not measured"
+config = "experiments/sweeps/lgbm_random_search_nonloser_3y.toml"
+why = "parameter search in cell C, LightGBM; 20 runs, one seed, duration not measured"
 
 [[item]]
-config = "experiments/sweeps/xgb_random_search_dd_entry_3y.toml"
-why = "parameter search in the primary cell, XGBoost on CPU; 40 runs, one seed, duration not measured"
+config = "experiments/sweeps/xgb_random_search_nonloser_3y.toml"
+why = "parameter search in cell C, XGBoost on CPU; 20 runs, one seed, duration not measured"

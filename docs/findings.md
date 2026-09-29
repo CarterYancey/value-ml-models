@@ -16,122 +16,134 @@ picks the top 20 per test year, and they are **selection-biased** by
 the trial counts given. They rank candidates; none is a result of
 record. Results are never compared across dataset versions.
 
+## The goal (Carter, 2026-09-29)
+
+A model that makes a manageable number of high-precision selections
+with low risk and upside. The thesis: high precision on a modest
+target beats the market over time by avoiding big losers, depending
+on the precision, the era and the variance of the picks' returns.
+Results are judged on what the picks and a portfolio of them went on
+to do, then on precision, then on PR-AUC.
+[Decision log](notes/2026-09-29-decisions.md).
+
 ## State (2026-09-29)
 
-| cell (3y, `dataset_v1.4`) | trials | best so far, p@20 | bar | status |
+| cell (3y, `dataset_v1.4`) | trials | forests on the 112 ranks, p@20 | bar | status |
 |---|---|---|---|---|
-| `fwd_3y_cagr >= 0.1 & fwd_3y_max_drawdown_from_entry < 0.2` ("from entry", **primary**) | 69 | forests 0.48–0.50 (2013–20: 0.53–0.54), fold-mean PR-AUC 0.327, on the 112 rank columns | single factor 0.39, base rate 0.21 | feature set chosen; no label rung beats it on pick outcomes; parameter searches queued, waiting for Carter |
-| `fwd_3y_cagr >= 0.1 & fwd_3y_max_drawdown < 0.3` ("whole path") | 29 | forests 0.37–0.39 | single factor 0.34, base rate 0.11 | close to a screen; second choice |
-| `label_3y_beat_spy` | 47 (725 on v1.1) | forests 0.40–0.54, not separable | single factor 0.49, base rate 0.35 | parked |
+| C, "not a loser": `fwd_3y_cagr >= 0 & fwd_3y_max_drawdown_from_entry < 0.3` | 12 | 0.78–0.79 (2013–20: 0.84), PR-AUC 0.585 | base rate 0.39 | **the candidate's cell**; parameter searches queued |
+| A, "from entry": `fwd_3y_cagr >= 0.1 & fwd_3y_max_drawdown_from_entry < 0.2` | 80 | 0.48–0.50 (2013–20: 0.53–0.54), PR-AUC 0.327 | single factor 0.39, base rate 0.21 | same picks as C, more winners, more losers |
+| B: `fwd_3y_excess_cagr > 0 & fwd_3y_max_drawdown_from_entry < 0.2` | 6 | 0.28 (2013–20: 0.18) | base rate 0.20 | no skill after 2013; dropped |
+| `fwd_3y_cagr >= 0.1 & fwd_3y_max_drawdown < 0.3` ("whole path") | 29 | 0.37–0.39 | single factor 0.34, base rate 0.11 | not pursued |
+| `label_3y_beat_spy` | 47 (725 on v1.1) | 0.40–0.54 | single factor 0.49, base rate 0.35 | parked |
 
-- **Sealed holdout:** 19 looks, all at 1y/2y/5y (below). Every 3y cell
-  is unopened.
-- **Ledger:** 1,929 runs by run id on the host at the last count
-  (2026-09-29), before the sandbox's shard.
+**The candidate** (decision 10): cell C's forest and 12-month
+momentum combined by mean rank, top 10 a month, at most 2 per
+sector, equal weights, buy and hold. Simulated, 35 bps a side,
+`dollar_volume_3m >= 100000`, buys 2005–2020, valued end of 2023,
+three forest seeds: **11.1–11.7% a year time-weighted against SPY's
+9.6%, worst drawdown −47% to −49% against −53%**, final value
+between 3% below and 4% above SPY's. 13 backtest configurations
+were tried on those years; momentum was the best of three factors.
+
+- **Sealed holdout:** 19 looks, all at 1y/2y/5y (below). Every 3y
+  cell is unopened.
+- **Code not yet in `Claude`:** the sector cap,
+  `claude/backtest-sector-cap`.
 
 ## Conclusions that stand
 
 Each with the note that carries its evidence.
 
-1. **Drawdown-constrained compounding is learnable and the lift holds
-   after 2013.** Three seeds, seed std at most 0.03, every candidate
-   higher in 2013–20 than in 2005–12.
-   [note](notes/2026-09-28-drawdown-compounder-cells.md)
-2. **Those models fall to the base rate for entry years whose window
-   holds a crash** (2005–08, 2019), and so does every single factor.
+1. **The models avoid losers and give up the big winners.** Top 20
+   of cell A's forest: losers (3y CAGR below 0) 0.20 against 0.45
+   for all rows, big losers 0.10 against 0.32, big winners (0.25 or
+   more) 0.06 against 0.15.
+   [pick anatomy](notes/2026-09-29-pick-anatomy.md)
+2. **A modest target is predicted with high precision.** Cell C:
+   0.78 at 20 picks a year, 0.76 at 50, 0.74 at 100; 0.83 or more in
+   11 of 16 years; under 0.60 for entry years 2006–08 and 2019. Its
+   picks: losers 0.13, median drawdown 0.13, median CAGR 0.09. Same
+   note.
+3. **The models are sector selectors.** They rank on market-wide
+   volatility ranks, so utilities and REITs (3% and 6% of the
+   universe) were half and a quarter of an uncapped portfolio's
+   buys, and every buy of 2005–06 was a REIT. Uncapped portfolios
+   ended 26–29% below SPY with a −63% drawdown.
+   [first backtests](notes/2026-09-29-first-backtests.md)
+4. **With at most 2 buys per sector the portfolio compounds at
+   SPY's rate with a shallower drawdown** (9.4–9.9% against 9.6%,
+   −44% to −47% against −53%): less lost in falls, less gained in
+   strong rises.
+   [capped backtests](notes/2026-09-29-sector-cap-backtests.md)
+5. **Momentum among the stocks the forest ranks as safe adds 1.2 to
+   2.4 points a year**, on three seeds; quality gives the shallowest
+   drawdown (−41%) at the same return; cheapness makes the portfolio
+   worse. Momentum and the value factors alone are the worst picks
+   on the screen (losers 0.61–0.68).
+   [factor combinations](notes/2026-09-29-factor-combinations.md)
+6. **The pick-outcome screen cannot stand in for a backtest.** It
+   showed cell C's picks level with SPY at a third of the average
+   drawdown; the portfolio had a deeper drawdown than SPY. It counts
+   stocks, not sectors. First-backtests note.
+7. **A fixed score threshold selects the wrong years.** The top
+   scores are 0.81–0.85 for 2006–08 entries (precision 0.15–0.60)
+   and 0.65–0.69 for 2011–13 (precision near 1.0); `score >= 0.8`
+   has a pooled precision of 0.42. Select by rank within the period.
    Same note.
-3. **Much of that lift is one column.** `conservative_score_rank`
-   alone scores 0.39 in the primary cell: about 60% of the forests'
-   lift over the base rate. LightGBM as configured adds nothing to it;
-   forests add 0.11. Same note.
-4. **Forests are ahead of LightGBM in both compounder cells**, on p@20
-   and PR-AUC, comparing two configurations, not two tuned families.
-   Same note.
-5. **The v1.1 forest edge on 3y beat_spy sat in the v1.1 form of 17
-   rank columns** that upstream decision 0016 re-mapped at v1.2.
-   Code, added columns and dropped columns are each ruled out by a
-   run; v1.1 and v1.4 give identical fold rows on the other 103
-   columns. Open: whether that form carried a quarter identifier or
-   stock information. [note](notes/2026-09-beat-spy-v11-to-v14.md)
-6. **On v1.4, no forest is clearly better than a single factor on 3y
-   beat_spy**, and its lift over the base rate is a 2005–12 lift.
-   Same note.
-7. **The columns v1.4 added lower forest PR-AUC by 0.01–0.02 on 3y
-   beat_spy** (15 of 16 years). Same note.
-8. **Large excess return (`fwd_3y_excess_cagr >= 0.08`) showed no
-   skill** across 120 xgboost configurations and a forest.
-   [note](notes/2026-09-derived-label-cells.md)
-9. **The universe loses to SPY:** over walk-forward test rows the mean
-   `fwd_3y_excess_cagr` is −0.11 and 36% beat SPY (unweighted; smoke
-   test, scratch ledger). An excess return of picks is read against
-   zero, not against the average row.
-10. **Scores are not probabilities.** Forest Brier beats the no-skill
-    reference in 5–10 of 16 years in the compounder cells.
-11. **In the primary cell no feature set beats the 112 rank columns,
-    and most of the signal is three of them.** Sector ranks add
-    nothing; the 15 technical ranks alone come within 0.005 PR-AUC;
-    without `vol_12m_rank`, `vol_36m_rank` and
-    `conservative_score_rank` forests fall to the single factor's
-    p@20 (0.39); 60 raw technical and trend columns lower PR-AUC by
-    0.011–0.015. Every arm is at the base rate for 2019 entries.
-    [note](notes/2026-09-29-feature-sets-dd-entry.md)
-12. **Nine label rungs around the primary cell give the same pick
-    outcomes, and none passes the screen on every seed.** Picks beat
-    SPY 0.47–0.50 of the time (single factor 0.49, all rows 0.36)
-    with a median excess CAGR of about zero; the forests' 0.11 of
-    p@20 over the single factor shows as a lower drawdown (0.19–0.20
-    against 0.26), not as return. Entry years 2017–20 lose to SPY.
-    [note](notes/2026-09-29-label-rungs-dd-entry.md)
-13. **Hyperparameters barely matter inside a family; p@20 differences
-    under 0.03 are noise** (standard error of a pooled p@20 over 320
-    picks). Rank on PR-AUC and the 2013–20 half.
-    [note](notes/2026-08-beat-spy-v11-families.md)
+8. **A relative label makes picks worse at beating the market**
+   (cell B: picks beat SPY 0.38 of the time against 0.50 for A), and
+   **fundamentals alone worked before 2013 and not after** (0.63 and
+   0.28). Pick-anatomy note.
+9. **Label thresholds move p@20 and PR-AUC, not what the picks go
+   on to do.** Nine rungs around cell A, the same outcomes.
+   [label rungs](notes/2026-09-29-label-rungs-dd-entry.md)
+10. **No feature set beats the 112 rank columns in cell A, and most
+    of the signal is three of them** (`vol_12m_rank`,
+    `vol_36m_rank`, `conservative_score_rank`). Sector ranks add
+    nothing; 60 raw columns lower PR-AUC by 0.011–0.015.
+    [feature sets](notes/2026-09-29-feature-sets-dd-entry.md)
+11. **Forests are ahead of LightGBM as configured in the compounder
+    cells, and the lift holds after 2013.**
+    [compounder cells](notes/2026-09-28-drawdown-compounder-cells.md)
+12. **On v1.4 no forest beats a single factor on 3y beat_spy; the
+    v1.1 edge sat in the v1.1 form of 17 rank columns.**
+    [v1.1 to v1.4](notes/2026-09-beat-spy-v11-to-v14.md)
+13. **Hyperparameters barely matter inside a family; p@20
+    differences under 0.03 are noise. The forest's seed moves a
+    backtest by about half a point a year.** A sweep summary's
+    `pr_auc` is pooled and reads about 0.05 below the fold mean.
+    [v1.1 families](notes/2026-08-beat-spy-v11-families.md),
+    factor-combinations note.
 
 Found on v1.0/v1.1 and not re-run since:
 [earlier work](notes/2026-08-earlier-work.md),
-[v1.1 model families](notes/2026-08-beat-spy-v11-families.md).
+[derived labels](notes/2026-09-derived-label-cells.md).
 
 ## Open questions
 
-- Which label serves best for beating the market? Lift over a cell's
-  own base rate cannot say. `pick_outcomes` is the screen,
-  `vml-backtest` the yardstick of record.
-- Do the volatility ranks measure calmness itself or stand in for
-  something the fundamentals measure worse? And which of the raw
-  technical and raw trend columns lowers PR-AUC? Neither changes the
-  feature set; the second has a proposed two-arm sweep (note of
-  2026-09-29).
-- Do the rungs' forests pick the same rows? Needs two `vml-run`
-  bundles. 20 picks are 13–16 stocks in every cell measured.
-- Is a better predictor of the label a better portfolio? The rungs
-  say p@20 can move without the picks' outcomes moving.
-- Quarter identifier or stock information in the v1.1 ranks (5 above)?
-  Low priority: it changes nothing about what runs on v1.4.
+- Does the candidate hold outside 2005–2023? Only the holdout and
+  time can say; the backtests share their years.
+- Can the models be made sector-neutral instead of capped? There is
+  no within-sector volatility rank upstream, and deriving one here
+  is not allowed: an upstream request.
+- Would a sell discipline or a shorter horizon raise the return
+  without giving the losers back? Not tried.
+- Why 134 delistings with momentum against 52 without: takeover
+  targets? Not checked.
+- Does another family rank the safe stocks better? Queued.
 
 ## Plan
 
-In full, with the reasoning: [notes/2026-09-28-plan.md](notes/2026-09-28-plan.md).
-The queue an agent works from is `experiments/queue.toml`.
+The queue is `experiments/queue.toml`; decisions and their reasons
+are in the [decision log](notes/2026-09-29-decisions.md).
 
-1. Done 2026-09-29: the feature set for the primary cell is the
-   `ranks` group (112 columns).
-2. Done 2026-09-29: the single-factor bar and nine label rungs. No
-   rung displaces the primary cell; none earned a backtest.
-3. Parameter search per family in the primary cell, equal budgets,
-   ranked on fold-mean PR-AUC (a sweep summary's `pr_auc` is pooled
-   and reads about 0.05 lower) and worst-seed 2013–20 p@20. Queued:
-   `{forest,lgbm,xgb}_random_search_dd_entry_3y`, 40 draws each, one
-   seed; then the top five of each on three seeds.
-4. One candidate per surviving label: a regular config through
-   `vml-run` (saves the fold bundle), `vml-promote`, `vml-backtest`
-   with one portfolio template and buys ending 2020-12-31, then one
-   final eval, then `vml-train-deploy`.
-5. Calibration for the family that wins, before the final eval.
-
-Decisions waiting for Carter: `cost_bps` and the investability filter
-for the backtest template; whether the parameter searches run as
-queued and whether `pick_outcomes` goes into them first (the queue
-stopped on 2026-09-29, predictions contradicted).
+1. Parameter searches in cell C, 20 draws per family, read on
+   fold-mean PR-AUC and on the picks' losers and winners. A winner
+   needs +0.01 PR-AUC on three seeds to earn one backtest.
+2. Carter's, when he would act on the candidate: one holdout look
+   in cell C's 3y cell, promotion, the pull request for the sector
+   cap, deployment.
+3. Calibration before any rule that reads a score as a probability.
 
 ## Sealed holdout record
 

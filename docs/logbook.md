@@ -14,6 +14,13 @@ read** stub; a correction is a new entry that names the old one.
 
 <!-- entries -->
 
+### 2026-09-29 · bt_nonloser_{dd30,mom}_top10_cap2_s{232,1776} (vml-backtest); forest_nonloser_dd30_3y_s{232,1776} (vml-run)
+git `6708518` · [note](notes/2026-09-29-factor-combinations.md)
+- **Did:** Seed check (decision 9): cell C's forest on seeds 232 and 1776, and the forest alone and the forest with momentum backtested with each, cap 2. Thirteen backtest configurations tried on dataset_v1.4 in all.
+- **Got:** Time-weighted CAGR, seeds 23 / 232 / 1776: forest alone 9.74 / 9.35 / 9.90%; with momentum 11.07 / 11.73 / 11.11%; SPY 9.58%. Worst drawdown −46.1 / −47.1 / −44.2% and −47.8 / −46.7 / −48.5%; SPY −52.9%. Final value with momentum 711,494 / 764,062 / 717,485; SPY 732,110. Forest p@20 0.788 / 0.778 / 0.781, fold-mean PR-AUC 0.585 on each.
+- **Concluded:** As predicted: every figure within 0.7 points a year and 3 points of drawdown of seed 23, and the momentum portfolio leads the forest alone by 1.2 to 2.4 points a year on every seed. The seed moves a backtest by about half a point a year. The candidate is cell C's forest with momentum by mean rank, cap 2 per sector (decision 10). Not shown: that it holds outside 2005–2023; momentum was the best of three.
+- **Next:** Carter's: holdout look, promotion, pull request for claude/backtest-sector-cap. Queue: parameter searches in cell C, 20 draws per family (decision 11).
+
 ### 2026-09-29 · bt_nonloser_{ey,mom,roc}_top10_cap2 (vml-backtest); factor_{earnings_yield,mom_12_2,roc_greenblatt}_3y (vml-run)
 git `52f2ccd` · [note](notes/2026-09-29-factor-combinations.md)
 - **Did:** Combined cell C's forest by mean rank with one single factor each, named before the runs: earnings yield (value), 12-month momentum, return on capital (quality). Template of decision 6 with a cap of 2 per sector. Nine backtest configurations tried on dataset_v1.4 in all. What would count was fixed beforehand: drawdown within 5 points of −46%, time-weighted CAGR of 10.7% or more, gain not confined to 2005–12.

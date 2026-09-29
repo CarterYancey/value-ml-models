@@ -234,3 +234,40 @@ three. The seed is not a parameter anyone would tune, so the spread
 over seeds is a measure of how much of a backtest's figure is
 chance. A result that does not hold on the other two seeds is not
 carried forward.
+
+### 10. The candidate, and what is Carter's
+
+*Decided (2026-09-29, after the seed check):* the candidate carried
+forward is **cell C's forest and 12-month momentum by mean rank, at
+most 2 buys per sector a month, top 10 a month, equal weights, buy
+and hold**. Bundles: `forest_nonloser_dd30_3y` (run `53ceedd93e6d`;
+seeds 232 and 1776 beside it) and `factor_mom_12_2_3y`.
+
+*What it has shown:* on buys of 2005–2020, 11.1–11.7% a year
+time-weighted against SPY's 9.6%, a worst drawdown of −47% to −49%
+against −53%, on three seeds; between 3% below and 4% above SPY in
+money. Thirteen backtest configurations were tried on those years.
+
+*Not done, because they are Carter's:* a look at the sealed holdout
+(the 3y cell for this label is unopened), `vml-promote`, a pull
+request for `claude/backtest-sector-cap` into `Claude`, and
+`vml-train-deploy`. The backtest engine can also trade 2021 onwards
+with year-end refits; that overlaps the holdout era and was not run.
+
+### 11. The parameter searches move to cell C, smaller
+
+*Decided:* the three searches queued for the primary cell
+(`*_random_search_dd_entry_3y`, 40 draws each) are taken off the
+queue unrun; their files stay. In their place: the same three
+families in cell C, 20 draws each, one seed, with pick outcomes
+(`*_random_search_nonloser_3y`).
+
+*Why:* the candidate's model is cell C's forest, whose parameters
+were tuned on 3y beat_spy on another dataset version. Whether
+another family or other parameters rank the safe stocks better is
+still unknown, and a better ranking feeds the portfolio directly.
+20 draws, not 40: parameters have moved little inside a family so
+far, and what decides is the three-seed round and the backtest that
+follow, not the search. A search winner is backtested once, under
+the candidate's template, and only if its fold-mean PR-AUC is above
+the forest's 0.585 by 0.01 or more on three seeds.
