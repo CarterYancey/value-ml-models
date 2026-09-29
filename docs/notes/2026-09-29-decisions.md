@@ -158,3 +158,34 @@ modelling decisions and are reported with every result.
 is not tuned per candidate; the per-year table is read, not the
 final figure alone. Three backtests are planned: cell C's forest,
 cell A's forest, and the two together (`combine = "mean_rank"`).
+
+### 7. A sector cap at selection, on a feature branch
+
+*Decided (2026-09-29, after the
+[first backtests](2026-09-29-first-backtests.md)):* add
+`max_per_group` to the backtest's selection: at each rebalance, walk
+the candidates in score order and skip a stock once its group
+(`sector` by default) already holds the cap among that month's buys.
+Report the sector shares of the buys in every backtest report. Code
+and tests on `claude/backtest-sector-cap`, off the branch this
+session was given; the lab branch merges it and continues.
+
+*Why:* half the buys of all three portfolios were utilities and a
+quarter REITs; every buy of 2005–06 was a REIT, bought into the
+2007–08 fall. The portfolios ended 26–29% below SPY with a deeper
+drawdown than SPY's. The thesis is about avoiding big losers stock
+by stock; a portfolio of one sector avoids nothing when the sector
+falls. The cap is a selection rule, as the investability filter is.
+It reads `sector`, a column of the manifest's `features` group, at
+the snapshot the pick is scored on; it derives nothing and changes
+no fit.
+
+*What it is not:* not a new feature for the models (invariant 4),
+and not a fix to the models, which will still rank utilities first.
+Whether the models should be made sector-neutral is a separate
+question; upstream has no within-sector volatility rank, and
+deriving one here is not allowed.
+
+*Values:* cap of 2 per sector among 10 monthly buys, fixed before
+the run. One alternative, 1 per sector, is run beside it and both
+are reported. The template is otherwise decision 6's.

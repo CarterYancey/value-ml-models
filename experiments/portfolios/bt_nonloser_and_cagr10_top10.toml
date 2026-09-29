@@ -1,0 +1,48 @@
+# Backtest of a candidate carried forward from forest_pick_anatomy_3y.
+# The template is decision 6 of docs/notes/2026-09-29-decisions.md,
+# fixed before the first backtest and identical for every candidate
+# except the bundles: top 10 a month, equal weights, buy and hold,
+# 35 bps a side, dollar_volume_3m >= 100000, buys 2005 through 2020,
+# valued at the end of 2023.
+#
+# Cells C and A together, by mean rank of the two scores.
+#
+# Predictions, written before the run (2026-09-29):
+#   - Between the two single-bundle backtests on final value and on
+#     worst drawdown: the two forests rank on the same columns.
+name = "bt_nonloser_and_cagr10_top10"
+dataset_version = "dataset_v1.4"
+prices_version = "prices_v1.0"
+
+bundles = [
+    "experiments/models/forest_nonloser_dd30_3y_53ceedd93e6d",
+    "experiments/models/forest_cagr10_dd20_3y_df10b2ee396f",
+]
+
+[signal]
+combine = "mean_rank"
+max_staleness_days = 200
+model_update = "refit"
+label_lag_days = 45
+
+[[investability]]
+column = "dollar_volume_3m"
+op = ">="
+value = 100000.0
+
+[portfolio]
+strategy = "buy_and_hold"
+top_k = 10
+weighting = "equal"
+monthly_cash = 1000.0
+
+[execution]
+cost_bps = 35.0
+benchmark_cost_bps = 0.0
+max_quote_age_days = 3
+delist_after_days = 30
+
+[window]
+start = 2005-01-01
+end = 2020-12-31
+valuation_end = 2023-12-29

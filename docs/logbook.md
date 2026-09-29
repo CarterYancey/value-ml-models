@@ -14,6 +14,20 @@ read** stub; a correction is a new entry that names the old one.
 
 <!-- entries -->
 
+### 2026-09-29 · bt_nonloser_dd30_top10, bt_cagr10_dd20_top10, bt_nonloser_and_cagr10_top10 (vml-backtest)
+git `319144c` · [note](notes/2026-09-29-first-backtests.md)
+- **Did:** Backtested cell C's forest, cell A's and the two by mean rank under one template fixed beforehand: top 10 a month, equal weights, buy and hold, 35 bps a side, dollar_volume_3m >= 100000, buys 2005–2020, valued end of 2023. Three backtest configurations on dataset_v1.4, all reported. Read the sectors of the buys from the dataset.
+- **Got:** Final value on 192,000 deposited: 518,612 / 534,517 / 541,571 against SPY's 732,110 (money-weighted 8.7–9.1% against 11.6%). Worst drawdown −63% to −65% against −53%. 2007: −20.7% against +7.3%. Ahead of SPY in 10 of 19 years. Buys: utilities 0.49 and real estate 0.27 for cell C (0.03 and 0.06 of the universe); every buy of 2005 and 2006 a REIT.
+- **Concluded:** Predictions missed: within 15% of SPY (29% below) and a shallower drawdown (deeper). The three portfolios are one portfolio, and the models are sector selectors: they rank on market-wide volatility ranks, so the calmest sectors fill the top. The screen's precision figures stand; 'distinct stocks' could not see that the picks were one sector. Costs are not the reason (1,442 in total).
+- **Next:** Decision 7: a sector cap at selection, on claude/backtest-sector-cap; the three backtests again with it.
+
+### 2026-09-29 · forest_nonloser_dd30_3y, forest_cagr10_dd20_3y (vml-run)
+git `319144c` · [note](notes/2026-09-29-first-backtests.md)
+- **Did:** Ran the 'not a loser' cell's forest and the primary cell's forest as regular configs so that their fold bundles are saved (decision 5). Seed 23, 112 rank columns, top_k up to 100 and score thresholds.
+- **Got:** Cell C: p@20 0.7875, the sweep's seed-23 value; p@100 0.744. By score: 'score >= 0.8' selects 597 rows with a precision of 0.42, 'score >= 0.7' 9,763 rows with 0.53. The mean score of the top 20 is 0.81–0.85 for 2006–08 entries (precision 0.15–0.60) and 0.65–0.69 for 2011–13 (precision 0.95–1.0).
+- **Concluded:** The score is highest in the years the model is most wrong, so a fixed score threshold selects the pre-crash years. Selection by a fixed score is not the route to higher precision with these models; top K per period is.
+- **Next:** Backtests (decision 6).
+
 ### 2026-09-29 · forest_pick_anatomy_3y
 18 runs · `dataset_v1.4` · 3 cells · git `320894b` · [summary](../reports/sweeps/forest_pick_anatomy_3y/forest_pick_anatomy_3y_summary.md) · [note](notes/2026-09-29-pick-anatomy.md)
 - **Did:** One forest configuration, three seeds, in three cells (A primary; B excess CAGR above 0 with drawdown from entry under 0.2; C 'not a loser': CAGR of 0 or more with drawdown from entry under 0.3) × two feature sets (112 ranks; 97 without technical), with the tails of the picks' returns. 18 hashes, 288 fold rows; A with ranks reproduces the reference (p@20 0.500, PR-AUC 0.3267).
