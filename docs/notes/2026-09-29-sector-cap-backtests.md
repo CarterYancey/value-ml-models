@@ -81,8 +81,8 @@ year. With cap 1: ten sectors at 0.08–0.10 each.
 
 1. **Sector concentration was the reason for the deep drawdown.**
    The same models with at most two buys a sector: worst drawdown
-   −46% against −63%, and 2007–08 turn from 29.5 points behind SPY
-   over the two years to 1.6 ahead (cell C). Rival (a) of the first
+   −46% against −63%, and the yearly excess over SPY for 2007 and
+   2008 together goes from −29.5 points to +1.6 (cell C). Rival (a) of the first
    note, tested and kept.
 2. **Capped, the portfolio compounds at SPY's rate with a shallower
    drawdown:** time-weighted 9.7% against 9.6%, drawdown −46%
@@ -94,8 +94,8 @@ year. With cap 1: ten sectors at 0.08–0.10 each.
    and lost in 2013, 2020, 2021 and 2023.
 4. **The shape is the thesis's:** less lost in market falls, less
    gained in strong rises. SPY's five best years in the window
-   (2009, 2013, 2017, 2021, 2023; 19–39%) are all years the
-   portfolio lagged, by 3.5 to 16.6 points.
+   (2009, 2013, 2017, 2020, 2021; 20–39%) are all years the
+   portfolio lagged, by 3.5 to 16.3 points.
 5. **Cell C is ahead of cell A once capped** (time-weighted 9.7%
    against 8.7%, drawdown −46% against −49%); uncapped they were the
    same portfolio. One path each: a difference of one point a year

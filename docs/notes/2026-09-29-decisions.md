@@ -219,3 +219,18 @@ rank is relative to the month's cross-section.
 point or more, with the gain not confined to 2005–12. Nine backtest
 configurations will then have been tried on these years; the number
 goes with every figure.
+
+### 9. Check the backtests against the forest's seed
+
+*Decided (2026-09-29, after the factor combinations):* cell C's
+forest is run with seeds 232 and 1776 (the sweep's other two), and
+two backtests are repeated with each: the forest alone with a cap of
+2, and the forest with momentum. Four more backtest configurations,
+thirteen in all.
+
+*Why:* the forest-and-momentum portfolio met what decision 8 said
+would count. It is one path from one seed, and it was the best of
+three. The seed is not a parameter anyone would tune, so the spread
+over seeds is a measure of how much of a backtest's figure is
+chance. A result that does not hold on the other two seeds is not
+carried forward.

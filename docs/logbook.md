@@ -14,6 +14,13 @@ read** stub; a correction is a new entry that names the old one.
 
 <!-- entries -->
 
+### 2026-09-29 · bt_nonloser_{ey,mom,roc}_top10_cap2 (vml-backtest); factor_{earnings_yield,mom_12_2,roc_greenblatt}_3y (vml-run)
+git `52f2ccd` · [note](notes/2026-09-29-factor-combinations.md)
+- **Did:** Combined cell C's forest by mean rank with one single factor each, named before the runs: earnings yield (value), 12-month momentum, return on capital (quality). Template of decision 6 with a cap of 2 per sector. Nine backtest configurations tried on dataset_v1.4 in all. What would count was fixed beforehand: drawdown within 5 points of −46%, time-weighted CAGR of 10.7% or more, gain not confined to 2005–12.
+- **Got:** Forest alone 633,757 / 9.74% time-weighted / −46.1% (SPY 732,110 / 9.58% / −52.9%). With momentum 711,494 / 11.07% / −47.8%. With quality 694,945 / 9.65% / −41.2%. With value 493,413 / 7.76% / −49.4%. Momentum's yearly excess over SPY sums to +44.8 points over 2005–12 and −9.8 over 2013–20 (forest alone +26.6 and −23.1). Alone on the screen, momentum's picks have 0.68 losers.
+- **Concluded:** The forest with momentum meets all three criteria; quality meets the drawdown one and gives the shallowest drawdown so far; cheapness among calm stocks makes the portfolio worse. Momentum helps only among the stocks the forest ranks as safe. Predictions matched except quality's drawdown (4.9 points shallower, predicted within 3). Best of three and ninth of nine on one seed and one path: not carried forward until the seed check (decision 9) is read.
+- **Next:** Decision 9: the forest alone and with momentum on seeds 232 and 1776.
+
 ### 2026-09-29 · bt_nonloser_dd30_top10_cap2, bt_cagr10_dd20_top10_cap2, bt_nonloser_dd30_top10_cap1 (vml-backtest)
 git `499884b` · [note](notes/2026-09-29-sector-cap-backtests.md)
 - **Did:** Built a sector cap at selection (max_per_group, branch claude/backtest-sector-cap, 458 tests pass) and a report of what was bought by sector. Re-ran the uncapped cell C backtest: same hash, same figures. Ran cell C with at most 2 and at most 1 buys per sector a month, and cell A with at most 2; the template is otherwise unchanged. Six backtest configurations tried on dataset_v1.4 in all.
