@@ -14,6 +14,10 @@ read** stub; a correction is a new entry that names the old one.
 
 <!-- entries -->
 
+### 2026-09-29 · lgbm_random_search_nonloser_3y
+20 runs · `dataset_v1.4` · `fwd_3y_cagr >= 0.0 & fwd_3y_max_drawdown_from_entry < 0.3` · git `f2caa98` · [summary](../reports/sweeps/lgbm_random_search_nonloser_3y/lgbm_random_search_nonloser_3y_summary.md)
+- **not yet read**: the sweep ended, its numbers are unread.
+
 ### 2026-09-29 · forest_random_search_nonloser_3y
 20 runs · `dataset_v1.4` · `fwd_3y_cagr >= 0.0 & fwd_3y_max_drawdown_from_entry < 0.3` · git `fd131d3` · [summary](../reports/sweeps/forest_random_search_nonloser_3y/forest_random_search_nonloser_3y_summary.md)
 - **Did:** Random search over forest parameters in cell C ('not a loser'), 20 draws, one seed, the 112 ranks, with pick outcomes (decision 11). 20 hashes, 320 fold rows in the shard. Read on fold-mean PR-AUC from the ledger.
