@@ -15,8 +15,11 @@ read** stub; a correction is a new entry that names the old one.
 <!-- entries -->
 
 ### 2026-09-28 · baseline_pick_outcomes_3y
-2 runs · `dataset_v1.4` · `fwd_3y_cagr >= 0.1 & fwd_3y_max_drawdown_from_entry < 0.2` · git `c03a322` · [summary](../reports/sweeps/baseline_pick_outcomes_3y/baseline_pick_outcomes_3y_summary.md)
-- **not yet read**: the sweep ended, its numbers are unread.
+2 runs · `dataset_v1.4` · `fwd_3y_cagr >= 0.1 & fwd_3y_max_drawdown_from_entry < 0.2` · git `6146e5f` · [summary](../reports/sweeps/baseline_pick_outcomes_3y/baseline_pick_outcomes_3y_summary.md)
+- **Did:** Ran the two low-risk single factors in the primary cell with pick outcomes, through the ledger (sandbox shard): the bar for the pick-outcome screen. Deterministic, one run each; the cell now has 66 configurations.
+- **Got:** Highest conservative_score_rank, top 20 per year, pooled: p@20 0.3875, picks beat SPY 0.4906 of the time (all test rows 0.363), median excess CAGR −0.0023 (all rows −0.073), mean −0.021, median drawdown from entry 0.19, 15.4 distinct stocks per 20 picks. By half: beat_spy hit rate 0.54 in 2005–12 and 0.44 in 2013–20 (all rows 0.41 and 0.30); fold mean of the yearly median excess CAGR +0.012 and −0.019. Entry years 2017–20: hit rate 0.10–0.35, median excess −0.02 to −0.12. Lowest vol_36m_rank: p@20 0.325, hit rate 0.378, median excess −0.026, 8.6 stocks per 20 picks.
+- **Concluded:** As expected in the config: the three figures equal the smoke test of 2026-09-28, so the harness did not change. The bar a label's forest has to beat on the screen is a hit rate of 0.49 pooled and 0.44 in 2013–20, and a median excess CAGR of about zero pooled and −0.02 in 2013–20. The single factor's picks do not beat SPY after 2017. vol_36m_rank picks fewer than 9 stocks per 20 rows and is not the bar.
+- **Next:** forest_label_rungs_dd_entry_3y (next in the queue).
 
 ### 2026-09-28 · forest_feature_sets_dd_entry_3y
 30 runs · `dataset_v1.4` · `fwd_3y_cagr >= 0.1 & fwd_3y_max_drawdown_from_entry < 0.2` · run on the host at git `00ba3ec`, read 2026-09-29 · [note](notes/2026-09-29-feature-sets-dd-entry.md)
