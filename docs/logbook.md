@@ -14,6 +14,10 @@ read** stub; a correction is a new entry that names the old one.
 
 <!-- entries -->
 
+### 2026-09-29 · baseline_pick_anatomy_3y
+4 runs · `dataset_v1.4` · `fwd_3y_cagr >= 0.1 & fwd_3y_max_drawdown_from_entry < 0.2` · git `603c440` · [summary](../reports/sweeps/baseline_pick_anatomy_3y/baseline_pick_anatomy_3y_summary.md)
+- **not yet read**: the sweep ended, its numbers are unread.
+
 ### 2026-09-29 · decisions: stop rules lifted, decision log opened
 git `f5e064f` · [note](notes/2026-09-29-decisions.md)
 - **Did:** Carter lifted the stop rules of agents.md for now (2026-09-29), restated the goal (a few high-precision, low-risk selections with upside; precision 0.65 or more on a modest target) and asked for every decision to be logged. Opened the decision log. Decisions 1 to 3: measure the tails of the picks' returns before searching parameters; add pick outcomes and top_k 5 and 10 to the three parameter searches, which had not run; keep the searches queued behind the new sweeps.
