@@ -14,6 +14,10 @@ read** stub; a correction is a new entry that names the old one.
 
 <!-- entries -->
 
+### 2026-09-29 · forest_random_search_nonloser_3y
+20 runs · `dataset_v1.4` · `fwd_3y_cagr >= 0.0 & fwd_3y_max_drawdown_from_entry < 0.3` · git `829d6c3` · [summary](../reports/sweeps/forest_random_search_nonloser_3y/forest_random_search_nonloser_3y_summary.md)
+- **not yet read**: the sweep ended, its numbers are unread.
+
 ### 2026-09-29 · bt_nonloser_{dd30,mom}_top10_cap2_s{232,1776} (vml-backtest); forest_nonloser_dd30_3y_s{232,1776} (vml-run)
 git `6708518` · [note](notes/2026-09-29-factor-combinations.md)
 - **Did:** Seed check (decision 9): cell C's forest on seeds 232 and 1776, and the forest alone and the forest with momentum backtested with each, cap 2. Thirteen backtest configurations tried on dataset_v1.4 in all.
