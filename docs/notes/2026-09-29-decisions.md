@@ -27,11 +27,30 @@ Carter's reading of the label rungs: the lower drawdown of the picks
 suggests fewer losers, so an excess CAGR that is no higher must mean
 too little recall on big winners.
 
+Clarified by Carter later the same day:
+
+- **0.65 is not a hard minimum.** It came from simplified simulations
+  on a label like `fwd_1y_cagr > 0`; the precision needed may differ
+  for other labels or more accurate simulations. The point is to aim
+  for higher precision.
+- **The selection rule is open.** Higher precision may come from
+  picking by score (say, confidence above 0.70) instead of the top
+  20.
+- **The number of picks is flexible.** It has to be manageable by one
+  person putting in a few hours a week with the model as a screener:
+  20 or more trades a quarter are feasible, 50 a year are fine, 1,000
+  are not.
+- **Sweeps are for finding a candidate, not for settling it.** The
+  aim is a cell, feature set and model that does pretty well, carried
+  forward through the workflow for the experiments and simulations
+  that are hard to do quickly.
+
 ## What a result is judged on from here
 
 In this order: what the picks went on to do (losers, big winners,
-excess CAGR, drawdown), by entry year; the precision on the label
-against 0.65; then PR-AUC and p@20 for ranking candidates inside one
+excess CAGR, drawdown), by entry year; the precision on the label,
+higher being better and 0.65 a reference point, at whatever number
+of picks up to some tens a quarter gives it; then PR-AUC and p@20 for ranking candidates inside one
 cell. The pick-outcome screen stays a screen: no costs, equal
 weights, top K rows per year.
 
@@ -75,3 +94,19 @@ beside it.
 *Decided:* not dropped, not run first. Their cell and feature set
 may change with what decision 1 finds; they are re-examined when it
 has been read.
+
+### 4. Read selection by score beside selection by top K
+
+*Decided (2026-09-29, after Carter's clarification):* sweeps from the
+next one on set `score_thresholds` as well as `top_k` (up to 100),
+and are read on how many picks a year a threshold gives and what
+precision they have. The two anatomy sweeps were already running
+with `top_k = [20, 10, 5, 50]` and are not restarted.
+
+*Why:* the selection rule and the number of picks are open, so a
+candidate is not rejected for its p@20 alone. *Caveat, to be checked
+before any threshold is read:* scores of different folds are not
+comparable (CLAUDE.md), and forest scores in these cells are not
+probabilities (findings, conclusion 10), so a fixed threshold picks
+very different numbers of rows in different years. The number of
+picks per year is reported with every threshold.
