@@ -14,6 +14,10 @@ read** stub; a correction is a new entry that names the old one.
 
 <!-- entries -->
 
+### 2026-09-29 · xgb_random_search_nonloser_3y
+20 runs · `dataset_v1.4` · `fwd_3y_cagr >= 0.0 & fwd_3y_max_drawdown_from_entry < 0.3` · git `68d3a2b` · [summary](../reports/sweeps/xgb_random_search_nonloser_3y/xgb_random_search_nonloser_3y_summary.md)
+- **not yet read**: the sweep ended, its numbers are unread.
+
 ### 2026-09-29 · lgbm_random_search_nonloser_3y
 20 runs · `dataset_v1.4` · `fwd_3y_cagr >= 0.0 & fwd_3y_max_drawdown_from_entry < 0.3` · git `f2caa98` · [summary](../reports/sweeps/lgbm_random_search_nonloser_3y/lgbm_random_search_nonloser_3y_summary.md)
 - **not yet read**: the sweep ended, its numbers are unread.
