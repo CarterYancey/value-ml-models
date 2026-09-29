@@ -110,3 +110,51 @@ comparable (CLAUDE.md), and forest scores in these cells are not
 probabilities (findings, conclusion 10), so a fixed threshold picks
 very different numbers of rows in different years. The number of
 picks per year is reported with every threshold.
+
+### 5. Carry cell C forward, with cell A beside it
+
+*Decided (2026-09-29, after the
+[pick anatomy](2026-09-29-pick-anatomy.md)):* two regular configs,
+`forest_nonloser_dd30_3y` (cell C) and `forest_cagr10_dd20_3y` (cell
+A), run through `vml-run` so that their fold bundles are saved. Same
+forest configuration and columns as the sweep, seed 23.
+
+*Why:* cell C is the first candidate that does what the thesis asks
+of the model (precision 0.78 on a modest target, losers 0.13), and
+Carter asked for a combination that does pretty well to be carried
+forward instead of settled in sweeps. Cell A goes with it because
+its picks hold more winners and it is the comparison every earlier
+result was made against. No parameter search first: parameters
+moved nothing inside the forest family so far (findings, conclusion
+13), and what is unknown about these candidates is what a portfolio
+of their picks does, not their third decimal.
+
+*Cost:* 2 runs, 2 configurations (one per cell).
+
+### 6. The backtest template
+
+*Decided:* one template for every candidate, fixed before the first
+backtest is run, only the bundle changing:
+
+| | value | from |
+|---|---|---|
+| strategy | `buy_and_hold`, monthly deposit 1,000, SPY leg with identical deposits | the repo's template (`allprob_top25_5models`) |
+| picks | top 10 of the month's cross-section by score, equal weights | 10 a month is about 30 trades a quarter, inside what Carter called feasible (2026-09-29); equal weights because the scores are not probabilities |
+| `min_score` | none | selection by score is studied on the bundle with `vml-eval` first |
+| filters | none | |
+| investability | `dollar_volume_3m >= 100000` | the repo's template |
+| `cost_bps` | 35 per side | the repo's template |
+| buys | 2005-01-01 to 2020-12-31 | the walk-forward test years; later years overlap the holdout era |
+| valuation end | 2023-12-29 | three years after the last buy |
+| `model_update` | not reached: no buy after the last fold | |
+
+*Why these values:* `cost_bps` and the investability filter were
+waiting for Carter. He has since asked for decisions to be made and
+logged; both values are the ones in the template he wrote for the
+live screen, so they are his earlier choices, not new ones. They are
+modelling decisions and are reported with every result.
+
+*Rules kept:* every backtest is a trial and is counted; the template
+is not tuned per candidate; the per-year table is read, not the
+final figure alone. Three backtests are planned: cell C's forest,
+cell A's forest, and the two together (`combine = "mean_rank"`).
