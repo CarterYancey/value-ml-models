@@ -14,6 +14,10 @@ read** stub; a correction is a new entry that names the old one.
 
 <!-- entries -->
 
+### 2026-09-28 · baseline_pick_outcomes_3y
+2 runs · `dataset_v1.4` · `fwd_3y_cagr >= 0.1 & fwd_3y_max_drawdown_from_entry < 0.2` · git `c03a322` · [summary](../reports/sweeps/baseline_pick_outcomes_3y/baseline_pick_outcomes_3y_summary.md)
+- **not yet read**: the sweep ended, its numbers are unread.
+
 ### 2026-09-28 · forest_feature_sets_dd_entry_3y
 30 runs · `dataset_v1.4` · `fwd_3y_cagr >= 0.1 & fwd_3y_max_drawdown_from_entry < 0.2` · run on the host at git `00ba3ec`, read 2026-09-29 · [note](notes/2026-09-29-feature-sets-dd-entry.md)
 - **Did:** Read the feature-set sweep (run on the host): five arms against the 112 rank columns, two parameter sets, three seeds. All 30 config hashes matched to the ledger (480 fold rows); rows, effective sizes and base rates per fold equal the reference's; resolved column counts 97 / 15 / 109 / 125 / 172.
