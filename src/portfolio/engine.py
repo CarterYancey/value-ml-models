@@ -308,6 +308,11 @@ def _execute(
                 "combined_score": float(
                     row.get("combined_score", float("nan"))
                 ),
+                **(
+                    {"group": row["group"]}
+                    if "group" in cand_info.columns
+                    else {}
+                ),
                 # per-model scores, for line-by-line sanity checks
                 **{
                     c: float(row[c])

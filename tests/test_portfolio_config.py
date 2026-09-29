@@ -122,3 +122,32 @@ def test_derived_name_and_hash_track_content():
     raw_again = _raw()
     del raw_again["name"]
     assert BacktestConfig.from_dict(raw_again).config_hash == a.config_hash
+
+
+def test_group_cap_parses_and_is_off_by_default():
+    assert BacktestConfig.from_dict(_raw()).max_per_group is None
+    config = BacktestConfig.from_dict(
+        _raw(portfolio={"max_per_group": 2, "group_column": "industry"})
+    )
+    assert config.max_per_group == 2
+    assert config.group_column == "industry"
+    assert BacktestConfig.from_dict(
+        _raw(portfolio={"max_per_group": 1})
+    ).group_column == "sector"
+
+
+def test_group_cap_validation():
+    for bad in (0, -1, 1.5, True, "2"):
+        with pytest.raises(ConfigError, match="max_per_group"):
+            BacktestConfig.from_dict(_raw(portfolio={"max_per_group": bad}))
+    with pytest.raises(ConfigError, match="group_column"):
+        BacktestConfig.from_dict(_raw(portfolio={"group_column": "sector"}))
+
+
+def test_group_cap_changes_the_hash_only_when_set():
+    base = BacktestConfig.from_dict(_raw())
+    assert "max_per_group" not in base.canonical_json()
+    capped = BacktestConfig.from_dict(_raw(portfolio={"max_per_group": 2}))
+    assert capped.config_hash != base.config_hash
+    other = BacktestConfig.from_dict(_raw(portfolio={"max_per_group": 1}))
+    assert other.config_hash != capped.config_hash

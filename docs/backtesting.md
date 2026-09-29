@@ -30,6 +30,16 @@ five-model AllProb screen):
   section (own `min_score`/`min_scores`/`filters`) states a hysteresis
   band explicitly (buy > 0.7, sell < 0.5). New portfolio-management
   ideas plug in as new `Strategy` classes without touching the engine;
+- an optional **group cap**, `[portfolio] max_per_group = 2`: at each
+  rebalance the candidates are walked in score order and a stock is
+  skipped once that many of the month's buys already share its group
+  (`group_column`, default `sector`; a NULL group counts as one group).
+  It caps a month's buys, not the book: what is already held is not
+  counted. A selection rule like the investability filter, stated in
+  the report and part of the config hash when set. Every report, capped
+  or not, carries "What was bought": the share of buys per group and
+  the largest group of each year, because a portfolio whose buys sit
+  in one sector is one bet however many stocks it holds;
 - the `model_update` policy for trade years past a bundle's last fold
   (the fold calendar stops where test labels stop being observable, but
   a live portfolio keeps trading): `"refit"` (default) simulates the
