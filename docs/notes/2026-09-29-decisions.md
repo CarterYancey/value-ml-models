@@ -466,3 +466,63 @@ On all rows (bundles saved, then evaluated inside each floor without
 refitting) and trained inside each floor: 15 fits. The five all-rows
 fits are five more configurations in cell C (the screen is in the
 hash).
+
+### 19. Read two-model candidates on the screen: `blend` in `vml-eval`
+
+*Decided:* a third feature branch, `claude/eval-blend` (on top of the
+universe branch): an eval config's `blend = [bundle directories]`
+combines the evaluated bundle's fold scores with other bundles' by
+mean rank within the test quarter, the backtest's `mean_rank` on test
+rows. Each blend is its own configuration in the cell's trial count.
+
+*Why:* the candidate is a blend (cell C's forest and momentum), and
+the screen of decision 16 can only read one model. Every second
+ranking tried so far cost a backtest on the same sixteen years, and
+the best of three was kept. With the blend on the screen, second
+rankings are compared on 640 picks over 64 quarters before any
+backtest is spent, and the backtest count grows only for the ones
+that pass.
+
+*First, check the screen against what the backtests already said.*
+Three blends whose backtests exist (decision 8), inside the 100k
+floor:
+
+| blend with cell C's forest | its backtest against the forest alone | what the screen should show if it is a fair proxy |
+|---|---|---|
+| 12-month momentum | +1.2 to +2.4 points a year, three seeds | mean excess CAGR above the forest alone's by 0.01 or more |
+| return on capital | the same return, drawdown 5 points shallower | within 0.01 of the forest alone |
+| earnings yield | −2.0 points a year | below the forest alone by 0.01 or more |
+
+If the screen orders the three as the backtests did, it is used to
+choose second rankings. If it does not, it is not, and the note says
+so.
+
+*Then, the second rankings to try, named before any is run:*
+
+| | blend | why this one |
+|---|---|---|
+| n1 | forest + momentum + net payout yield | the conservative formula (low volatility, momentum, payout) with the forest as its low-risk leg |
+| n2 | forest + momentum + return on capital | safe, rising and profitable: the two second rankings that each helped one thing |
+| n3 | forest + a learned upside model | a forest on `fwd_3y_cagr >= 0.15` (feature set fs4, inside the 100k floor): does a model of who compounds beat a single factor as the second ranking? |
+| n4 | forest + momentum + the upside model | |
+
+*What would send a blend to a backtest:* screen mean excess CAGR at
+least 0.005 a year above the momentum blend's, losers no more than
+0.02 above it, and not more than 0.01 below it in 2005–12 or in
+2013–20. At most two blends are backtested.
+
+### 20. One calibrated run, for selection by confidence
+
+*Decided:* `forest_nonloser_dd30_isotonic_3y`, the candidate's forest
+with prequential isotonic calibration, five score thresholds and the
+new "Selection by score" tables. One run, one more configuration in
+cell C.
+
+*Why:* Carter wants candidates read by confidence ("mean excess CAGR
+at score > 0.7"), with cash as a valid position, and notes that the
+scores can be read as confidence once calibrated (decision 13.2). The
+uncalibrated forest's fixed thresholds selected the pre-crash years.
+Whether calibration repairs that is an empirical question with a
+prediction written in the config: it should not, because a fold's
+calibration map is learned from earlier years' outcomes and a crash
+is not in them until it has happened.

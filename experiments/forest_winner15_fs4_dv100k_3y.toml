@@ -1,0 +1,90 @@
+# An upside model, to be blended by mean rank with cell C's forest
+# (decision 19 of docs/notes/2026-09-29-decisions.md).
+#
+# Cell C's forest ranks the stocks that do not lose; its picks hold a
+# fifth of the universe's big winners (findings, conclusion 1).
+# Momentum as a second ranking added 1.2-2.4 points a year in the
+# backtests. This is a learned second ranking: which stocks compound
+# at 15% a year or more, predicted from everything with a story and
+# nothing that measures risk or liquidity (feature set fs4 of decision
+# 18), trained inside the template's liquidity floor.
+#
+# On its own this model is expected to pick volatile stocks: many
+# winners and many losers. It is not a candidate alone; it is read in
+# a blend with the forest of cell C.
+#
+# Predictions, written before the run (2026-09-30):
+#   1. p@20 0.40-0.55 against a base rate near 0.28: the label is
+#      learnable, less so than cell C.
+#   2. Alone on the screen: losers 0.30 or more (the forest of cell C:
+#      0.16), big winners (0.25 or more) 0.15 or more (the forest:
+#      under 0.05).
+name = "forest_winner15_fs4_dv100k_3y"
+dataset_version = "dataset_v1.4"
+min_dataset_version = "1.4"
+scheme = "walkforward"
+folds = "all"
+horizon_years = 3
+label = "fwd_3y_cagr >= 0.15"
+seed = 23
+top_k = [20, 50]
+precision_targets = [0.75, 0.9]
+pick_outcomes = [
+  "label_3y_beat_spy",
+  "fwd_3y_excess_cagr",
+  "fwd_3y_cagr",
+  "fwd_3y_max_drawdown_from_entry",
+  "fwd_3y_cagr < 0",
+  "fwd_3y_cagr < -0.1",
+  "fwd_3y_max_drawdown_from_entry >= 0.4",
+  "fwd_3y_cagr >= 0.15",
+  "fwd_3y_cagr >= 0.25",
+  "fwd_3y_excess_cagr >= 0.05",
+]
+
+[pick_screen]
+per = "quarter"
+top_k = 10
+max_per_group = 2
+group_column = "sector"
+
+[[universe]]
+column = "dollar_volume_3m"
+op = ">="
+value = 100000
+
+[features]
+groups = ["ranks"]
+exclude_columns = ["vol_12m_rank", "vol_36m_rank", "beta_12m_rank", "max_ret_21d_rank",
+  "conservative_score_rank", "log_marketcap_rank", "dollar_volume_3m_rank", "amihud_12m_rank"]
+columns = [
+  "fundamentals_age_days", "has_filing_183d", "has_filing_365d",
+  "negative_equity", "negative_ebitda", "negative_ev",
+  "revenue_up_frac_4q", "revenue_up_frac_8q", "revenue_up_frac_12q",
+  "revenue_up_frac_20q", "tangibles_up_frac_4q", "tangibles_up_frac_8q",
+  "tangibles_up_frac_12q", "tangibles_up_frac_20q", "ocf_up_frac_4q",
+  "ocf_up_frac_8q", "ocf_up_frac_12q", "ocf_up_frac_20q",
+  "ocf_positive_frac_4q", "ocf_positive_frac_8q",
+  "ocf_positive_frac_12q", "ocf_positive_frac_20q",
+  "fund_history_quarters", "div_years_paid_10y", "div_streak_10y",
+  "div_cuts_10y", "div_history_years_10y", "earnings_yield_5y_pctile",
+  "ocf_yield_5y_pctile", "fcf_yield_5y_pctile", "sales_yield_5y_pctile",
+  "book_to_market_5y_pctile", "tangible_book_to_market_5y_pctile",
+  "ni_change_scaled", "two_year_loss", "liab_gt_assets", "piotroski_f",
+  "piotroski_roa_positive", "piotroski_cfo_positive",
+  "piotroski_roa_up", "piotroski_cfo_gt_ni", "piotroski_leverage_down",
+  "piotroski_liquidity_up", "piotroski_no_issuance",
+  "piotroski_margin_up", "piotroski_turnover_up", "mohanram_g7",
+]
+
+[model]
+name = "random_forest"
+bootstrap = true
+class_weight = 1.0
+n_jobs = 16
+criterion = "entropy"
+max_depth = 4
+max_features = 0.205191
+max_samples = 0.663781
+min_samples_leaf = 72
+n_estimators = 490
