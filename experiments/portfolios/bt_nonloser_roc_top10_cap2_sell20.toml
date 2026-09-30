@@ -1,0 +1,65 @@
+# Decision 21 of docs/notes/2026-09-29-decisions.md (2026-09-30). The
+# template of decision 6 with a cap of 2 per sector (decision 7);
+# every figure is read beside SPY under the same deposits, and beside
+# the per-buy table ("What the buys went on to do").
+#
+# What would make a new candidate, fixed before the run: final value at
+# or above SPY's (732,110), time-weighted CAGR of 10.6% or more (SPY
+# 9.58% plus a point), worst drawdown at least 5 points shallower than
+# SPY's -52.9%, and a positive mean 3-year excess per buy for the buys
+# of 2005-12 and of 2013-20.
+#
+# The quality blend with a sell discipline: a holding is sold once it
+# is no longer among the top 20% of the month's buy candidates by
+# combined rank, or is not a candidate at all (`[sell] max_rank_pct`).
+# Bought at the top 10 (0.3% of about 3,300 candidates), kept to the
+# top 20%: the band is the hysteresis. Buy and hold keeps for ever
+# what the models ranked first once; the label is about three years.
+#
+# Prediction (2026-09-30): time-weighted CAGR 0.5 to 1.5 points above
+# buy and hold's 9.65%, because the per-buy edge is in the first three
+# years (+1.3% a year per buy) and old holdings trailed SPY in 2021
+# and 2023; costs up to three times buy and hold's 1,045; drawdown
+# within 3 points of -41.2%.
+name = "bt_nonloser_roc_top10_cap2_sell20"
+dataset_version = "dataset_v1.4"
+prices_version = "prices_v1.0"
+
+bundles = [
+    "experiments/models/forest_nonloser_dd30_3y_53ceedd93e6d",
+    "experiments/models/factor_roc_greenblatt_3y_da640394cbba",
+]
+
+[signal]
+combine = "mean_rank"
+max_staleness_days = 200
+model_update = "refit"
+label_lag_days = 45
+
+[[investability]]
+column = "dollar_volume_3m"
+op = ">="
+value = 100000.0
+
+[portfolio]
+strategy = "sell_below_criteria"
+top_k = 10
+weighting = "equal"
+monthly_cash = 1000.0
+max_per_group = 2
+group_column = "sector"
+
+[sell]
+max_rank_pct = 0.2
+filters = []
+
+[execution]
+cost_bps = 35.0
+benchmark_cost_bps = 0.0
+max_quote_age_days = 3
+delist_after_days = 30
+
+[window]
+start = 2005-01-01
+end = 2020-12-31
+valuation_end = 2023-12-29

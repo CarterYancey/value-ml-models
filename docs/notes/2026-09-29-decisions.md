@@ -526,3 +526,79 @@ Whether calibration repairs that is an empirical question with a
 prediction written in the config: it should not, because a fold's
 calibration map is learned from earlier years' outcomes and a crash
 is not in them until it has happened.
+
+### 21. The screen's check failed for momentum; read the backtests per buy, and test a sell discipline
+
+*What happened (2026-09-30):* the check of decision 19 did not come
+out as predicted. On the screen inside the 100k floor, mean excess
+CAGR of the picks: forest alone −0.001; with momentum **−0.018**
+(predicted: above the forest by 0.01 or more); with return on capital
+**+0.014** (predicted: within 0.01); with earnings yield −0.030
+(predicted: below by 0.01 or more, matched). By the rule written in
+decision 19 the screen is therefore **not** used on its own to choose
+second rankings.
+
+*What the disagreement is.* The backtests were read on time-weighted
+return, where momentum led the forest alone by 1.3 points a year and
+return on capital did not. The backtests' own buys, read one by one
+over the three years after each trade date from the price panel
+(delisting proceeds riding SPY), say this: mean excess a year per buy
++0.001 for the forest alone, +0.005 with momentum, **+0.013 with
+return on capital**, −0.032 with earnings yield; for the buys of
+2005–12 and of 2013–20 separately, +0.013 / −0.011, +0.025 / −0.016,
+**+0.013 / +0.012**, −0.007 / −0.057. In money (final value on
+192,000 deposited): 633,757, 711,494, 694,945, 493,413; SPY 732,110.
+So the screen and the per-buy reading agree on return on capital
+(best, and the only one positive in both halves) and on earnings
+yield (worst); they differ on the size of momentum's effect (−0.017
+against +0.004 relative to the forest alone), and both put it far
+below what time-weighted return suggested. Part of the screen's gap
+is the label convention: 15% of the momentum blend's screen picks
+were acquired inside the window (7% for the forest alone), and the
+dataset carries an acquired stock's final price flat to the horizon,
+where a portfolio gets the cash back. Detail:
+[blends note](2026-09-30-blends-and-calibration.md).
+
+*Decided:*
+
+1. **Per-buy outcomes go into every backtest report**
+   (`claude/backtest-buy-outcomes`): each buy over the 1 and 3 years
+   after its trade date against the benchmark, by buy year and
+   pooled. Time-weighted return gives the small early portfolio the
+   weight of the large late one; decision 8's criterion was written on
+   it, and momentum's lead sits in 2005–11.
+2. **A candidate is judged on four things together**, fixed here
+   before the next backtests: final value at or above SPY's under the
+   same deposits; time-weighted CAGR at least a point above SPY's;
+   worst drawdown at least 5 points shallower; and a positive mean
+   3-year excess per buy for the buys of 2005–12 and of 2013–20. The
+   candidate of decision 10 meets the second and third, misses the
+   first on two seeds of three and the fourth (−0.016 for 2013–20).
+3. **Five backtests** (14th to 18th on these years), each with its
+   prediction in its config:
+   - the quality blend (forest and return on capital) on the forest's
+     other two seeds: it was never seed-checked;
+   - forest, momentum and return on capital (blend n2; it passed
+     decision 19's bar against the momentum blend on the screen, as
+     did n1, forest with momentum and net payout yield, by a smaller
+     margin: n1 is not backtested);
+   - the quality blend and the momentum blend each with a sell
+     discipline, `[sell] max_rank_pct = 0.2`: a holding is sold once
+     it is outside the top 20% of the month's candidates by combined
+     rank. One value, chosen before any run: bought at the top 0.3%,
+     kept to the top 20%.
+4. The learned upside model is dropped: the forest on
+   `fwd_3y_cagr >= 0.15` has no skill at its own label (p@20 0.29
+   against a base rate of 0.30 inside the floor), and both blends
+   with it are below the forest alone on the screen (−0.031 and
+   −0.037).
+
+*Why a sell discipline now.* Buy and hold keeps for ever what the
+models ranked first once, and the label is about three years. Per buy
+the quality blend is 1.3% a year ahead of SPY over its first three
+years in both halves of the sample, yet the portfolio ends 5% behind
+SPY in money: no portfolio kept up with SPY in 2021 and 2023, years
+in which it held stocks bought up to eighteen years earlier. Selling
+what the models no longer rank highly, and buying what they do, keeps
+the money where the measured edge is. Whether that survives costs and
+turnover is what the two backtests measure.
