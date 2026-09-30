@@ -195,7 +195,8 @@ def evaluate_bundle(
         # (bundle.folds is sorted — chronological under walkforward)
         calib = (
             PrequentialCalibration(
-                config.calibration, config.calibration_min_rows
+                config.calibration, config.calibration_min_rows,
+                label_lag_folds=config.horizon_years,
             )
             if config.calibration
             else None
@@ -297,7 +298,9 @@ def evaluate_bundle(
             metrics.update(report_only_metrics(fold_predictions, config,
                                                per_year=False))
             if calib is not None:
-                calib.observe(raw_scores, test_fit.y, test_fit.sample_weight)
+                calib.observe(
+                    fold, raw_scores, test_fit.y, test_fit.sample_weight
+                )
             run_log.fold_done(
                 {
                     "fold": fold,

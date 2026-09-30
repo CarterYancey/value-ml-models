@@ -389,8 +389,16 @@ in [PLAN.md](PLAN.md); check items off (and add new ones) as work proceeds.
 - [x] Post-hoc calibration (isotonic / Platt), prequentially: with
       `calibration = "isotonic"|"platt"` in a config (or sweep), fold
       Y's raw scores are calibrated on the pooled out-of-sample test
-      predictions of folds < Y — already purged/embargoed and strictly
-      earlier, so no local split is constructed (invariant 1 intact).
+      predictions of the earlier folds **whose outcomes were known
+      before year Y** (fold f with f + H < Y for an H-year label), so
+      no local split is constructed (invariant 1 intact).
+      *Corrected 2026-09-30 (`claude/calibration-label-lag`):* until
+      then every fold < Y was used, which handed fold Y's calibrator
+      outcomes from up to H years in its future (docs/notes/
+      process-issues.md). No fit, ranking or uncalibrated metric was
+      affected; no calibrated run had been recorded before that day.
+      Rows on one isotonic step now keep their raw order (they were
+      tied, and a top-K over ties is a top-K in row order).
       Folds below `calibration_min_rows` of history (default 1000) stay
       raw and are flagged in the report; the report draws the calibrated
       and raw reliability curves side by side and states the

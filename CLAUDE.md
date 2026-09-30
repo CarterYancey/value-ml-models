@@ -185,6 +185,11 @@ invariants below are this repo's equivalents.
 - Backtest results reported without transaction costs or without the
   investability filter (there is no upstream liquidity floor; the filter is
   built here from `log_marketcap`, `dollar_volume_3m`, `amihud_12m`).
+- Calibration, or any other statistic of past predictions, fitted on
+  outcomes that were not yet observable at the test rows' dates: a
+  walk-forward fold's H-year labels are complete H years after the
+  fold's year, so fold Y may only use folds f with f + H < Y
+  (`harness.calibration`). "Earlier fold" is not "known outcome".
 - Regression-reframe scores read as probabilities: `lightgbm_regressor`
   scores are predicted CAGRs — no Brier/calibration, score thresholds are
   on the return scale, and evaluation/trial accounting happens on the
