@@ -56,7 +56,6 @@
 # Expanded: 3 cells x 2 feature sets x 1 set x 3 seeds = 18 runs.
 # Run: uv run vml-sweep experiments/sweeps/forest_pick_anatomy_3y.toml
 name = "forest_pick_anatomy_3y"
-note = "v1.4 3y, three kinds of label x two feature sets, read on the tails of the picks' returns: forests avoid losers (0.13-0.20 vs 0.45 of all rows) and give up big winners (0.03-0.06 vs 0.15); the 'not a loser' cell reaches p@20 0.78 (base 0.39); a relative label (excess > 0 & dd < 0.2) makes picks worse at beating SPY (0.38 vs 0.50); fundamentals alone worked before 2013 and not after"
 dataset_version = "dataset_v1.4"
 min_dataset_version = "1.4"
 scheme = "walkforward"

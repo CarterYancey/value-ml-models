@@ -34,7 +34,6 @@
 # Expanded: 1 cell x 1 feature set x 20 draws x 1 seed = 20 runs.
 # Run: uv run vml-sweep experiments/sweeps/lgbm_random_search_nonloser_3y.toml
 name = "lgbm_random_search_nonloser_3y"
-note = "v1.4 3y 'not a loser' cell, 20 LightGBM draws: fold-mean PR-AUC 0.566-0.581, below the forest's 0.585, and the picks are worse on every outcome (losers 0.15-0.25, beat SPY 0.25-0.36); the most boosted draws have the lowest PR-AUC and the highest p@20 (0.75)"
 dataset_version = "dataset_v1.4"
 min_dataset_version = "1.4"
 scheme = "walkforward"

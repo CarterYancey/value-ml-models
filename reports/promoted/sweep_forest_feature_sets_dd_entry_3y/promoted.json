@@ -1,0 +1,14 @@
+{
+  "name": "sweep_forest_feature_sets_dd_entry_3y",
+  "promoted_utc": "2026-09-30T01:43:16+00:00",
+  "source_report": "reports/sweeps/forest_feature_sets_dd_entry_3y/forest_feature_sets_dd_entry_3y_summary.md",
+  "run_id": "",
+  "config_hash": "",
+  "git_sha": "",
+  "dataset_version": "dataset_v1.4",
+  "config_path": "experiments/sweeps/forest_feature_sets_dd_entry_3y.toml",
+  "note": "v1.4 3y from-entry cell, five feature sets vs the 112 ranks, 2 sets x 3 seeds (run on the host): none beats the ranks (fold-mean PR-AUC 0.327); sector ranks add nothing; the 15 technical ranks alone reach 0.322; without vol_12m_rank, vol_36m_rank and conservative_score_rank forests fall to the single factor's p@20 (0.39); 60 raw technical+trend columns lower PR-AUC by 0.011-0.015. The summary's pr_auc is pooled and not comparable with 0.327",
+  "files": [
+    "forest_feature_sets_dd_entry_3y_summary.md"
+  ]
+}

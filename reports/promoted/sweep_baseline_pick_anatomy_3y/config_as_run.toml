@@ -34,7 +34,6 @@
 # Expanded: 1 cell x 4 factors x 1 seed = 4 runs.
 # Run: uv run vml-sweep experiments/sweeps/baseline_pick_anatomy_3y.toml
 name = "baseline_pick_anatomy_3y"
-note = "The single-factor bars with the tails of the picks' returns: conservative_score_rank halves the big losers and keeps the big winners (0.13 vs 0.15); the value factors (earnings yield, book to market, magic formula) are the worst picks on every measure (losers 0.61-0.63, median excess CAGR -0.20)"
 dataset_version = "dataset_v1.4"
 min_dataset_version = "1.4"
 scheme = "walkforward"

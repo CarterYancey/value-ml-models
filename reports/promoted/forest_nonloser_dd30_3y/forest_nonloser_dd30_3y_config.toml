@@ -14,7 +14,6 @@
 # unchanged (p@20 0.788). top_k and score_thresholds differ from the sweep's,
 # so the hash differs and this is one more configuration in the cell.
 name = "forest_nonloser_dd30_3y"
-note = "THE CANDIDATE'S FOREST. v1.4 3y 'not a loser' (cagr >= 0 & drawdown from entry < 0.3): p@20 0.79 vs base 0.39 (0.84 in 2013-20; under 0.60 for 2006-08 and 2019 entries); picks: losers 0.13, big losers 0.06, big winners 0.03, median CAGR 0.09; scores highest where the model is most wrong (0.81-0.85 in 2006-08), so a fixed score threshold selects the pre-crash years. Backtested with momentum and a sector cap: docs/notes/2026-09-29-factor-combinations.md"
 dataset_version = "dataset_v1.4"
 min_dataset_version = "1.4"
 scheme = "walkforward"

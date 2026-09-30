@@ -1,4 +1,4 @@
-# Parameter search in cell C, the 'not a loser' cell, lgbm arm
+# Parameter search in cell C, the 'not a loser' cell, forest arm
 # (docs/notes/2026-09-29-decisions.md, decision 11). One of three
 # searches with equal budgets: 20 draws, one seed, for random_forest,
 # lightgbm and xgboost.
@@ -13,17 +13,16 @@
 # winners 0.03. It is the forest of the candidate portfolio
 # (docs/notes/2026-09-29-factor-combinations.md).
 #
-# Ranges: those of lgbm_random_search_dd_entry_3y, which was written
+# Ranges: those of forest_random_search_dd_entry_3y, which was written
 # for the primary cell and never run.
-# Memory and time for LightGBM have not been measured in the sandbox.
 #
 # Predictions, written before the run (2026-09-29):
-#   - The best draw's fold-mean PR-AUC is between 0.565 and 0.590:
-#     LightGBM reaches the forest here or falls just short, as its one
-#     untuned set did in the primary cell (0.303 against 0.327).
-#   - The draws span at least 0.03: tuning matters more for LightGBM
-#     than for forests.
-#   - No draw's picks have fewer losers than the forest's 0.13.
+#   - At least 15 of the 20 draws land within 0.010 of 0.585 on
+#     fold-mean PR-AUC and none exceeds 0.600.
+#   - The picks' losers (fwd_3y_cagr < 0, top 20) stay between 0.10
+#     and 0.18 for every draw within 0.010 of the reference's PR-AUC.
+#   - Deep draws (max_depth >= 9 with min_samples_leaf under 50) have
+#     the lowest PR-AUC.
 #
 # How to read it: the summary ranks on POOLED pr_auc, which is not the
 # fold mean. Rank on the fold mean of pr_auc from the ledger rows and
@@ -32,9 +31,8 @@
 # worth three seeds when its fold-mean PR-AUC exceeds 0.595.
 #
 # Expanded: 1 cell x 1 feature set x 20 draws x 1 seed = 20 runs.
-# Run: uv run vml-sweep experiments/sweeps/lgbm_random_search_nonloser_3y.toml
-name = "lgbm_random_search_nonloser_3y"
-note = "v1.4 3y 'not a loser' cell, 20 LightGBM draws: fold-mean PR-AUC 0.566-0.581, below the forest's 0.585, and the picks are worse on every outcome (losers 0.15-0.25, beat SPY 0.25-0.36); the most boosted draws have the lowest PR-AUC and the highest p@20 (0.75)"
+# Run: uv run vml-sweep experiments/sweeps/forest_random_search_nonloser_3y.toml
+name = "forest_random_search_nonloser_3y"
 dataset_version = "dataset_v1.4"
 min_dataset_version = "1.4"
 scheme = "walkforward"
@@ -65,17 +63,15 @@ label = "fwd_3y_cagr >= 0 & fwd_3y_max_drawdown_from_entry < 0.3"
 groups = ["ranks"]
 
 [model]
-name = "lightgbm"
-subsample_freq = 1
+name = "random_forest"
+bootstrap = true
+class_weight = 1.0
+n_jobs = 8
 
 [random]
-learning_rate = { low = 0.01, high = 0.2, log = true }
-n_estimators = { low = 100, high = 1500, int = true, log = true }
-num_leaves = { low = 7, high = 63, int = true, log = true }
-min_child_samples = { low = 20, high = 300, int = true, log = true }
-min_child_weight = { low = 1e-3, high = 10.0, log = true }
-subsample = { low = 0.6, high = 1.0 }
-colsample_bytree = { low = 0.4, high = 1.0 }
-reg_alpha = { low = 1e-4, high = 10.0, log = true }
-reg_lambda = { low = 1e-3, high = 30.0, log = true }
-class_weight = { choices = [1.0, 0.5, 0.25] }
+n_estimators = { low = 150, high = 500, int = true }
+max_depth = { low = 3, high = 12, int = true }
+min_samples_leaf = { low = 20, high = 500, int = true, log = true }
+max_features = { low = 0.05, high = 0.6 }
+max_samples = { low = 0.3, high = 1.0 }
+criterion = { choices = ["gini", "entropy"] }

@@ -48,7 +48,6 @@
 # 4-5 minutes each.
 # Run: uv run vml-sweep experiments/sweeps/forest_label_rungs_dd_entry_3y.toml
 name = "forest_label_rungs_dd_entry_3y"
-note = "v1.4 3y, CAGR floor 0.08/0.10/0.15 x drawdown-from-entry cap 0.15/0.20/0.30, one forest, 3 seeds: the thresholds move p@20 (0.23-0.57) and PR-AUC (0.19-0.42) and leave what the picks go on to do where it was (beat SPY 0.43-0.50, median excess CAGR about zero); the 0.15 floor is the worst rung on every outcome"
 dataset_version = "dataset_v1.4"
 min_dataset_version = "1.4"
 scheme = "walkforward"
