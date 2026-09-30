@@ -1,0 +1,57 @@
+# Decision 23 of docs/notes/2026-09-29-decisions.md (2026-09-30). The
+# template of decision 6 with a cap of 2 per sector; the four criteria
+# of decision 21 (final value at or above SPY's 732,110; time-weighted
+# CAGR of 10.6% or more; worst drawdown at least 5 points shallower
+# than SPY's -52.9%; positive mean 3-year excess per buy for the buys
+# of 2005-12 and of 2013-20).
+#
+# The quality blend with the rank sell discipline, forest seed 1776: the
+# seed check of bt_nonloser_roc_top10_cap2_sell20 (seed 23: 800,456,
+# time-weighted 10.64%, drawdown -38.8%, all four criteria met, the
+# second by 0.04 points).
+#
+# Prediction (2026-09-30): final value above SPY's and above the same
+# seed's buy-and-hold quality blend (752,267 / 721,826); time-weighted
+# CAGR 10.2-11.2%; drawdown within 3 points of -38.8%.
+name = "bt_nonloser_roc_top10_cap2_sell20_s1776"
+dataset_version = "dataset_v1.4"
+prices_version = "prices_v1.0"
+
+bundles = [
+    "experiments/models/forest_nonloser_dd30_3y_s1776_003a8739d3d5",
+    "experiments/models/factor_roc_greenblatt_3y_da640394cbba",
+]
+
+[signal]
+combine = "mean_rank"
+max_staleness_days = 200
+model_update = "refit"
+label_lag_days = 45
+
+[[investability]]
+column = "dollar_volume_3m"
+op = ">="
+value = 100000.0
+
+[portfolio]
+strategy = "sell_below_criteria"
+top_k = 10
+weighting = "equal"
+monthly_cash = 1000.0
+max_per_group = 2
+group_column = "sector"
+
+[sell]
+max_rank_pct = 0.2
+filters = []
+
+[execution]
+cost_bps = 35.0
+benchmark_cost_bps = 0.0
+max_quote_age_days = 3
+delist_after_days = 30
+
+[window]
+start = 2005-01-01
+end = 2020-12-31
+valuation_end = 2023-12-29

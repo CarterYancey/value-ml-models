@@ -67,3 +67,7 @@ why = "the same five sets trained inside the 100k floor; 5 runs, 20 minutes"
 [[item]]
 config = "experiments/sweeps/forest_features_nonloser_dv1m_3y.toml"
 why = "the same five sets trained inside the 1m floor; 5 runs, 15 minutes"
+
+[[item]]
+config = "experiments/sweeps/baseline_factors_nonloser_1y_dv100k.toml"
+why = "single-factor bars for the 1-year 'not a loser' cell inside the 100k floor (decision 22); 5 runs, two minutes"

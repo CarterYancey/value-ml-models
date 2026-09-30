@@ -633,3 +633,48 @@ its first configurations.
 than the 3-year forest among the entries of 2008–09 and 2020 by 0.05
 or more, or a calibrated threshold that selects rows in 12 or more of
 the 16 years at a precision near its score.
+
+### 23. Two blends meet the four criteria on one seed; check them before believing them
+
+*What came out (2026-09-30, backtests 14 to 18;
+[backtests note](2026-09-30-backtests.md)):*
+
+| | final value | time-weighted | money-weighted | worst drawdown | per buy, 3y excess | buys of 2005–12 | of 2013–20 |
+|---|---|---|---|---|---|---|---|
+| SPY, same deposits | 732,110 | 9.58% | 11.62% | −52.9% | | | |
+| forest + return on capital, seeds 23 / 232 / 1776 | 694,945 / 752,267 / 721,826 | 9.65 / 10.18 / 10.04% | 11.18 / 11.85 / 11.50% | −41.2 / −42.4 / −41.3% | +0.013 / +0.019 / +0.012 | +0.013 / +0.023 / +0.018 | +0.012 / +0.014 / +0.005 |
+| the same with the sell discipline (seed 23) | 800,456 | 10.64% | 12.37% | −38.8% | +0.013 | +0.014 | +0.012 |
+| forest + momentum + return on capital (seed 23) | **948,956** | **12.24%** | **13.79%** | −41.2% | **+0.025** | +0.034 | +0.016 |
+| forest + momentum with the sell discipline (seed 23) | 674,817 | 9.87% | 10.93% | −51.7% | +0.004 | +0.024 | −0.017 |
+
+The three-way blend and the quality blend with the sell discipline
+each meet all four criteria of decision 21 on seed 23. The three-way
+blend was predicted to land between its parents and landed above both
+on every measure: a prediction missed upwards, and the best of
+eighteen backtests. It is treated as suspect until checked.
+
+*Decided:* six more backtests (19th to 24th), predictions in each
+config:
+
+1. the three-way blend on the forest's other two seeds;
+2. the quality blend with the sell discipline on the other two seeds;
+3. the three-way blend with **fractional shares**. The template buys
+   whole shares with 100 a pick on total-return adjusted prices, so a
+   stock priced above its budget is skipped (111 of 192 months bought
+   fewer than ten stocks in the three-way run). That is a selection
+   rule nobody chose, applied to a price nobody paid. If the result
+   depends on it, it is not the blend's;
+4. the three-way blend with the sell discipline.
+
+*What carries a blend forward:* all four criteria on all three seeds,
+and for the three-way blend a fractional-share result within a point
+a year of the whole-share one. *What does not change whatever comes
+out:* these are backtests 19 to 24 on the same sixteen buy years; the
+blend that comes through is a candidate for Carter's holdout look and
+for paper trading, not a result.
+
+*Not done:* no further second rankings are tried. Return on capital
+and momentum were both named in decision 8 before any backtest; the
+three-way blend is their union, named in decision 19 before it was
+run. Trying more factors on these years from here would be fitting
+them.

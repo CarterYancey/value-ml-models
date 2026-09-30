@@ -686,7 +686,10 @@ docs/notes/2026-09-29-decisions.md. Start a new session there.
       `claude/backtest-sector-cap`. (Carter, 2026-09-30: the consumed
       cells were opened on older dataset versions and simpler labels;
       their counts should not stop experiments.)
-- [ ] **Sell discipline** for the candidate: one backtest with
+- [ ] **Sell discipline** for the candidate (2026-09-30: run as a
+      rank criterion, `[sell] max_rank_pct = 0.2`, on the candidate
+      and on the quality blend, decision 21; results in
+      docs/notes/2026-09-30-backtests.md): one backtest with
       `strategy = "sell_below_criteria"`, criteria fixed before the
       run (the 14th backtest on 2005-2020). It works best with a
       calibrated model: buy on high confidence, sell or rebalance
@@ -707,15 +710,29 @@ docs/notes/2026-09-29-decisions.md. Start a new session there.
       a failure. Holding cash when nothing clears the bar is a valid
       strategy; the number of picks a year at a threshold is part of
       the result. Carter, 2026-09-30.
-- [ ] **Calibration** (prequential, Phase 3 item above) before any
+- [x] **Calibration** (2026-09-30: run on the candidate's forest
+      after fixing a look-ahead in the calibrator; an honest
+      calibrator for a 3-year label is four years behind and an
+      absolute confidence bar would have held cash through the best
+      entry years: docs/notes/2026-09-30-blends-and-calibration.md.
+      A 1-year cell is the follow-up, decision 22.) Prequential,
+      Phase 3 item above, before any
       rule that reads a score as confidence. Measured 2026-09-29 on
       the candidate's forest: top scores 0.81-0.85 for 2006-08 entries
       (precision 0.15-0.60) and 0.65-0.69 for 2011-13 (precision near
       1.0), so a fixed threshold picks the pre-crash years; a
       threshold relative to the year's scores, or calibrated
       probabilities, is what the confidence rule needs.
-- [ ] **Feature selection on theory, not only on the manifest
-      groups.** Carter, 2026-09-30: the models lean on a few columns,
+- [x] **Feature selection on theory, not only on the manifest
+      groups.** (2026-09-30: five sets in cell C, on all rows and
+      inside two liquidity floors, read on the portfolio screen. No
+      set without the risk ranks matches the ranks: 0.013-0.034 a
+      year less mean excess, more losers, and the same two sectors
+      picked through operating-cash-flow stability. The floor at
+      training changes nothing for the ranks forest.
+      docs/notes/2026-09-30-features-and-floor.md. One seed, one
+      forest configuration; a parameter search on the theory-led set
+      is the untested rival.) Carter, 2026-09-30: the models lean on a few columns,
       the volatility and liquidity ranks among them; try excluding
       them, and prefer columns with a causal story in value investing
       (cash generation, balance-sheet strength, profitability,
@@ -741,6 +758,22 @@ docs/notes/2026-09-29-decisions.md. Start a new session there.
       of the report; the label cell stays the same, so the trial
       count needs a "universe" qualifier. Not feature engineering
       (no new column); check data/manual.md before building it.
+- [ ] **Upstream request: an outcome that treats a delisting as a
+      portfolio does.** `fwd_{H}_cagr` carries a delisted stock's
+      final price flat to the horizon (decision 0002), so a stock
+      acquired three months after the snapshot at a 30% premium has a
+      3-year CAGR of 9% and an excess of about minus SPY's return,
+      where a portfolio gets the cash back and reinvests it. Found
+      2026-09-30: 15% of the momentum blend's screen picks were
+      acquired inside the window (7% of the forest's) and their mean
+      excess was -0.05 (docs/notes/2026-09-30-blends-and-calibration.md).
+      Wanted: per horizon the delisting date (or days held) and a
+      variant of the return with the proceeds in the benchmark from
+      the delisting to the horizon (`fwd_{H}_cagr_reinvested`,
+      `fwd_{H}_excess_cagr_reinvested`). It matters for every upside
+      label (`fwd_3y_cagr >= 0.15` calls a quick 40% takeover a miss)
+      and for `pick_outcomes`. Until then the backtest's per-buy
+      table is the fair reading.
 - [ ] **Upstream request:** within-sector ranks of volatility and of
       the conservative score, so the models can be sector-neutral
       instead of capped (docs/notes/2026-09-29-first-backtests.md).
