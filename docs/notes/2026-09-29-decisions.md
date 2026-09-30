@@ -678,3 +678,72 @@ and momentum were both named in decision 8 before any backtest; the
 three-way blend is their union, named in decision 19 before it was
 run. Trying more factors on these years from here would be fitting
 them.
+
+### 24. The candidate is now the three-way blend; backtesting on these years stops
+
+*What the checks of decision 23 showed (2026-09-30, backtests 19 to
+26; [backtests note](2026-09-30-backtests.md)):*
+
+| | seed 23 | seed 232 | seed 1776 | SPY |
+|---|---|---|---|---|
+| **forest + momentum + return on capital, buy and hold** | | | | |
+| final value on 192,000 deposited | 948,956 | 959,660 | 949,366 | 732,110 |
+| time-weighted CAGR | 12.24% | 12.26% | 12.23% | 9.58% |
+| worst drawdown | −41.2% | −41.3% | −42.0% | −52.9% |
+| per buy, 3y excess a year (buys of 2005–12 / 2013–20) | +0.034 / +0.016 | +0.034 / +0.016 | +0.035 / +0.013 | |
+| **the same with the rank sell discipline** | | | | |
+| final value | 1,090,591 | 1,042,252 | 1,028,085 | 732,110 |
+| time-weighted CAGR | 13.14% | 12.70% | 12.66% | 9.58% |
+| worst drawdown | −39.5% | −40.2% | −40.5% | −52.9% |
+| **forest + return on capital with the sell discipline** | | | | |
+| final value | 800,456 | 852,325 | 803,800 | 732,110 |
+| time-weighted CAGR | 10.64% | 11.09% | 10.79% | 9.58% |
+| worst drawdown | −38.8% | −39.7% | −39.4% | −52.9% |
+
+With fractional shares the three-way blend (seed 23) ends at 936,540,
+12.12%, −43.0%: the whole-share rule was not doing the selecting. All
+three rows meet the four criteria of decision 21 on all three seeds.
+
+*Decided:*
+
+1. **The candidate carried forward is cell C's forest, 12-month
+   momentum and return on capital by mean rank**, top 10 a month, at
+   most 2 per sector, equal weights, inside `dollar_volume_3m >=
+   100000`. It replaces the candidate of decision 10 (forest and
+   momentum), which misses two of the four criteria. Bundles:
+   `forest_nonloser_dd30_3y` (run `53ceedd93e6d`; seeds 232 and 1776
+   beside it), `factor_mom_12_2_3y`, `factor_roc_greenblatt_3y`.
+2. **Buy and hold is the base case; the rank sell discipline
+   (`[sell] max_rank_pct = 0.2`) is the variant to paper-trade beside
+   it.** It added 0.4 to 0.9 points a year on the three seeds at four
+   times the costs and about 15 sales a year, and it was predicted to
+   do worse, so its gain is the less certain of the two.
+3. **No further backtest is run on buys of 2005–2020.** Twenty-six
+   configurations have been tried on those years. Each further
+   variant makes the best figure less believable, not more (decision
+   12); what is missing now is evidence from years the choices were
+   not made on.
+
+*What the candidate is, in plain terms:* stocks the forest ranks as
+unlikely to lose over three years, that earn a high return on their
+capital, and whose price has risen over the past year. Low risk,
+quality and trend: three premia with long records, combined by rank.
+The forest keeps the losers down (20% of the blend's buys lost money
+over the three years after the trade; 42% of all test rows inside
+the floor have a negative 3-year CAGR); return
+on capital moves the picks from utilities and real estate (1.4% of
+buys, from 35%) to operating companies; momentum adds the winners.
+
+*What it has not shown:* that it holds outside 2005–2023. The three
+ingredients were named before any of them was backtested (decision
+8), and the blend before it was run (decision 19), but it is the best
+of 26 configurations on sixteen buy years, its forest was chosen on
+the same years, and the three premia are well known to have paid in
+this period. A figure of +2.7 points a year over SPY should be
+expected to shrink.
+
+*Carter's, as before:* one holdout look in cell C's 3y cell with the
+candidate's forest; promotion; the pull requests for the five feature
+branches; deployment. Also his to decide: whether the backtest engine
+may trade 2021–2023 with year-end refits for the candidate (it
+overlaps the holdout era and was not run).

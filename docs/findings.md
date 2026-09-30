@@ -4,151 +4,143 @@ What is known now, by cell, and what is planned. Kept short on purpose:
 **this file is rewritten, not appended to**, and stays under about 150
 lines.
 
-- What was done, in order, one entry per sweep: [logbook.md](logbook.md).
-  Read that first.
-- Tables, checks and reasoning behind a conclusion: the note it links
-  to, in [notes/](notes/).
-- How an unattended session works: [agents.md](agents.md).
+- What was done, in order: [logbook.md](logbook.md). Read that first.
+- Tables, checks and reasoning: the note a conclusion links to, in
+  [notes/](notes/). Unattended sessions: [agents.md](agents.md).
 
 Numbers are walk-forward fold means over test years 2005–2020 (16
-folds, `split_folds.parquet` of the named dataset version), `p@20`
-picks the top 20 per test year, and they are **selection-biased** by
-the trial counts given. They rank candidates; none is a result of
-record. Results are never compared across dataset versions.
+folds, `split_folds.parquet` of the named dataset version),
+**selection-biased** by the trial counts given; none is a result of
+record. Never compared across dataset versions or universes.
 
 ## Next session: start here
 
 1. The candidate and how it was reached: "State" below, then
-   [decisions](notes/2026-09-29-decisions.md) 1–13 in order.
-2. What to do next: TODO.md, "Next, from the session of
-   2026-09-29/30" (Carter's notes of 2026-09-30: theory-led feature
-   selection and a training-time liquidity floor, evaluation by
-   confidence with mean beside median, a sell discipline,
-   calibration; the holdout counts are not a reason to hold back).
-3. Not yet in `Claude`: the sector cap (`claude/backtest-sector-cap`).
+   [decisions](notes/2026-09-29-decisions.md) 14–24 (the session of
+   2026-09-30; 1–13 are the day before).
+2. What to do next: TODO.md, "Next, from the second session of
+   2026-09-30".
+3. Code not yet in `Claude`: `claude/backtest-buy-outcomes` holds
+   all five feature branches of the session (TODO.md lists them;
+   one is a look-ahead fix in calibration). The lab branch is
+   `claude/lab-2026-09-30`.
 
-## The goal (Carter, 2026-09-29)
+## State (2026-09-30)
 
-A manageable number of high-precision, low-risk selections with
-upside. Results are judged on what a portfolio of the picks went on
-to do, then on precision, then on PR-AUC
-([decision log](notes/2026-09-29-decisions.md)).
+The goal (Carter): a manageable number of high-precision, low-risk
+selections with upside, judged on what a portfolio of the picks went
+on to do, then on precision. 0.65 and the number of picks are aims.
 
-## State (2026-09-29)
+**The candidate** (decision 24): cell C's forest, 12-month momentum
+and return on capital combined by mean rank; top 10 a month, at most
+2 per sector, equal weights, `dollar_volume_3m >= 100000`. Simulated,
+35 bps a side, buys 2005–2020, valued end of 2023, three forest seeds:
 
-| cell (3y, `dataset_v1.4`) | trials | forests on the 112 ranks, p@20 | bar | status |
+| | final value on 192,000 | time-weighted | worst drawdown | per buy, 3y excess a year |
 |---|---|---|---|---|
-| C, "not a loser": `fwd_3y_cagr >= 0 & fwd_3y_max_drawdown_from_entry < 0.3` | 72 | 0.78–0.79 (2013–20: 0.84), PR-AUC 0.585 | base rate 0.39 | **the candidate's cell**; searched, 20 draws per family, nothing better |
-| A, "from entry": `fwd_3y_cagr >= 0.1 & fwd_3y_max_drawdown_from_entry < 0.2` | 80 | 0.48–0.50 (2013–20: 0.53–0.54), PR-AUC 0.327 | single factor 0.39, base rate 0.21 | same picks as C, more winners, more losers |
-| B: `fwd_3y_excess_cagr > 0 & fwd_3y_max_drawdown_from_entry < 0.2` | 6 | 0.28 (2013–20: 0.18) | base rate 0.20 | no skill after 2013; dropped |
-| `fwd_3y_cagr >= 0.1 & fwd_3y_max_drawdown < 0.3` ("whole path") | 29 | 0.37–0.39 | single factor 0.34, base rate 0.11 | not pursued |
-| `label_3y_beat_spy` | 47 (725 on v1.1) | 0.40–0.54 | single factor 0.49, base rate 0.35 | parked |
+| SPY, same deposits | 732,110 | 9.58% | −52.9% | |
+| **candidate, buy and hold** | 949,000–960,000 | 12.2% | −41% to −42% | +0.024 to +0.026 (2005–12: +0.034; 2013–20: +0.013 to +0.016) |
+| candidate, rank sell discipline | 1,028,000–1,091,000 | 12.7–13.1% | −39.5% to −40.5% | the same |
+| forest + return on capital, sell discipline | 800,000–852,000 | 10.6–11.1% | −39% to −40% | +0.012 to +0.019 |
+| decision 10's candidate (forest + momentum) | 711,000–764,000 | 11.1–11.7% | −47% to −49% | +0.001 to +0.005 (2013–20: −0.016 to −0.023) |
 
-**The candidate** (decision 10): cell C's forest and 12-month
-momentum combined by mean rank, top 10 a month, at most 2 per
-sector, equal weights, buy and hold. Simulated, 35 bps a side,
-`dollar_volume_3m >= 100000`, buys 2005–2020, valued end of 2023,
-three forest seeds: **11.1–11.7% a year time-weighted against SPY's
-9.6%, worst drawdown −47% to −49% against −53%**, final value
-between 3% below and 4% above SPY's. 13 backtest configurations
-were tried on those years; momentum was the best of three factors.
+61% of the candidate's buys beat SPY over their first three years,
+20% lost money; 235 stocks bought in sixteen years; utilities and
+real estate 1.4% of buys. **26 backtest configurations were tried on
+these years; this is the best of them, and it has not been shown to
+hold outside 2005–2023.** [backtests](notes/2026-09-30-backtests.md)
 
-- **Sealed holdout:** 19 looks, all at 1y/2y/5y (below). Every 3y
-  cell is unopened.
-- **Code not yet in `Claude`:** the sector cap,
-  `claude/backtest-sector-cap`.
+| cell (3y unless said, `dataset_v1.4`) | trials | best | status |
+|---|---|---|---|
+| C, "not a loser": `fwd_3y_cagr >= 0 & fwd_3y_max_drawdown_from_entry < 0.3` | 80 on all rows; 23 inside the 100k floor; 15 inside 1m | forest on 112 ranks: p@20 0.79 (base 0.39), PR-AUC 0.585 | **the candidate's forest**; feature sets, floor and parameters searched, nothing better |
+| 1y: `fwd_1y_cagr >= 0 & fwd_1y_max_drawdown_from_entry < 0.2`, inside 100k | 6 | forest p@20 0.67 (base 0.46) | closed: the 3y forest picks better at 1y |
+| A, B, whole path, `label_3y_beat_spy`, `fwd_3y_cagr >= 0.15` | 80, 6, 29, 47, 1 | see notes | not pursued (same picks as C, or no skill) |
+
+**Sealed holdout:** 19 looks, none in a 3y cell (below).
 
 ## Conclusions that stand
 
-Each with the note that carries its evidence.
+1. **The forest avoids losers and gives up winners; a second and
+   third ranking put the winners back.** Forest alone: 17% of buys
+   lose money over three years and the portfolio earns SPY's return.
+   With return on capital: +0.012 to +0.019 a year per buy in both
+   halves. With momentum as well: +0.025. Backtests note.
+2. **Momentum helps only beside quality.** Forest + momentum led on
+   time-weighted return because of 2005–11; per buy it is negative
+   for 2013–20. Time-weighted return gives the small early portfolio
+   the weight of the late one: read the per-buy table of every
+   backtest beside it.
+   [blends](notes/2026-09-30-blends-and-calibration.md)
+3. **Theory-led features and a training-time liquidity floor do not
+   help in cell C.** Four sets without the risk ranks (fundamentals;
+   with 47 unranked scores, shares and flags; without volatility,
+   size and liquidity) pick 0.013–0.034 a year worse on the screen
+   with more losers. The floor changes nothing for the ranks forest.
+   One seed, one forest configuration.
+   [features and floor](notes/2026-09-30-features-and-floor.md)
+4. **The models are sector selectors whatever they are fed.** Without
+   volatility they rank on the stability of operating cash flow and
+   pick the same utilities and REITs (33–39% of picks). Return on
+   capital as a second ranking removes them (it is undefined for most
+   REITs and low for utilities). Same note;
+   [first backtests](notes/2026-09-29-first-backtests.md).
+5. **Selection is by rank within the period, not by confidence.** An
+   honest calibrator for a 3-year label is four years behind: it gave
+   no row 0.5 in 2011–13 (top 20 right 95–100%) and 0.5 to 42–44% of
+   rows in 2017–19 (precision 0.31–0.48). A 1-year label's is two
+   years behind and no better (precision at 0.5 from 0.10 to 0.84 by
+   year). Blends note; [1y cell](notes/2026-09-30-one-year-cell.md).
+6. **A shorter horizon does not help**: the 3-year forest's picks have
+   fewer 1-year losers (0.236 against 0.275) than a forest trained on
+   the 1-year label, and neither sees a crash coming. 1y note.
+7. **A rank sell discipline helps where the rank is stable**: +0.75
+   to +0.99 points a year for the quality blend, +0.4 to +0.9 for the
+   candidate, −1.2 for forest + momentum (costs 8.5 times).
+8. **The dataset's delisting convention understates acquired
+   stocks.** A delisted stock's price is carried flat to the horizon;
+   a portfolio reinvests the cash. 15% of the momentum blend's screen
+   picks were acquired inside the window. It biases `fwd_*` outcomes
+   and every upside label. Blends note; upstream request in TODO.
+9. **The screen (top 10 a quarter, 2 per sector) is a shortlist, not
+   a verdict.** It agreed with the backtests' per-buy reading on
+   return on capital and earnings yield and was 0.02 harsher on every
+   blend with momentum. Blends note.
+10. **Label thresholds, forest parameters and the seed move little**
+    (a seed: half a point a year in a backtest at most); **a relative
+    label makes picks worse at beating the market; the cheapest
+    stocks are the worst picks.**
+    [rungs](notes/2026-09-29-label-rungs-dd-entry.md),
+    [searches](notes/2026-09-29-searches-nonloser.md),
+    [pick anatomy](notes/2026-09-29-pick-anatomy.md)
 
-1. **The models avoid losers and give up the big winners.** Top 20
-   of cell A's forest: losers (3y CAGR below 0) 0.20 against 0.45
-   for all rows, big losers 0.10 against 0.32, big winners (0.25 or
-   more) 0.06 against 0.15.
-   [pick anatomy](notes/2026-09-29-pick-anatomy.md)
-2. **A modest target is predicted with high precision.** Cell C:
-   0.78 at 20 picks a year, 0.76 at 50, 0.74 at 100; 0.83 or more in
-   11 of 16 years; under 0.60 for entry years 2006–08 and 2019. Its
-   picks: losers 0.13, median drawdown 0.13, median CAGR 0.09. Same
-   note.
-3. **The models are sector selectors.** They rank on market-wide
-   volatility ranks, so utilities and REITs (3% and 6% of the
-   universe) were half and a quarter of an uncapped portfolio's
-   buys, and every buy of 2005–06 was a REIT. Uncapped portfolios
-   ended 26–29% below SPY with a −63% drawdown.
-   [first backtests](notes/2026-09-29-first-backtests.md)
-4. **With at most 2 buys per sector the portfolio compounds at
-   SPY's rate with a shallower drawdown** (9.4–9.9% against 9.6%,
-   −44% to −47% against −53%): less lost in falls, less gained in
-   strong rises.
-   [capped backtests](notes/2026-09-29-sector-cap-backtests.md)
-5. **Momentum among the stocks the forest ranks as safe adds 1.2 to
-   2.4 points a year**, on three seeds; quality gives the shallowest
-   drawdown (−41%) at the same return; cheapness makes the portfolio
-   worse. Momentum and the value factors alone are the worst picks
-   on the screen (losers 0.61–0.68).
-   [factor combinations](notes/2026-09-29-factor-combinations.md)
-6. **The pick-outcome screen cannot stand in for a backtest.** It
-   showed cell C's picks level with SPY at a third of the average
-   drawdown; the portfolio had a deeper drawdown than SPY. It counts
-   stocks, not sectors. First-backtests note.
-7. **A fixed score threshold selects the wrong years.** The top
-   scores are 0.81–0.85 for 2006–08 entries (precision 0.15–0.60)
-   and 0.65–0.69 for 2011–13 (precision near 1.0); `score >= 0.8`
-   has a pooled precision of 0.42. Select by rank within the period.
-   Same note.
-8. **A relative label makes picks worse at beating the market**
-   (cell B: picks beat SPY 0.38 of the time against 0.50 for A), and
-   **fundamentals alone worked before 2013 and not after** (0.63 and
-   0.28). Pick-anatomy note.
-9. **Label thresholds move p@20 and PR-AUC, not what the picks go
-   on to do.** Nine rungs around cell A, the same outcomes.
-   [label rungs](notes/2026-09-29-label-rungs-dd-entry.md)
-10. **No feature set beats the 112 rank columns in cell A, and most
-    of the signal is three of them** (`vol_12m_rank`,
-    `vol_36m_rank`, `conservative_score_rank`). Sector ranks add
-    nothing; 60 raw columns lower PR-AUC by 0.011–0.015.
-    [feature sets](notes/2026-09-29-feature-sets-dd-entry.md)
-11. **Hyperparameters barely matter inside a family; p@20
-    differences under 0.03 are noise. The forest's seed moves a
-    backtest by about half a point a year.** A sweep summary's
-    `pr_auc` is pooled and reads about 0.05 below the fold mean.
-    [v1.1 families](notes/2026-08-beat-spy-v11-families.md),
-    factor-combinations note.
-
-Earlier, and standing: forests ahead of LightGBM in the compounder
-cells, lift holding after 2013
-([note](notes/2026-09-28-drawdown-compounder-cells.md)); no forest
-beats a single factor on 3y beat_spy on v1.4
-([note](notes/2026-09-beat-spy-v11-to-v14.md)); v1.0/v1.1 work
-([earlier](notes/2026-08-earlier-work.md),
-[derived labels](notes/2026-09-derived-label-cells.md)).
+Earlier work: [compounder cells](notes/2026-09-28-drawdown-compounder-cells.md),
+[3y beat_spy on v1.4](notes/2026-09-beat-spy-v11-to-v14.md),
+[v1.0/v1.1](notes/2026-08-earlier-work.md),
+[derived labels](notes/2026-09-derived-label-cells.md) (one row
+corrected 2026-09-30).
 
 ## Open questions
 
-- Does the candidate hold outside 2005–2023? Only the holdout and
-  time can say; the backtests share their years.
-- Sector-neutral models need a within-sector volatility rank
-  upstream; deriving one here is not allowed.
-- Theory-led feature sets, a training-time liquidity floor, a sell
-  discipline, selection by calibrated confidence: TODO.md.
+- Does the candidate hold outside 2005–2023? Low risk, quality and
+  momentum are known to have paid in this period; the blend may be
+  their sum. Only the holdout, 2021–23 trading and time can say.
+  Every portfolio trailed SPY in 2021 (the candidate by 9.5 points).
+- Why the screen is harsher on momentum blends than the backtests'
+  own buys (entry timing is what is left), and whether a parameter
+  search on the theory-led features would change conclusion 3.
 
 ## Plan
 
-The queue is `experiments/queue.toml`; decisions and their reasons
-are in the [decision log](notes/2026-09-29-decisions.md).
-
-1. Done 2026-09-30: parameter searches in cell C. No draw of
-   forests, LightGBM or XGBoost exceeds the candidate's forest
-   (PR-AUC 0.585); boosted families pick worse at nearly the same
-   PR-AUC. [note](notes/2026-09-29-searches-nonloser.md)
-2. Carter's, when he would act on the candidate: one holdout look
-   in cell C's 3y cell, promotion, the pull request for the sector
-   cap, deployment.
-3. Calibration before any rule that reads a score as a probability.
-4. Proposed and not run (decision 12): a sell discipline, a shorter
-   horizon, a within-sector volatility rank upstream.
+1. Carter's: the pull requests; one holdout look in cell C's 3y cell
+   with `forest_nonloser_dd30_3y`; whether the engine may trade
+   2021–23 for the candidate (it overlaps the holdout era);
+   promotion; deployment and paper trading of the candidate beside
+   its sell-discipline variant.
+2. No further backtests on buys of 2005–2020 (decision 24).
+3. Proposed, not built: a position cap (the quality blend's two
+   largest holdings are a third of it); upstream requests
+   (delisting-aware outcomes, within-sector risk ranks, market-state
+   features).
 
 ## Sealed holdout record
 
@@ -166,12 +158,8 @@ brackets:
 | 5y cagr_ge_0 (v1.1 [2019]) | 2 | 0.66–0.68 vs 0.50 |
 | 2y cagr_ge_8 (v1.0) | 1 | p@20 0.35 vs 0.30 |
 
-All 19 looks were on older dataset versions and simpler labels
-(Carter, 2026-09-30: not a reason to hold experiments back). The one
-consistent signal: technical-rank models had no holdout skill on the
-relative labels; valuation/trend models kept some.
-
-## Process
-
-Rules learned the hard way: CLAUDE.md, "Before writing a
-conclusion"; incidents in [notes/process-issues.md](notes/process-issues.md).
+All on older dataset versions and simpler labels (Carter, 2026-09-30:
+not a reason to hold experiments back). A look inside a universe
+consumes the label's cell. Process rules: CLAUDE.md; incidents:
+[notes/process-issues.md](notes/process-issues.md) (2026-09-30:
+calibration fitted on outcomes from the future).
