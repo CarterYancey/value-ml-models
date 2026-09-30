@@ -14,6 +14,13 @@ read** stub; a correction is a new entry that names the old one.
 
 <!-- entries -->
 
+### 2026-09-29 · session close 2026-09-30
+git `685c75e`
+- **Did:** Promoted the candidate's forest run, the four sweeps behind it (feature sets, label rungs, pick anatomy, single-factor bars), the three searches in cell C and three backtests (uncapped, capped, capped with momentum). Recorded Carter's closing notes as decision 13 and as the next steps in TODO.md. Built the results branch for the pull request.
+- **Got:** 13 promoted directories added under reports/promoted/. 13 backtest configurations and 72 walk-forward configurations in cell C in the sandbox shard.
+- **Concluded:** The record for the next session is docs/findings.md ('Next session: start here'), the decision log, and TODO.md. Lab branch claude/lab-2026-09-28 keeps every config and report; the results branch carries only what the tracked-configs check allows.
+- **Next:** Carter: the pull request; a holdout look in cell C when he would act on the candidate.
+
 ### 2026-09-29 · xgb_random_search_nonloser_3y
 20 runs · `dataset_v1.4` · `fwd_3y_cagr >= 0.0 & fwd_3y_max_drawdown_from_entry < 0.3` · git `7e4ca71` · [summary](../reports/sweeps/xgb_random_search_nonloser_3y/xgb_random_search_nonloser_3y_summary.md) · [note](notes/2026-09-29-searches-nonloser.md)
 - **Did:** Random search over XGBoost parameters in cell C on CPU, 20 draws, one seed, the 112 ranks, with pick outcomes. 20 hashes, 320 fold rows.

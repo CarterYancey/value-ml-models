@@ -16,6 +16,17 @@ picks the top 20 per test year, and they are **selection-biased** by
 the trial counts given. They rank candidates; none is a result of
 record. Results are never compared across dataset versions.
 
+## Next session: start here
+
+1. The candidate and how it was reached: "State" below, then
+   [decisions](notes/2026-09-29-decisions.md) 1–13 in order.
+2. What to do next: TODO.md, "Next, from the session of
+   2026-09-29/30" (Carter's notes of 2026-09-30: theory-led feature
+   selection and a training-time liquidity floor, evaluation by
+   confidence with mean beside median, a sell discipline,
+   calibration; the holdout counts are not a reason to hold back).
+3. Not yet in `Claude`: the sector cap (`claude/backtest-sector-cap`).
+
 ## The goal (Carter, 2026-09-29)
 
 A manageable number of high-precision, low-risk selections with
