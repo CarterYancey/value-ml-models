@@ -446,6 +446,10 @@ in [PLAN.md](PLAN.md); check items off (and add new ones) as work proceeds.
       Sweeps take the same `[features]` table (or a `[[features]]` array
       as the feature axis), infer cell horizons from labels, and derive
       a default `name` (`{model}_sweep_{features}_{labels}_{hash}`) too.
+- [x] Boolean flags as model inputs (2026-09-30, same branch): the
+      nullable boolean feature columns are handed to models as 0/1
+      floats with NULL kept (`harness.dataset.feature_matrix`), route
+      (b) below for the flags only. Strings and dates stay excluded.
 - [ ] Encode the categorical/non-numeric `features` columns (`sector`,
       `industry`, `famaindustry`, `scalemarketcap`, the `Y`/`N` condition
       flags like `negative_equity`, and the `fund_datekey` /
@@ -679,7 +683,12 @@ docs/notes/2026-09-29-decisions.md. Start a new session there.
       run (the 14th backtest on 2005-2020). It works best with a
       calibrated model: buy on high confidence, sell or rebalance
       when it falls. Carter, 2026-09-30.
-- [ ] **Quick evaluation by confidence, not only by K.** The report's
+- [x] **Quick evaluation by confidence, not only by K.** (2026-09-30,
+      `claude/universe-and-portfolio-screen`: with `score_thresholds`
+      and `pick_outcomes` set, the report's "Selection by score"
+      tables give, per year and pooled, the rows and stocks at or
+      above each threshold, their precision and the mean and median
+      of every outcome; years with no pick are shown.) The report's
       "High-confidence picks" table shows how many names clear a
       score and how precise they are; add the pick outcomes at those
       thresholds (mean excess CAGR, losers, big winners of every
@@ -711,7 +720,11 @@ docs/notes/2026-09-29-decisions.md. Start a new session there.
       beat SPY 0.63 of the time before 2013 and 0.28 after
       (docs/notes/2026-09-29-pick-anatomy.md): the question is open
       in cell C and on pick outcomes and backtests, not on p@20.
-- [ ] **Training-time liquidity floor.** Carter, 2026-09-30: drop
+- [x] **Training-time liquidity floor.** (2026-09-30, same branch:
+      `[[universe]]` in configs and sweeps, `universe_scope = "test"`
+      for the reference arm, a universe-qualified ledger cell, carried
+      into bundles, deployment refits and backtest refits;
+      docs/experiments.md "Universe".) Carter, 2026-09-30: drop
       rows below a dollar-volume threshold from training and test
       (the investability filter, applied to the dataset, not only to
       the backtest): less microcap noise, and the models need not
@@ -723,9 +736,11 @@ docs/notes/2026-09-29-decisions.md. Start a new session there.
 - [ ] **Upstream request:** within-sector ranks of volatility and of
       the conservative score, so the models can be sector-neutral
       instead of capped (docs/notes/2026-09-29-first-backtests.md).
-- [ ] **Sector cap in the pick-outcome screen** (`eval/picks.py`),
+- [x] **Sector cap in the pick-outcome screen** (`eval/picks.py`),
       so the screen sees what the backtest sees; and a sector table
-      of the top-K picks in every run report.
+      of the top-K picks in every run report. (2026-09-30, same
+      branch: `[pick_screen]`, top K per test quarter with a cap per
+      sector, and the picks' share by sector beside the test rows'.)
 - [ ] Ranking metric for boosted-family searches: p@K over 2013-20
       of the worst seed, not PR-AUC (the two order LightGBM and
       XGBoost draws in opposite directions).

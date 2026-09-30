@@ -154,6 +154,104 @@ Rules:
   weights and one entry date per row. A label that looks good here has
   earned a backtest, nothing more.
 
+### The portfolio screen
+
+Top K rows a year count rows, not sectors and not quarters: on
+2026-09-29 they showed a forest's picks level with SPY at a third of the
+average drawdown, while the uncapped portfolio of the same picks was a
+utilities and REIT portfolio with a deeper drawdown than SPY's. The
+screen applies the backtest template's selection rule to the test rows:
+
+```toml
+[pick_screen]
+per = "quarter"        # or "year"
+top_k = 10             # picks per period, by score
+max_per_group = 2      # optional: at most this many per group
+group_column = "sector"
+```
+
+A backtest buys from the latest completed quarter's median snapshots,
+and those are the test rows, so "top 10 per test quarter, at most 2 per
+sector" picks very nearly what `vml-backtest` buys under the same rule.
+The report gains a "Portfolio screen" section: per test year and
+pooled, the picks, the distinct stocks, the largest group and its
+share, the precision on the run's label and every pick outcome; then
+each group's share of the picks beside its share of the test rows.
+Logged per fold and pooled as `screen_n`, `screen_precision`,
+`screen_n_stocks`, `screen_top_group_share`, `screen_mean_<o>`,
+`screen_median_<o>`; sweep summaries lead their pick-outcome columns
+with them. The group column must be a feature column of the manifest.
+Report-only and part of the config hash when set, like
+`pick_outcomes`; an eval config may set it for a saved bundle. Still a
+screen: equal weights, no costs, entry at the snapshot, held to the
+horizon.
+
+### Selection by score
+
+With `score_thresholds` and `pick_outcomes` both set, the report gains
+"Selection by score": for every threshold, per test year and pooled,
+how many rows and distinct stocks scored at or above it, their
+precision and what they went on to do (`thr_mean_<o>_at_<t>`,
+`thr_median_<o>_at_<t>`, `thr_n_stocks_at_<t>`, `thr_years_at_<t>`). A
+year with no row at the bar is a year in cash and keeps its row. The
+mean is what an equal-weighted portfolio of those rows earns; the
+median is shown beside it. Read the years before the pooled row, and a
+threshold as a probability only on a calibrated run
+(`calibration = "isotonic"`).
+
+## Universe: the rows a model is trained and evaluated on
+
+```toml
+[[universe]]
+column = "dollar_volume_3m"
+op = ">="
+value = 100000
+# universe_scope = "test"   # train on every row, evaluate inside
+```
+
+A `[[universe]]` is a row filter on feature columns (the backtest's
+`[[investability]]` spec: `column`, `op`, `value`; several entries are
+ANDed; a NULL fails). By default it applies to train and test rows:
+the model learns from, and is measured on, the stocks it would be
+asked about. `universe_scope = "test"` trains on everything and
+evaluates inside the universe: the reference arm for a training-time
+floor, and what an eval config's `universe` does to a saved bundle
+(`vml-eval`; refused for a bundle that has its own).
+
+What it is and is not:
+
+- **Not a split.** Upstream tags still decide which rows are train and
+  which are test; the filter only leaves rows out, so the purge and
+  embargo hold for the rows that remain (invariant 1).
+- **Not a feature.** It reads a manifest feature column as of the
+  snapshot and derives nothing (invariant 4). Labels and weights
+  cannot be screened on.
+- **Another population, so another cell.** Base rates, baselines and
+  picks inside a universe are not comparable with a run over all rows.
+  The run is logged under `label [universe: ...]`; its report states
+  the configurations tried in that cell and against the label in any
+  universe. Baselines have to be run inside the universe too. The
+  sealed holdout is per label whatever the universe: a look inside a
+  universe consumes the label's cell.
+- **Part of the model.** It is in the config hash, in the bundle,
+  in a deployment refit and in the backtest's year-end refits. A
+  backtest refuses a bundle trained inside a universe unless its own
+  `[[investability]]` or `[[filters]]` carry the same filters.
+- `sample_weight_{H}y` is the upstream uniqueness weight and is not
+  recomputed for the rows left out.
+- One universe per sweep file (top-level `[[universe]]`), so a sweep's
+  runs are compared inside one population.
+
+## Boolean feature columns
+
+The upstream flags (`negative_equity`, `two_year_loss`, the nine
+`piotroski_*` signals, ...) are nullable booleans. They are handed to
+every model as floats, True 1.0 and False 0.0, NULL kept as NaN
+("unknown" is not "failed": data/features.md). This changes how a
+value is stored, not what it says, and reads no other row or column.
+String and date columns (`sector`, `industry`, `fund_datekey`, ...)
+are still not model inputs.
+
 ## Models
 
 `model.name` in a config selects from the registry: the baselines

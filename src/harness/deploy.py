@@ -41,7 +41,7 @@ from pathlib import Path
 import pandas as pd
 
 from harness.config import ExperimentConfig
-from harness.dataset import Dataset
+from harness.dataset import Dataset, feature_matrix
 from harness.errors import ConfigError, DatasetValidationError
 from harness.model_store import DeploymentBundle
 from harness.results import ResultsStore, git_sha, new_run_id
@@ -138,13 +138,19 @@ def train_deployment_model(
         # label is observable — all roles, all kinds, delistings included.
         # Column-projected: the refit needs features + label + weight,
         # not the full-width (string-heavy) frame.
+        dataset.check_universe(config.universe)
         refit_frame = dataset.frame(
             list(feature_cols)
             + [
                 config.label,
                 dataset.sample_weight_column(config.horizon_years),
             ]
+            + [f.column for f in config.universe]
         )
+        if config.universe and config.universe_scope == "all":
+            # the deployed model learns from the rows the selected
+            # config learned from: a universe is part of the model
+            refit_frame = dataset.apply_universe(refit_frame, config.universe)
         fit = dataset.fit_data(
             refit_frame, config.label, feature_cols, config.horizon_years,
             target=model_target(config.model_name),
@@ -230,7 +236,9 @@ def _score_frame(bundle: DeploymentBundle, frame: pd.DataFrame):
             f"inference data lacks feature columns the model was "
             f"trained on: {missing}"
         )
-    return bundle.model.predict_scores(frame[list(bundle.feature_columns)])
+    return bundle.model.predict_scores(
+        feature_matrix(frame, bundle.feature_columns)
+    )
 
 
 def predict_with_bundle(

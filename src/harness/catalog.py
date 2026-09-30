@@ -35,7 +35,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from harness.config import ExperimentConfig
+from harness.config import ExperimentConfig, universe_qualifier
 from harness.errors import ConfigError
 from harness.results import ResultsStore, default_results_path
 from models.registry import BASELINE_MODELS
@@ -107,9 +107,10 @@ def _cell_key(dataset_version: str, scheme: str, horizon: int | str,
 
 def config_cell(config: ExperimentConfig) -> tuple[str, str, int, str]:
     """(dataset_version, scheme, horizon, label) the run is *measured*
-    on — a regression reframe is charged to its binary `eval_label`."""
+    on — a regression reframe is charged to its binary `eval_label`,
+    and a run inside a universe to the universe-qualified label."""
     return (config.dataset_version, config.scheme, config.horizon_years,
-            config.eval_label or config.label)
+            config.cell_label)
 
 
 def short_metric(key: str) -> str:
@@ -432,7 +433,8 @@ def cmd_list(args) -> int:
         rows.append({
             "config": str(entry["path"]),
             "model": c.model_name,
-            "cell": f"{c.label} ({_scheme_tag(c.scheme)})",
+            "cell": f"{c.label}{universe_qualifier(c.universe)} "
+                    f"({_scheme_tag(c.scheme)})",
             "features": _features_summary(c),
             "dataset": c.dataset_version
             + (f" (min {c.min_dataset_version})" if c.min_dataset_version
@@ -525,7 +527,8 @@ def cmd_show(args) -> int:
     print(f"config hash:   {config.config_hash}")
     print(f"model:         {config.model_name} "
           f"{json.dumps(config.model_params, sort_keys=True)}")
-    print(f"cell:          {config.label} — {config.horizon_years}y, "
+    print(f"cell:          {config.label}"
+          f"{universe_qualifier(config.universe)} — {config.horizon_years}y, "
           f"scheme {_scheme_tag(config.scheme)}")
     print(f"features:      {_features_summary(config)}")
     print(f"dataset:       {config.dataset_version}"

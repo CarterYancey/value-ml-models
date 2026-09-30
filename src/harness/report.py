@@ -17,7 +17,9 @@ from pathlib import Path
 import pandas as pd
 
 from eval.era import crash_label
+from eval.metrics import threshold_tag
 from harness.derived_labels import is_derived_label, parse_label_expression
+from harness.filters import describe_filters
 
 #: Metric families shown in the era table, in reading order. Anything
 #: logged but not listed here (roc_auc, recall_at_k, thr_for_prec_*,
@@ -122,6 +124,19 @@ def _pick_outcome_views(table: pd.DataFrame) -> list[tuple[str, pd.DataFrame]]:
     return views
 
 
+def _screen_view(table: pd.DataFrame) -> pd.DataFrame:
+    """A screen or threshold table as reported: crash years tagged
+    inline like the era table."""
+    df = table.copy()
+    def tag(era):
+        if str(era) == "pooled":
+            return "pooled"
+        label = crash_label(int(era)) if str(era).isdigit() else None
+        return f"{era} ({label})" if label else str(era)
+    df["era"] = df["era"].map(tag)
+    return df
+
+
 def _baseline_view(baseline_df: pd.DataFrame) -> pd.DataFrame:
     """Baseline comparison trimmed to the columns that get read."""
     drop = [c for c in baseline_df.columns
@@ -143,6 +158,9 @@ def write_report(
     crash_df: pd.DataFrame | None = None,
     confidence_df: pd.DataFrame | None = None,
     pick_outcome_tables: dict[int, pd.DataFrame] | None = None,
+    threshold_tables: dict[float, pd.DataFrame] | None = None,
+    screen_tables: tuple[pd.DataFrame, pd.DataFrame] | None = None,
+    label_configurations_tried: int | None = None,
     baseline_df: pd.DataFrame | None = None,
     calibration_path: Path | None = None,
     pr_curve_path: Path | None = None,
@@ -230,10 +248,39 @@ def write_report(
             "folds' refits, so this assumes score stability across "
             "refits of this config (what a live deployment assumes too)."
         )
+    universe = getattr(config, "universe", ())
+    if universe:
+        scope = getattr(config, "universe_scope", "all")
+        lines.append(
+            f"- **universe: `{describe_filters(universe)}`** — "
+            + (
+                "train and test rows outside it are left out (a row with "
+                "a NULL in a filter column is outside)"
+                if scope == "all"
+                else "the model is trained on every row and **evaluated "
+                "inside the universe only** (scope `test`)"
+            )
+            + ". Every number below describes this universe: base rates, "
+            "baselines and picks are not comparable with a run over all "
+            "rows, and the run is counted in the universe's own ledger "
+            "cell. The filter reads feature columns as of the snapshot; "
+            "it builds no split (upstream tags decide train and test, "
+            "the purge and embargo hold for the rows that remain) and "
+            "derives no column. `sample_weight` is the upstream "
+            "uniqueness weight, not recomputed for the rows left out."
+        )
     lines.append(
         f"- **configurations tried against this cell "
-        f"(dataset, scheme, horizon, label): {configurations_tried}** "
+        f"(dataset, scheme, horizon, label"
+        + (", universe" if universe else "")
+        + f"): {configurations_tried}** "
         "(from the append-only results store; failed runs count)"
+        + (
+            f"; **{label_configurations_tried} against this label in any "
+            "universe**"
+            if label_configurations_tried is not None
+            else ""
+        )
     )
     if artifacts and "model_bundle" in artifacts:
         lines.append(
@@ -317,6 +364,52 @@ def write_report(
                 lines.append("")
                 lines.append(_table(view))
                 lines.append("")
+
+    if screen_tables is not None:
+        screen = config.pick_screen
+        table, group_table = screen_tables
+        lines.append("## Portfolio screen (capped, periodic picks)")
+        lines.append("")
+        lines.append(
+            f"`[pick_screen]`: {screen.describe()}. The backtest "
+            "template's selection rule applied to the test rows (a "
+            "backtest buys from the latest completed quarter's median "
+            "snapshots, which are these rows), read on the run's label "
+            "(`precision`) and on the pick outcomes. Equal weights, no "
+            "costs, entry at the snapshot, held to the horizon: closer "
+            "to a portfolio than the top-K-per-year tables, and still a "
+            "screen for `vml-backtest`, not a substitute. Report-only."
+        )
+        lines.append("")
+        lines.append(_table(_screen_view(table)))
+        lines.append("")
+        if group_table is not None and not group_table.empty:
+            lines.append(
+                f"What the screen picked, by `{screen.group_column}` "
+                "(pooled over test years):"
+            )
+            lines.append("")
+            lines.append(_table(group_table))
+            lines.append("")
+
+    if threshold_tables:
+        lines.append("## Selection by score (every row at or above a threshold)")
+        lines.append("")
+        lines.append(
+            "What every row with `score >= t` went on to do, per test "
+            "year and pooled, with how many rows and distinct stocks "
+            "that is. A year with no row at the bar is a year in cash "
+            "and is shown. Scores of different folds come from "
+            "different fits: read the picks per year before the pooled "
+            "row, and read a threshold as a probability only on a "
+            "calibrated run. Report-only, like the pick outcomes."
+        )
+        lines.append("")
+        for t, table in threshold_tables.items():
+            lines.append(f"### `score >= {threshold_tag(t)}`")
+            lines.append("")
+            lines.append(_table(_screen_view(table)))
+            lines.append("")
 
     source_bundle = artifacts.get("source_bundle") if artifacts else None
     if not score_figures_rendered:
@@ -465,6 +558,16 @@ def write_report(
                 "train_rows": fr["n_train_rows"],
                 "effective_train_size": fr["effective_train_size"],
                 "test_rows": fr["n_test_rows"],
+                # rows of the fold before the universe left some out
+                # (labeled or not, so an upper bound for the train rows)
+                **{
+                    name: fr[key]
+                    for name, key in (
+                        ("train_rows_before_universe", "n_train_rows_all"),
+                        ("test_rows_before_universe", "n_test_rows_all"),
+                    )
+                    if key in fr
+                },
             }
             for fr in fold_results
         ]

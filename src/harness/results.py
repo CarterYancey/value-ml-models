@@ -171,6 +171,28 @@ class ResultsStore:
         ]
         return int(sel["config_hash"].nunique())
 
+    def configurations_tried_any_universe(
+        self, dataset_version: str, scheme: str, horizon_years: int, label: str
+    ) -> int:
+        """Distinct config hashes ever run against this label in any
+        universe: the unqualified cell plus every `label [universe: ...]`
+        cell (harness.config.universe_qualifier). A universe makes a new
+        cell, not a clean slate; a report inside one states both
+        counts."""
+        df = self.load()
+        if df.empty:
+            return 0
+        sel = df[
+            (df["dataset_version"] == dataset_version)
+            & (df["scheme"] == scheme)
+            & (df["horizon_years"] == str(horizon_years))
+            & (
+                (df["label"] == label)
+                | df["label"].str.startswith(f"{label} [universe: ")
+            )
+        ]
+        return int(sel["config_hash"].nunique())
+
     def model_comparison(
         self,
         dataset_version: str,
