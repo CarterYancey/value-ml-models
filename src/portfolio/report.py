@@ -138,6 +138,48 @@ def yearly_table(
     return pd.DataFrame(rows)
 
 
+def group_tables(
+    trades: pd.DataFrame,
+) -> tuple[pd.DataFrame, pd.DataFrame] | None:
+    """What was bought, by the candidates' `group` (the sector unless
+    the config names another column): the share of buys per group over
+    the whole window, and per year the largest group with its share.
+    None when the trade log carries no group. Counts buys, not money:
+    with equal weights the two agree, with score weights they need
+    not."""
+    if trades.empty or "group" not in trades.columns:
+        return None
+    buys = trades[trades["side"] == "buy"].copy()
+    if buys.empty:
+        return None
+    buys["group"] = (
+        buys["group"].astype(object).where(buys["group"].notna(), "unknown")
+    )
+    counts = buys["group"].value_counts()
+    overall = pd.DataFrame(
+        {
+            "group": counts.index,
+            "buys": counts.to_numpy(),
+            "share": (counts / counts.sum()).to_numpy(),
+        }
+    )
+    buys["year"] = pd.to_datetime(buys["date"]).dt.year
+    rows = []
+    for year, frame in buys.groupby("year"):
+        per = frame["group"].value_counts()
+        rows.append(
+            {
+                "year": int(year),
+                "buys": int(len(frame)),
+                "stocks": int(frame["asset"].nunique()),
+                "groups": int(len(per)),
+                "largest_group": per.index[0],
+                "largest_share": float(per.iloc[0] / per.sum()),
+            }
+        )
+    return overall, pd.DataFrame(rows)
+
+
 def headline_table(
     strategy: SimulationResult, benchmark: SimulationResult
 ) -> pd.DataFrame:
@@ -256,6 +298,26 @@ def write_backtest_report(
             f"less (positive excess) in {won} of them. See the tagged rows "
             "above — few, correlated observations, wide uncertainty."
         )
+
+    group_lines = []
+    grouped = group_tables(strategy_result.trades)
+    if grouped is not None:
+        overall, by_year = grouped
+        overall_view = overall.copy()
+        overall_view["share"] = overall_view["share"].map(_pct)
+        by_year_view = by_year.copy()
+        by_year_view["largest_share"] = by_year_view["largest_share"].map(_pct)
+        group_lines = [
+            f"## What was bought, by `{config.group_column}`",
+            "",
+            "Shares of the number of buys. A portfolio whose buys sit in "
+            "one group is one bet, however many stocks it holds.",
+            "",
+            _table(overall_view),
+            "",
+            _table(by_year_view),
+            "",
+        ]
 
     reb = strategy_result.rebalance_log
     n_months = len(reb)
@@ -453,11 +515,18 @@ def write_backtest_report(
         "- investability filter:",
         *inv_lines,
         f"- selection: top {config.top_k} by combined score, "
-        f"`{config.weighting}`-weighted; strategy `{config.strategy}`",
+        f"`{config.weighting}`-weighted; strategy `{config.strategy}`"
+        + (
+            f"; at most {config.max_per_group} of a rebalance's buys per "
+            f"`{config.group_column}`, walked in score order"
+            if config.max_per_group is not None
+            else ""
+        ),
         *sell_lines,
         f"- costs: {config.cost_bps} bps per side (benchmark "
         f"{config.benchmark_cost_bps} bps)",
         "",
+        *group_lines,
         "## Coverage & diagnostics",
         "",
         *coverage_lines,

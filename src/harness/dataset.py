@@ -21,9 +21,11 @@ import numpy as np
 import pandas as pd
 import pyarrow.parquet as pq
 
+from eval.picks import outcome_column
 from harness.derived_labels import (
     DerivedLabel,
     is_derived_label,
+    label_slug,
     parse_label_expression,
 )
 from harness.errors import (
@@ -69,7 +71,7 @@ class SplitAccess(Enum):
 
     STANDARD is all ordinary model-selection work and permits only
     `walkforward`. FINAL_EVAL is granted solely by the dedicated
-    final-eval script (once per phase); REGISTERED_DIAGNOSTIC solely by
+    final-eval script (one look per cell); REGISTERED_DIAGNOSTIC solely by
     the registered-experiment runner (data/manual.md §7).
     """
 
@@ -127,7 +129,8 @@ def _target_array(label: str, vals: pd.Series, target: str) -> np.ndarray:
                 "train on the continuous outcome columns (fwd_*), with "
                 "the binary cell named in eval_label instead"
             )
-        return vals.to_numpy(dtype=float)
+        # copied for the same reason as the weights (_weights_for)
+        return np.array(vals.to_numpy(dtype=float), dtype=float, copy=True)
     if _is_boolean_values(vals):
         return vals.astype(bool).to_numpy()
     try:
@@ -511,6 +514,58 @@ class Dataset:
                 f"label {label!r} is not in the manifest labels group"
             )
 
+    def check_pick_outcomes(
+        self, outcomes: Sequence[str], feature_cols: Sequence[str]
+    ) -> None:
+        """Refuse pick outcomes (eval.picks) that are not label columns
+        or label expressions of this dataset, and any whose source
+        column is also a model input: an outcome is what happened after
+        the snapshot, so it can describe the picks and never feed them."""
+        features = set(feature_cols)
+        for outcome in outcomes:
+            self.check_label(outcome)
+            sources = (
+                self.derived_label(outcome).source_columns
+                if is_derived_label(outcome)
+                else (outcome,)
+            )
+            leaked = sorted(set(sources) & features)
+            if leaked:
+                raise DatasetValidationError(
+                    f"pick outcome {outcome!r} reads {leaked}, which the "
+                    "run also uses as features"
+                )
+
+    def pick_outcome_values(
+        self, frame: pd.DataFrame, outcomes: Sequence[str]
+    ) -> dict[str, np.ndarray]:
+        """The pick outcomes of `frame`'s rows as float arrays (NULL ->
+        NaN), keyed by the predictions-frame column eval.picks reads:
+        the key says whether the outcome is binary (a stored boolean
+        label or a label expression: reported as a hit rate) or
+        continuous (reported as mean and median)."""
+        values: dict[str, np.ndarray] = {}
+        for outcome in outcomes:
+            if outcome not in frame.columns:
+                raise DatasetValidationError(
+                    f"pick outcome {outcome!r} is not a column of the "
+                    "frame; project it with apply_split(columns=...)"
+                )
+            col = frame[outcome]
+            binary = is_derived_label(outcome) or _is_boolean_values(
+                col.dropna()
+            )
+            arr = np.full(len(col), np.nan)
+            seen = col.notna().to_numpy()
+            if binary:
+                arr[seen] = col[seen].astype(bool).to_numpy(dtype=float)
+            else:
+                arr[seen] = pd.to_numeric(col[seen], errors="raise").to_numpy(
+                    dtype=float
+                )
+            values[outcome_column(label_slug(outcome), binary)] = arr
+        return values
+
     def sample_weight_column(self, horizon_years: int) -> str:
         """The `sample_weight_{H}y` column for a horizon, verified against
         the manifest's sample_weights group."""
@@ -617,9 +672,10 @@ class Dataset:
             raise SplitApplicationError(f"unknown split scheme {scheme!r}")
         if scheme in SEALED_SCHEMES and access is not SplitAccess.FINAL_EVAL:
             raise HoldoutAccessError(
-                "the `holdout` scheme is sealed: it is evaluated once per "
-                "phase by the dedicated final-eval script, never during "
-                "development or model selection"
+                "the `holdout` scheme is sealed: it is evaluated by the "
+                "dedicated final-eval script (one look per cell, further "
+                "looks disclosed), never during development or model "
+                "selection"
             )
         if scheme in DIAGNOSTIC_SCHEMES and access is not SplitAccess.REGISTERED_DIAGNOSTIC:
             raise DiagnosticSchemeError(
@@ -722,4 +778,9 @@ class Dataset:
                 "upstream guarantees weights exactly where the label is "
                 "observable — refusing to fit"
             )
-        return w.to_numpy(dtype=float)
+        # a copy, never a view: a view keeps the whole block of the frame
+        # it was cut from alive for as long as anything holds the weights,
+        # and a fitted scikit-learn forest holds them (`_sample_weight`).
+        # With fold models kept for the bundle that was one training
+        # frame, about 1 GB, retained per fold: 18 GB over 16 folds.
+        return np.array(w.to_numpy(dtype=float), dtype=float, copy=True)

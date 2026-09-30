@@ -108,11 +108,11 @@ in [PLAN.md](PLAN.md); check items off (and add new ones) as work proceeds.
       number of configurations tried. (`ResultsStore.model_comparison`;
       a report with no recorded baselines for the cell says so and is not
       reportable.)
-- [x] Final-eval script for the sealed `holdout` fold: runs once per phase,
+- [x] Final-eval script for the sealed `holdout` fold: one look per cell,
       logs the result whether good or bad. Nothing else may read holdout
       tags. (`scripts/run_final_eval.py` — the only FINAL_EVAL entry
-      point; a completed eval per (phase, cell) is recorded in
-      `reports/final_evals.csv` and cannot be repeated.)
+      point; a completed eval per cell is recorded in
+      `reports/final_evals.csv`; repeating one needs a disclosed reason.)
 
 ### Registered diagnostics (from data/manual.md §7 — diagnostic only)
 - [ ] Leakage-gap experiment: identical model under `random_kfold`,
@@ -272,6 +272,66 @@ in [PLAN.md](PLAN.md); check items off (and add new ones) as work proceeds.
       `experiments/*.toml` with the results ledger — answers "have I run
       this?", "what's closest to edit from?", "what did it score?"
       without grepping. (`harness/catalog.py`)
+- [x] Catalog answers "did it beat the baseline, and what did I learn?":
+      headline shown against the best baseline in the same cell with a
+      signed lift; listing grouped by cell and ranked by lift inside it
+      (no cross-label sort); `note` column from the config; `final_eval`
+      column from the sealed ledger; `★` for promoted; restricted
+      schemes flagged; portfolio configs listed as their own kind.
+- [x] Config hygiene: new `experiments/**/*.toml` are git-ignored; a
+      config earns tracking through `vml-promote <name> --note "..."`,
+      which snapshots the config into the promoted directory, writes the
+      note into the config (outside the hash), stages both (`git add -f`)
+      and regenerates the `reports/promoted/README.md` index.
+- [x] Final eval without a copied `*_holdout.toml`:
+      `scripts/run_final_eval.py` takes the selected walk-forward config
+      and switches the scheme in memory. `--phase` is gone: the seal is
+      per cell (label, horizon, holdout window from `split_folds.parquet`
+      — not the dataset version, which re-used the same rows across
+      v1.1–v1.4); a further look needs `--reopen "reason"` and is then
+      counted in the report, the ledger and the catalog (`✓ look k/N`).
+      Old `phase` ledgers migrate in place and their rows count as looks.
+- [x] Cross-sweep digest: `vml-experiments sweeps` flattens every sweep
+      summary CSV into one per-cell markdown (top runs across sweeps with
+      lift, "what wins" per feature set / model / swept parameter,
+      continuous axes quartile-binned). Fixed `runs` crashing on ledger
+      rows without a horizon (backtest / deployment).
+- [ ] Backfill notes on the tracked sample configs (what each one
+      taught) so the catalog's `note` column is populated from day one.
+- [x] Split the lab notebook (2026-09-28): `docs/logbook.md` (one
+      short entry per sweep, `vml-logbook`), `docs/findings.md`
+      (current state, under ~150 lines), `docs/notes/` (detail).
+- [x] Unattended runs (2026-09-28, docs/agents.md): run queue
+      (`vml-queue`, `experiments/queue.toml`), `vml-sweep --resume`
+      from per-run result records, ledger shards
+      (`experiments/ledger/`, `VML_RESULTS`, `VML_LEDGER_READ`),
+      checkpoints on `claude/` branches, and
+      `scripts/check_tracked_configs.py` with the `pr-hygiene`
+      workflow for pull requests.
+- [x] Forest runs needed ~18 GB: fitted fold models kept their
+      training frame alive through the stored sample weights. Weights
+      and targets are now copied (2026-09-28).
+- [ ] Carter: machine user and token, branch rulesets, sandbox
+      resources (docs/agents.md, "Setting up").
+- [ ] First unattended session end to end in a sandbox: queue, stub,
+      checkpoint, push from the machine account.
+- [ ] Decide what to do with the unpromoted configs the branch
+      carries (`python scripts/check_tracked_configs.py` lists 11):
+      promote, name in `experiments/KEEP`, or untrack with `--fix`.
+- [ ] `vml-experiments sweeps` ranks rows on different metrics (p@10 /
+      p@20 / p@50) in one table — rank within one metric, or group by
+      it.
+- [x] Guard against editing a sweep TOML after it has run:
+      `vml-sweep` copies the sweep file into `reports/sweeps/<name>/`
+      and refuses to run when that directory holds the copy of a
+      different sweep identity. Every run also writes
+      `<run>_config.json` (full config, resolved feature columns)
+      beside its report, `vml-run` copies its TOML there, and
+      `vml-promote` carries the as-run copy (`config_as_run.toml`).
+      `note` is now accepted in sweep files, so promoted sweep configs
+      load again.
+- [ ] `lgbm_candidate_sets_3y.toml` is pinned to dataset_v1.0 and never
+      ran — re-pin to v1.4 or drop it.
 - [x] Upstream doc sync: `scripts/sync_data_docs.py` copies the dataset
       docs from the local `radarash-dataset` checkout, records upstream
       commit + file hashes in `data/upstream.json`; `--check` detects
@@ -431,10 +491,125 @@ in [PLAN.md](PLAN.md); check items off (and add new ones) as work proceeds.
       `experiments/sweeps/forest_random_search_3y.toml`, both with a
       `[[features]]` axis so the feature set is searched, not
       hand-picked)
-- [ ] Run the real searches against `dataset_v1.1`
+- [x] Run the real searches against `dataset_v1.1`
       (`lgbm_random_search_3y`, `forest_random_search_3y`, plus the
       grid exemplars), commit the summaries, and pick Phase-3
-      candidates for the sealed holdout.
+      candidates for the sealed holdout. (Aug–Sep 2026: forest, xgb,
+      lgbm and quantile-regressor searches on 3y beat_spy; conclusions
+      in docs/findings.md, summaries promoted.)
+- [x] Run the v1.4 baselines (`scripts/run_baselines.py dataset_v1.4`).
+      (2026-09-26: 80 runs over the 20 stored-label cells. Derived-label
+      cells are not covered by the script.)
+- [x] Run the carry-forward sweeps on v1.4:
+      `forest_candidate_sets_3y` and `xgb_candidate_sets_3y`.
+      (2026-09-27: forests p@20 0.42 pooled, 0.22 in 2013–19 against a
+      0.28 base rate; xgb 0.37 / 0.17. Lower than the same
+      configurations on v1.1, on a column set that differs by 13
+      added and 4 dropped columns; the cause is open, so the v1.1
+      findings are unconfirmed, not refuted. No 3y beat_spy finalist;
+      the 3y holdout stays unopened. docs/findings.md.)
+- [x] Run `forest_v11_code_control_3y` (4 runs, needs
+      `dataset_v1.1`). (2026-09-28: all 64 fold rows equal the August
+      ledger rows; the code is not the cause.)
+- [x] Run `forest_feature_ablation_3y`. (2026-09-28: 8 runs, one
+      seed, not the 24 in its header. Arm fs0, the v1.1 column set,
+      scored p@20 0.44 against the predicted 0.58: the 13 added
+      columns are not the cause, though removing them raises PR-AUC
+      by 0.01-0.02. The arms cannot be ranked. docs/findings.md.)
+- [x] Do the 120 columns shared by the v1.1 and v1.4 feature sets
+      hold identical values? (2026-09-28: no. 17 changed at v1.2,
+      upstream decision 0016; 103 are equal. `data/versions.md`
+      updated.)
+- [x] Run `forest_v11_column_control_3y` and
+      `forest_v14_unchanged_columns_3y`. (2026-09-28: the v1.1 edge
+      is in the v1.1 values of the 17 columns decision 0016
+      re-mapped: p@20 0.57-0.58 with them, 0.43-0.47 without. The
+      four dropped columns change nothing, and v1.1 and v1.4 give
+      identical fold rows on the other 103 columns.)
+- [ ] Quarter identifier or stock information? Per-quarter picks on
+      v1.1 (p@K within each test quarter, or the spread of the
+      picks over a year's quarters) for the runs with and without
+      the 17 columns. Needs per-quarter metrics or saved
+      predictions. Then a note upstream: decision 0016 expects
+      walk-forward not to be inflated by the keys. Low priority, it
+      changes nothing about what to run on v1.4.
+- [x] Run `baseline_lowvol_rank_3y`. (2026-09-28: best single
+      factor is `conservative_score_rank`. From-entry cell: 0.39
+      against forests 0.50 and LightGBM 0.39-0.40. Whole-path cell:
+      0.34 against forests 0.37-0.39. 3y beat_spy: 0.49, level with
+      the best forest arm on v1.4.)
+- [x] Choose the primary cell. (2026-09-28, Carter: cagr >= 10% &
+      drawdown from entry < 20%. The choice of label stays part of
+      the experiments.)
+- [x] Run `forest_feature_sets_dd_entry_3y`. (2026-09-29: no arm
+      beats the 112 ranks; most of the signal is `vol_12m_rank`,
+      `vol_36m_rank`, `conservative_score_rank`.
+      docs/notes/2026-09-29-feature-sets-dd-entry.md)
+- [x] Label screen: report-only outcomes of a run's top-K picks
+      (`pick_outcomes`, `src/eval/picks.py`, docs/experiments.md;
+      2026-09-28). Hit rate for binary outcomes, mean and median for
+      continuous ones, beside the same over all test rows, plus the
+      distinct stocks among the picks; in run reports, the ledger's
+      per-fold metrics and sweep summaries; settable from an eval
+      config for saved bundles.
+- [x] Run `baseline_pick_outcomes_3y`. (2026-09-29: the bar is a
+      beat-SPY hit rate of 0.49 and a median excess CAGR of about
+      zero. docs/notes/2026-09-29-label-rungs-dd-entry.md)
+- [x] Label-comparison backtest template. (2026-09-29, decision 6
+      of docs/notes/2026-09-29-decisions.md: top 10 a month, equal
+      weights, buy and hold, 35 bps, `dollar_volume_3m >= 100000`,
+      buys 2005-2020, valued end of 2023; then a cap of 2 per
+      sector, decision 7. `experiments/portfolios/bt_*.toml`.)
+- [x] Run `forest_label_rungs_dd_entry_3y`. (2026-09-29: the
+      thresholds move p@20 and PR-AUC and not what the picks go on
+      to do; no rung passes the screen on every seed.)
+- [x] Parameter search per family. (2026-09-30, in the candidate's
+      cell C instead of the primary cell, 20 draws each: no draw of
+      any family exceeds the reference forest's fold-mean PR-AUC
+      0.585; boosted families pick worse at the same PR-AUC.
+      docs/notes/2026-09-29-searches-nonloser.md)
+- [x] Investability filter before any top-K number is acted on.
+      (2026-09-29: every backtest applies `dollar_volume_3m >=
+      100000`; the screen still does not, see the next section.)
+- [x] Report the number of distinct `permaticker`s among the top-K
+      picks per test year (`n_stocks_at_K`, part of `pick_outcomes`;
+      2026-09-28). Runs without `pick_outcomes` do not carry it.
+- [ ] A crash-window line in the era table for path labels: entry
+      years whose window holds a market crash (2005-08, 2019 at 3y)
+      are where the compounder models fall to the base rate.
+- [ ] A config hash that leaves the sweep name out (the
+      `identity_hash` exists for single configs), recorded in the
+      ledger, so a re-run under another sweep name can be matched to
+      the original by hash.
+- [ ] `vml-experiments verify`: expand each config under
+      `experiments/` and compare its config hashes with the ledger's,
+      so a config that no longer matches its own runs is reported
+      (today: `lgbm_random_search_3y`, `lgbm_cagr_quantile_3y`,
+      `forest_random_search_3y`).
+- [ ] `vml-experiments columns <run> <run>`: diff the resolved feature
+      columns of two runs from their `*_config.json` records.
+- [x] Multi-seed the drawdown-compounder labels on v1.4
+      (`fwd_3y_cagr >= 0.1 & fwd_3y_max_drawdown < 0.3` and
+      `… & fwd_3y_max_drawdown_from_entry < 0.2`). (2026-09-28: three
+      baseline sweeps, `lgbm_drawdown_compounder_seeds_3y` and
+      `forest_drawdown_compounder_seeds_3y`, 48 runs. Held over
+      seeds and in 2013-20; forests p@20 0.50 against a 0.21 base
+      rate and 0.37-0.39 against 0.11, ahead of LightGBM; no lift
+      for entry years 2005-08 and 2019. docs/findings.md.)
+- [ ] Baselines for derived-label cells: `scripts/run_baselines.py`
+      takes stored labels only, so each derived cell needs hand-written
+      baseline sweeps today. Give the script a `--label "<expression>"`
+      option.
+- [ ] Random-ranking baseline over several seeds in the standard grid:
+      one seed scored p@20 0.39 on 3y beat_spy against a 0.35 base
+      rate, and the catalog measures lift against it.
+- [x] Ledger: an interrupted run's fold rows were logged `completed`.
+      Fold rows are now held until every fold has finished and a
+      stopped run leaves one `failed` row (`RunLog`,
+      `src/harness/results.py`; runner, `vml-eval`, era probe).
+- [ ] Ledger: a run whose process is killed outright (OOM,
+      `kill -9`) leaves no row, so the trial goes uncounted. Log a
+      row when a run starts, once ledger readers can ignore it.
 - [x] `[[sets]]` axis: whole parameter dictionaries taken as units (the
       top candidates of a wide search), crossed with cells, feature sets,
       `[grid]`, `[random]` and seeds; a parameter lives in exactly one of
@@ -446,9 +621,11 @@ in [PLAN.md](PLAN.md); check items off (and add new ones) as work proceeds.
       and per test year), summary ranked by the mean with the spread
       beside it (`_summary_seeds.csv`), per-seed run reports under
       `seeds/`. (`src/harness/seed_report.py`)
-- [ ] Seed-stability pass on the sweep winner (multi-seed `[[sets]]`
+- [x] Seed-stability pass on the sweep winner (multi-seed `[[sets]]`
       sweep over the top candidates; a config whose ranking collapses
-      across seeds is noise, not signal).
+      across seeds is noise, not signal). (v1.1: xgb spread ≤ 0.02 over
+      3 seeds; forest top candidates over 2–4 seeds within noise of one
+      another. The v1.4 re-run is the item above.)
 - [x] GPU opt-in for LightGBM: `device = "cuda"` (or legacy-OpenCL
       `"gpu"`) on `lightgbm`/`lightgbm_regressor`, passed through as
       LightGBM's `device_type`. Requires a CUDA build of lightgbm (the
@@ -484,6 +661,81 @@ in [PLAN.md](PLAN.md); check items off (and add new ones) as work proceeds.
       re-run the top decile of a cheap-budget search (low
       `n_estimators`) at full budget via a follow-up sweep file — no
       harness change needed, just two sweep configs.
+
+### Next, from the session of 2026-09-29/30 (Carter's notes, decision 13)
+
+The candidate and its evidence: docs/findings.md, "State";
+docs/notes/2026-09-29-decisions.md. Start a new session there.
+
+- [ ] **Carter:** one holdout look in cell C's 3y cell
+      (`fwd_3y_cagr >= 0 & fwd_3y_max_drawdown_from_entry < 0.3`)
+      with `experiments/forest_nonloser_dd30_3y.toml`, when he would
+      act on the candidate; the pull request for
+      `claude/backtest-sector-cap`. (Carter, 2026-09-30: the consumed
+      cells were opened on older dataset versions and simpler labels;
+      their counts should not stop experiments.)
+- [ ] **Sell discipline** for the candidate: one backtest with
+      `strategy = "sell_below_criteria"`, criteria fixed before the
+      run (the 14th backtest on 2005-2020). It works best with a
+      calibrated model: buy on high confidence, sell or rebalance
+      when it falls. Carter, 2026-09-30.
+- [ ] **Quick evaluation by confidence, not only by K.** The report's
+      "High-confidence picks" table shows how many names clear a
+      score and how precise they are; add the pick outcomes at those
+      thresholds (mean excess CAGR, losers, big winners of every
+      pick with `score >= p`, per year and pooled), so "mean excess
+      CAGR at score > 0.7" can be read. Report **mean** beside median:
+      an equal-weighted portfolio earns the mean, and the best picks
+      may outweigh the worst. A median excess CAGR below zero is not
+      a failure. Holding cash when nothing clears the bar is a valid
+      strategy; the number of picks a year at a threshold is part of
+      the result. Carter, 2026-09-30.
+- [ ] **Calibration** (prequential, Phase 3 item above) before any
+      rule that reads a score as confidence. Measured 2026-09-29 on
+      the candidate's forest: top scores 0.81-0.85 for 2006-08 entries
+      (precision 0.15-0.60) and 0.65-0.69 for 2011-13 (precision near
+      1.0), so a fixed threshold picks the pre-crash years; a
+      threshold relative to the year's scores, or calibrated
+      probabilities, is what the confidence rule needs.
+- [ ] **Feature selection on theory, not only on the manifest
+      groups.** Carter, 2026-09-30: the models lean on a few columns,
+      the volatility and liquidity ranks among them; try excluding
+      them, and prefer columns with a causal story in value investing
+      (cash generation, balance-sheet strength, profitability,
+      consistency). One August winner used
+      `groups = ["ranks"]`, `exclude_families = ["ranks/technical",
+      "ranks/trend"]`, `families = ["features/trend",
+      "features/technical"]` (v1.1, 3y beat_spy;
+      `forest_random_search_3y-2seeds2`). On v1.4 in cell A,
+      fundamentals only scored 0.40-0.42 against 0.50 and its picks
+      beat SPY 0.63 of the time before 2013 and 0.28 after
+      (docs/notes/2026-09-29-pick-anatomy.md): the question is open
+      in cell C and on pick outcomes and backtests, not on p@20.
+- [ ] **Training-time liquidity floor.** Carter, 2026-09-30: drop
+      rows below a dollar-volume threshold from training and test
+      (the investability filter, applied to the dataset, not only to
+      the backtest): less microcap noise, and the models need not
+      learn the liquidity columns. A row filter on a manifest
+      feature column, declared in the config, part of the hash and
+      of the report; the label cell stays the same, so the trial
+      count needs a "universe" qualifier. Not feature engineering
+      (no new column); check data/manual.md before building it.
+- [ ] **Upstream request:** within-sector ranks of volatility and of
+      the conservative score, so the models can be sector-neutral
+      instead of capped (docs/notes/2026-09-29-first-backtests.md).
+- [ ] **Sector cap in the pick-outcome screen** (`eval/picks.py`),
+      so the screen sees what the backtest sees; and a sector table
+      of the top-K picks in every run report.
+- [ ] Ranking metric for boosted-family searches: p@K over 2013-20
+      of the worst seed, not PR-AUC (the two order LightGBM and
+      XGBoost draws in opposite directions).
+- [ ] Whole shares at 100 a pick leave 55-108 of 192 months short of
+      10 buys in the capped backtests; consider `fractional_shares`
+      or a larger monthly deposit in the template, stated as a
+      template change.
+- [ ] Why 134 delisting liquidations with momentum against 52
+      without: takeover targets? Read the trades CSV of the promoted
+      backtest.
 
 ## 3.5 — Downturn specialization (PLAN §4 Phase 3.5)
 
@@ -564,9 +816,11 @@ slice. All within the invariants: no local splits, no derived features.
       fit diagnostics only — R²≈0 on stock returns is normal and says
       nothing about the top of the ranking, so neither is ever
       headlined. (`eval/metrics.regression_diagnostics`, `eval/era.py`)
-- [ ] Run the regression-reframe spike against `dataset_v1.1`
+- [x] Run the regression-reframe spike against `dataset_v1.1`
       (`lgbm_cagr_quantile_3y`) and compare its summary against the
       classification sweeps on the same eval cells before going further.
+      (Did not beat the classifiers: 0.44 pooled vs 0.47–0.55;
+      docs/findings.md.)
 - [ ] Deep learning goes through upstream first: sequence-shaped dataset
       variant (per-quarter point-in-time history per stock) is a
       prerequisite; do not flatten history locally (invariant 4). Then a

@@ -85,6 +85,41 @@ def infer_horizon_years(label: str) -> int | None:
     return int(m.group(1)) if m else None
 
 
+def parse_pick_outcomes(raw, horizon_years: int, source: str) -> tuple[str, ...]:
+    """The `pick_outcomes` list of a config, normalized and checked as
+    far as a config alone allows: a list of distinct label names or
+    label expressions, each carrying a horizon no longer than the
+    run's. A shorter window lies inside the run's (every window starts
+    at `snapshot_date`), so its outcome is observable on the run's test
+    rows; a longer one is not. That the columns exist and sit in the
+    manifest's `labels` group is checked against the dataset at run
+    time."""
+    if isinstance(raw, str) or not isinstance(raw, (list, tuple)):
+        raise ConfigError(
+            f"config {source}: pick_outcomes must be a list of label "
+            f"columns or label expressions, got {raw!r}"
+        )
+    outcomes = tuple(normalize_label(str(o)) for o in raw)
+    dupes = sorted({o for o in outcomes if outcomes.count(o) > 1})
+    if dupes:
+        raise ConfigError(f"config {source}: pick_outcomes repeats {dupes}")
+    for o in outcomes:
+        h = infer_horizon_years(o)
+        if h is None:
+            raise ConfigError(
+                f"config {source}: pick outcome {o!r} carries no `{{H}}y` "
+                "horizon; outcomes are label columns (label_*, fwd_*) or "
+                "label expressions over them"
+            )
+        if h > horizon_years:
+            raise ConfigError(
+                f"config {source}: pick outcome {o!r} is a {h}y outcome but "
+                f"the run's horizon is {horizon_years}y; its window outlives "
+                "the run's, so it is not observable on the run's test rows"
+            )
+    return outcomes
+
+
 @dataclass(frozen=True)
 class FeatureSpec:
     """Hierarchical feature selection: groups ⊃ families ⊃ columns.
@@ -230,6 +265,12 @@ class ExperimentConfig:
     #: minimum pooled history rows before a fold gets calibrated;
     #: earlier folds report raw scores and are flagged in the report
     calibration_min_rows: int = DEFAULT_CALIBRATION_MIN_ROWS
+    #: report-only outcomes of the top-K picks (eval.picks): stored
+    #: binary labels, label expressions (hit rate) or continuous outcome
+    #: columns (mean and median), all from the manifest's `labels`
+    #: group and none at a horizon beyond the run's. Never model inputs;
+    #: the run stays counted in its own label's trial-ledger cell.
+    pick_outcomes: tuple[str, ...] = ()
 
     @classmethod
     def from_file(cls, path: str | Path) -> "ExperimentConfig":
@@ -279,6 +320,9 @@ class ExperimentConfig:
             calibration=str(raw.get("calibration", "")),
             calibration_min_rows=int(
                 raw.get("calibration_min_rows", DEFAULT_CALIBRATION_MIN_ROWS)
+            ),
+            pick_outcomes=parse_pick_outcomes(
+                raw.get("pick_outcomes", ()), horizon, source
             ),
         )
         if config.calibration and config.calibration not in CALIBRATION_METHODS:
@@ -391,6 +435,8 @@ class ExperimentConfig:
         if self.calibration:
             raw["calibration"] = self.calibration
             raw["calibration_min_rows"] = self.calibration_min_rows
+        if self.pick_outcomes:
+            raw["pick_outcomes"] = list(self.pick_outcomes)
         if self.features is not None:
             raw["features"] = self.features.to_table()
         else:
@@ -437,6 +483,8 @@ class ExperimentConfig:
         if self.calibration:
             payload["calibration"] = self.calibration
             payload["calibration_min_rows"] = self.calibration_min_rows
+        if self.pick_outcomes:
+            payload["pick_outcomes"] = list(self.pick_outcomes)
         return payload
 
     def canonical_json(self) -> str:
@@ -481,7 +529,7 @@ def _resolve_horizon(raw: dict, label: str, source: str) -> int:
 
 
 _EVAL_ALLOWED = frozenset(
-    {"name", "top_k", "score_thresholds", "precision_targets"}
+    {"name", "top_k", "score_thresholds", "precision_targets", "pick_outcomes"}
 )
 
 
@@ -499,6 +547,11 @@ class EvalConfig:
     top_k: tuple[int, ...] = (20, 50)
     score_thresholds: tuple[float, ...] = ()
     precision_targets: tuple[float, ...] = ()
+    #: report-only pick outcomes (eval.picks) as written in the file;
+    #: None keeps the bundle's own. They describe the picks and change
+    #: nothing about what is evaluated, so an evaluation may set them.
+    #: Checked against the bundle's horizon by `evaluate_bundle`.
+    pick_outcomes: tuple[str, ...] | None = None
 
     @classmethod
     def from_file(cls, path: str | Path) -> "EvalConfig":
@@ -521,6 +574,15 @@ class EvalConfig:
             )
         if "name" not in raw:
             raise ConfigError(f"eval config {source} lacks a name")
+        pick_outcomes = raw.get("pick_outcomes")
+        if pick_outcomes is not None and (
+            isinstance(pick_outcomes, str)
+            or not isinstance(pick_outcomes, (list, tuple))
+        ):
+            raise ConfigError(
+                f"eval config {source}: pick_outcomes must be a list of "
+                f"label columns or label expressions, got {pick_outcomes!r}"
+            )
         return cls(
             name=raw["name"],
             top_k=tuple(int(k) for k in raw.get("top_k", (20, 50))),
@@ -529,5 +591,10 @@ class EvalConfig:
             ),
             precision_targets=tuple(
                 float(p) for p in raw.get("precision_targets", ())
+            ),
+            pick_outcomes=(
+                None
+                if pick_outcomes is None
+                else tuple(str(o) for o in pick_outcomes)
             ),
         )

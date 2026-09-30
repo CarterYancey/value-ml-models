@@ -9,6 +9,8 @@ structurally out of its reach.
 
 from __future__ import annotations
 
+import json
+import shutil
 import traceback
 from pathlib import Path
 
@@ -24,6 +26,11 @@ from eval.era import (
     pooled_metrics,
 )
 from eval.metrics import compute_all, regression_diagnostics
+from eval.picks import (
+    has_pick_outcomes,
+    pick_outcome_metrics,
+    pick_outcome_table,
+)
 from eval.plots import render_calibration_plot, render_pr_curve, render_roc_curve
 from explain.rules import render_tree_diagram, rules_text
 from harness.calibration import PrequentialCalibration
@@ -32,7 +39,13 @@ from harness.dataset import Dataset, SplitAccess
 from harness.errors import ConfigError
 from harness.model_store import ModelBundle
 from harness.report import write_report
-from harness.results import ResultsStore, git_sha, new_run_id
+from harness.results import (
+    ResultsStore,
+    RunLog,
+    default_results_path,
+    git_sha,
+    new_run_id,
+)
 from models.registry import (
     BASELINE_MODELS,
     build_model,
@@ -41,7 +54,7 @@ from models.registry import (
 )
 
 DEFAULT_DATA_ROOT = Path("data/datasets")
-DEFAULT_RESULTS = Path("experiments/results.csv")
+DEFAULT_RESULTS = default_results_path()
 DEFAULT_REPORTS = Path("reports")
 #: Where the CLI saves trained model bundles (git-ignored). Library
 #: callers opt in via run_experiment(models_dir=...).
@@ -81,6 +94,7 @@ def run_experiment(
         "label": config.eval_label or config.label,
         "model": config.model_name,
     }
+    run_log = RunLog(store, base_row)
 
     try:
         check_target_labels(config)
@@ -101,6 +115,10 @@ def run_experiment(
                 f"no folds for scheme={config.scheme!r} "
                 f"horizon={config.horizon_years}"
             )
+        config_record = _write_config_record(
+            Path(reports_dir) / f"{config.name}_config.json",
+            config, run_id, sha, dataset.version, feature_cols,
+        )
         calib = None
         if config.calibration:
             calib = PrequentialCalibration(
@@ -124,11 +142,14 @@ def run_experiment(
                 list(feature_cols)
                 + [config.label]
                 + ([config.eval_label] if config.eval_label else [])
+                + list(config.pick_outcomes)
                 + [dataset.sample_weight_column(config.horizon_years)]
             )
         )
+        dataset.check_pick_outcomes(config.pick_outcomes, feature_cols)
         fold_importances: list[tuple[int, np.ndarray]] = []
         raw_score_arrays: list[np.ndarray] = []
+        run_log.n_folds = len(folds)
         for fold in folds:
             split = dataset.apply_split(
                 config.scheme, fold, config.horizon_years, access=access,
@@ -197,10 +218,17 @@ def run_experiment(
             test_years = pd.to_datetime(
                 split.test.loc[test_fit.X.index, "snapshot_date"]
             ).dt.year.to_numpy()
-            prediction_frames.append(
-                collect_predictions(
-                    fold, test_years, test_fit.y, scores,
-                    test_fit.sample_weight, outcome=outcome,
+            fold_predictions = collect_predictions(
+                fold, test_years, test_fit.y, scores,
+                test_fit.sample_weight, outcome=outcome,
+                **_pick_outcome_columns(dataset, config, split.test, test_fit),
+            )
+            prediction_frames.append(fold_predictions)
+            # report-only outcomes of this fold's picks; same top-K rows
+            # as the fold's precision@K
+            metrics.update(
+                pick_outcome_metrics(
+                    fold_predictions, top_k=config.top_k, per_year=False
                 )
             )
             if calib is not None:
@@ -216,10 +244,8 @@ def run_experiment(
                 imp = imp_fn()
                 if imp is not None:
                     fold_importances.append((fold, imp))
-            store.append(
+            run_log.fold_done(
                 {
-                    **base_row,
-                    "status": "completed",
                     "fold": fold,
                     "n_train_rows": len(fit.X),
                     "effective_train_size": f"{fit.effective_size:.4f}",
@@ -227,8 +253,9 @@ def run_experiment(
                     "metrics_json": metrics,
                 }
             )
+        run_log.commit()
 
-        artifacts: dict[str, Path] = {}
+        artifacts: dict[str, Path] = {"config_record": config_record}
         reports_dir = Path(reports_dir)
         if fold_rules:
             artifacts["rules"] = _write_rules_file(
@@ -300,6 +327,7 @@ def run_experiment(
             precision_targets=config.precision_targets,
             probabilistic=probabilistic,
         )
+        pooled_block.update(pick_outcome_metrics(pooled, top_k=config.top_k))
         return {
             "run_id": run_id,
             "status": "completed",
@@ -310,15 +338,26 @@ def run_experiment(
             "report_path": report_path,
             "model_bundle": bundle_path,
         }
-    except Exception as exc:
-        store.append(
-            {
-                **base_row,
-                "status": "failed",
-                "error": f"{type(exc).__name__}: {exc}",
-            }
-        )
+    except BaseException as exc:
+        # BaseException: Ctrl-C and SystemExit stop a run too, and a
+        # stopped run is a failed trial, not a shorter completed one
+        run_log.fail(exc)
         raise
+
+
+def _pick_outcome_columns(dataset: Dataset, config, test, test_fit) -> dict:
+    """The `collect_predictions` arguments that carry a run's pick
+    outcomes (eval.picks) for one fold's scored test rows; empty when
+    the config names none."""
+    if not config.pick_outcomes:
+        return {}
+    rows = test.loc[test_fit.X.index]
+    return {
+        "stocks": rows["permaticker"].to_numpy(),
+        "pick_outcomes": dataset.pick_outcome_values(
+            rows, config.pick_outcomes
+        ),
+    }
 
 
 def finalize_run(
@@ -370,6 +409,10 @@ def finalize_run(
         probabilistic=probabilistic,
     )
     confidence_df = confidence_profile(predictions, probabilistic=probabilistic)
+    pick_outcome_tables = {
+        k: pick_outcome_table(predictions, k)
+        for k in (config.top_k if has_pick_outcomes(predictions) else ())
+    }
 
     calibration_path = pr_curve_path = roc_curve_path = None
     if render_score_figures:
@@ -414,6 +457,7 @@ def finalize_run(
         era_df=era_df,
         crash_df=crash_df,
         confidence_df=confidence_df,
+        pick_outcome_tables=pick_outcome_tables,
         baseline_df=baseline_df,
         calibration_path=calibration_path,
         pr_curve_path=pr_curve_path,
@@ -422,6 +466,39 @@ def finalize_run(
         artifacts=artifacts,
     )
     return report_path, configurations_tried
+
+
+def _write_config_record(
+    path: Path,
+    config: ExperimentConfig,
+    run_id: str,
+    sha: str,
+    dataset_version: str,
+    feature_cols: list[str],
+) -> Path:
+    """The run's own copy of what it ran, written next to its report
+    before the first fold is fitted: the full config (the payload the
+    config hash is taken over) and the feature columns the feature spec
+    resolved to *on this dataset version*.
+
+    A report that only names its config file cannot be checked once that
+    file is edited or lost, and a feature spec does not pin a column
+    set: the same spec selects different columns on another dataset
+    version. Its name shares the report's stem, so promotion carries it.
+    """
+    path.parent.mkdir(parents=True, exist_ok=True)
+    record = {
+        "experiment": config.name,
+        "run_id": run_id,
+        "config_hash": config.config_hash,
+        "git_sha": sha,
+        "dataset_version": dataset_version,
+        "config": json.loads(config.canonical_json()),
+        "n_feature_columns": len(feature_cols),
+        "feature_columns": list(feature_cols),
+    }
+    path.write_text(json.dumps(record, indent=2) + "\n")
+    return path
 
 
 def _write_rules_file(
@@ -479,6 +556,10 @@ def _write_importances_file(
 
 def run_config_file(path: str | Path, **kwargs) -> dict:
     config = ExperimentConfig.from_file(path)
+    # the config file as written (comments included), beside the report
+    reports_dir = Path(kwargs.get("reports_dir", DEFAULT_REPORTS))
+    reports_dir.mkdir(parents=True, exist_ok=True)
+    shutil.copyfile(path, reports_dir / f"{config.name}_config.toml")
     return run_experiment(config, config_path=str(path), **kwargs)
 
 

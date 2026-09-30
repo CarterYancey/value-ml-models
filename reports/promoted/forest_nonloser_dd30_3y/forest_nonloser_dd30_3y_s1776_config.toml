@@ -1,0 +1,43 @@
+# forest_nonloser_dd30_3y with seed 1776: the same model, columns and
+# cell, for a check of how much a backtest depends on the forest's
+# seed (docs/notes/2026-09-29-decisions.md, decision 9). Not a new
+# candidate and not a tuning dimension.
+#
+# Expected: the fold rows of forest_pick_anatomy_3y's seed-1776 run of
+# cell C with the ranks group (p@20 0.781).
+name = "forest_nonloser_dd30_3y_s1776"
+dataset_version = "dataset_v1.4"
+min_dataset_version = "1.4"
+scheme = "walkforward"
+folds = "all"
+horizon_years = 3
+label = "fwd_3y_cagr >= 0 & fwd_3y_max_drawdown_from_entry < 0.3"
+feature_groups = ["ranks"]
+seed = 1776
+top_k = [20, 10, 5, 50, 100]
+score_thresholds = [0.6, 0.7, 0.75, 0.8]
+precision_targets = [0.75, 0.9]
+pick_outcomes = [
+  "label_3y_beat_spy",
+  "fwd_3y_excess_cagr",
+  "fwd_3y_cagr",
+  "fwd_3y_max_drawdown_from_entry",
+  "fwd_3y_cagr < 0",
+  "fwd_3y_cagr < -0.1",
+  "fwd_3y_max_drawdown_from_entry >= 0.4",
+  "fwd_3y_cagr >= 0.15",
+  "fwd_3y_cagr >= 0.25",
+  "fwd_3y_excess_cagr >= 0.05",
+]
+
+[model]
+name = "random_forest"
+bootstrap = true
+class_weight = 1.0
+n_jobs = 8
+criterion = "entropy"
+max_depth = 4
+max_features = 0.205191
+max_samples = 0.663781
+min_samples_leaf = 72
+n_estimators = 490

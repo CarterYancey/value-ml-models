@@ -497,3 +497,135 @@ def test_min_dataset_version_lands_on_every_run():
         SweepConfig.from_dict(
             _sweep_dict(dataset_version="dataset_v1.2", min_dataset_version="1.3")
         )
+
+
+# ------------------------------------------- config copy in the report dir
+
+_MINI_TOML = """\
+name = "mini_sweep"
+dataset_version = "%s"
+scheme = "walkforward"
+feature_groups = ["ranks"]
+seeds = [3]
+top_k = [5]
+[[cells]]
+label = "label_3y_beat_spy"
+[model]
+name = "decision_tree"
+min_weight_fraction_leaf = 0.02
+[grid]
+max_depth = %s
+"""
+
+
+def _run_toml(path, data_root, tmp_path):
+    return run_sweep(
+        SweepConfig.from_file(path),
+        data_root=data_root,
+        results_path=tmp_path / "results.csv",
+        reports_dir=tmp_path / "reports",
+        sweep_config_path=str(path),
+    )
+
+
+def test_sweep_copies_its_config_into_the_report_dir(data_root, tmp_path):
+    """The summary must not depend on the file under experiments/: the
+    sweep file is copied as written, and every run records its full
+    config and the columns its feature spec resolved to."""
+    path = tmp_path / "mini_sweep.toml"
+    text = "# why this sweep exists\n" + _MINI_TOML % (VERSION, "[2, 3]")
+    path.write_text(text)
+    out = _run_toml(path, data_root, tmp_path)
+    sweep_dir = tmp_path / "reports" / "sweeps" / "mini_sweep"
+    assert (sweep_dir / "mini_sweep_config.toml").read_text() == text
+    assert "mini_sweep_config.toml" in out["summary_md"].read_text()
+
+    run = out["runs"][0]
+    record = json.loads((sweep_dir / f"{run['run']}_config.json").read_text())
+    assert record["config_hash"] == run["config_hash"]
+    assert record["config"]["model_params"]["max_depth"] == 2
+    assert record["n_feature_columns"] == len(record["feature_columns"]) > 0
+    assert all(c.endswith("_rank") for c in record["feature_columns"])
+    assert f"{run['run']}_config.json" in run["report_path"].read_text()
+
+
+def test_edited_sweep_cannot_reuse_its_report_dir(data_root, tmp_path):
+    """Editing a sweep file in place and re-running it would overwrite
+    the old summary with another config's numbers."""
+    path = tmp_path / "mini_sweep.toml"
+    path.write_text(_MINI_TOML % (VERSION, "[2, 3]"))
+    _run_toml(path, data_root, tmp_path)
+    sweep_dir = tmp_path / "reports" / "sweeps" / "mini_sweep"
+    summary = (sweep_dir / "mini_sweep_summary.md").read_text()
+
+    path.write_text(_MINI_TOML % (VERSION, "[4]"))
+    with pytest.raises(ConfigError, match="different sweep config"):
+        _run_toml(path, data_root, tmp_path)
+    assert (sweep_dir / "mini_sweep_summary.md").read_text() == summary
+    assert "[2, 3]" in (sweep_dir / "mini_sweep_config.toml").read_text()
+
+
+def test_note_does_not_change_a_sweep(data_root, tmp_path):
+    """`vml-promote --note` writes `note` into the sweep file; the sweep
+    must still load, expand to the same configs, and re-run in place."""
+    path = tmp_path / "mini_sweep.toml"
+    body = _MINI_TOML % (VERSION, "[2]")
+    path.write_text(body)
+    before = SweepConfig.from_file(path)
+    _run_toml(path, data_root, tmp_path)
+
+    path.write_text(body.replace(
+        'name = "mini_sweep"\n', 'name = "mini_sweep"\nnote = "what it showed"\n'
+    ))
+    after = SweepConfig.from_file(path)
+    assert after.identity_hash == before.identity_hash
+    assert [r.config.config_hash for r in after.expand()] == [
+        r.config.config_hash for r in before.expand()
+    ]
+    _run_toml(path, data_root, tmp_path)  # not refused
+
+
+def test_resume_skips_completed_runs(data_root, tmp_path, monkeypatch):
+    """An interrupted sweep, run again with resume, runs only what is
+    missing and adds no duplicate trials to the ledger."""
+    import harness.sweep as sweep_module
+
+    sweep = SweepConfig.from_dict(_sweep_dict(name="resume_sweep"))
+    kwargs = dict(
+        data_root=data_root,
+        results_path=tmp_path / "results.csv",
+        reports_dir=tmp_path / "reports",
+    )
+    first = run_sweep(sweep, **kwargs)
+    assert first["n_failed"] == 0
+    rows_before = len(ResultsStore(kwargs["results_path"]).load())
+
+    # lose one run's record: that run, and only that run, is run again
+    records = sorted((tmp_path / "reports").rglob("*_result.json"))
+    assert len(records) == len(first["runs"])
+    lost = json.loads(records[0].read_text())["run"]
+    records[0].unlink()
+
+    ran = []
+    real = sweep_module.run_experiment
+
+    def spy(config, **kw):
+        ran.append(config.name)
+        return real(config, **kw)
+
+    monkeypatch.setattr(sweep_module, "run_experiment", spy)
+    second = run_sweep(sweep, resume=True, **kwargs)
+    assert ran == [lost]
+    assert second["n_failed"] == 0
+    rows_after = ResultsStore(kwargs["results_path"]).load()
+    per_run = rows_before // len(first["runs"])
+    assert len(rows_after) == rows_before + per_run
+
+    a = pd.read_csv(first["summary_csv"]).set_index("run").sort_index()
+    b = pd.read_csv(second["summary_csv"]).set_index("run").sort_index()
+    pd.testing.assert_frame_equal(a, b)
+
+    # without resume, everything runs again
+    ran.clear()
+    run_sweep(sweep, **kwargs)
+    assert len(ran) == len(first["runs"])

@@ -1,0 +1,93 @@
+# Which columns carried the v1.1 forest edge on 3y beat_spy? The v1.1
+# half of a two-sweep control (docs/findings.md, "Results of the two
+# tests"); the v1.4 half is forest_v14_unchanged_columns_3y.
+#
+# What is known (verified 2026-09-28):
+#   - today's code reproduces the August v1.1 numbers exactly
+#     (forest_v11_code_control_3y, 64 of 64 fold rows);
+#   - on v1.4, the v1.1 column set less its four dropped columns (120
+#     columns, arm fs0 of forest_feature_ablation_3y) scores p@20 0.44,
+#     against 0.60 for the same parameters and seed on v1.1;
+#   - 17 of those 120 columns hold different values on v1.4: the 16
+#     rank columns that upstream decision 0016 (dataset v1.2) pinned,
+#     and conservative_score, which is built from one of them. The
+#     other 103 are equal to within 2e-10.
+# So two differences are left between the v1.1 runs and fs0: the four
+# dropped columns, and the values of the 17 changed columns.
+#
+#   fs0  the 120 shared columns with their v1.1 values (the v1.1 set
+#        minus piotroski_f_rank, mohanram_g7_rank,
+#        fundamentals_age_days_rank, ni_change_scaled_rank).
+#   fs1  the 103 unchanged columns (fs0 minus the 17 changed ones).
+#
+# Predictions, written before the run (r48, seed 23 scored 0.597 with
+# all 124 columns on v1.1 and 0.441 with the 120 on v1.4):
+#   - fs0 near 0.59: the four dropped columns are not the cause, and
+#     the edge sits in the v1.1 values of the 17 changed columns.
+#   - fs0 near 0.44: the four dropped columns carried it, in spite of
+#     0.05% of the impurity importance.
+#   - fs1 should equal arm fs0 of forest_v14_unchanged_columns_3y (same
+#     rows, same 103 columns, values equal to within 2e-10). If it does
+#     not, something besides the columns differs between the versions.
+#   - fs1 near 0.44 with fs0 near 0.59: the edge needs the 17 columns
+#     in their v1.1 form. Whether that form carried stock information
+#     or a quarter identifier (decision 0016) is a separate question.
+#
+# Check each run's *_config.json for the resolved column count before
+# reading its numbers: fs0 must say 120 and fs1 103.
+#
+# This is a check, not a search: it adds 8 configurations to the v1.1
+# cell's trial count (717 so far) and none of its numbers is a result.
+# dataset_v1.1 is superseded upstream; nothing found here is a
+# candidate.
+#
+# Expanded: 1 cell x 2 feature sets x 2 sets x 2 seeds = 8 runs.
+# Run: uv run vml-sweep experiments/sweeps/forest_v11_column_control_3y.toml
+name = "forest_v11_column_control_3y"
+dataset_version = "dataset_v1.1"
+scheme = "walkforward"
+folds = "all"
+seeds = [23, 232]
+top_k = [20]
+rank_metric = "precision_at_20"
+
+sets = [
+  {criterion = "gini",    max_depth = 3, max_features = 0.914775, max_samples = 0.441152, min_samples_leaf = 248, n_estimators = 126},  # 2seeds r30
+  {criterion = "entropy", max_depth = 4, max_features = 0.205191, max_samples = 0.663781, min_samples_leaf = 72,  n_estimators = 490},  # 2seeds r48
+]
+
+[[cells]]
+label = "label_3y_beat_spy"
+
+# fs0: the 120 shared columns, v1.1 values
+[[features]]
+groups = ["ranks"]
+exclude_families = ["ranks/technical", "ranks/trend"]
+families = ["features/trend", "features/technical"]
+exclude_columns = [
+  "piotroski_f_rank", "mohanram_g7_rank", "fundamentals_age_days_rank",
+  "ni_change_scaled_rank",
+]
+
+# fs1: the 103 columns whose values are the same on v1.1 and v1.4
+[[features]]
+groups = ["ranks"]
+exclude_families = ["ranks/technical", "ranks/trend"]
+families = ["features/trend", "features/technical"]
+exclude_columns = [
+  "piotroski_f_rank", "mohanram_g7_rank", "fundamentals_age_days_rank",
+  "ni_change_scaled_rank",
+  "asset_turnover_delta_1y_rank", "asset_turnover_rank",
+  "capex_to_assets_rank", "conservative_score", "debt_to_equity_rank",
+  "dividend_yield_rank", "ev_to_marketcap_rank",
+  "ext_financing_to_assets_rank", "gmi_rank", "gp_to_assets_rank",
+  "gross_margin_delta_1y_rank", "gross_margin_delta_2y_rank",
+  "gross_margin_rank", "net_payout_yield_rank", "rnd_to_assets_rank",
+  "sales_yield_rank", "share_count_growth_1y_rank",
+]
+
+[model]
+name = "random_forest"
+bootstrap = true
+n_jobs = 8
+class_weight = 1

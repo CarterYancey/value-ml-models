@@ -367,13 +367,18 @@ def _check_predictions(predictions: pd.DataFrame) -> None:
 
 def collect_predictions(
     fold: int, years: np.ndarray, y_true, scores, sample_weight,
-    outcome=None,
+    outcome=None, stocks=None, pick_outcomes=None,
 ) -> pd.DataFrame:
     """One fold's test predictions in the standard frame layout.
 
     `outcome` (continuous-target runs only) is the realized continuous
     label on the same rows; its presence turns on the outcome-based
-    diagnostics in the era/pooled tables."""
+    diagnostics in the era/pooled tables.
+
+    `pick_outcomes` (frame column -> values, from
+    `Dataset.pick_outcome_values`) and `stocks` (the rows'
+    `permaticker`) are the report-only outcomes of the picks
+    (eval.picks)."""
     frame = pd.DataFrame(
         {
             "fold": fold,
@@ -385,4 +390,8 @@ def collect_predictions(
     )
     if outcome is not None:
         frame["outcome"] = np.asarray(outcome, dtype=float)
+    if pick_outcomes:
+        frame["permaticker"] = np.asarray(stocks)
+        for col, vals in pick_outcomes.items():
+            frame[col] = np.asarray(vals, dtype=float)
     return frame

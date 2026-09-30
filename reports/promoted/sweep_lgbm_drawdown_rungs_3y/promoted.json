@@ -1,0 +1,14 @@
+{
+  "name": "sweep_lgbm_drawdown_rungs_3y",
+  "promoted_utc": "2026-09-26T19:52:21+00:00",
+  "source_report": "reports/sweeps/lgbm_drawdown_rungs_3y/lgbm_drawdown_rungs_3y_summary.md",
+  "run_id": "",
+  "config_hash": "",
+  "git_sha": "",
+  "dataset_version": "dataset_v1.4",
+  "config_path": "experiments/sweeps/lgbm_drawdown_rungs_3y.toml",
+  "note": "v1.4 3y cagr>=10% x from-entry drawdown rungs: p@20 ~0.40 at every rung vs base 0.21-0.34 (lift grows as the rung tightens); class_weight 0.25-0.5 >= 1.0; the relvalue feature axis was a no-op (ranks already holds ranks/relvalue)",
+  "files": [
+    "lgbm_drawdown_rungs_3y_summary.md"
+  ]
+}

@@ -1,0 +1,72 @@
+# XGBoost random search on the primary relative-label cell — the GPU
+# counterpart of lgbm_random_search_3y (same cell, feature axis, seeds,
+# metrics, and search_seed, so the two families' summaries compare
+# apples to apples; each family's draws are its own sample, not paired).
+#
+# device = "cuda" runs on the stock PyPI wheel — no custom build. Two
+# guarantees the wrapper enforces= device is a model param, so cuda and
+# cpu runs hash as distinct configs and never mix in the trial ledger;
+# and XGBoost's silent GPU-to-CPU fallback (it only warns when no GPU
+# is visible) is turned into a hard error, so a CPU fit can never be
+# logged under a cuda config. On a GPU-less machine set device = "cpu".
+#
+# Range rationale (mirrors the LightGBM sweep where the knobs
+# correspond; XGBoost-specific notes)=
+#   max_depth        3-9      depth-wise growth (XGBoost's default
+#                             policy) — 2^depth leaf cap, so this spans
+#                             the same tree sizes as num_leaves 7-63
+#   min_child_weight 0.5-200  log — hessian mass per leaf; for logistic
+#                             loss each row contributes w*p*(1-p) <=
+#                             0.25w, so the top of this range forces
+#                             leaves of roughly a thousand weighted rows
+#   gamma            1e-4-10  log — minimum split loss; XGBoost's extra
+#                             purity knob with no LightGBM twin
+#   class_weight             maps to scale_pos_weight (positives
+#                             weighted w vs 1; w < 1 = precision-first,
+#                             same semantics as everywhere else)
+#
+# Expanded= 1 cell x 2 feature sets x 80 draws = 160 runs.
+# Run= vml-sweep experiments/sweeps/xgb_random_search_3y.toml
+name = "xgb_search_cells_features_params"
+note = "v1.1: top-5 xgb_random_search_3y draws x 3 seeds x 1/2/3y beat_spy; best 3y set2 p@20 0.560 +/- 0.018; seed spread <= 0.02; carried forward as xgb_candidate_sets_3y"
+dataset_version = "dataset_v1.1"
+scheme = "walkforward"
+folds = "all"
+seeds = [23,32,1776]
+top_k = [20]
+rank_metric = "precision_at_20"
+search_seed = 12
+
+sets = [
+{ class_weight = 0.5, colsample_bytree= 0.407286, gamma= 0.000106243, learning_rate= 0.0118662, max_depth= 8, min_child_weight= 89.3656, n_estimators= 556, reg_alpha= 0.436331, reg_lambda= 21.3796, subsample= 0.6872},
+{class_weight= 0.5, colsample_bytree= 0.825382, gamma= 4.79144, learning_rate= 0.126577, max_depth= 6, min_child_weight= 5.09555, n_estimators= 274, reg_alpha= 4.30687, reg_lambda= 0.235585, subsample= 0.920096},
+{class_weight= 0.1, colsample_bytree= 0.638389, gamma= 0.00994761, learning_rate= 0.0113265, max_depth= 6, min_child_weight= 59.9175, n_estimators= 195, reg_alpha= 0.000140183, reg_lambda= 0.418799, subsample= 0.887142},
+{class_weight= 0.1, colsample_bytree= 0.765949, gamma= 0.000139965, learning_rate= 0.0114436, max_depth= 8, min_child_weight= 7.50202, n_estimators= 1069, reg_alpha= 3.75825, reg_lambda= 0.186001, subsample= 0.954949},
+{class_weight= 0.1, colsample_bytree= 0.607408, gamma= 0.342094, learning_rate= 0.0165055, max_depth= 5, min_child_weight= 7.1194, n_estimators= 517, reg_alpha= 5.39125, reg_lambda= 0.0251088, subsample= 0.631728}
+]
+
+[[cells]]
+label = "label_3y_beat_spy"
+
+[[cells]]
+label = "label_2y_beat_spy"
+
+[[cells]]
+label = "label_1y_beat_spy"
+
+[[features]]
+groups = ["ranks"]
+exclude_families = ["ranks/technical", "ranks/trend"]
+families = ["features/trend", "features/technical"]
+
+[[features]]
+groups = ["features"]
+exclude_families = ["features/meta", "features/classification"]
+exclude_columns = [
+    "two_year_loss", "liab_gt_assets",
+]
+
+[model]
+name = "xgboost"
+device = "cuda"
+

@@ -1,0 +1,72 @@
+# What are the picks made of? Single-factor bars, with the tails of the
+# picks' returns (docs/notes/2026-09-29-decisions.md, decision 1).
+#
+# Carter's reading of forest_label_rungs_dd_entry_3y (2026-09-29): the
+# picks' drawdown is lower than the single factor's and their excess
+# CAGR is not higher, so there are fewer losers among them and too few
+# big winners. pick_outcomes so far gave mean and median only. This
+# sweep puts the tails in the ledger for four single factors: the
+# low-risk one that is the bar, and three value factors, since the
+# goal is value picks.
+#
+# Outcomes added, each a hit rate of the picks beside the rate over all
+# test rows:
+#   fwd_3y_cagr < 0                         losers
+#   fwd_3y_cagr < -0.1                      big losers
+#   fwd_3y_max_drawdown_from_entry >= 0.4   deep drawdown on the way
+#   fwd_3y_cagr >= 0.15                     winners
+#   fwd_3y_cagr >= 0.25                     big winners
+#   fwd_3y_excess_cagr >= 0.05              beat SPY by 5 points
+# top_k adds 5 and 10: the goal is a few selections.
+#
+# Predictions, written before the run:
+#   - conservative_score_rank: losers and big losers well under the
+#     all-row rates (under half of them), big winners at or under the
+#     all-row rate.
+#   - The value factors (earnings yield, book to market, magic
+#     formula): big winners above the all-row rate, big losers at or
+#     above it, median excess CAGR below the conservative score's.
+#     p@20 on this label is 0.08-0.11 for the first two (ledger).
+#
+# Deterministic, one seed. Adds 4 configurations to the primary cell
+# (69 before). The picks of a rank_factor do not depend on the label.
+#
+# Expanded: 1 cell x 4 factors x 1 seed = 4 runs.
+# Run: uv run vml-sweep experiments/sweeps/baseline_pick_anatomy_3y.toml
+name = "baseline_pick_anatomy_3y"
+note = "The single-factor bars with the tails of the picks' returns: conservative_score_rank halves the big losers and keeps the big winners (0.13 vs 0.15); the value factors (earnings yield, book to market, magic formula) are the worst picks on every measure (losers 0.61-0.63, median excess CAGR -0.20)"
+dataset_version = "dataset_v1.4"
+min_dataset_version = "1.4"
+scheme = "walkforward"
+folds = "all"
+seeds = [7]
+top_k = [20, 10, 5, 50]
+rank_metric = "precision_at_20"
+pick_outcomes = [
+  "label_3y_beat_spy",
+  "fwd_3y_excess_cagr",
+  "fwd_3y_cagr",
+  "fwd_3y_max_drawdown_from_entry",
+  "fwd_3y_cagr < 0",
+  "fwd_3y_cagr < -0.1",
+  "fwd_3y_max_drawdown_from_entry >= 0.4",
+  "fwd_3y_cagr >= 0.15",
+  "fwd_3y_cagr >= 0.25",
+  "fwd_3y_excess_cagr >= 0.05",
+]
+
+sets = [
+  {rank_column = "conservative_score_rank", higher_is_better = true},
+  {rank_column = "earnings_yield_rank", higher_is_better = true},
+  {rank_column = "book_to_market_rank", higher_is_better = true},
+  {rank_column = "magic_formula_score_rank", higher_is_better = true},
+]
+
+[[cells]]
+label = "fwd_3y_cagr >= 0.1 & fwd_3y_max_drawdown_from_entry < 0.2"
+
+[[features]]
+groups = ["ranks"]
+
+[model]
+name = "rank_factor"

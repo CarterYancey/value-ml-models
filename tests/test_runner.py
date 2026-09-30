@@ -121,3 +121,69 @@ def test_rank_and_random_baselines_run(data_root, tmp_path):
         assert summary["status"] == "completed"
         for fr in summary["fold_results"]:
             assert fr["effective_train_size"] < fr["n_train_rows"]
+
+
+@pytest.mark.parametrize("stop", [KeyboardInterrupt, RuntimeError])
+def test_run_stopped_midway_logs_no_completed_rows(
+    data_root, tmp_path, monkeypatch, stop
+):
+    """A run that stops after some folds (Ctrl-C, or an error in a later
+    fold) is one failed trial: none of its finished folds may be logged
+    as `completed`, or the ledger shows a complete run with fewer folds."""
+    import harness.runner as runner
+
+    real = runner.compute_all
+    calls = {"n": 0}
+
+    def stop_on_second_fold(*args, **kwargs):
+        calls["n"] += 1
+        if calls["n"] == 2:
+            raise stop("stopped")
+        return real(*args, **kwargs)
+
+    monkeypatch.setattr(runner, "compute_all", stop_on_second_fold)
+    results = tmp_path / "results.csv"
+    with pytest.raises(stop):
+        run_experiment(
+            _config(),
+            data_root=data_root,
+            results_path=results,
+            reports_dir=tmp_path / "reports",
+        )
+    store = ResultsStore(results).load()
+    assert list(store["status"]) == ["failed"]
+    assert stop.__name__ in store.iloc[0]["error"]
+    assert "stopped after 1 of" in store.iloc[0]["error"]
+    # the stopped run is still a trial against its cell
+    assert ResultsStore(results).configurations_tried(
+        "dataset_v0.0-test", "walkforward", 3, "label_3y_beat_spy"
+    ) == 1
+
+
+def test_run_from_a_file_copies_the_file_beside_the_report(data_root, tmp_path):
+    from harness.runner import run_config_file
+
+    path = tmp_path / "exp.toml"
+    text = (
+        "# why this run exists\n"
+        'name = "copied_cfg"\n'
+        'dataset_version = "dataset_v0.0-test"\n'
+        'scheme = "walkforward"\n'
+        "horizon_years = 3\n"
+        'label = "label_3y_beat_spy"\n'
+        'feature_groups = ["ranks"]\n'
+        "seed = 7\n"
+        "top_k = [5]\n"
+        "[model]\n"
+        'name = "majority_class"\n'
+    )
+    path.write_text(text)
+    reports = tmp_path / "reports"
+    run_config_file(
+        path, data_root=data_root, results_path=tmp_path / "results.csv",
+        reports_dir=reports,
+    )
+    assert (reports / "copied_cfg_config.toml").read_text() == text
+    record = json.loads((reports / "copied_cfg_config.json").read_text())
+    assert record["config"]["label"] == "label_3y_beat_spy"
+    assert record["feature_columns"]

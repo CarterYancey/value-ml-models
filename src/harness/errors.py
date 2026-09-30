@@ -20,8 +20,9 @@ class SplitApplicationError(HarnessError):
 
 class HoldoutAccessError(HarnessError):
     """The sealed `holdout` scheme was requested outside the dedicated
-    final-eval script. It is evaluated once per phase; results seen there
-    never flow back into selection."""
+    final-eval script. It is looked at once per cell (label, horizon,
+    holdout window), further looks only with a disclosed reason; results
+    seen there never flow back into selection."""
 
 
 class DiagnosticSchemeError(HarnessError):

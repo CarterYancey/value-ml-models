@@ -1,0 +1,24 @@
+{
+  "name": "forest_nonloser_dd30_3y",
+  "promoted_utc": "2026-09-30T01:40:20+00:00",
+  "source_report": "reports/forest_nonloser_dd30_3y.md",
+  "run_id": "53ceedd93e6d",
+  "config_hash": "087f2d7dfea489b2",
+  "git_sha": "319144c0016b771eeeb57b9d17f1cb63915225d3",
+  "dataset_version": "dataset_v1.4",
+  "config_path": "experiments/forest_nonloser_dd30_3y.toml",
+  "note": "THE CANDIDATE'S FOREST. v1.4 3y 'not a loser' (cagr >= 0 & drawdown from entry < 0.3): p@20 0.79 vs base 0.39 (0.84 in 2013-20; under 0.60 for 2006-08 and 2019 entries); picks: losers 0.13, big losers 0.06, big winners 0.03, median CAGR 0.09; scores highest where the model is most wrong (0.81-0.85 in 2006-08), so a fixed score threshold selects the pre-crash years. Backtested with momentum and a sector cap: docs/notes/2026-09-29-factor-combinations.md",
+  "experiment": "forest_nonloser_dd30_3y",
+  "model": "random_forest",
+  "label": "fwd_3y_cagr >= 0.0 & fwd_3y_max_drawdown_from_entry < 0.3",
+  "horizon_years": 3,
+  "scheme": "walkforward",
+  "headline": "p@10=0.800",
+  "baseline": "0.475 rank_factor",
+  "lift": "+0.325",
+  "files": [
+    "forest_nonloser_dd30_3y.md",
+    "forest_nonloser_dd30_3y_s1776.md",
+    "forest_nonloser_dd30_3y_s232.md"
+  ]
+}

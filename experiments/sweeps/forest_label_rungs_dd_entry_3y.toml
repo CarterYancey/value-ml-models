@@ -1,0 +1,104 @@
+# Which label? Rungs around the from-entry compounder cell, read on
+# pick outcomes (docs/findings.md, "Plan", track 2; docs/experiments.md,
+# "Pick outcomes").
+#
+# Nine cells: CAGR floor 0.08 / 0.10 / 0.15 x drawdown-from-entry cap
+# 0.15 / 0.20 / 0.30. The centre cell (0.10, 0.20) is the primary cell;
+# it is run again here because the earlier runs carry no pick outcomes
+# (3 more configurations in a cell that has 34, plus whatever
+# forest_feature_sets_dd_entry_3y adds).
+#
+# p@20 and the lift over the base rate are NOT comparable across these
+# cells: each is measured against its own label. What is comparable is
+# what the picks went on to do, the same for every cell:
+#   label_3y_beat_spy                hit rate of the picks
+#   fwd_3y_excess_cagr               mean and median
+#   fwd_3y_cagr                      mean and median
+#   fwd_3y_max_drawdown_from_entry   mean and median
+#
+# The bar, from a smoke test of the harness on 2026-09-28 (scratch
+# ledger, top 20 per year): highest conservative_score_rank, no model,
+# picks beat SPY 0.49 of the time (all test rows: 0.36), median excess
+# CAGR -0.002 (all rows: -0.073), mean -0.021, median drawdown from
+# entry 0.19. Re-run that baseline through the ledger before quoting
+# it (baseline_pick_outcomes_3y, to be written).
+#
+# Predictions, written before the run:
+#   - At a fixed CAGR floor, a tighter drawdown cap lowers the picks'
+#     median drawdown and their mean excess CAGR: it selects calmer
+#     stocks. The beat_spy hit rate moves by less than 0.05 across
+#     caps.
+#   - The 0.15 floor raises the picks' mean excess CAGR and their
+#     drawdown, and its p@20 is the lowest of the three floors.
+#   - No cell's picks reach a median excess CAGR above +0.03 in
+#     2013-20. If one does, it is the first candidate for a backtest.
+# A cell passes the screen when its picks beat the single-factor bar
+# on the beat_spy hit rate and on median excess CAGR, in 2013-20 and
+# not only pooled, on every seed. Passing earns a vml-run and a
+# backtest (buys through 2020), nothing more.
+#
+# Model: one forest configuration, set1 of forest_candidate_sets_3y
+# with class_weight 1.0, the candidate with the best Brier in the
+# primary cell. Features: the ranks group (112 columns), the reference
+# of forest_feature_sets_dd_entry_3y. Both were chosen on the centre
+# cell, which favours it; read the rungs against each other, not
+# against the centre.
+#
+# Expanded: 9 cells x 1 feature set x 1 set x 3 seeds = 27 runs, about
+# 4-5 minutes each.
+# Run: uv run vml-sweep experiments/sweeps/forest_label_rungs_dd_entry_3y.toml
+name = "forest_label_rungs_dd_entry_3y"
+note = "v1.4 3y, CAGR floor 0.08/0.10/0.15 x drawdown-from-entry cap 0.15/0.20/0.30, one forest, 3 seeds: the thresholds move p@20 (0.23-0.57) and PR-AUC (0.19-0.42) and leave what the picks go on to do where it was (beat SPY 0.43-0.50, median excess CAGR about zero); the 0.15 floor is the worst rung on every outcome"
+dataset_version = "dataset_v1.4"
+min_dataset_version = "1.4"
+scheme = "walkforward"
+folds = "all"
+seeds = [23, 232, 1776]
+top_k = [20, 50]
+rank_metric = "precision_at_20"
+pick_outcomes = [
+  "label_3y_beat_spy",
+  "fwd_3y_excess_cagr",
+  "fwd_3y_cagr",
+  "fwd_3y_max_drawdown_from_entry",
+]
+
+sets = [
+  {criterion = "entropy", max_depth = 4, max_features = 0.205191, max_samples = 0.663781, min_samples_leaf = 72, n_estimators = 490},  # forest_candidate_sets_3y set1
+]
+
+[[cells]]
+label = "fwd_3y_cagr >= 0.08 & fwd_3y_max_drawdown_from_entry < 0.15"
+
+[[cells]]
+label = "fwd_3y_cagr >= 0.08 & fwd_3y_max_drawdown_from_entry < 0.2"
+
+[[cells]]
+label = "fwd_3y_cagr >= 0.08 & fwd_3y_max_drawdown_from_entry < 0.3"
+
+[[cells]]
+label = "fwd_3y_cagr >= 0.1 & fwd_3y_max_drawdown_from_entry < 0.15"
+
+[[cells]]
+label = "fwd_3y_cagr >= 0.1 & fwd_3y_max_drawdown_from_entry < 0.2"
+
+[[cells]]
+label = "fwd_3y_cagr >= 0.1 & fwd_3y_max_drawdown_from_entry < 0.3"
+
+[[cells]]
+label = "fwd_3y_cagr >= 0.15 & fwd_3y_max_drawdown_from_entry < 0.15"
+
+[[cells]]
+label = "fwd_3y_cagr >= 0.15 & fwd_3y_max_drawdown_from_entry < 0.2"
+
+[[cells]]
+label = "fwd_3y_cagr >= 0.15 & fwd_3y_max_drawdown_from_entry < 0.3"
+
+[[features]]
+groups = ["ranks"]
+
+[model]
+name = "random_forest"
+bootstrap = true
+class_weight = 1.0
+n_jobs = 8

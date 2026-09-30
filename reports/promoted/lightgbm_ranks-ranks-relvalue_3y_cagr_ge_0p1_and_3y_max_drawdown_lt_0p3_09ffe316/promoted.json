@@ -1,0 +1,22 @@
+{
+  "name": "lightgbm_ranks-ranks-relvalue_3y_cagr_ge_0p1_and_3y_max_drawdown_lt_0p3_09ffe316",
+  "promoted_utc": "2026-09-26T19:52:22+00:00",
+  "source_report": "reports/lightgbm_ranks-ranks-relvalue_3y_cagr_ge_0p1_and_3y_max_drawdown_lt_0p3_09ffe316.md",
+  "run_id": "d397b818a6d1",
+  "config_hash": "0d86cd96370c4184",
+  "git_sha": "7a2fb0dab776f24c53bf7901d2ffc5999655ecb0",
+  "dataset_version": "dataset_v1.4",
+  "config_path": "experiments/lgbm_3y_compounder_no_crash.toml",
+  "note": "v1.4 cagr>=10% & max drawdown<30% over 3y: p@20 0.362 vs base rate 0.112 (3.2x), the largest relative lift found; single seed, no v1.4 baseline yet",
+  "experiment": "lightgbm_ranks-ranks-relvalue_3y_cagr_ge_0p1_and_3y_max_drawdown_lt_0p3_09ffe316",
+  "model": "lightgbm",
+  "label": "fwd_3y_cagr >= 0.1 & fwd_3y_max_drawdown < 0.3",
+  "horizon_years": 3,
+  "scheme": "walkforward",
+  "headline": "p@20=0.363",
+  "baseline": "none run",
+  "lift": "",
+  "files": [
+    "lightgbm_ranks-ranks-relvalue_3y_cagr_ge_0p1_and_3y_max_drawdown_lt_0p3_09ffe316.md"
+  ]
+}

@@ -132,6 +132,14 @@ class BacktestConfig:
     top_k: int = 25
     weighting: str = "score"
     monthly_cash: float = 1000.0
+    #: at most this many of one rebalance's buys may share a value of
+    #: `group_column` (None = no cap). A selection rule, like the
+    #: investability filter: candidates are walked in score order and a
+    #: stock is skipped once its group is full
+    max_per_group: int | None = None
+    #: the cross-section column the cap groups on; a NULL is its own
+    #: group ("unknown"), capped like any other
+    group_column: str = "sector"
 
     # --- execution --------------------------------------------------------
     #: round-trip friction per side, in basis points — required in the
@@ -285,6 +293,25 @@ class BacktestConfig:
             raise ConfigError(
                 f"backtest config {source}: monthly_cash must be > 0"
             )
+        max_per_group = pf.get("max_per_group")
+        if max_per_group is not None:
+            if isinstance(max_per_group, bool) or not isinstance(
+                max_per_group, int
+            ):
+                raise ConfigError(
+                    f"backtest config {source}: max_per_group must be an "
+                    f"integer, got {max_per_group!r}"
+                )
+            if max_per_group < 1:
+                raise ConfigError(
+                    f"backtest config {source}: max_per_group must be >= 1"
+                )
+        group_column = str(pf.get("group_column", "sector"))
+        if "group_column" in pf and max_per_group is None:
+            raise ConfigError(
+                f"backtest config {source}: group_column is set without "
+                "max_per_group; it only names what the cap groups on"
+            )
 
         ex = raw.get("execution", {})
         if "cost_bps" not in ex:
@@ -330,6 +357,8 @@ class BacktestConfig:
             top_k=top_k,
             weighting=weighting,
             monthly_cash=monthly_cash,
+            max_per_group=max_per_group,
+            group_column=group_column,
             cost_bps=cost_bps,
             benchmark_cost_bps=float(ex.get("benchmark_cost_bps", 0.0)),
             max_quote_age_days=int(ex.get("max_quote_age_days", 0)),
@@ -366,6 +395,9 @@ class BacktestConfig:
             added["label_lag_days"] = self.label_lag_days
         if self.fractional_shares:
             added["fractional_shares"] = True
+        if self.max_per_group is not None:
+            added["max_per_group"] = self.max_per_group
+            added["group_column"] = self.group_column
         if self.has_sell_criteria:
             added["sell"] = {
                 "min_score": self.sell_min_score,

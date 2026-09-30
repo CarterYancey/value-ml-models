@@ -56,6 +56,7 @@ import hashlib
 import itertools
 import json
 import re
+import shutil
 import tomllib
 import traceback
 from dataclasses import dataclass, field, replace
@@ -74,6 +75,7 @@ from harness.config import (
     FeatureSpec,
     infer_horizon_years,
     parse_dataset_version,
+    parse_pick_outcomes,
 )
 from harness.derived_labels import label_slug, normalize_label
 from harness.errors import ConfigError
@@ -84,6 +86,7 @@ from harness.seed_report import (
     aggregate_candidates,
     candidate_frame,
     headline_metrics,
+    pick_outcome_headline,
     write_candidate_report,
 )
 from harness.runner import (
@@ -128,6 +131,10 @@ _SWEEP_ALLOWED = frozenset(
         "calibration",
         "calibration_min_rows",
         "min_dataset_version",
+        "pick_outcomes",
+        # the one-line conclusion `vml-promote --note` writes into a
+        # config; not part of the sweep's identity or of any run's hash
+        "note",
     }
 )
 
@@ -188,6 +195,9 @@ class SweepConfig:
     #: ExperimentConfig.min_dataset_version) — a sweep over columns a
     #: newer version introduced states it once, here
     min_dataset_version: str = ""
+    #: report-only outcomes of every run's top-K picks (eval.picks,
+    #: ExperimentConfig.pick_outcomes)
+    pick_outcomes: tuple[str, ...] = ()
 
     @classmethod
     def from_file(cls, path: str | Path) -> "SweepConfig":
@@ -501,6 +511,14 @@ class SweepConfig:
                 else f"precision_at_{top_k[0]}"
             )
 
+        # checked against every cell's horizon: an outcome whose window
+        # outlives a cell's is not observable on that cell's test rows
+        pick_outcomes: tuple[str, ...] = ()
+        for horizon, _label, _eval in cells:
+            pick_outcomes = parse_pick_outcomes(
+                raw.get("pick_outcomes", ()), horizon, f"sweep {source}"
+            )
+
         sweep = cls(
             name=str(raw.get("name", "")),
             dataset_version=str(raw["dataset_version"]),
@@ -529,6 +547,7 @@ class SweepConfig:
                 raw.get("calibration_min_rows", DEFAULT_CALIBRATION_MIN_ROWS)
             ),
             min_dataset_version=min_dataset_version,
+            pick_outcomes=pick_outcomes,
         )
         if not sweep.name:
             sweep = replace(sweep, name=sweep.derived_name())
@@ -610,6 +629,8 @@ class SweepConfig:
             payload["calibration_min_rows"] = self.calibration_min_rows
         if self.min_dataset_version:
             payload["min_dataset_version"] = self.min_dataset_version
+        if self.pick_outcomes:
+            payload["pick_outcomes"] = list(self.pick_outcomes)
         blob = json.dumps(payload, sort_keys=True, separators=(",", ":"))
         return hashlib.sha256(blob.encode()).hexdigest()[:8]
 
@@ -696,6 +717,9 @@ class SweepConfig:
                 calibration=self.calibration,
                 calibration_min_rows=self.calibration_min_rows,
                 min_dataset_version=self.min_dataset_version,
+                pick_outcomes=parse_pick_outcomes(
+                    self.pick_outcomes, horizon, f"sweep {self.name}"
+                ),
             )
             candidate, name = self._run_names(
                 label, fs_idx, set_idx, combo, draw_idx, seed, config
@@ -898,6 +922,7 @@ def run_sweep(
     reports_dir: str | Path = DEFAULT_REPORTS,
     sweep_config_path: str = "",
     models_dir: str | Path | None = None,
+    resume: bool = False,
 ) -> dict:
     """Run every expanded config; one run failing never stops the sweep.
 
@@ -905,16 +930,31 @@ def run_sweep(
     Path, "n_failed": int}. Each run is logged to the results store by
     `run_experiment` itself (completed or failed), so the trial ledger
     sees the whole sweep regardless of what this function returns.
+
+    Every completed run leaves a result record beside its report
+    (`<run>_result.json`: config hash, run id, pooled and per-fold
+    metrics). With `resume`, a run whose record is there and carries
+    the run's config hash is not run again: its numbers are read back,
+    so a sweep that died (an OOM kill, a lost sandbox) costs the run
+    that was in flight and nothing else, and adds no duplicate trials
+    to the ledger. Failed runs leave no record and are run again.
     """
     runs = sweep.expand()
     sweep_reports = Path(reports_dir) / "sweeps" / sweep.name
+    config_copy = _snapshot_sweep_config(sweep, sweep_config_path, sweep_reports)
     multi_seed = len(sweep.seeds) > 1
     # per-seed run reports are detail under a multi-seed sweep; the
     # sweep directory itself holds one report per candidate
     run_reports = sweep_reports / "seeds" if multi_seed else sweep_reports
     outcomes: list[dict] = []
     for i, run in enumerate(runs, start=1):
-        print(f"[{i}/{len(runs)}] {run.config.name}{_peak_rss_note()}")
+        record_path = run_reports / f"{run.config.name}_result.json"
+        done = _read_run_record(record_path, run) if resume else None
+        print(
+            f"[{i}/{len(runs)}] {run.config.name}"
+            + (" (resumed: already run)" if done else _peak_rss_note()),
+            flush=True,
+        )
         outcome = {
             "run": run.config.name,
             "candidate": run.candidate or run.config.name,
@@ -930,6 +970,10 @@ def run_sweep(
             "sampled_params": run.sampled_params,
             "config_hash": run.config.config_hash,
         }
+        if done is not None:
+            outcome.update(done)
+            outcomes.append(outcome)
+            continue
         try:
             summary = run_experiment(
                 run.config,
@@ -952,6 +996,7 @@ def run_sweep(
                     fr["fold"]: fr["metrics"] for fr in summary["fold_results"]
                 },
             )
+            _write_run_record(record_path, outcome)
         except Exception as exc:
             traceback.print_exc()
             outcome.update(
@@ -970,7 +1015,7 @@ def run_sweep(
     }
     summary_md, summary_csv, seeds_csv = _write_sweep_summary(
         sweep, outcomes, candidates, sweep_reports, results_path,
-        sweep_config_path,
+        sweep_config_path, config_copy,
     )
     return {
         "runs": outcomes,
@@ -983,6 +1028,86 @@ def run_sweep(
     }
 
 
+_RECORD_KEYS = ("status", "run_id", "report_path", "pooled_metrics", "fold_metrics")
+
+
+def _write_run_record(path: Path, outcome: dict) -> None:
+    """A completed run's result record, what `resume` reads back."""
+    record = {
+        "run": outcome["run"],
+        "config_hash": outcome["config_hash"],
+        **{k: outcome[k] for k in _RECORD_KEYS},
+    }
+    record["report_path"] = str(record["report_path"])
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_suffix(".json.tmp")
+    tmp.write_text(json.dumps(record, indent=1, sort_keys=True) + "\n")
+    tmp.replace(path)  # never a half-written record
+
+
+def _read_run_record(path: Path, run: "SweepRun") -> dict | None:
+    """The outcome fields of a run that already completed under this
+    exact config, or None (no record, unreadable, or another config's:
+    then the run is simply run)."""
+    try:
+        record = json.loads(path.read_text())
+    except (OSError, ValueError):
+        return None
+    if (
+        record.get("config_hash") != run.config.config_hash
+        or record.get("status") != "completed"
+    ):
+        return None
+    return {
+        "status": "completed",
+        "run_id": record["run_id"],
+        "report_path": Path(record["report_path"]),
+        "pooled_metrics": record["pooled_metrics"],
+        # JSON object keys are strings; folds are ints
+        "fold_metrics": {
+            int(fold): m for fold, m in record["fold_metrics"].items()
+        },
+        "resumed": True,
+    }
+
+
+def sweep_config_copy_path(sweep_reports: Path) -> Path:
+    """Where a sweep's report directory keeps its copy of the config."""
+    return sweep_reports / f"{sweep_reports.name}_config.toml"
+
+
+def _snapshot_sweep_config(
+    sweep: SweepConfig, sweep_config_path: str, sweep_reports: Path
+) -> Path | None:
+    """Copy the sweep file, as written, into the sweep's report
+    directory before anything runs.
+
+    The summary used to name the file under `experiments/` and nothing
+    more, so a sweep file edited in place after its run left results
+    whose config no longer existed anywhere. For the same reason a
+    report directory that already holds a *different* sweep's copy is
+    refused: running an edited sweep under its old name would overwrite
+    the old summary with numbers from another config. Re-running the
+    same sweep (resuming, or after only its `note` changed) is fine.
+    """
+    if not sweep_config_path or not Path(sweep_config_path).is_file():
+        return None  # built from a dict: there is no file to copy
+    copy = sweep_config_copy_path(sweep_reports)
+    if copy.exists():
+        earlier = SweepConfig.from_file(copy)
+        if earlier.identity_hash != sweep.identity_hash:
+            raise ConfigError(
+                f"{sweep_reports} holds the results of a different sweep "
+                f"config (identity {earlier.identity_hash}, copied in "
+                f"{copy.name}); {sweep_config_path} now has identity "
+                f"{sweep.identity_hash}. Copy the sweep to a new file with "
+                "a new `name` instead of editing it in place."
+            )
+    sweep_reports.mkdir(parents=True, exist_ok=True)
+    shutil.copyfile(sweep_config_path, copy)
+    return copy
+
+
 def _write_sweep_summary(
     sweep: SweepConfig,
     outcomes: list[dict],
@@ -990,6 +1115,7 @@ def _write_sweep_summary(
     sweep_reports: Path,
     results_path: str | Path,
     sweep_config_path: str,
+    config_copy: Path | None = None,
 ) -> tuple[Path, Path, Path | None]:
     """Ranked summary: markdown for reading, CSV with every pooled metric
     per run; under a multi-seed sweep the markdown ranks *candidates* by
@@ -1059,6 +1185,10 @@ def _write_sweep_summary(
     ):
         if extra in df.columns and extra not in metric_cols:
             metric_cols.append(extra)
+    metric_cols += [
+        c for c in pick_outcome_headline(sweep, df.columns)
+        if c not in metric_cols
+    ]
     id_cols = ["run", "status", "label", "seed", "grid_params"]
     if sweep.param_sets:
         id_cols.insert(4, "param_set")
@@ -1105,7 +1235,14 @@ def _write_sweep_summary(
     lines = [
         f"# Sweep summary — {sweep.name}",
         "",
-        f"- sweep config: `{sweep_config_path or '<inline>'}`",
+        f"- sweep config: `{sweep_config_path or '<inline>'}`"
+        + (
+            f" — copied as run to [{config_copy.name}]({config_copy.name}) "
+            f"(sweep identity `{sweep.identity_hash}`); the copy, not the "
+            "file under `experiments/`, is the record"
+            if config_copy is not None
+            else ""
+        ),
         f"- dataset version: `{sweep.dataset_version}` (pinned, immutable)",
         f"- scheme: `{sweep.scheme}`, folds: `{sweep.folds}`, git `{git_sha()}`",
         f"- model family: `{sweep.model_name}`, fixed params "
@@ -1229,6 +1366,13 @@ def _main(argv=None) -> int:
         action="store_true",
         help="print the expanded run names and exit without training",
     )
+    parser.add_argument(
+        "--resume",
+        action="store_true",
+        help="skip runs that already completed under the same config "
+        "(their result records sit beside their reports) and run the "
+        "rest; for a sweep that was interrupted",
+    )
     args = parser.parse_args(argv)
     try:
         sweep = SweepConfig.from_file(args.config)
@@ -1243,6 +1387,7 @@ def _main(argv=None) -> int:
             reports_dir=args.reports_dir,
             sweep_config_path=str(args.config),
             models_dir=args.save_models,
+            resume=args.resume,
         )
     except Exception:
         traceback.print_exc()

@@ -1,0 +1,14 @@
+{
+  "name": "forest_candidate_sets_3y__label_3y_beat_spy__set3__s23",
+  "promoted_utc": "2026-09-27T23:36:37+00:00",
+  "source_report": "reports/sweeps/forest_candidate_sets_3y/seeds/forest_candidate_sets_3y__label_3y_beat_spy__set3__s23.md",
+  "run_id": "48129483682c",
+  "config_hash": "616ac1790f2ff7ac",
+  "git_sha": "b649c58e1d8c19bd5fe35da9f4cfec3cfed01da9",
+  "dataset_version": "1.4",
+  "config_path": "",
+  "note": "Era table for the top v1.4 forest candidate (set3, seed 23): p@20 0.60-0.75 in 2005-09 and 0.60 in 2020, but 0.10-0.25 in 2013-15 and 2017-19 (base 0.24-0.32); Brier worse than base_rate_brier in 12 of 16 years",
+  "files": [
+    "forest_candidate_sets_3y__label_3y_beat_spy__set3__s23.md"
+  ]
+}

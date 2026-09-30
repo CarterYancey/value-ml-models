@@ -1,0 +1,97 @@
+# Which feature set for the from-entry compounder cell? Forest arm
+# (docs/findings.md, "Drawdown-compounder cells" and "Plan").
+#
+# Cell: fwd_3y_cagr >= 0.1 & fwd_3y_max_drawdown_from_entry < 0.2, the
+# primary cell chosen 2026-09-28. Base rate 0.21; 34 configurations
+# tried in it so far.
+#
+# The reference arm is forest_drawdown_compounder_seeds_3y, class
+# weight 1.0: the whole `ranks` group (112 columns), the same two
+# parameter sets and the same three seeds, so it is not repeated.
+# Its numbers, seed-mean fold-mean: p@20 0.499 and 0.500 (2013-20:
+# 0.544 and 0.535), PR-AUC 0.327. The best single factor in the cell
+# is conservative_score_rank: p@20 0.388 (2013-20: 0.419), PR-AUC
+# 0.301 (baseline_lowvol_rank_3y).
+#
+#   fs0  ranks minus the technical family (no volatility, momentum or
+#        price-distance ranks, no conservative_score_rank).
+#   fs1  the technical ranks alone.
+#   fs2  ranks minus the three columns the models lean on most and the
+#        best single factor is built from: vol_12m_rank, vol_36m_rank,
+#        conservative_score_rank.
+#   fs3  ranks plus sector ranks.
+#   fs4  ranks plus the raw technical and trend families.
+#
+# Questions and predictions, written before the run:
+#   - How much of the signal is the technical family? vol_12m_rank +
+#     vol_36m_rank hold 0.42 of the forest importance in this cell.
+#     Prediction: fs1 lands near the reference (within 0.03 on p@20,
+#     0.01 on PR-AUC) and fs0 well below it (p@20 under 0.40). If fs0
+#     holds near 0.50 instead, the fundamentals carry the signal on
+#     their own and volatility is a stand-in for them.
+#   - fs2 against fs0 says whether the rest of the technical family
+#     replaces the volatility ranks.
+#   - fs3 and fs4 are the candidates for a better set than the
+#     reference. Prediction: neither moves PR-AUC by more than 0.005.
+#     On 3y beat_spy, raw technical columns lowered PR-AUC by about
+#     0.01 (forest_feature_ablation_3y).
+# Read PR-AUC first: its seed std is about 0.001, against 0.01-0.03
+# for p@20, and two arms within 0.03 on p@20 are not told apart.
+# Look at the crash-window entry years (2005-08, 2019) in each arm:
+# the reference falls to the base rate there.
+#
+# Check each run's *_config.json for the resolved column count.
+#
+# An arm that wins here is the feature set for the parameter search,
+# not a finalist: the parameter sets were tuned on beat_spy.
+#
+# Expanded: 1 cell x 5 feature sets x 2 sets x 3 seeds = 30 runs,
+# about 4-5 minutes each.
+# Run: uv run vml-sweep experiments/sweeps/forest_feature_sets_dd_entry_3y.toml
+name = "forest_feature_sets_dd_entry_3y"
+note = "v1.4 3y from-entry cell, five feature sets vs the 112 ranks, 2 sets x 3 seeds (run on the host): none beats the ranks (fold-mean PR-AUC 0.327); sector ranks add nothing; the 15 technical ranks alone reach 0.322; without vol_12m_rank, vol_36m_rank and conservative_score_rank forests fall to the single factor's p@20 (0.39); 60 raw technical+trend columns lower PR-AUC by 0.011-0.015. The summary's pr_auc is pooled and not comparable with 0.327"
+dataset_version = "dataset_v1.4"
+min_dataset_version = "1.4"
+scheme = "walkforward"
+folds = "all"
+seeds = [23, 232, 1776]
+top_k = [20, 50]
+precision_targets = [0.75, 0.9]
+rank_metric = "precision_at_20"
+
+sets = [
+  {criterion = "entropy", max_depth = 3, max_features = 0.504,    max_samples = 0.589,    min_samples_leaf = 38, n_estimators = 407},  # forest_candidate_sets_3y set3
+  {criterion = "entropy", max_depth = 4, max_features = 0.205191, max_samples = 0.663781, min_samples_leaf = 72, n_estimators = 490},  # forest_candidate_sets_3y set1
+]
+
+[[cells]]
+label = "fwd_3y_cagr >= 0.1 & fwd_3y_max_drawdown_from_entry < 0.2"
+
+# fs0: ranks minus technical
+[[features]]
+groups = ["ranks"]
+exclude_families = ["ranks/technical"]
+
+# fs1: technical ranks alone
+[[features]]
+families = ["ranks/technical"]
+
+# fs2: ranks minus the volatility ranks and the conservative score
+[[features]]
+groups = ["ranks"]
+exclude_columns = ["vol_12m_rank", "vol_36m_rank", "conservative_score_rank"]
+
+# fs3: ranks plus sector ranks
+[[features]]
+groups = ["ranks", "sector_ranks"]
+
+# fs4: ranks plus raw technical and trend
+[[features]]
+groups = ["ranks"]
+families = ["features/technical", "features/trend"]
+
+[model]
+name = "random_forest"
+bootstrap = true
+class_weight = 1.0
+n_jobs = 8

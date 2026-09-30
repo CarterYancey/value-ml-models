@@ -1,0 +1,14 @@
+{
+  "name": "sweep_xgb_relvalue_random_search_3y",
+  "promoted_utc": "2026-09-26T19:52:20+00:00",
+  "source_report": "reports/sweeps/xgb_relvalue_random_search_3y/xgb_relvalue_random_search_3y_summary.md",
+  "run_id": "",
+  "config_hash": "",
+  "git_sha": "",
+  "dataset_version": "dataset_v1.4",
+  "config_path": "experiments/sweeps/xgb_relvalue_random_search_3y.toml",
+  "note": "NEGATIVE, v1.4: fwd_3y_excess_cagr >= 0.08 \u2014 120 runs, mean p@20 0.222 vs base rate 0.219: no skill; the 0.31 top run is selection noise",
+  "files": [
+    "xgb_relvalue_random_search_3y_summary.md"
+  ]
+}

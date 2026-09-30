@@ -1,0 +1,24 @@
+# Pull requests into the integration branches carry results, not
+# working material: unpromoted configs and reports outside
+# reports/promoted/ are refused (scripts/check_tracked_configs.py).
+name: pr-hygiene
+
+on:
+  pull_request:
+    branches: [Claude, main]
+
+permissions:
+  contents: read
+
+jobs:
+  tracked-configs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: No working material in the pull request
+        run: python scripts/check_tracked_configs.py --base "origin/${{ github.base_ref }}"

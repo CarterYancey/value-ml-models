@@ -25,16 +25,18 @@ import pandas as pd
 
 from eval.era import collect_predictions
 from eval.metrics import compute_all, regression_diagnostics
+from eval.picks import pick_outcome_metrics
 from harness.calibration import PrequentialCalibration
-from harness.config import EvalConfig
+from harness.config import EvalConfig, parse_pick_outcomes
 from harness.dataset import Dataset, SplitAccess
 from harness.errors import DatasetValidationError
 from harness.model_store import ModelBundle
-from harness.results import ResultsStore, git_sha, new_run_id
+from harness.results import ResultsStore, RunLog, git_sha, new_run_id
 from harness.runner import (
     DEFAULT_DATA_ROOT,
     DEFAULT_REPORTS,
     DEFAULT_RESULTS,
+    _pick_outcome_columns,
     finalize_run,
 )
 
@@ -61,6 +63,15 @@ def evaluate_bundle(
         top_k=eval_config.top_k,
         score_thresholds=eval_config.score_thresholds,
         precision_targets=eval_config.precision_targets,
+        pick_outcomes=(
+            train_config.pick_outcomes
+            if eval_config.pick_outcomes is None
+            else parse_pick_outcomes(
+                eval_config.pick_outcomes,
+                train_config.horizon_years,
+                eval_config_path or eval_config.name,
+            )
+        ),
     )
 
     store = ResultsStore(results_path)
@@ -81,6 +92,7 @@ def evaluate_bundle(
         "label": config.eval_label or config.label,
         "model": config.model_name,
     }
+    run_log = RunLog(store, base_row)
 
     try:
         # Loaded from the directory the bundle was trained on
@@ -116,9 +128,12 @@ def evaluate_bundle(
                 list(bundle.feature_columns)
                 + [config.label]
                 + ([config.eval_label] if config.eval_label else [])
+                + list(config.pick_outcomes)
                 + [dataset.sample_weight_column(config.horizon_years)]
             )
         )
+        dataset.check_pick_outcomes(config.pick_outcomes, bundle.feature_columns)
+        run_log.n_folds = len(bundle.folds)
         for fold in bundle.folds:
             split = dataset.apply_split(
                 config.scheme, fold, config.horizon_years,
@@ -171,18 +186,23 @@ def evaluate_bundle(
             test_years = pd.to_datetime(
                 split.test.loc[test_fit.X.index, "snapshot_date"]
             ).dt.year.to_numpy()
-            prediction_frames.append(
-                collect_predictions(
-                    fold, test_years, test_fit.y, scores,
-                    test_fit.sample_weight, outcome=outcome,
+            fold_predictions = collect_predictions(
+                fold, test_years, test_fit.y, scores,
+                test_fit.sample_weight, outcome=outcome,
+                **_pick_outcome_columns(dataset, config, split.test, test_fit),
+            )
+            prediction_frames.append(fold_predictions)
+            # report-only outcomes of this fold's picks; same top-K rows
+            # as the fold's precision@K
+            metrics.update(
+                pick_outcome_metrics(
+                    fold_predictions, top_k=config.top_k, per_year=False
                 )
             )
             if calib is not None:
                 calib.observe(raw_scores, test_fit.y, test_fit.sample_weight)
-            store.append(
+            run_log.fold_done(
                 {
-                    **base_row,
-                    "status": "completed",
                     "fold": fold,
                     "n_train_rows": stats["n_train_rows"],
                     "effective_train_size": (
@@ -192,6 +212,7 @@ def evaluate_bundle(
                     "metrics_json": metrics,
                 }
             )
+        run_log.commit()
 
         report_path, configurations_tried = finalize_run(
             config=config,
@@ -225,14 +246,10 @@ def evaluate_bundle(
             "source_bundle": Path(bundle_dir),
             "train_run_id": bundle.run_id,
         }
-    except Exception as exc:
-        store.append(
-            {
-                **base_row,
-                "status": "failed",
-                "error": f"{type(exc).__name__}: {exc}",
-            }
-        )
+    except BaseException as exc:
+        # BaseException: Ctrl-C and SystemExit stop a run too, and a
+        # stopped run is a failed trial, not a shorter completed one
+        run_log.fail(exc)
         raise
 
 

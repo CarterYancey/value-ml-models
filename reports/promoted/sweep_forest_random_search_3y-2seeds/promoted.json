@@ -1,0 +1,14 @@
+{
+  "name": "sweep_forest_random_search_3y-2seeds",
+  "promoted_utc": "2026-09-26T19:52:09+00:00",
+  "source_report": "reports/sweeps/forest_random_search_3y-2seeds/forest_random_search_3y-2seeds_summary.md",
+  "run_id": "",
+  "config_hash": "",
+  "git_sha": "",
+  "dataset_version": "dataset_v1.1",
+  "config_path": "",
+  "note": "v1.1 3y beat_spy: forests p@20 ~0.55 family-wide (base 0.35) and the only family holding ~0.49 in 2013-20; top candidates within noise, shallow depth 3-4; carried forward as forest_candidate_sets_3y",
+  "files": [
+    "forest_random_search_3y-2seeds_summary.md"
+  ]
+}

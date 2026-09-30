@@ -1,0 +1,49 @@
+# RECOVERED CONFIG (2026-09-28). The file this sweep ran from was
+# forest_random_search_3y.toml, edited in place afterwards; no copy of
+# the version that ran was kept. This file was rebuilt from the header
+# of reports/promoted/sweep_forest_random_search_3y-2seeds/ (model,
+# random-search spec, n_samples, search_seed, seeds) plus a guess at
+# the feature spec, and then checked: it expands to 100 runs whose
+# names and config hashes all equal the 100 recorded in that summary's
+# CSV and in the ledger. The hash covers the feature spec and every
+# model parameter, so this is the config that ran (dataset_v1.1, git
+# e587a66, 2026-08-31). Comments and key order are not recoverable.
+#
+# Feature spec: ranks minus the technical and trend rank families, plus
+# raw features/trend and features/technical. On dataset_v1.1 it
+# resolved to 124 columns (69 ranks, 45 raw trend, 10 raw technical);
+# the list is in the promoted r30 run's importances CSV.
+#
+# Do not re-run under this name: the report directory and the ledger
+# already hold its results.
+name = "forest_random_search_3y-2seeds"
+dataset_version = "dataset_v1.1"
+scheme = "walkforward"
+folds = "all"
+seeds = [23, 232]
+top_k = [20]
+rank_metric = "precision_at_20"
+n_samples = 50
+search_seed = 42
+
+[[cells]]
+label = "label_3y_beat_spy"
+
+[[features]]
+groups = ["ranks"]
+exclude_families = ["ranks/technical", "ranks/trend"]
+families = ["features/trend", "features/technical"]
+
+[model]
+name = "random_forest"
+bootstrap = true
+n_jobs = 8
+class_weight = 1
+
+[random]
+criterion = { choices = ["gini", "entropy"] }
+max_depth = { low = 3, high = 16, int = true }
+max_features = { low = 0.1, high = 0.95 }
+max_samples = { low = 0.2, high = 0.7 }
+min_samples_leaf = { low = 20, high = 500, int = true, log = true }
+n_estimators = { low = 100, high = 500, int = true }

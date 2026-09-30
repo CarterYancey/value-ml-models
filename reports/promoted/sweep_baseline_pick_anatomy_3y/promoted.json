@@ -1,0 +1,14 @@
+{
+  "name": "sweep_baseline_pick_anatomy_3y",
+  "promoted_utc": "2026-09-30T01:40:22+00:00",
+  "source_report": "reports/sweeps/baseline_pick_anatomy_3y/baseline_pick_anatomy_3y_summary.md",
+  "run_id": "",
+  "config_hash": "",
+  "git_sha": "",
+  "dataset_version": "dataset_v1.4",
+  "config_path": "experiments/sweeps/baseline_pick_anatomy_3y.toml",
+  "note": "The single-factor bars with the tails of the picks' returns: conservative_score_rank halves the big losers and keeps the big winners (0.13 vs 0.15); the value factors (earnings yield, book to market, magic formula) are the worst picks on every measure (losers 0.61-0.63, median excess CAGR -0.20)",
+  "files": [
+    "baseline_pick_anatomy_3y_summary.md"
+  ]
+}

@@ -1,0 +1,55 @@
+# bt_nonloser_dd30_top10 with a sector cap: at most 2 of a month's 10 buys per
+# sector (docs/notes/2026-09-29-decisions.md, decision 7;
+# docs/notes/2026-09-29-first-backtests.md). The template is otherwise
+# decision 6's, unchanged.
+#
+# The uncapped backtest ended 26-29% below SPY with a worst drawdown of
+# -63%: half its buys were utilities, a quarter REITs, and every buy of
+# 2005-06 a REIT.
+#
+# Predictions, written before the run (2026-09-29):
+#   - 2007 is no longer 28 points behind SPY: within 10 points of it.
+#   - The worst drawdown is shallower than the uncapped -63.4%, and not
+#     deeper than SPY's -52.9% by more than 3 points.
+#   - The final value is above the uncapped 518,612. Whether it reaches
+#     SPY's 732,110 is the open question; no prediction.
+#   - At least 5 sectors are bought in every year.
+#   If the drawdown and 2007 do not improve, sector concentration was
+#   not the reason the screen and the backtest disagreed.
+name = "bt_nonloser_dd30_top10_cap2"
+dataset_version = "dataset_v1.4"
+prices_version = "prices_v1.0"
+
+bundles = [
+    "experiments/models/forest_nonloser_dd30_3y_53ceedd93e6d",
+]
+
+[signal]
+combine = "product"
+max_staleness_days = 200
+model_update = "refit"
+label_lag_days = 45
+
+[[investability]]
+column = "dollar_volume_3m"
+op = ">="
+value = 100000.0
+
+[portfolio]
+strategy = "buy_and_hold"
+top_k = 10
+weighting = "equal"
+monthly_cash = 1000.0
+max_per_group = 2
+group_column = "sector"
+
+[execution]
+cost_bps = 35.0
+benchmark_cost_bps = 0.0
+max_quote_age_days = 3
+delist_after_days = 30
+
+[window]
+start = 2005-01-01
+end = 2020-12-31
+valuation_end = 2023-12-29
