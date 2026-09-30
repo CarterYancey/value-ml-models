@@ -908,6 +908,11 @@ slice. All within the invariants: no local splits, no derived features.
       alone is never a sell); optional `[sell]` section for a separate
       criteria band (hysteresis), inherited from the buy criteria
       otherwise; sells logged with per-cause reasons.
+- [x] Rank-based sell criterion (2026-09-30,
+      `claude/backtest-rank-sell`): `[sell] max_rank_pct`, a holding
+      is kept while it is among that top share of the month's buy
+      candidates; for `mean_rank` combinations and for models whose
+      score level moves between years.
 - [ ] Richer strategies behind the `Strategy` interface: periodic full
       rebalance, stop-loss / trailing-stop sells, position caps,
       partial trimming (sell down to weight instead of all-or-nothing).

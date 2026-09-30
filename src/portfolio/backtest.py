@@ -47,6 +47,7 @@ from portfolio.signals import (
     ModelSet,
     apply_filters,
     apply_min_score,
+    candidate_rank_pct,
     combine_scores,
     review_held,
     score_floors,
@@ -97,16 +98,6 @@ class CandidateFeed:
         scored = self.model_set.score(xs, int(when.year))
         cols = self.model_set.score_columns
 
-        # the held book is judged on the scored, unfiltered
-        # cross-section: dropping out of the top-K or the buy screen is
-        # not a sell — failing the sell criteria is
-        held_review = (
-            review_held(scored, held_assets, self.sell_floors,
-                        self.sell_filters)
-            if self.evaluate_sells
-            else pd.DataFrame(columns=["passes_sell", "sell_reason"])
-        )
-
         after_floor = apply_min_score(scored, self.floors)
         after_filters = apply_filters(after_floor, config.filters)
         after_inv = apply_filters(after_filters, config.investability)
@@ -141,6 +132,24 @@ class CandidateFeed:
             ["combined_score", "asset"], ascending=[False, True],
             kind="mergesort",
         ).reset_index(drop=True)
+
+        # the held book is judged on the scored, unfiltered
+        # cross-section: dropping out of the top-K or the buy screen is
+        # not a sell — failing the sell criteria is. A rank criterion
+        # ([sell] max_rank_pct) reads the month's candidate ranking.
+        held_review = (
+            review_held(
+                scored, held_assets, self.sell_floors, self.sell_filters,
+                rank_pct=(
+                    candidate_rank_pct(priced)
+                    if config.sell_max_rank_pct is not None
+                    else None
+                ),
+                max_rank_pct=config.sell_max_rank_pct,
+            )
+            if self.evaluate_sells
+            else pd.DataFrame(columns=["passes_sell", "sell_reason"])
+        )
 
         diagnostics = {
             "n_cross_section": len(xs),

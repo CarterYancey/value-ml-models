@@ -68,6 +68,12 @@ class BacktestConfig:
     #: None = inherit the buy [[filters]]; [] (an explicit empty
     #: `filters = []`) = no column screens on sells
     sell_filters: tuple[FilterSpec, ...] | None = None
+    #: a held position passes only while it is among this top share of
+    #: the month's buy candidates by combined score (None = no rank
+    #: criterion). Relative to the month's cross-section, so it means
+    #: the same in a year of high scores and a year of low ones, and it
+    #: works for a mean_rank combination, which has no score to floor.
+    sell_max_rank_pct: float | None = None
     #: a snapshot older than this at the trade date drops out of the
     #: cross-section (stale fundamentals are not a tradable signal)
     max_staleness_days: int = 200
@@ -193,6 +199,7 @@ class BacktestConfig:
         sell_raw = raw.get("sell")
         has_sell_criteria = sell_raw is not None
         sell_min_score, sell_min_scores, sell_filters = None, {}, None
+        sell_max_rank_pct = None
         if has_sell_criteria:
             if not isinstance(sell_raw, dict):
                 raise ConfigError(
@@ -200,12 +207,25 @@ class BacktestConfig:
                     "(min_score, min_scores, filters)"
                 )
             unknown = sorted(set(sell_raw) - {"min_score", "min_scores",
-                                              "filters"})
+                                              "filters", "max_rank_pct"})
             if unknown:
                 raise ConfigError(
                     f"backtest config {source}: unknown [sell] keys "
-                    f"{unknown}; expected min_score, min_scores, filters"
+                    f"{unknown}; expected min_score, min_scores, filters, "
+                    "max_rank_pct"
                 )
+            if "max_rank_pct" in sell_raw:
+                pct = sell_raw["max_rank_pct"]
+                if (
+                    isinstance(pct, bool)
+                    or not isinstance(pct, (int, float))
+                    or not 0.0 < float(pct) <= 1.0
+                ):
+                    raise ConfigError(
+                        f"backtest config {source}: [sell] max_rank_pct "
+                        f"must be a share in (0, 1], got {pct!r}"
+                    )
+                sell_max_rank_pct = float(pct)
             if "min_score" in sell_raw:
                 sell_min_score = float(sell_raw["min_score"])
             raw_scores = sell_raw.get("min_scores", {})
@@ -300,6 +320,7 @@ class BacktestConfig:
             sell_min_score=sell_min_score,
             sell_min_scores=sell_min_scores,
             sell_filters=sell_filters,
+            sell_max_rank_pct=sell_max_rank_pct,
             max_staleness_days=int(signal.get("max_staleness_days", 200)),
             filters=filters,
             investability=investability,
@@ -359,6 +380,10 @@ class BacktestConfig:
                     else [f.to_table() for f in self.sell_filters]
                 ),
             }
+            # only when set, so [sell] sections written before the rank
+            # criterion keep their hashes
+            if self.sell_max_rank_pct is not None:
+                added["sell"]["max_rank_pct"] = self.sell_max_rank_pct
         return {
             **added,
             "name": self.name,

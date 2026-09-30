@@ -407,6 +407,13 @@ def write_backtest_report(
             f"{'' if config.sell_filters is not None else ' (inherited from buy)'}: "
             f"{filter_desc}"
         )
+        if config.sell_max_rank_pct is not None:
+            sell_lines.append(
+                "- sell rank: a held position is sold once it is no "
+                f"longer among the top {config.sell_max_rank_pct:.0%} of "
+                "the month's buy candidates by combined score (after "
+                "every buy screen), or is not a candidate at all"
+            )
 
     inv_lines = (
         [f"- `{f.describe()}`" for f in config.investability]

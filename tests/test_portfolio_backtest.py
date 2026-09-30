@@ -433,3 +433,73 @@ def test_window_before_first_fold_year_is_refused(
             results_path=tmp_path / "results.csv",
             reports_dir=tmp_path / "reports",
         )
+
+
+def test_rank_sell_criterion(wf_bundle_dir):
+    from portfolio.signals import candidate_rank_pct
+
+    candidates = pd.DataFrame(
+        {"asset": [7, 1, 2, 3], "combined_score": [0.9, 0.8, 0.5, 0.1]}
+    )
+    pct = candidate_rank_pct(candidates)
+    assert pct.loc[7] == 0.25 and pct.loc[3] == 1.0
+    assert candidate_rank_pct(candidates.iloc[:0]).empty
+
+    scored = pd.DataFrame({"permaticker": [1, 2, 3, 4], "score_m": 0.9})
+    review = review_held(
+        scored, held_assets=[1, 2, 3, 4], floors={}, filters=(),
+        rank_pct=pct, max_rank_pct=0.5,
+    )
+    assert review.loc[1, "passes_sell"]  # second of four: top half
+    assert not review.loc[2, "passes_sell"]
+    assert review.loc[2, "sell_reason"] == "rank:below_top_share"
+    # scored but screened out of the month's candidates
+    assert review.loc[4, "sell_reason"] == "rank:not_a_candidate"
+    # without the criterion nothing changes
+    plain = review_held(scored, held_assets=[2, 4], floors={}, filters=())
+    assert plain["passes_sell"].all()
+
+    ranked = _bt_config(
+        wf_bundle_dir, sell={"max_rank_pct": 0.3},
+        portfolio={"strategy": "sell_below_criteria"},
+    )
+    band = _bt_config(
+        wf_bundle_dir, sell={}, portfolio={"strategy": "sell_below_criteria"},
+    )
+    assert ranked.sell_max_rank_pct == 0.3 and band.sell_max_rank_pct is None
+    assert ranked.config_hash != band.config_hash
+    assert "max_rank_pct" not in band.canonical_json()
+    for bad in (0, 1.5, True, "half"):
+        with pytest.raises(ConfigError, match="max_rank_pct"):
+            _bt_config(wf_bundle_dir, sell={"max_rank_pct": bad})
+
+
+def test_rank_sell_backtest_end_to_end(
+    data_root, prices_dir, wf_bundle_dir, tmp_path
+):
+    # six stocks, two bought a month: a holding outside the top third
+    # of the month's candidates is sold
+    config = _bt_config(
+        wf_bundle_dir,
+        name="bt_rank_sell",
+        signal={"combine": "mean_rank"},
+        portfolio={"strategy": "sell_below_criteria", "top_k": 2,
+                   "weighting": "equal", "monthly_cash": 1000.0},
+        sell={"max_rank_pct": 0.34},
+        window={"end": __import__("datetime").date(2017, 12, 31)},
+    )
+    summary = run_backtest(
+        config,
+        data_root=data_root,
+        results_path=tmp_path / "results.csv",
+        reports_dir=tmp_path / "reports",
+        refit_cache_dir=tmp_path / "refits",
+    )
+    trades = summary["strategy_result"].trades
+    reasons = set(trades.loc[trades["side"] == "sell", "reason"].astype(str))
+    assert any(r.startswith("criteria:rank:") for r in reasons)
+    report = (
+        tmp_path / "reports" / "backtest"
+        / f"bt_rank_sell_{config.config_hash}.md"
+    ).read_text()
+    assert "sell rank: a held position is sold once it is no longer among the top 34%" in report

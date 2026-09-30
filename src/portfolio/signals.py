@@ -462,11 +462,27 @@ def sell_filter_specs(config: BacktestConfig) -> tuple[FilterSpec, ...]:
     )
 
 
+def candidate_rank_pct(candidates: pd.DataFrame) -> pd.Series:
+    """Each buy candidate's position in the month's ranking as a share
+    of the candidates, best first: the top one of 200 is at 0.005, the
+    last at 1.0. `candidates` is sorted by combined score, best first
+    (the feed's order), with an `asset` column."""
+    n = len(candidates)
+    if not n:
+        return pd.Series(dtype=float)
+    return pd.Series(
+        (pd.RangeIndex(1, n + 1) / n).to_numpy(dtype=float),
+        index=candidates["asset"].to_numpy(),
+    )
+
+
 def review_held(
     scored: pd.DataFrame,
     held_assets: list,
     floors: dict[str, float],
     filters: tuple[FilterSpec, ...],
+    rank_pct: pd.Series | None = None,
+    max_rank_pct: float | None = None,
 ) -> pd.DataFrame:
     """Evaluate the held book against the sell criteria on the *scored,
     unfiltered* cross-section — a stock that merely dropped out of the
@@ -474,7 +490,13 @@ def review_held(
     alone. Returns one row per held asset: `passes_sell` and, when it
     fails, a `sell_reason`. A held asset absent from the cross-section
     (its snapshot aged past the staleness cap — the fundamentals can no
-    longer be verified) fails: missingness never passes a screen."""
+    longer be verified) fails: missingness never passes a screen.
+
+    With `max_rank_pct`, a held asset must also be among that top share
+    of the month's buy candidates (`rank_pct`, from
+    `candidate_rank_pct`). An asset that is not a candidate at all (it
+    fails the buy screens, or has no quote) fails: it is not something
+    the strategy would buy today at any rank."""
     rows = []
     by_asset = (
         scored.set_index("permaticker") if not scored.empty else pd.DataFrame()
@@ -496,6 +518,11 @@ def review_held(
                     if pd.isna(value) or not _OPS[spec.op](value, spec.value):
                         reason = f"filter:{spec.column}"
                         break
+            if not reason and max_rank_pct is not None:
+                if rank_pct is None or asset not in rank_pct.index:
+                    reason = "rank:not_a_candidate"
+                elif float(rank_pct.loc[asset]) > max_rank_pct:
+                    reason = "rank:below_top_share"
         rows.append(
             {"asset": asset, "passes_sell": not reason, "sell_reason": reason}
         )
