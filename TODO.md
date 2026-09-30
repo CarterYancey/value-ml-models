@@ -916,6 +916,10 @@ slice. All within the invariants: no local splits, no derived features.
       alone is never a sell); optional `[sell]` section for a separate
       criteria band (hysteresis), inherited from the buy criteria
       otherwise; sells logged with per-cause reasons.
+- [x] Per-buy outcomes in every backtest report (2026-09-30,
+      `claude/backtest-buy-outcomes`): each buy over the 1 and 3
+      years after its trade date against the benchmark, by buy year
+      and pooled, delisting proceeds riding the benchmark.
 - [x] Rank-based sell criterion (2026-09-30,
       `claude/backtest-rank-sell`): `[sell] max_rank_pct`, a holding
       is kept while it is among that top share of the month's buy
