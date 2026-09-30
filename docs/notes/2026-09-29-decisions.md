@@ -589,7 +589,8 @@ where a portfolio gets the cash back. Detail:
      kept to the top 20%.
 4. The learned upside model is dropped: the forest on
    `fwd_3y_cagr >= 0.15` has no skill at its own label (p@20 0.29
-   against a base rate of 0.30 inside the floor), and both blends
+   against a base rate of 0.27 inside the floor, fold-mean PR-AUC
+   0.289), and both blends
    with it are below the forest alone on the screen (−0.031 and
    −0.037).
 
@@ -602,3 +603,33 @@ in which it held stocks bought up to eighteen years earlier. Selling
 what the models no longer rank highly, and buying what they do, keeps
 the money where the measured edge is. Whether that survives costs and
 turnover is what the two backtests measure.
+
+### 22. A one-year "not a loser" cell
+
+*Decided (2026-09-30):* `forest_nonloser_dd20_1y`: the candidate's
+forest on `fwd_1y_cagr >= 0 & fwd_1y_max_drawdown_from_entry < 0.2`
+(base rate 0.42 on all test rows of 2005–2020, 0.45 inside the 100k
+floor), calibrated, trained on every row and measured inside the
+floor, with 1-year pick outcomes and the screen; five single-factor
+bars in the same cell; and cell C's 3-year forest read on the same
+1-year outcomes as the reference. Decision 12 proposed a shorter
+horizon; two things found today make the case for it:
+
+- a 3-year label's calibrator is four years behind (the calibration
+  run above), a 1-year label's two;
+- a 3-year fold for year Y is trained on snapshots up to Y−3, a
+  1-year fold up to Y−1, and a sell discipline re-decides monthly.
+
+*Folds 2005–2020 only.* The 1-year fold calendar runs to 2022, but
+the 2021–22 snapshots are in the 3-year holdout window and their
+1-year outcomes are part of what that holdout measures. They stay
+unseen.
+
+*What it is compared on:* the same test rows as the 3-year cells
+(256,351 on all rows), 1-year outcomes for both models. A new cell:
+its first configurations.
+
+*What would carry it forward:* written in the config. Fewer losers
+than the 3-year forest among the entries of 2008–09 and 2020 by 0.05
+or more, or a calibrated threshold that selects rows in 12 or more of
+the 16 years at a precision near its score.

@@ -1,0 +1,28 @@
+# Cell C's 3-year forest read on 1-year outcomes inside the 100k
+# floor, with the portfolio screen: the reference for the 1-year cell
+# (experiments/forest_nonloser_dd20_1y.toml). A shorter outcome window
+# lies inside the run's, so it is observable on the same test rows.
+name = "screen_1y_outcomes_dv100k"
+top_k = [20, 50]
+pick_outcomes = [
+  "label_1y_beat_spy",
+  "fwd_1y_excess_cagr",
+  "fwd_1y_cagr",
+  "fwd_1y_max_drawdown_from_entry",
+  "fwd_1y_cagr < 0",
+  "fwd_1y_cagr < -0.1",
+  "fwd_1y_max_drawdown_from_entry >= 0.3",
+  "fwd_1y_cagr >= 0.15",
+  "fwd_1y_cagr >= 0.3",
+]
+
+[pick_screen]
+per = "quarter"
+top_k = 10
+max_per_group = 2
+group_column = "sector"
+
+[[universe]]
+column = "dollar_volume_3m"
+op = ">="
+value = 100000

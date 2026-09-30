@@ -14,6 +14,53 @@ read** stub; a correction is a new entry that names the old one.
 
 <!-- entries -->
 
+### 2026-09-30 · forest_nonloser_dd30_isotonic_3y, forest_nonloser_dd30_isotonic_lag_3y (vml-run): calibration
+git `e2c2e4a` · [note](notes/2026-09-30-blends-and-calibration.md)
+- **Did:** Ran the candidate's forest with prequential isotonic calibration to read selection by confidence (decision 20). The first run contradicted its first prediction (p@20 0.650, predicted the uncalibrated 0.788), which exposed two defects in harness/calibration.py: each fold was calibrated on outcomes not yet known at its dates (every earlier fold, where a 3-year label is known three years late), and isotonic steps tied the top of the ranking. Fixed on claude/calibration-label-lag (fold Y uses folds up to Y-4 for a 3-year label; rows on a step keep their raw order; 481 tests), and ran again under a new name. One earlier calibrated run exists (host ledger, 2026-09-25); its row in the derived-label note carries a dated correction.
+- **Got:** After the fix: p@20 0.7875 and PR-AUC 0.585, the uncalibrated run's. Folds 2005-08 raw, 2009-20 calibrated. Rows at a calibrated 0.5 or more: none in 2011-13 (top 20 right 95-100% of the time), 42-44% of all rows in 2017-19 at a precision of 0.31-0.48; no row reaches 0.7 after 2008. Brier 0.2266 calibrated, 0.2148 raw, 0.2200 no-skill.
+- **Concluded:** An honest calibrator for a 3-year label is four years behind and follows the regime of four years before; an absolute confidence bar, calibrated or not, would have held cash through the best entry years and bought broadly before the worst. Selection stays by rank within the period for this label. The first run is not to be read. Predictions of the second run: ranking kept, held; the threshold predictions could not be tested as written (no row at 0.7 or 0.8 after 2008).
+- **Next:** A 1-year cell, whose calibrator lags two folds (decision 22).
+
+### 2026-09-30 · second rankings on the screen: blend evaluations (vml-eval), forest_winner15_fs4_dv100k_3y, factor_net_payout_yield_3y (vml-run)
+git `e2c2e4a` · [note](notes/2026-09-30-blends-and-calibration.md)
+- **Did:** Built blend in vml-eval (claude/eval-blend): two or three bundles as one ranking by mean rank within the test quarter. Checked the screen against the three blends whose backtests exist (decision 19), then read four new blends named beforehand. All inside the 100k floor, cell C's forest seed 23, screen top 10 per quarter, at most 2 per sector. 8 evaluation hashes and 2 new bundles; cell C has 80 configurations on all rows and 23 inside 100k.
+- **Got:** Screen mean excess CAGR / losers: forest alone -0.001 / 0.156; with momentum -0.018 / 0.244; with return on capital +0.014 / 0.162; with earnings yield -0.030 / 0.283; momentum + net payout -0.010 / 0.262; momentum + return on capital +0.006 / 0.214; with a learned upside forest -0.031 / 0.256; momentum + upside -0.037 / 0.294. Return on capital is +0.016 for 2005-12 entries and +0.011 for 2013-20; every other blend is negative after 2013. The upside forest (fwd_3y_cagr >= 0.15) has p@20 0.29 against a base rate of 0.27.
+- **Concluded:** The check failed as written: momentum was predicted 0.01 above the forest alone and is 0.017 below (return on capital 0.015 above, predicted within 0.01; earnings yield held). The backtests' own buys, read one by one over three years from the price panel, side with the screen on the order: per buy +0.001 forest alone, +0.005 momentum, +0.013 return on capital (+0.013 and +0.012 in the two halves), -0.032 earnings yield. Momentum's lead was a time-weighted figure from 2005-11. About a third of the screen's momentum gap is the label convention: 15% of its picks were acquired in the window and are carried flat. The upside model has no skill and is dropped. By decision 19's rule the screen alone does not choose second rankings.
+- **Next:** Decision 21: per-buy outcomes in every backtest report; five backtests (the quality blend on two more seeds, forest + momentum + return on capital, a rank sell discipline on the quality blend and on the candidate).
+
+### 2026-09-30 · forest_features_nonloser_dv1m_3y
+5 runs · `dataset_v1.4` · `fwd_3y_cagr >= 0.0 & fwd_3y_max_drawdown_from_entry < 0.3` · git `1f0f79b` · [summary](../reports/sweeps/forest_features_nonloser_dv1m_3y/forest_features_nonloser_dv1m_3y_summary.md) · [note](notes/2026-09-30-features-and-floor.md)
+- **Did:** See forest_features_nonloser_dv100k_3y: the same five sets trained inside the 1m floor.
+- **Got:** In that entry.
+- **Concluded:** In that entry.
+
+### 2026-09-30 · forest_features_nonloser_dv100k_3y
+5 runs · `dataset_v1.4` · `fwd_3y_cagr >= 0.0 & fwd_3y_max_drawdown_from_entry < 0.3` · git `1f0f79b` · [summary](../reports/sweeps/forest_features_nonloser_dv100k_3y/forest_features_nonloser_dv100k_3y_summary.md) · [note](notes/2026-09-30-features-and-floor.md)
+- **Did:** The same five feature sets trained inside the 100k floor (and, in forest_features_nonloser_dv1m_3y, inside the 1m floor): the training-time liquidity floor of decision 13.1. Reference: the all-rows bundles measured inside the same floor. 10 hashes, 160 fold rows.
+- **Got:** fs0 trained inside against trained on all rows, measured inside the floor: 100k p@20 0.769 / 0.784, PR-AUC 0.601 / 0.602, screen precision 0.753 / 0.766, screen mean excess -0.003 / -0.001; 1m 0.788 / 0.797, 0.615 / 0.618, 0.755 / 0.778, -0.002 / +0.002. Sets without risk ranks: at 1m the floor moves p@20 by +0.003 to +0.056 and mean excess by +0.004 to +0.013; at 100k by -0.031 to +0.012 and -0.004 to +0.005. No arm's screen mean excess is above fs0's in any universe.
+- **Concluded:** The floor changes nothing for the ranks forest, as predicted (the rival, PR-AUC up 0.01 inside the floor, is not supported: -0.001 and -0.003). That it helps the fundamentals sets by 0.02 on p@20 held in one of four comparisons. Features and the floor are not where the upside is in cell C: the candidate's model stays the ranks forest trained on every row, the floor stays in the backtest and the screen. Trials: cell C 77 on all rows, 16 inside 100k, 15 inside 1m.
+- **Next:** Decision 19: second rankings blended with the forest on the screen, first checked against the three blends whose backtests exist.
+
+### 2026-09-30 · forest_features_nonloser_allrows_3y
+5 runs · `dataset_v1.4` · `fwd_3y_cagr >= 0.0 & fwd_3y_max_drawdown_from_entry < 0.3` · git `1f0f79b` · [summary](../reports/sweeps/forest_features_nonloser_allrows_3y/forest_features_nonloser_allrows_3y_summary.md) · [note](notes/2026-09-30-features-and-floor.md)
+- **Did:** Five feature sets in cell C on every row, the candidate's forest, seed 23 (decision 18): the ranks (fs0), ranks without technical (fs1), fs1 plus the 47 unranked scores, shares and flags (fs2, the theory-led set), ranks without the eight risk and liquidity ranks (fs3), fs3 plus the 47 (fs4). Bundles saved and each evaluated inside the 100k and the 1m floor with vml-eval. 15 hashes, 240 fold rows; fs0 reproduces the candidate (p@20 0.788, PR-AUC 0.585).
+- **Got:** All rows, p@20 / screen precision / screen mean excess CAGR / losers: fs0 0.788 / 0.766 / -0.000 / 0.164; fs1 0.659 / 0.619 / -0.028 / 0.248; fs2 0.672 / 0.641 / -0.023 / 0.231; fs3 0.644 / 0.656 / -0.031 / 0.238; fs4 0.666 / 0.661 / -0.031 / 0.234. Inside the floors the same to within 0.01. 2013-20 entries: fs0 mean excess -0.019, the others -0.054 to -0.066 with picks beating SPY 0.28-0.32 of the time. Utilities and real estate are 35-39% of the screen's picks in every arm.
+- **Concluded:** No set passes decision 16's rule; the theory-led sets pick worse on every outcome and pick the same two sectors, ranking on the trend and consistency of operating cash flow once volatility is gone. Predictions: matched for fs0, fs1 and for no arm beating fs0 on the screen; missed for fs2 over fs1 by 0.02 (0.013, PR-AUC lower), for fs3 between fs1 and fs0 (below fs1) and for the sector shares (0.37-0.38 predicted under 0.20). One seed, one forest configuration tuned on the ranks.
+- **Next:** The floor-trained arms (forest_features_nonloser_dv100k_3y, dv1m).
+
+### 2026-09-30 · baseline_factors_nonloser_dv1m_3y
+5 runs · `dataset_v1.4` · `fwd_3y_cagr >= 0.0 & fwd_3y_max_drawdown_from_entry < 0.3` · git `1f0f79b` · [summary](../reports/sweeps/baseline_factors_nonloser_dv1m_3y/baseline_factors_nonloser_dv1m_3y_summary.md) · [note](notes/2026-09-30-features-and-floor.md)
+- **Did:** See baseline_factors_nonloser_dv100k_3y: the same five factors inside the 1m floor.
+- **Got:** In that entry.
+- **Concluded:** In that entry.
+
+### 2026-09-30 · baseline_factors_nonloser_dv100k_3y
+5 runs · `dataset_v1.4` · `fwd_3y_cagr >= 0.0 & fwd_3y_max_drawdown_from_entry < 0.3` · git `1f0f79b` · [summary](../reports/sweeps/baseline_factors_nonloser_dv100k_3y/baseline_factors_nonloser_dv100k_3y_summary.md) · [note](notes/2026-09-30-features-and-floor.md)
+- **Did:** Single-factor bars for cell C inside the 100k floor (and, in baseline_factors_nonloser_dv1m_3y, inside the 1m floor), with the new portfolio screen: top 10 per test quarter, at most 2 per sector. Five factors each, deterministic; 10 hashes, 160 fold rows.
+- **Got:** Screen inside 100k, precision / losers / mean excess CAGR: conservative score 0.62 / 0.245 / -0.006; lowest 36-month volatility 0.74 / 0.167 / -0.025; return on capital 0.52 / 0.347 / -0.052; momentum 0.21 / 0.658 / -0.238; earnings yield 0.25 / 0.573 / -0.200. Inside 1m the same order (conservative 0.63 / 0.241 / -0.002). All test rows inside 100k: losers 0.423, mean excess -0.089.
+- **Concluded:** As expected: the order of the factors is the all-rows order and every factor has fewer losers than on all rows. The conservative score matches the forest's mean excess with more losers and twice the big winners; lowest volatility has the forest's losers and 0.024 less return.
+- **Next:** forest_features_nonloser_allrows_3y.
+
 ### 2026-09-29 · session close 2026-09-30
 git `685c75e`
 - **Did:** Promoted the candidate's forest run, the four sweeps behind it (feature sets, label rungs, pick anatomy, single-factor bars), the three searches in cell C and three backtests (uncapped, capped, capped with momentum). Recorded Carter's closing notes as decision 13 and as the next steps in TODO.md. Built the results branch for the pull request.
