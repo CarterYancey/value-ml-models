@@ -237,7 +237,9 @@ def write_report(
         lines.append(
             f"- **prequential calibration** (`{cal['method']}`): each "
             "fold's scores are calibrated on the pooled out-of-sample "
-            "predictions of earlier folds (min "
+            "predictions of the earlier folds whose outcomes were known "
+            "when the fold's year began (a fold's outcomes are complete "
+            f"{cal.get('label_lag_folds', '?')} years after it; min "
             f"{cal['min_rows']} history rows; no local split "
             "constructed). Calibrated folds: "
             f"{_folds(cal['calibrated_folds'])}; raw for lack of "

@@ -132,7 +132,8 @@ def run_experiment(
         calib = None
         if config.calibration:
             calib = PrequentialCalibration(
-                config.calibration, config.calibration_min_rows
+                config.calibration, config.calibration_min_rows,
+                label_lag_folds=config.horizon_years,
             )
             # prequential calibration consumes folds chronologically
             # (walkforward fold ids are test years)
@@ -246,7 +247,9 @@ def run_experiment(
                                                per_year=False))
             if calib is not None:
                 # history is always raw scores; reported scores may differ
-                calib.observe(raw_scores, test_fit.y, test_fit.sample_weight)
+                calib.observe(
+                    fold, raw_scores, test_fit.y, test_fit.sample_weight
+                )
                 raw_score_arrays.append(np.asarray(raw_scores, dtype=float))
             estimator = getattr(model, "estimator_", None)
             if isinstance(estimator, DecisionTreeClassifier):

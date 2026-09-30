@@ -23,6 +23,18 @@ version), `p@20` picks the top 20 per test year, and they are
 | `fwd_3y_excess_cagr >= 0.08` | random_forest + isotonic | 0.12 | 0.22 | below the base rate |
 | `fwd_1y_excess_cagr >= 0.5 \| fwd_1y_max_drawdown_from_entry < 0.1 & fwd_3y_excess_cagr > 0` | lightgbm | 0.20 | 0.22 | no skill |
 
+*Correction, 2026-09-30.* The "random_forest + isotonic" row is not a
+measurement of that forest's ranking. Its scores were calibrated with
+an isotonic map, which until 2026-09-30 tied every score on the map's
+top step (a top 20 over tied scores is the first 20 rows) and was
+fitted on outcomes not yet observable at the test rows' dates
+([process issues](process-issues.md), found 2026-09-30). The same
+defects took a forest in another cell from p@20 0.79 uncalibrated to
+0.65. "Below the base rate" is therefore unverified for the forest;
+the xgboost row (120 uncalibrated configurations at the base rate) is
+unaffected, and the conclusion below rests on it. The forest has not
+been re-run.
+
 - **Drawdown-constrained compounding looks learnable; large excess
   return does not.** Absolute "compound without a crash" targets beat
   their base rates by 1.5–3×, while "beat SPY by 8 points" sits at the

@@ -86,3 +86,40 @@ Found on 2026-09-28 (night), from the first pick-outcome table:
   low bar, and an excess-return number for picks is read against
   zero, not against the universe. Smoke-test numbers, scratch
   ledger.
+
+Found on 2026-09-30, from the first calibrated run on a 3-year label
+(`forest_nonloser_dd30_isotonic_3y`):
+
+- **Prequential calibration used outcomes from the future.** Fold Y's
+  calibrator was fitted on the test predictions *and outcomes* of
+  every fold before Y. A 3-year label of a 2007 snapshot is not known
+  until 2010, so the calibrator for the 2008 entries had seen what the
+  2005–07 entries went on to do in the crash. It showed as a
+  calibrated run in which no 2008 or 2009 row scored 0.5 or more,
+  while the uncalibrated scores for those years were the highest of
+  the sample. The module's docstring said the history was "strictly
+  earlier"; the test years were, the outcomes were not. **"Earlier
+  fold" is not "known outcome": anything fitted on past predictions
+  may use fold f for fold Y only when f + H < Y.** Fixed on
+  `claude/calibration-label-lag`. Blast radius, checked: the fit, the
+  ranking and every uncalibrated metric were never affected. Three
+  configs set `calibration` (searched in `experiments/` here and on
+  the host): `lgbm_isotonic_3y_beat_spy` has no ledger rows;
+  `forest_isotonic_3y_excess8_relvalue` ran once on the host
+  (2026-09-25, run `0bdb9eb4fef8`, logged under the derived name
+  `random_forest_ranks-relvalue_3y_excess_cagr_ge_0p08_b8251f37`) and
+  is the "random_forest + isotonic" row of
+  [derived-label cells](2026-09-derived-label-cells.md), corrected
+  there; `forest_nonloser_dd30_isotonic_3y`, the run that found it,
+  is not to be read. No final eval used calibration (a holdout run is
+  one fold and has no history to calibrate on). A first search by
+  experiment name found nothing: the host run has a derived name, and
+  it was found by config path. **Search a ledger by config path as
+  well as by name.**
+- **Isotonic calibration tied the top of the ranking.** The same run
+  had p@20 0.65 against the uncalibrated 0.79: an isotonic map is a
+  step function, all scores on its top step became one value, and the
+  top 20 of tied scores are the first 20 rows. The docstring said
+  precision@K was "essentially untouched". Rows on a step now keep
+  their raw order. **A prediction written in the config ("p@20 as in
+  the uncalibrated run") is what caught both.**

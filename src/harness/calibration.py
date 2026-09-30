@@ -1,21 +1,34 @@
 """Prequential post-hoc calibration (TODO Phase 3, PLAN §2).
 
 Boosted/averaged tree scores rank well but are not honest probabilities.
-Calibration learns a monotone map g(score) -> P(positive) — it changes
-no ranking (up to ties isotonic's flat steps introduce), so precision@K
-and the precision-floor family are essentially untouched; what it buys
+Calibration learns a monotone map g(score) -> P(positive). It changes
+no ranking: an isotonic fit is a step function, and the rows on one
+step keep the order of their raw scores (`TIE_BREAK`), so precision@K
+and the precision-floor family are the uncalibrated run's. What it buys
 is *stable, interpretable thresholds*: `thr_for_prec_*` becomes a
 probability you could fix ex ante, and the `score >= p` confidence
 tiers mean what they say.
 
 The calibration data problem is solved prequentially, without
 constructing any local split (invariant 1 intact): when scoring fold Y,
-the pooled out-of-sample test predictions of folds < Y already exist —
-each was produced on its own purged, embargoed test year, all strictly
-earlier than year Y. The calibrator for fold Y is fit on that history
-and applied to fold Y's raw scores; the raw scores then join the
-history for later folds. This mirrors exactly what a live deployment
-would do (calibrate today's model on all past out-of-sample history).
+out-of-sample test predictions of earlier folds already exist, each
+produced on its own purged, embargoed test year. The calibrator for
+fold Y is fit on the folds **whose outcomes were known before year Y
+began** and applied to fold Y's raw scores.
+
+**Which folds those are.** A fold's test rows are the snapshots of one
+year, and a label with an H-year horizon is observed H years after its
+snapshot: fold f's outcomes are complete at the end of year f + H. So
+fold Y may be calibrated on folds f with f + H < Y, and on no later
+one (`label_lag_folds = H`). Until 2026-09-30 every fold < Y was used.
+For a 3-year label that calibrated the 2008 entries on what the 2005,
+2006 and 2007 entries went on to do, which was not known until the end
+of 2008, 2009 and 2010: the calibrator had seen the crash the scores
+were supposed to be read before. The fit itself (the model, its
+ranking, p@K, PR-AUC) was never affected; thresholds on calibrated
+scores, Brier and the calibration curve of a calibrated run were. This
+is what a live deployment can do: calibrate today's model on the
+out-of-sample history whose outcomes have been observed.
 
 Disclosed approximations and limits:
 
@@ -55,6 +68,13 @@ CALIBRATION_METHODS = ("isotonic", "platt")
 
 #: Default minimum pooled history rows before a fold gets calibrated.
 DEFAULT_CALIBRATION_MIN_ROWS = 1000
+
+#: Weight of the raw score in a calibrated score. An isotonic map is a
+#: step function: every raw score on one step gets the same calibrated
+#: value, and a top-K over tied scores is a top-K in row order. Mixing
+#: in a vanishing share of the raw score keeps the raw order within a
+#: step and moves no calibrated value by more than this.
+TIE_BREAK = 1e-6
 
 
 def fit_calibrator(method: str, scores, y_true, sample_weight):
@@ -116,57 +136,84 @@ def fit_calibrator(method: str, scores, y_true, sample_weight):
 
 class PrequentialCalibration:
     """The shared fold loop for the runner and `vml-eval`: feed it each
-    fold's raw out-of-sample scores in chronological order; it calibrates
-    against the folds already seen. Both entry points using this one
-    class is what makes a bundle re-evaluation reproduce the training
-    run's calibrated scores exactly."""
+    fold's raw out-of-sample scores; it calibrates a fold against the
+    earlier folds whose outcomes were known when the fold's year began
+    (`label_lag_folds`, the label's horizon in years; see the module
+    docstring). Both entry points using this one class is what makes a
+    bundle re-evaluation reproduce the training run's calibrated scores
+    exactly. Folds are walk-forward test years."""
 
-    def __init__(self, method: str, min_rows: int):
+    def __init__(self, method: str, min_rows: int, label_lag_folds: int):
         if method not in CALIBRATION_METHODS:
             raise ConfigError(
                 f"unknown calibration method {method!r}; expected one of "
                 f"{list(CALIBRATION_METHODS)} or empty (off)"
             )
+        if int(label_lag_folds) < 1:
+            raise ConfigError(
+                "label_lag_folds is the label's horizon in years and must "
+                f"be >= 1, got {label_lag_folds!r}"
+            )
         self.method = method
         self.min_rows = int(min_rows)
-        self._scores: list[np.ndarray] = []
-        self._y: list[np.ndarray] = []
-        self._w: list[np.ndarray] = []
+        self.label_lag_folds = int(label_lag_folds)
+        #: fold -> (raw scores, outcomes, weights)
+        self._history: dict[int, tuple[np.ndarray, np.ndarray, np.ndarray]] = {}
         #: fold -> True if the fold's scores were calibrated
         self.fold_calibrated: dict[int, bool] = {}
+        #: fold -> the folds its calibrator was fitted on
+        self.fold_history: dict[int, list[int]] = {}
 
-    def history_rows(self) -> int:
-        return int(sum(len(s) for s in self._scores))
+    def usable_folds(self, fold: int) -> list[int]:
+        """The observed folds whose outcomes were complete before
+        `fold`'s year began: f + label_lag_folds < fold."""
+        return sorted(
+            f for f in self._history if f + self.label_lag_folds < fold
+        )
+
+    def history_rows(self, fold: int) -> int:
+        return int(sum(len(self._history[f][0]) for f in self.usable_folds(fold)))
 
     def calibrate(self, fold: int, raw_scores) -> np.ndarray:
         """Calibrated scores for one fold, or the raw scores unchanged
-        when the pooled history is still below `min_rows` (or cannot
-        support a fit). Call in chronological fold order."""
+        when the usable history is still below `min_rows` (or cannot
+        support a fit)."""
         raw = np.asarray(raw_scores, dtype=float)
         transform = None
-        if self.history_rows() >= self.min_rows:
+        usable = self.usable_folds(fold)
+        if usable and self.history_rows(fold) >= self.min_rows:
             transform = fit_calibrator(
                 self.method,
-                np.concatenate(self._scores),
-                np.concatenate(self._y),
-                np.concatenate(self._w),
+                *(
+                    np.concatenate([self._history[f][i] for f in usable])
+                    for i in range(3)
+                ),
             )
         self.fold_calibrated[fold] = transform is not None
-        return raw if transform is None else transform(raw)
+        self.fold_history[fold] = usable if transform is not None else []
+        if transform is None:
+            return raw
+        # rows on one isotonic step keep the order of their raw scores
+        return (1.0 - TIE_BREAK) * transform(raw) + TIE_BREAK * raw
 
-    def observe(self, raw_scores, y_true, sample_weight) -> None:
-        """Add one fold's raw out-of-sample predictions to the history
+    def observe(self, fold: int, raw_scores, y_true, sample_weight) -> None:
+        """Record one fold's raw out-of-sample predictions and outcomes
         (always raw — calibrators map raw scores, never re-calibrated
-        ones). Call after `calibrate` for the same fold."""
-        self._scores.append(np.asarray(raw_scores, dtype=float))
-        self._y.append(np.asarray(y_true, dtype=float))
-        self._w.append(np.asarray(sample_weight, dtype=float))
+        ones). They enter a later fold's calibrator only once their
+        outcomes were observable (`usable_folds`)."""
+        self._history[int(fold)] = (
+            np.asarray(raw_scores, dtype=float),
+            np.asarray(y_true, dtype=float),
+            np.asarray(sample_weight, dtype=float),
+        )
 
     def summary(self) -> dict:
         """Report fragment: which folds were calibrated, which stayed raw."""
         return {
             "method": self.method,
             "min_rows": self.min_rows,
+            "label_lag_folds": self.label_lag_folds,
+            "fold_history": dict(sorted(self.fold_history.items())),
             "calibrated_folds": sorted(
                 f for f, c in self.fold_calibrated.items() if c
             ),
