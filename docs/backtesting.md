@@ -32,7 +32,15 @@ five-model AllProb screen):
   and a holding whose snapshot aged out of the cross-section fails).
   The sell criteria default to the buy criteria; an optional `[sell]`
   section (own `min_score`/`min_scores`/`filters`) states a hysteresis
-  band explicitly (buy > 0.7, sell < 0.5). New portfolio-management
+  band explicitly (buy > 0.7, sell < 0.5). `[sell] max_rank_pct = 0.3`
+  adds a criterion relative to the month's cross-section: a holding is
+  sold once it is no longer among the top 30% of the month's buy
+  candidates by combined score (after every buy screen), or is not a
+  candidate at all. A score floor means different things in different
+  years (fold models score hotter before a crash than after one) and a
+  `mean_rank` combination has no score to floor; the rank criterion
+  works for both, with the band between the top K that is bought and
+  the top share that is kept as the hysteresis. New portfolio-management
   ideas plug in as new `Strategy` classes without touching the engine;
 - an optional **group cap**, `[portfolio] max_per_group = 2`: at each
   rebalance the candidates are walked in score order and a stock is
