@@ -334,3 +334,135 @@ Recorded as next steps in TODO.md ("Next, from the session of
 4. **A sell discipline** goes on the list, and pairs with
    calibration: buy on high confidence, sell or rebalance when it
    falls.
+
+## Session of 2026-09-30 (second), decisions 14 onwards
+
+Carter opened the session with the thesis restated and the stop rules
+still lifted ("do anything you feel is best to reach this goal", every
+decision logged, code on a feature branch). He added, in the same
+session, that the 0.65 precision and the small number of picks are
+aims, not limits (already recorded above, "Clarified by Carter"). Not
+lifted, as before: the hard invariants, the branch workflow, the rules
+under "Before writing a conclusion". No holdout look, promotion, pull
+request into `Claude` or deployment is made under this log.
+
+Lab branch: `claude/lab-2026-09-30`, off `claude/lab-2026-09-28` with
+`Claude` merged in (the session's checkout was `Claude` itself, which
+is never committed to).
+
+### 14. Build the three tools Carter's notes ask for before running anything
+
+*Decided:* one feature branch, `claude/universe-and-portfolio-screen`
+(off `Claude`, merged into the lab branch), with:
+
+1. **`[[universe]]`**, a declared row filter on manifest feature
+   columns, for the training-time liquidity floor (decision 13.1);
+2. **`[pick_screen]`**, the backtest template's selection rule (top K
+   per test quarter, a cap per sector) applied to the test rows, with
+   the picks' share by sector (TODO "Sector cap in the pick-outcome
+   screen");
+3. **selection by score**: what every row at or above a score
+   threshold went on to do, mean beside median, per year, years
+   without a pick shown (decision 13.2);
+4. boolean flags as model inputs (decision 17).
+
+*Why first:* each of the experiments Carter named needs one of them,
+and the screen decides how every later sweep is read. The top-20-a-year
+tables said cell C's picks matched SPY at a third of the drawdown; the
+portfolio of those picks was one sector (findings, conclusion 6). A
+screen that picks what the backtest buys makes a sweep worth reading
+without a backtest per arm.
+
+*Checked on real data before use:* the candidate's forest (run
+`53ceedd93e6d`) under the screen (top 10 per quarter, at most 2 per
+sector, rows with `dollar_volume_3m >= 100000`) picks 180 distinct
+stocks in 640 picks; its backtest under the same rule bought 178. Mean
+excess CAGR of the screen's picks −0.001 (the backtest: 9.74% a year
+against SPY's 9.58%). A smoke run outside the ledger; the same
+evaluation is repeated through the ledger below.
+
+### 15. What a universe is, and how it is counted
+
+*Decided:*
+
+- A universe qualifies the ledger cell: runs inside one are logged
+  under `label [universe: ...]`. Base rates and baselines differ
+  inside a universe (cell C's base rate is 0.25 below 10,000 a day of
+  dollar volume and 0.55 above 100 million), so its numbers are never
+  set beside an all-rows run's.
+- Reports state two counts: configurations in the universe's cell, and
+  against the label in any universe. A universe is not a clean slate.
+- The sealed holdout stays per label: a look inside a universe would
+  consume the label's cell.
+- `universe_scope = "test"` (train on every row, evaluate inside) is
+  the reference arm: without it a training-time floor cannot be told
+  apart from a test-time one.
+- A bundle trained inside a universe is refused by a backtest that
+  does not screen on the same filters.
+- Floors, fixed before any run: `dollar_volume_3m >= 100000` (the
+  backtest template's investability filter, decision 6) and
+  `dollar_volume_3m >= 1000000` (ten times it; leaves out 45% of test
+  rows against 19–29%). Nominal dollars: the floor is looser in later
+  years (the 25th percentile of test rows is 85,000 in 2005 and
+  517,000 in 2020). A rank floor would be era-neutral; the template
+  uses dollars, so the experiments do.
+
+*Why it is not a split or a feature:* upstream tags still assign every
+row its role; the filter leaves rows out of both sides and reads only
+what was known at the snapshot. `sample_weight_3y` is kept as shipped:
+leaving a stock's illiquid quarters out makes its remaining rows
+slightly more unique than their weights say, which under-weights them
+a little and inflates nothing.
+
+### 16. Sweeps are read on the portfolio screen first
+
+*Decided:* from this session, a sweep's arms are compared on the
+screen with the template's rule, fixed here: **top 10 per test
+quarter, at most 2 per sector**. In this order: mean excess CAGR of
+the screen's picks (an equal-weighted portfolio earns the mean;
+decision 13.2) with the median beside it, the share of losers
+(`fwd_3y_cagr < 0`) and of deep drawdowns, the precision on the run's
+label, each by entry period (2005–12, 2013–20) before pooled. p@20 and
+PR-AUC stay the metrics of record for ranking inside a cell.
+
+*What would send an arm to a backtest:* a mean excess CAGR on the
+screen at least 0.01 a year above the reference arm's in the same
+universe, not more than 0.01 below it in either period, with losers at
+0.20 or less. Fixed before the first sweep. An arm that passes on one
+seed is run on three before it is backtested.
+
+*Caveat:* the screen is still equal weights, no costs, entry at the
+snapshot, held three years; and it cannot read a combination of two
+models, which is what the candidate is.
+
+### 17. Boolean flags are handed to models as 0/1 with NULL kept
+
+*Decided:* route (b) of the TODO item on non-numeric columns, for the
+boolean flags only (`harness.dataset.feature_matrix`).
+
+*Why:* the flags carry what a value investor looks at first (two
+years of losses, negative equity, the nine Piotroski signals) and
+could not be selected at all: a nullable boolean reaches pandas as an
+object column. Storing True as 1.0 and False as 0.0 changes the
+representation of a value, row by row, and reads no other row or
+column; it is not a derived feature (invariant 4). NULL stays NaN
+because a NULL flag means "unknown" (data/features.md), not "failed".
+Strings and dates (`sector`, `industry`, `fund_datekey`) stay out.
+
+### 18. The feature sets, named before the run
+
+*Decided:* five sets in cell C, one forest configuration (the
+candidate's), seed 23:
+
+| | set | columns | the question |
+|---|---|---|---|
+| fs0 | the `ranks` group | 112 | the reference |
+| fs1 | ranks without the technical family | 97 | fundamentals as ranks (run before on all rows: p@20 0.66) |
+| fs2 | fs1 plus the 47 columns upstream ships unranked because they are already comparable across quarters: the Piotroski and Mohanram scores and the nine signals, the `*_up_frac_*` and `ocf_positive_frac_*` consistency shares, the dividend record (`div_*_10y`), the own-history valuation percentiles (`*_5y_pctile`), filing age and the loss, negative-equity and negative-EBITDA flags | 144 | Carter's theory-led set: cash generation, balance sheet, profitability, consistency. None of the 47 has been a model input on v1.4 in these cells. |
+| fs3 | ranks without the eight risk, size and liquidity ranks (`vol_12m`, `vol_36m`, `beta_12m`, `max_ret_21d`, `conservative_score`, `log_marketcap`, `dollar_volume_3m`, `amihud_12m`) | 104 | the dominant columns excluded, price trend kept |
+| fs4 | fs3 plus the 47 | 151 | everything with a story, nothing that measures risk or liquidity directly |
+
+On all rows (bundles saved, then evaluated inside each floor without
+refitting) and trained inside each floor: 15 fits. The five all-rows
+fits are five more configurations in cell C (the screen is in the
+hash).
