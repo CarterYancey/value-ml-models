@@ -1,6 +1,6 @@
 # Portfolio backtest — bt_nonloser_mom_top10_cap2_s1776
 
-- run `a1c54ae28c5f`, git `67085188347ba3b65da380d4f8f0329ff997ac3f`, backtest config `5552bd33d02ed4e4`
+- run `2cdba00157e0`, git `c3ff72fce9c700ba3c45604a87d9fd4b9d250363`, backtest config `5552bd33d02ed4e4`
 - dataset `1.4`, price panel `prices_v1.0` (benchmark `SPY`)
 - buy window: 2005–2020 (last buy 2020-12-31), valuation through 2023-12-29; trade years past a bundle's walk-forward folds are served by `model_update = "refit"` (see the bundle list below)
 - deposits: 1,000.00 on the first trading day of each month, identically into both legs
@@ -89,6 +89,30 @@ Shares of the number of buys. A portfolio whose buys sit in one group is one bet
 | 2018 | 101  | 32     | 10     | Industrials        | 18.81%        |
 | 2019 | 107  | 33     | 9      | Utilities          | 16.82%        |
 | 2020 | 89   | 29     | 9      | Consumer Defensive | 19.10%        |
+
+## What the buys went on to do
+
+Every buy read on its own, over the 1, 3 years after its trade date, from the price panel: `mean_excess` and `median_excess` are the buys' annualized return minus the benchmark's over the same dates, `beat` the share above it, `lost` the share with a negative return, `early_exit` the share that stopped printing before the horizon (they exit at the final print and the proceeds ride the benchmark to the horizon, as a portfolio reinvests what an acquisition pays out). `n` counts the buys whose horizon ends inside the valuation window. One buy, one vote, no costs: this reads the selection, where the headline reads the portfolio (time-weighted return gives the small early portfolio the weight of the large late one; money-weighted return the reverse).
+
+| year     | buys | n_1y | mean_excess_1y | median_excess_1y | beat_1y | lost_1y | early_exit_1y | n_3y | mean_excess_3y | median_excess_3y | beat_3y | lost_3y | early_exit_3y |
+| -------- | ---- | ---- | -------------- | ---------------- | ------- | ------- | ------------- | ---- | -------------- | ---------------- | ------- | ------- | ------------- |
+| 2005     | 105  | 105  | 8.01%          | 2.87%            | 56.19%  | 28.57%  | 16.19%        | 105  | 3.67%          | 3.11%            | 64.76%  | 31.43%  | 34.29%        |
+| 2006     | 117  | 117  | -1.17%         | -2.10%           | 43.59%  | 33.33%  | 14.53%        | 117  | -2.38%         | 0.75%            | 53.85%  | 81.20%  | 17.09%        |
+| 2007     | 117  | 117  | 2.78%          | -0.41%           | 49.57%  | 70.94%  | 0.85%         | 117  | 7.18%          | 7.22%            | 77.78%  | 46.15%  | 0.85%         |
+| 2008     | 120  | 120  | 3.48%          | 2.62%            | 54.17%  | 76.67%  | 4.17%         | 120  | 4.34%          | 4.72%            | 71.67%  | 24.17%  | 11.67%        |
+| 2009     | 115  | 115  | -1.56%         | -3.46%           | 42.61%  | 21.74%  | 2.61%         | 115  | 2.33%          | 1.45%            | 53.04%  | 1.74%   | 6.09%         |
+| 2010     | 120  | 120  | 13.44%         | 15.15%           | 65.00%  | 14.17%  | 18.33%        | 120  | 3.88%          | 5.88%            | 61.67%  | 8.33%   | 30.83%        |
+| 2011     | 115  | 115  | 8.31%          | 7.72%            | 59.13%  | 27.83%  | 7.83%         | 115  | 2.30%          | 1.56%            | 53.91%  | 6.09%   | 7.83%         |
+| 2012     | 112  | 112  | -3.74%         | -7.48%           | 35.71%  | 19.64%  | 8.93%         | 112  | -2.59%         | -0.98%           | 43.75%  | 17.86%  | 8.93%         |
+| 2013     | 119  | 119  | -0.05%         | -3.60%           | 45.38%  | 17.65%  | 2.52%         | 119  | 0.96%          | 2.28%            | 60.50%  | 17.65%  | 3.36%         |
+| 2014     | 108  | 108  | 9.86%          | 12.38%           | 67.59%  | 23.15%  | 0.00%         | 108  | 1.52%          | 5.01%            | 62.04%  | 21.30%  | 8.33%         |
+| 2015     | 117  | 117  | 3.62%          | 0.67%            | 51.28%  | 35.90%  | 4.27%         | 117  | -5.58%         | -3.78%           | 39.32%  | 30.77%  | 10.26%        |
+| 2016     | 113  | 113  | -6.05%         | -4.90%           | 38.05%  | 24.78%  | 2.65%         | 113  | -2.29%         | 0.65%            | 52.21%  | 17.70%  | 7.96%         |
+| 2017     | 112  | 112  | -3.52%         | -4.85%           | 41.96%  | 32.14%  | 5.36%         | 112  | -2.40%         | -0.82%           | 45.54%  | 27.68%  | 18.75%        |
+| 2018     | 101  | 101  | 9.47%          | 6.87%            | 75.25%  | 17.82%  | 8.91%         | 101  | 0.52%          | 1.30%            | 55.45%  | 9.90%   | 11.88%        |
+| 2019     | 107  | 107  | -6.50%         | -7.01%           | 37.38%  | 37.38%  | 2.80%         | 107  | -4.11%         | -5.58%           | 26.17%  | 18.69%  | 2.80%         |
+| 2020     | 89   | 89   | -22.54%        | -23.20%          | 12.36%  | 32.58%  | 3.37%         | 89   | -8.11%         | -6.48%           | 24.72%  | 34.83%  | 10.11%        |
+| all buys | 1787 | 1787 | 1.16%          | -0.60%           | 48.80%  | 32.40%  | 6.49%         | 1787 | 0.09%          | 1.00%            | 53.44%  | 24.73%  | 11.92%        |
 
 ## Coverage & diagnostics
 

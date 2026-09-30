@@ -1,6 +1,6 @@
 # Portfolio backtest — bt_nonloser_mom_top10_cap2_s232
 
-- run `c46d7531856e`, git `67085188347ba3b65da380d4f8f0329ff997ac3f`, backtest config `ddaa9da1a75bb1eb`
+- run `67bc737af73a`, git `c3ff72fce9c700ba3c45604a87d9fd4b9d250363`, backtest config `ddaa9da1a75bb1eb`
 - dataset `1.4`, price panel `prices_v1.0` (benchmark `SPY`)
 - buy window: 2005–2020 (last buy 2020-12-31), valuation through 2023-12-29; trade years past a bundle's walk-forward folds are served by `model_update = "refit"` (see the bundle list below)
 - deposits: 1,000.00 on the first trading day of each month, identically into both legs
@@ -90,6 +90,30 @@ Shares of the number of buys. A portfolio whose buys sit in one group is one bet
 | 2019 | 109  | 35     | 9      | Industrials        | 16.51%        |
 | 2020 | 88   | 29     | 9      | Consumer Defensive | 22.73%        |
 
+## What the buys went on to do
+
+Every buy read on its own, over the 1, 3 years after its trade date, from the price panel: `mean_excess` and `median_excess` are the buys' annualized return minus the benchmark's over the same dates, `beat` the share above it, `lost` the share with a negative return, `early_exit` the share that stopped printing before the horizon (they exit at the final print and the proceeds ride the benchmark to the horizon, as a portfolio reinvests what an acquisition pays out). `n` counts the buys whose horizon ends inside the valuation window. One buy, one vote, no costs: this reads the selection, where the headline reads the portfolio (time-weighted return gives the small early portfolio the weight of the large late one; money-weighted return the reverse).
+
+| year     | buys | n_1y | mean_excess_1y | median_excess_1y | beat_1y | lost_1y | early_exit_1y | n_3y | mean_excess_3y | median_excess_3y | beat_3y | lost_3y | early_exit_3y |
+| -------- | ---- | ---- | -------------- | ---------------- | ------- | ------- | ------------- | ---- | -------------- | ---------------- | ------- | ------- | ------------- |
+| 2005     | 108  | 108  | 9.16%          | 4.44%            | 59.26%  | 27.78%  | 13.89%        | 108  | 3.33%          | 3.23%            | 63.89%  | 32.41%  | 25.93%        |
+| 2006     | 116  | 116  | -0.19%         | -4.07%           | 43.97%  | 31.03%  | 14.66%        | 116  | 0.87%          | 2.19%            | 59.48%  | 79.31%  | 17.24%        |
+| 2007     | 119  | 119  | 4.81%          | 1.26%            | 53.78%  | 68.07%  | 3.36%         | 119  | 7.57%          | 6.34%            | 81.51%  | 50.42%  | 3.36%         |
+| 2008     | 119  | 119  | 3.46%          | 2.88%            | 56.30%  | 76.47%  | 4.20%         | 119  | 3.90%          | 4.35%            | 70.59%  | 26.05%  | 11.76%        |
+| 2009     | 114  | 114  | 0.17%          | -2.28%           | 42.98%  | 17.54%  | 2.63%         | 114  | 2.24%          | 1.46%            | 55.26%  | 1.75%   | 6.14%         |
+| 2010     | 117  | 117  | 14.27%         | 13.99%           | 64.10%  | 14.53%  | 18.80%        | 117  | 3.41%          | 5.60%            | 61.54%  | 10.26%  | 31.62%        |
+| 2011     | 115  | 115  | 7.19%          | 6.86%            | 58.26%  | 30.43%  | 5.22%         | 115  | 2.48%          | 1.56%            | 53.91%  | 6.09%   | 5.22%         |
+| 2012     | 109  | 109  | -3.52%         | -5.31%           | 38.53%  | 19.27%  | 7.34%         | 109  | -1.53%         | -0.14%           | 49.54%  | 18.35%  | 7.34%         |
+| 2013     | 120  | 120  | -2.56%         | -3.27%           | 45.00%  | 18.33%  | 2.50%         | 120  | 0.21%          | 1.32%            | 58.33%  | 16.67%  | 3.33%         |
+| 2014     | 106  | 106  | 10.03%         | 12.90%           | 68.87%  | 21.70%  | 0.00%         | 106  | 2.52%          | 5.83%            | 63.21%  | 18.87%  | 9.43%         |
+| 2015     | 116  | 116  | 3.06%          | -0.23%           | 49.14%  | 38.79%  | 4.31%         | 116  | -5.09%         | -2.82%           | 38.79%  | 28.45%  | 10.34%        |
+| 2016     | 115  | 115  | -6.30%         | -6.85%           | 37.39%  | 25.22%  | 0.00%         | 115  | -2.25%         | 0.56%            | 50.43%  | 16.52%  | 5.22%         |
+| 2017     | 111  | 111  | -2.38%         | -4.35%           | 44.14%  | 30.63%  | 5.41%         | 111  | -2.10%         | -0.57%           | 46.85%  | 27.93%  | 18.92%        |
+| 2018     | 101  | 101  | 10.17%         | 7.15%            | 74.26%  | 18.81%  | 5.94%         | 101  | 3.74%          | 2.89%            | 60.40%  | 6.93%   | 8.91%         |
+| 2019     | 109  | 109  | -6.70%         | -7.01%           | 36.70%  | 38.53%  | 2.75%         | 109  | -4.02%         | -5.28%           | 28.44%  | 19.27%  | 2.75%         |
+| 2020     | 88   | 88   | -24.06%        | -25.14%          | 15.91%  | 39.77%  | 0.00%         | 88   | -8.98%         | -7.37%           | 20.45%  | 40.91%  | 6.82%         |
+| all buys | 1783 | 1783 | 1.34%          | -0.23%           | 49.58%  | 32.53%  | 5.78%         | 1783 | 0.54%          | 1.30%            | 54.51%  | 25.01%  | 10.94%        |
+
 ## Coverage & diagnostics
 
 - rebalance months: 192; months with **no** qualifying picks (cash held): 0; months with fewer than top_k=10 picks: 90
@@ -110,7 +134,7 @@ Shares of the number of buys. A portfolio whose buys sit in one group is one bet
 
 ## Provenance
 
-- backtest configurations tried against dataset `1.4`: 11 (this one included; every run is logged, failures too)
+- backtest configurations tried against dataset `1.4`: 13 (this one included; every run is logged, failures too)
 - fold definitions: `data/datasets/dataset_v1.4/split_folds.parquet` (frozen upstream; the buy window is the intersection of every bundle's fold years)
 - model bundles:
 - `forest_nonloser_dd30_3y_s232` — label `fwd_3y_cagr >= 0.0 & fwd_3y_max_drawdown_from_entry < 0.3` (3y), model `random_forest`, config `013621dbe24966cb`, train run `de629f13deec`, folds 2005–2020 (from `experiments/models/forest_nonloser_dd30_3y_s232_de629f13deec`)

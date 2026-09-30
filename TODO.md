@@ -674,6 +674,69 @@ in [PLAN.md](PLAN.md); check items off (and add new ones) as work proceeds.
       `n_estimators`) at full budget via a follow-up sweep file — no
       harness change needed, just two sweep configs.
 
+### Next, from the second session of 2026-09-30 (decisions 14-24)
+
+The candidate is now cell C's forest, 12-month momentum and return on
+capital by mean rank (docs/findings.md, "State";
+docs/notes/2026-09-30-backtests.md). Start a new session there.
+
+- [ ] **Carter: pull requests for the session's code.** Five feature
+      branches, stacked; `claude/backtest-buy-outcomes` contains all
+      of them and is the one to open against `Claude`
+      (`gh pr create --base Claude --head claude/backtest-buy-outcomes`):
+      `claude/universe-and-portfolio-screen` (`[[universe]]`,
+      `[pick_screen]`, selection by score, boolean flags),
+      `claude/eval-blend` (`blend` in vml-eval),
+      `claude/calibration-label-lag` (**a look-ahead fix**: calibration
+      was fitted on outcomes not yet known; and isotonic ties),
+      `claude/backtest-rank-sell` (`[sell] max_rank_pct`),
+      `claude/backtest-buy-outcomes` (per-buy table in every backtest
+      report). 484 tests pass on the combined branch.
+- [ ] **Carter: one holdout look** in cell C's 3y cell with
+      `experiments/forest_nonloser_dd30_3y.toml` (unchanged: the
+      candidate's forest is the forest of decision 10).
+- [ ] **Carter: decide whether the backtest engine may trade 2021-23
+      for the candidate** (year-end refits; overlaps the holdout era,
+      so it was not run). It is the only evidence outside the buy
+      years short of live trading: every portfolio trailed SPY in 2021.
+- [ ] **Carter: promotion.** Worth keeping: the three-way blend's
+      backtests (three seeds, fractional shares, sell discipline),
+      the quality blend's, the feature-set and floor sweeps, the
+      blend evaluations, the calibrated run after the fix, the 1-year
+      cell. Notes: docs/notes/2026-09-30-*.md.
+- [ ] **Deploy and paper-trade the candidate** beside its
+      sell-discipline variant. `vml-predict` ranks one model at a
+      time and orders several by mean rank; the two factors are
+      columns of the inference data, so the blend is the mean rank of
+      the forest's score, `mom_12_2_rank` and `roc_greenblatt_rank`
+      inside the liquidity floor, at most 2 per sector. A small
+      `vml-predict` option for rank-factor bundles would make that
+      one command.
+- [ ] **No further backtests on buys of 2005-2020** (decision 24: 26
+      configurations tried). New ideas are screened on
+      `[pick_screen]` and on the per-buy table of an existing run.
+- [ ] **A position cap** in the strategy (`Strategy` interface): the
+      quality blend buys 94 stocks in sixteen years and its two
+      largest holdings are a third of it with the sell discipline;
+      the candidate's largest is 8%. Stop adding to a holding above a
+      share of the portfolio.
+- [ ] **Why the screen is about 0.02 a year harsher on blends with
+      momentum than the backtests' own buys.** A third is the
+      delisting convention; entry timing (the snapshot against the
+      first trading days of the next quarter) is the untested rest.
+      A screen that enters at the next quarter's first month would
+      test it (needs an upstream outcome, or the price panel in the
+      screen).
+- [ ] **A parameter search on the theory-led feature set** (fs2 of
+      decision 18) before its verdict is final: it was run on a
+      forest configuration tuned on the ranks. Low priority: 20 draws
+      moved PR-AUC by 0.005 on the ranks.
+- [ ] **Upstream request: market-state features** (PLAN 5.6). A
+      confidence that means the same in 2008 and 2012 cannot come
+      from a stock's own columns: calibrated or not, thresholds
+      select years (docs/notes/2026-09-30-blends-and-calibration.md,
+      2026-09-30-one-year-cell.md).
+
 ### Next, from the session of 2026-09-29/30 (Carter's notes, decision 13)
 
 The candidate and its evidence: docs/findings.md, "State";
@@ -686,7 +749,7 @@ docs/notes/2026-09-29-decisions.md. Start a new session there.
       `claude/backtest-sector-cap`. (Carter, 2026-09-30: the consumed
       cells were opened on older dataset versions and simpler labels;
       their counts should not stop experiments.)
-- [ ] **Sell discipline** for the candidate (2026-09-30: run as a
+- [x] **Sell discipline** for the candidate (2026-09-30: run as a
       rank criterion, `[sell] max_rank_pct = 0.2`, on the candidate
       and on the quality blend, decision 21; results in
       docs/notes/2026-09-30-backtests.md): one backtest with
@@ -785,13 +848,18 @@ docs/notes/2026-09-29-decisions.md. Start a new session there.
 - [ ] Ranking metric for boosted-family searches: p@K over 2013-20
       of the worst seed, not PR-AUC (the two order LightGBM and
       XGBoost draws in opposite directions).
-- [ ] Whole shares at 100 a pick leave 55-108 of 192 months short of
+- [x] Whole shares at 100 a pick leave 55-108 of 192 months short of
       10 buys in the capped backtests; consider `fractional_shares`
       or a larger monthly deposit in the template, stated as a
-      template change.
-- [ ] Why 134 delisting liquidations with momentum against 52
+      template change. (2026-09-30: the candidate re-run with
+      fractional shares: 12.12% against 12.24% time-weighted,
+      936,540 against 948,956. The template is unchanged.)
+- [x] Why 134 delisting liquidations with momentum against 52
       without: takeover targets? Read the trades CSV of the promoted
-      backtest.
+      backtest. (2026-09-30: yes. Mean total return of the 134 is
+      +79%, median +39%, 21% at a loss; 33 are within 10% of cost,
+      bought a median three months before the delisting.
+      docs/notes/2026-09-30-blends-and-calibration.md)
 
 ## 3.5 — Downturn specialization (PLAN §4 Phase 3.5)
 
