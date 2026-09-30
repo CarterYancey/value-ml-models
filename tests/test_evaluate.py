@@ -231,3 +231,89 @@ def test_bundle_refuses_tampered_metadata(trained, tmp_path):
 def test_load_refuses_non_bundle(tmp_path):
     with pytest.raises(ModelBundleError, match="not a model bundle"):
         ModelBundle.load(tmp_path)
+
+
+def test_blend_scores_is_mean_rank_within_period():
+    import numpy as np
+
+    from harness.evaluate import blend_scores
+
+    a = [0.9, 0.1, 0.5, 0.2, 0.8]
+    b = [1.0, 3.0, float("nan"), 5.0, 4.0]
+    periods = [1, 1, 1, 2, 2]
+    out = blend_scores([a, b], periods)
+    # period 1: a ranks 3,1,2 of 3; b ranks 1,2 of 2 (the NaN is skipped)
+    assert out[0] == pytest.approx((3 / 3 + 1 / 2) / 2)
+    assert out[1] == pytest.approx((1 / 3 + 2 / 2) / 2)
+    assert out[2] == pytest.approx(2 / 3)  # ranked on model a alone
+    # period 2 is ranked on its own rows
+    assert out[3] == pytest.approx((1 / 2 + 2 / 2) / 2)
+    assert out[4] == pytest.approx((2 / 2 + 1 / 2) / 2)
+    # ties share the better rank; -inf ranks last
+    tied = blend_scores([[0.5, 0.5, float("-inf")]], [1, 1, 1])
+    assert tied.tolist() == pytest.approx([1.0, 1.0, 1 / 3])
+
+
+def test_blended_evaluation_is_its_own_configuration(
+    data_root, wf_bundle_dir, tmp_path
+):
+    from harness.config import EvalConfig, ExperimentConfig
+    from harness.errors import ConfigError
+    from harness.evaluate import evaluate_bundle
+    from harness.results import ResultsStore
+    from harness.runner import run_experiment
+
+    factor = run_experiment(
+        ExperimentConfig.from_dict(
+            {
+                "name": "factor_b2m",
+                "dataset_version": "dataset_v0.0-test",
+                "scheme": "walkforward",
+                "label": "label_3y_beat_spy",
+                "feature_groups": ["ranks"],
+                "top_k": [5],
+                "model": {"name": "rank_factor",
+                          "rank_column": "book_to_market_rank"},
+            }
+        ),
+        data_root=data_root,
+        results_path=tmp_path / "results.csv",
+        reports_dir=tmp_path / "reports",
+        models_dir=tmp_path / "models",
+    )
+    kwargs = dict(
+        data_root=data_root,
+        results_path=tmp_path / "results.csv",
+        reports_dir=tmp_path / "reports",
+    )
+    plain = evaluate_bundle(
+        wf_bundle_dir, EvalConfig.from_dict({"name": "plain", "top_k": [5]}),
+        **kwargs,
+    )
+    blended = evaluate_bundle(
+        wf_bundle_dir,
+        EvalConfig.from_dict(
+            {"name": "blend", "top_k": [5],
+             "blend": [str(factor["model_bundle"])]}
+        ),
+        **kwargs,
+    )
+    rows = ResultsStore(tmp_path / "results.csv").load()
+    hashes = {
+        name: set(rows[rows["run_id"] == s["run_id"]]["config_hash"])
+        for name, s in (("plain", plain), ("blend", blended))
+    }
+    assert hashes["plain"] != hashes["blend"]
+    report = blended["report_path"].read_text()
+    assert "**blend**" in report and "factor_b2m" in report
+    # a ranking: no Brier in a blended evaluation
+    assert all(
+        "brier" not in fr["metrics"] or fr["metrics"]["brier"] != fr["metrics"]["brier"]
+        for fr in blended["fold_results"]
+    )
+    with pytest.raises(ConfigError, match="is the evaluated bundle"):
+        evaluate_bundle(
+            wf_bundle_dir,
+            EvalConfig.from_dict({"name": "self", "blend": [str(wf_bundle_dir)]}),
+            **kwargs,
+        )
