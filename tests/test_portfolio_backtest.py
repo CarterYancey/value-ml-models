@@ -5,6 +5,8 @@ deposits, everything logged."""
 
 import json
 
+import numpy as np
+
 import pandas as pd
 import pytest
 
@@ -503,3 +505,52 @@ def test_rank_sell_backtest_end_to_end(
         / f"bt_rank_sell_{config.config_hash}.md"
     ).read_text()
     assert "sell rank: a held position is sold once it is no longer among the top 34%" in report
+
+def test_buy_outcomes_read_each_buy_against_the_benchmark():
+    from portfolio.report import buy_outcome_table, buy_outcomes
+
+    days = pd.bdate_range("2010-01-04", "2014-12-31")
+    n = np.arange(len(days), dtype=float)
+    bench = pd.Series(100.0 * 1.10 ** (n / 261.0), index=days)
+    grower = pd.Series(10.0 * 1.20 ** (n / 261.0), index=days)
+    # stops printing after six months, 30% up: an acquisition
+    acquired = pd.Series(
+        np.linspace(10.0, 13.0, 130), index=days[:130]
+    )
+
+    class Panel:
+        benchmark = bench
+
+        def series(self, asset):
+            return {1: grower, 2: acquired}.get(asset)
+
+    trades = pd.DataFrame(
+        {
+            "asset": [1, 2, 1, 3],
+            "date": [days[0], days[0], days[-100], days[0]],
+            "side": ["buy", "buy", "buy", "sell"],
+            "price": [10.0, 10.0, float(grower.iloc[-100]), 1.0],
+            "gross": [100.0, 100.0, 100.0, 5.0],
+        }
+    )
+    out = buy_outcomes(trades, Panel(), days[-1])
+    assert len(out) == 3  # the sell is not a buy
+    first, second, late = out.iloc[0], out.iloc[1], out.iloc[2]
+    assert first["excess_1y"] == pytest.approx(0.10, abs=0.01)
+    assert first["excess_3y"] == pytest.approx(0.10, abs=0.01)
+    assert first["early_exit_3y"] == 0.0
+    # +30% in six months, then the benchmark's 10% a year: about +37%
+    # over the year against the benchmark's 10%, not +30% held flat
+    assert second["early_exit_1y"] == 1.0
+    assert second["return_1y"] == pytest.approx(1.30 * 1.10 ** 0.5 - 1, abs=0.02)
+    assert second["excess_3y"] > 0
+    # a buy whose horizon ends after the valuation date has no outcome
+    assert np.isnan(late["excess_1y"]) and np.isnan(late["excess_3y"])
+
+    table = buy_outcome_table(out)
+    assert table["year"].tolist() == [2010, 2014, "all buys"]
+    pooled = table.iloc[-1]
+    assert pooled["buys"] == 3 and pooled["n_3y"] == 2
+    assert pooled["beat_3y"] == 1.0 and pooled["lost_3y"] == 0.0
+    assert pooled["early_exit_3y"] == 0.5
+    assert buy_outcome_table(out.iloc[:0]).empty

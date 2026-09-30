@@ -36,6 +36,8 @@ from portfolio.prices import (
     stock_price_source,
 )
 from portfolio.report import (
+    buy_outcome_table,
+    buy_outcomes,
     headline_table,
     max_drawdown,
     render_equity_plot,
@@ -356,6 +358,9 @@ def run_backtest(
             f"{config.name} — strategy vs {panel.benchmark_name}, "
             "identical monthly deposits",
         )
+        buy_frame = buy_outcomes(
+            strategy_result.trades, panel, valuation_end
+        )
         configurations_tried = _backtest_configurations_tried(
             store, config.dataset_version, config.config_hash
         )
@@ -374,6 +379,7 @@ def run_backtest(
             valuation_end=pd.Timestamp(valuation_end),
             configurations_tried=configurations_tried,
             artifacts=artifacts,
+            buy_outcome_frame=buy_frame,
         )
 
         headline = headline_table(strategy_result, benchmark_result)
@@ -390,6 +396,7 @@ def run_backtest(
             "benchmark_twr_cagr": twr_cagr(benchmark_result.monthly),
             "prices_version": panel.version,
             "buy_years": f"{buy_years[0]}-{buy_years[-1]}",
+            **_buy_outcome_metrics(buy_frame),
         }
         store.append(
             {
@@ -421,6 +428,20 @@ def run_backtest(
             }
         )
         raise
+
+
+def _buy_outcome_metrics(buy_frame: pd.DataFrame) -> dict:
+    """The pooled row of the buy-outcome table as ledger metrics
+    (`buy_mean_excess_3y`, `buy_beat_3y`, ...); empty without buys."""
+    table = buy_outcome_table(buy_frame)
+    if table.empty:
+        return {}
+    pooled = table.iloc[-1]
+    return {
+        f"buy_{key}": float(value)
+        for key, value in pooled.items()
+        if key not in ("year", "buys") and pd.notna(value)
+    }
 
 
 def _write_artifacts(

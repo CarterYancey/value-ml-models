@@ -74,7 +74,24 @@ Monthly point-in-time cross-sections come from `dataset.parquet` itself
 (latest completed-quarter median-kind snapshot per stock, staleness-
 capped) — **not** from historical inference directories, which are
 survivor-only by construction. The benchmark leg (SPY) runs through the
-same engine with identical deposits and accounting. Reports land in
+same engine with identical deposits and accounting.
+
+Every report carries **"What the buys went on to do"**: each buy read
+on its own over the 1 and 3 years after its trade date, from the price
+panel, against the benchmark over the same dates, by buy year and
+pooled (mean and median excess return a year, share beating the
+benchmark, share losing money, share that stopped printing early). A
+stock that stops printing exits at its final print and the proceeds
+ride the benchmark to the horizon. The pooled row is logged
+(`buy_mean_excess_3y`, `buy_beat_3y`, ...). Read it beside the
+headline: time-weighted return gives the small early portfolio the
+weight of the large late one, money-weighted return the reverse, and
+two strategies can swap places between them; one buy, one vote says
+whether the selection was good in the early years and in the late
+ones. It excludes costs and sizing, so it is a reading of the
+selection, not of the portfolio.
+
+Reports land in
 `reports/backtest/<name>_<config-hash>.*` (report, equity/trades/
 rebalances CSVs — trades carry tickers, per-model scores, and realized
 profit on sells — and the equity plot), lead with money- and
