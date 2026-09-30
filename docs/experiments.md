@@ -186,6 +186,29 @@ Report-only and part of the config hash when set, like
 screen: equal weights, no costs, entry at the snapshot, held to the
 horizon.
 
+### Two models as one ranking (`blend`)
+
+The backtest can rank on two bundles at once (`combine = "mean_rank"`);
+an eval config can do the same on the test rows, so a two-model
+candidate is read on the screen before a backtest is spent on it:
+
+```toml
+name = "screen_with_momentum"
+blend = ["experiments/models/factor_mom_12_2_3y_97c0f095cf48"]
+```
+
+`vml-eval <bundle> <this file>` scores every fold's test rows with the
+bundle's fold model and with each blended bundle's, ranks each model's
+scores within the test quarter as a share of the quarter's rows, and
+takes the mean share as the score (a row one model has no score for is
+ranked on the others; ties share the better rank). The bundles must
+share the dataset version and scheme and cover the evaluated bundle's
+folds; the label, the universe and the test rows are the evaluated
+bundle's. The result is a ranking, not a probability: no Brier and no
+calibration. The blended bundles' config hashes are part of the
+evaluation's own hash, so every blend tried is a configuration in the
+cell's trial count.
+
 ### Selection by score
 
 With `score_thresholds` and `pick_outcomes` both set, the report gains

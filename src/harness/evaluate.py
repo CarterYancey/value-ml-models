@@ -21,13 +21,14 @@ import traceback
 from dataclasses import replace
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
 
 from eval.era import collect_predictions
 from eval.metrics import compute_all, regression_diagnostics
 from harness.calibration import PrequentialCalibration
 from harness.config import EvalConfig, parse_pick_outcomes
-from harness.dataset import Dataset, SplitAccess
+from harness.dataset import Dataset, SplitAccess, feature_matrix
 from harness.errors import ConfigError, DatasetValidationError
 from harness.model_store import ModelBundle
 from harness.results import ResultsStore, RunLog, git_sha, new_run_id
@@ -42,6 +43,52 @@ from harness.runner import (
     selection_columns,
     universe_rows,
 )
+
+
+def blend_scores(score_arrays, periods) -> np.ndarray:
+    """Several models' scores on the same rows as one ranking: within
+    each period, every model's scores are ranked as a share of the
+    period's rows (the best at 1.0) and the shares averaged. This is
+    the backtest's `combine = "mean_rank"` on test rows: a row one model
+    has no score for (NaN) is ranked on the others alone, and ties share
+    the better rank. Shares, not rank numbers, so that periods of
+    different sizes give scores on one scale."""
+    frame = pd.DataFrame(
+        {i: np.asarray(s, dtype=float) for i, s in enumerate(score_arrays)}
+    )
+    shares = frame.groupby(np.asarray(periods), sort=False).rank(
+        method="max", pct=True
+    )
+    return shares.mean(axis=1, skipna=True).to_numpy(dtype=float)
+
+
+def _load_blend(paths, bundle: ModelBundle) -> list[ModelBundle]:
+    """The bundles an evaluation blends with `bundle`, checked to be
+    measured on the same thing: same dataset version and scheme, and a
+    fold model for every fold of `bundle`."""
+    others = []
+    primary = bundle.train_config
+    for path in paths:
+        other = ModelBundle.load(path)
+        config = other.train_config
+        if (config.dataset_version, config.scheme) != (
+            primary.dataset_version, primary.scheme
+        ):
+            raise ConfigError(
+                f"blend bundle {path} was trained on "
+                f"{config.dataset_version!r} under {config.scheme!r}; the "
+                f"evaluated bundle on {primary.dataset_version!r} under "
+                f"{primary.scheme!r}"
+            )
+        missing = sorted(set(bundle.folds) - set(other.folds))
+        if missing:
+            raise ConfigError(
+                f"blend bundle {path} has no model for folds {missing}"
+            )
+        if config.config_hash == primary.config_hash:
+            raise ConfigError(f"blend bundle {path} is the evaluated bundle")
+        others.append(other)
+    return others
 
 
 def evaluate_bundle(
@@ -62,6 +109,15 @@ def evaluate_bundle(
             "the eval config sets a universe but the bundle was trained "
             "with one; a bundle's own universe is pinned"
         )
+    blended = _load_blend(eval_config.blend, bundle)
+    if blended and train_config.calibration:
+        raise ConfigError(
+            "a blend is a ranking, not a probability; evaluate the "
+            "uncalibrated bundle"
+        )
+    # a blended score is a mean rank share: nothing to read as a
+    # probability, whatever the bundles are
+    probabilistic = bundle.probabilistic and not blended
     # the eval run's identity: the pinned train config with the eval's
     # metric parameters merged in — a distinct config hash per (bundle,
     # eval criteria), counted by the trial ledger
@@ -92,6 +148,7 @@ def evaluate_bundle(
             if eval_config.universe
             else {}
         ),
+        blend=tuple(b.train_config.config_hash for b in blended),
     )
 
     store = ResultsStore(results_path)
@@ -146,6 +203,7 @@ def evaluate_bundle(
         needed_columns = list(
             dict.fromkeys(
                 list(bundle.feature_columns)
+                + [c for b in blended for c in b.feature_columns]
                 + [config.label]
                 + ([config.eval_label] if config.eval_label else [])
                 + list(config.pick_outcomes)
@@ -175,6 +233,19 @@ def evaluate_bundle(
             raw_scores = scores
             if calib is not None:
                 scores = calib.calibrate(fold, raw_scores)
+            if blended:
+                rows = test_rows.loc[test_fit.X.index]
+                dates = pd.to_datetime(rows["snapshot_date"])
+                scores = blend_scores(
+                    [scores]
+                    + [
+                        b.fold_models[fold].predict_scores(
+                            feature_matrix(rows, b.feature_columns)
+                        )
+                        for b in blended
+                    ],
+                    periods=(dates.dt.year * 4 + dates.dt.quarter).to_numpy(),
+                )
             metrics = compute_all(
                 test_fit.y,
                 scores,
@@ -182,7 +253,7 @@ def evaluate_bundle(
                 top_k=config.top_k,
                 score_thresholds=config.score_thresholds,
                 precision_targets=config.precision_targets,
-                probabilistic=bundle.probabilistic,
+                probabilistic=probabilistic,
             )
             outcome = None
             if config.eval_label:  # continuous-target bundle
@@ -248,10 +319,22 @@ def evaluate_bundle(
             store=store,
             fold_results=fold_results,
             prediction_frames=prediction_frames,
-            probabilistic=bundle.probabilistic,
+            probabilistic=probabilistic,
             reports_dir=reports_dir,
             artifacts={
                 "source_bundle": Path(bundle_dir),
+                **(
+                    {
+                        "blend": [
+                            f"{b.train_config.name} "
+                            f"(`{b.train_config.config_hash}`, run "
+                            f"`{b.run_id}`)"
+                            for b in blended
+                        ]
+                    }
+                    if blended
+                    else {}
+                ),
                 **(
                     {"calibration": calib.summary()}
                     if calib is not None

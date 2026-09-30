@@ -293,6 +293,16 @@ def write_report(
             f"`{artifacts['source_bundle']}`: models loaded, not refit — "
             "only the metric parameters differ from the training run"
         )
+    if artifacts and "blend" in artifacts:
+        lines.append(
+            "- **blend**: the score is the mean, over this bundle and "
+            + "; ".join(artifacts["blend"])
+            + ", of each model's rank within the test quarter as a share "
+            "of the quarter's rows (the backtest's `combine = "
+            '"mean_rank"` on test rows; a row a model has no score for '
+            "is ranked on the others). A ranking, not a probability: no "
+            "Brier, no calibration, and score thresholds are rank shares."
+        )
     lines.append("")
 
     if era_df is not None and not era_df.empty:

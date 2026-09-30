@@ -403,6 +403,11 @@ class ExperimentConfig:
     universe_scope: str = "all"
     #: the portfolio screen (`[pick_screen]`, see `PickScreen`)
     pick_screen: PickScreen | None = None
+    #: config hashes of the bundles whose scores `vml-eval` combined
+    #: with this config's by mean rank (harness.evaluate, `blend`). Set
+    #: by an evaluation only, never read from a file: it is what makes a
+    #: blended evaluation its own configuration in the trial ledger.
+    blend: tuple[str, ...] = ()
 
     @classmethod
     def from_file(cls, path: str | Path) -> "ExperimentConfig":
@@ -657,6 +662,8 @@ class ExperimentConfig:
                 payload["universe_scope"] = self.universe_scope
         if self.pick_screen is not None:
             payload["pick_screen"] = self.pick_screen.to_table()
+        if self.blend:
+            payload["blend"] = list(self.blend)
         return payload
 
     def canonical_json(self) -> str:
@@ -700,10 +707,22 @@ def _resolve_horizon(raw: dict, label: str, source: str) -> int:
     return inferred
 
 
+def _parse_blend(raw, source: str) -> tuple[str, ...]:
+    if isinstance(raw, str) or not isinstance(raw, (list, tuple)):
+        raise ConfigError(
+            f"eval config {source}: blend must be a list of bundle "
+            f"directories, got {raw!r}"
+        )
+    paths = tuple(str(p) for p in raw)
+    if len(set(paths)) != len(paths):
+        raise ConfigError(f"eval config {source}: blend repeats a bundle")
+    return paths
+
+
 _EVAL_ALLOWED = frozenset(
     {
         "name", "top_k", "score_thresholds", "precision_targets",
-        "pick_outcomes", "pick_screen", "universe",
+        "pick_outcomes", "pick_screen", "universe", "blend",
     }
 )
 
@@ -736,6 +755,12 @@ class EvalConfig:
     #: on are fewer, and the evaluation is counted in the
     #: universe-qualified cell.
     universe: tuple[FilterSpec, ...] = ()
+    #: other walk-forward bundles (directories) whose fold scores are
+    #: combined with the evaluated bundle's by mean rank within each
+    #: test quarter: the backtest's `combine = "mean_rank"` on the test
+    #: rows, so a two-model candidate can be read on the screen before
+    #: it is backtested
+    blend: tuple[str, ...] = ()
 
     @classmethod
     def from_file(cls, path: str | Path) -> "EvalConfig":
@@ -787,4 +812,5 @@ class EvalConfig:
                 else None
             ),
             universe=parse_universe(raw.get("universe"), source),
+            blend=_parse_blend(raw.get("blend", ()), source),
         )
