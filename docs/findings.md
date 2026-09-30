@@ -129,11 +129,10 @@ beats a single factor on 3y beat_spy on v1.4
 
 - Does the candidate hold outside 2005–2023? Only the holdout and
   time can say; the backtests share their years.
-- Can the models be made sector-neutral instead of capped? There is
-  no within-sector volatility rank upstream, and deriving one here
-  is not allowed: an upstream request.
-- Would a sell discipline or a shorter horizon raise the return
-  without giving the losers back? Not tried.
+- Sector-neutral models need a within-sector volatility rank
+  upstream; deriving one here is not allowed.
+- Theory-led feature sets, a training-time liquidity floor, a sell
+  discipline, selection by calibrated confidence: TODO.md.
 
 ## Plan
 
@@ -167,16 +166,12 @@ brackets:
 | 5y cagr_ge_0 (v1.1 [2019]) | 2 | 0.66–0.68 vs 0.50 |
 | 2y cagr_ge_8 (v1.0) | 1 | p@20 0.35 vs 0.30 |
 
-The Aug 24 batch opened 12 looks in ~50 minutes, comparing
-technicals-vs-valuation pairs on the holdout. That is the pattern the
-one-look-per-cell rule now prevents. Read those cells as consumed. The
-one consistent signal: **technical-rank models had no holdout skill on
-the relative (beat_spy) labels, and valuation/trend models kept some.**
+All 19 looks were on older dataset versions and simpler labels
+(Carter, 2026-09-30: not a reason to hold experiments back). The one
+consistent signal: technical-rank models had no holdout skill on the
+relative labels; valuation/trend models kept some.
 
 ## Process
 
-Rules learned the hard way are in CLAUDE.md ("Before writing a
-conclusion"); the incidents behind them are in
-[notes/process-issues.md](notes/process-issues.md). The session log
-up to the split is in
-[notes/session-log-2026-09.md](notes/session-log-2026-09.md).
+Rules learned the hard way: CLAUDE.md, "Before writing a
+conclusion"; incidents in [notes/process-issues.md](notes/process-issues.md).
