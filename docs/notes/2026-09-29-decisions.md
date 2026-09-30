@@ -301,3 +301,36 @@ another kind: years the choices were not made on.
    sector-neutral instead of capped.
 5. **Ranking metric for boosted families:** if they are searched
    again, rank on p@K over 2013–20 of the worst seed, not on PR-AUC.
+
+### 13. Carter's notes at the close of the session (2026-09-30)
+
+Recorded as next steps in TODO.md ("Next, from the session of
+2026-09-29/30"); the reasoning here.
+
+1. **Feature selection.** The models lean on a few columns, the
+   volatility and liquidity ranks among them; Carter would rather
+   select features with a causal story in value investing, try
+   excluding the dominant ones, and consider a training-time
+   liquidity floor (rows below a dollar-volume threshold out of the
+   dataset, not only out of the backtest). What today's runs say:
+   fundamentals only (97 columns) scored below the ranks on p@20 in
+   cell A and its picks beat SPY more often before 2013 and less
+   after; that was one arm, one cell, on the screen. The question
+   is open in cell C, on pick outcomes and backtests.
+2. **Evaluation.** Median excess CAGR of the top K is a quick look,
+   not a verdict: the best picks may outweigh the worst, so the
+   mean (what an equal-weighted portfolio earns) belongs beside it;
+   holding cash when nothing clears a confidence bar is a valid
+   strategy; and the "High-confidence picks" table should carry the
+   picks' outcomes at each score threshold. The scores of the
+   models in use can be read as confidence once calibrated; today's
+   finding that a fixed threshold selects the pre-crash years is
+   about the uncalibrated scores of one forest.
+3. **The holdout record.** The 19 consumed looks were on older
+   dataset versions and simpler labels; Carter does not want the
+   counts to hold experiments back. The record is kept, the counts
+   stay with every holdout number, and cell C's 3y cell is
+   unopened.
+4. **A sell discipline** goes on the list, and pairs with
+   calibration: buy on high confidence, sell or rebalance when it
+   falls.

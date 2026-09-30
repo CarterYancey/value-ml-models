@@ -541,9 +541,10 @@ in [PLAN.md](PLAN.md); check items off (and add new ones) as work proceeds.
 - [x] Choose the primary cell. (2026-09-28, Carter: cagr >= 10% &
       drawdown from entry < 20%. The choice of label stays part of
       the experiments.)
-- [ ] Run `forest_feature_sets_dd_entry_3y` (30 runs, about 2.5
-      hours): five feature sets against the all-ranks reference in
-      the primary cell. Predictions in the config.
+- [x] Run `forest_feature_sets_dd_entry_3y`. (2026-09-29: no arm
+      beats the 112 ranks; most of the signal is `vol_12m_rank`,
+      `vol_36m_rank`, `conservative_score_rank`.
+      docs/notes/2026-09-29-feature-sets-dd-entry.md)
 - [x] Label screen: report-only outcomes of a run's top-K picks
       (`pick_outcomes`, `src/eval/picks.py`, docs/experiments.md;
       2026-09-28). Hit rate for binary outcomes, mean and median for
@@ -551,27 +552,25 @@ in [PLAN.md](PLAN.md); check items off (and add new ones) as work proceeds.
       distinct stocks among the picks; in run reports, the ledger's
       per-fold metrics and sweep summaries; settable from an eval
       config for saved bundles.
-- [ ] Run `baseline_pick_outcomes_3y` (2 runs): the single-factor
-      bar for the screen, through the ledger.
-- [ ] Label-comparison backtest template
-      (`experiments/portfolios/`): one bundle, monthly top-K buy and
-      hold, fixed `cost_bps` and investability filter, SPY leg,
-      `[window] end = 2020-12-31`. Parameters fixed before the first
-      label runs; backtests counted as trials. The bundle comes from
-      the candidate's own `vml-run`, not from a sweep.
-- [ ] Run `forest_label_rungs_dd_entry_3y` (27 runs, about 2
-      hours): CAGR floor 0.08 / 0.10 / 0.15 x drawdown-from-entry
-      cap 0.15 / 0.20 / 0.30, one forest configuration, 3 seeds,
-      read on pick outcomes. Predictions and pass rule in the
-      config.
-- [ ] Parameter search per family in the primary cell on the
-      feature set the ablation picks: equal budgets for
-      random_forest, lightgbm, xgboost, then the top five of each
-      on 3 seeds; rank on PR-AUC and worst-seed 2013-20 p@20. Then
-      calibration, then one holdout look. docs/findings.md, "Plan".
-- [ ] Investability filter before any top-K number in the path-label
-      cells is acted on: the lowest-`vol_12m_rank` top 20 scores
-      0.09 where the whole ranking has PR-AUC 0.31.
+- [x] Run `baseline_pick_outcomes_3y`. (2026-09-29: the bar is a
+      beat-SPY hit rate of 0.49 and a median excess CAGR of about
+      zero. docs/notes/2026-09-29-label-rungs-dd-entry.md)
+- [x] Label-comparison backtest template. (2026-09-29, decision 6
+      of docs/notes/2026-09-29-decisions.md: top 10 a month, equal
+      weights, buy and hold, 35 bps, `dollar_volume_3m >= 100000`,
+      buys 2005-2020, valued end of 2023; then a cap of 2 per
+      sector, decision 7. `experiments/portfolios/bt_*.toml`.)
+- [x] Run `forest_label_rungs_dd_entry_3y`. (2026-09-29: the
+      thresholds move p@20 and PR-AUC and not what the picks go on
+      to do; no rung passes the screen on every seed.)
+- [x] Parameter search per family. (2026-09-30, in the candidate's
+      cell C instead of the primary cell, 20 draws each: no draw of
+      any family exceeds the reference forest's fold-mean PR-AUC
+      0.585; boosted families pick worse at the same PR-AUC.
+      docs/notes/2026-09-29-searches-nonloser.md)
+- [x] Investability filter before any top-K number is acted on.
+      (2026-09-29: every backtest applies `dollar_volume_3m >=
+      100000`; the screen still does not, see the next section.)
 - [x] Report the number of distinct `permaticker`s among the top-K
       picks per test year (`n_stocks_at_K`, part of `pick_outcomes`;
       2026-09-28). Runs without `pick_outcomes` do not carry it.
@@ -662,6 +661,81 @@ in [PLAN.md](PLAN.md); check items off (and add new ones) as work proceeds.
       re-run the top decile of a cheap-budget search (low
       `n_estimators`) at full budget via a follow-up sweep file — no
       harness change needed, just two sweep configs.
+
+### Next, from the session of 2026-09-29/30 (Carter's notes, decision 13)
+
+The candidate and its evidence: docs/findings.md, "State";
+docs/notes/2026-09-29-decisions.md. Start a new session there.
+
+- [ ] **Carter:** one holdout look in cell C's 3y cell
+      (`fwd_3y_cagr >= 0 & fwd_3y_max_drawdown_from_entry < 0.3`)
+      with `experiments/forest_nonloser_dd30_3y.toml`, when he would
+      act on the candidate; the pull request for
+      `claude/backtest-sector-cap`. (Carter, 2026-09-30: the consumed
+      cells were opened on older dataset versions and simpler labels;
+      their counts should not stop experiments.)
+- [ ] **Sell discipline** for the candidate: one backtest with
+      `strategy = "sell_below_criteria"`, criteria fixed before the
+      run (the 14th backtest on 2005-2020). It works best with a
+      calibrated model: buy on high confidence, sell or rebalance
+      when it falls. Carter, 2026-09-30.
+- [ ] **Quick evaluation by confidence, not only by K.** The report's
+      "High-confidence picks" table shows how many names clear a
+      score and how precise they are; add the pick outcomes at those
+      thresholds (mean excess CAGR, losers, big winners of every
+      pick with `score >= p`, per year and pooled), so "mean excess
+      CAGR at score > 0.7" can be read. Report **mean** beside median:
+      an equal-weighted portfolio earns the mean, and the best picks
+      may outweigh the worst. A median excess CAGR below zero is not
+      a failure. Holding cash when nothing clears the bar is a valid
+      strategy; the number of picks a year at a threshold is part of
+      the result. Carter, 2026-09-30.
+- [ ] **Calibration** (prequential, Phase 3 item above) before any
+      rule that reads a score as confidence. Measured 2026-09-29 on
+      the candidate's forest: top scores 0.81-0.85 for 2006-08 entries
+      (precision 0.15-0.60) and 0.65-0.69 for 2011-13 (precision near
+      1.0), so a fixed threshold picks the pre-crash years; a
+      threshold relative to the year's scores, or calibrated
+      probabilities, is what the confidence rule needs.
+- [ ] **Feature selection on theory, not only on the manifest
+      groups.** Carter, 2026-09-30: the models lean on a few columns,
+      the volatility and liquidity ranks among them; try excluding
+      them, and prefer columns with a causal story in value investing
+      (cash generation, balance-sheet strength, profitability,
+      consistency). One August winner used
+      `groups = ["ranks"]`, `exclude_families = ["ranks/technical",
+      "ranks/trend"]`, `families = ["features/trend",
+      "features/technical"]` (v1.1, 3y beat_spy;
+      `forest_random_search_3y-2seeds2`). On v1.4 in cell A,
+      fundamentals only scored 0.40-0.42 against 0.50 and its picks
+      beat SPY 0.63 of the time before 2013 and 0.28 after
+      (docs/notes/2026-09-29-pick-anatomy.md): the question is open
+      in cell C and on pick outcomes and backtests, not on p@20.
+- [ ] **Training-time liquidity floor.** Carter, 2026-09-30: drop
+      rows below a dollar-volume threshold from training and test
+      (the investability filter, applied to the dataset, not only to
+      the backtest): less microcap noise, and the models need not
+      learn the liquidity columns. A row filter on a manifest
+      feature column, declared in the config, part of the hash and
+      of the report; the label cell stays the same, so the trial
+      count needs a "universe" qualifier. Not feature engineering
+      (no new column); check data/manual.md before building it.
+- [ ] **Upstream request:** within-sector ranks of volatility and of
+      the conservative score, so the models can be sector-neutral
+      instead of capped (docs/notes/2026-09-29-first-backtests.md).
+- [ ] **Sector cap in the pick-outcome screen** (`eval/picks.py`),
+      so the screen sees what the backtest sees; and a sector table
+      of the top-K picks in every run report.
+- [ ] Ranking metric for boosted-family searches: p@K over 2013-20
+      of the worst seed, not PR-AUC (the two order LightGBM and
+      XGBoost draws in opposite directions).
+- [ ] Whole shares at 100 a pick leave 55-108 of 192 months short of
+      10 buys in the capped backtests; consider `fractional_shares`
+      or a larger monthly deposit in the template, stated as a
+      template change.
+- [ ] Why 134 delisting liquidations with momentum against 52
+      without: takeover targets? Read the trades CSV of the promoted
+      backtest.
 
 ## 3.5 — Downturn specialization (PLAN §4 Phase 3.5)
 
