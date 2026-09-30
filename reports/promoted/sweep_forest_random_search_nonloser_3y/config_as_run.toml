@@ -1,0 +1,77 @@
+# Parameter search in cell C, the 'not a loser' cell, forest arm
+# (docs/notes/2026-09-29-decisions.md, decision 11). One of three
+# searches with equal budgets: 20 draws, one seed, for random_forest,
+# lightgbm and xgboost.
+#
+# Cell: fwd_3y_cagr >= 0 & fwd_3y_max_drawdown_from_entry < 0.3. Base
+# rate 0.39; 12 configurations tried in it before these searches.
+# Features: the ranks group, 112 columns on dataset_v1.4.
+#
+# The reference, three seeds (forest_pick_anatomy_3y and the candidate
+# runs): set1 of forest_candidate_sets_3y, class weight 1.0, p@20
+# 0.778-0.788, fold-mean PR-AUC 0.585, picks' losers 0.13, picks' big
+# winners 0.03. It is the forest of the candidate portfolio
+# (docs/notes/2026-09-29-factor-combinations.md).
+#
+# Ranges: those of forest_random_search_dd_entry_3y, which was written
+# for the primary cell and never run.
+#
+# Predictions, written before the run (2026-09-29):
+#   - At least 15 of the 20 draws land within 0.010 of 0.585 on
+#     fold-mean PR-AUC and none exceeds 0.600.
+#   - The picks' losers (fwd_3y_cagr < 0, top 20) stay between 0.10
+#     and 0.18 for every draw within 0.010 of the reference's PR-AUC.
+#   - Deep draws (max_depth >= 9 with min_samples_leaf under 50) have
+#     the lowest PR-AUC.
+#
+# How to read it: the summary ranks on POOLED pr_auc, which is not the
+# fold mean. Rank on the fold mean of pr_auc from the ledger rows and
+# on p@20 over 2013-20; read the picks' losers and big winners beside
+# them. One seed: p@20 differences under 0.03 are noise. A draw is
+# worth three seeds when its fold-mean PR-AUC exceeds 0.595.
+#
+# Expanded: 1 cell x 1 feature set x 20 draws x 1 seed = 20 runs.
+# Run: uv run vml-sweep experiments/sweeps/forest_random_search_nonloser_3y.toml
+name = "forest_random_search_nonloser_3y"
+dataset_version = "dataset_v1.4"
+min_dataset_version = "1.4"
+scheme = "walkforward"
+folds = "all"
+seeds = [23]
+top_k = [20, 10, 5, 50]
+precision_targets = [0.75, 0.9]
+rank_metric = "pr_auc"
+pick_outcomes = [
+  "label_3y_beat_spy",
+  "fwd_3y_excess_cagr",
+  "fwd_3y_cagr",
+  "fwd_3y_max_drawdown_from_entry",
+  "fwd_3y_cagr < 0",
+  "fwd_3y_cagr < -0.1",
+  "fwd_3y_max_drawdown_from_entry >= 0.4",
+  "fwd_3y_cagr >= 0.15",
+  "fwd_3y_cagr >= 0.25",
+  "fwd_3y_excess_cagr >= 0.05",
+]
+n_samples = 20
+search_seed = 29
+
+[[cells]]
+label = "fwd_3y_cagr >= 0 & fwd_3y_max_drawdown_from_entry < 0.3"
+
+[[features]]
+groups = ["ranks"]
+
+[model]
+name = "random_forest"
+bootstrap = true
+class_weight = 1.0
+n_jobs = 8
+
+[random]
+n_estimators = { low = 150, high = 500, int = true }
+max_depth = { low = 3, high = 12, int = true }
+min_samples_leaf = { low = 20, high = 500, int = true, log = true }
+max_features = { low = 0.05, high = 0.6 }
+max_samples = { low = 0.3, high = 1.0 }
+criterion = { choices = ["gini", "entropy"] }

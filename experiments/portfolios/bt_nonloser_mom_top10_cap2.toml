@@ -1,0 +1,52 @@
+# Cell C's forest and one single factor, by mean rank of the two:
+# momentum (mom_12_2_rank). Decision 8 of docs/notes/2026-09-29-decisions.md; the template
+# is decision 6's with a cap of 2 per sector (decision 7).
+#
+# The bar is bt_nonloser_dd30_top10_cap2, the forest alone: final value
+# 633,757, time-weighted CAGR 9.74%, worst drawdown -46.1% (SPY:
+# 732,110, 9.58%, -52.9%).
+#
+# What would count, fixed before the run: the drawdown within 5 points
+# of -46% and a time-weighted CAGR of 10.7% or more, with the gain not
+# confined to 2005-12.
+#
+# Prediction, written before the run (2026-09-29):
+#   Momentum: a higher return in 2013-2020 than the forest alone and a deeper drawdown in 2008.
+name = "bt_nonloser_mom_top10_cap2"
+dataset_version = "dataset_v1.4"
+prices_version = "prices_v1.0"
+
+bundles = [
+    "experiments/models/forest_nonloser_dd30_3y_53ceedd93e6d",
+    "experiments/models/factor_mom_12_2_3y_97c0f095cf48",
+]
+
+[signal]
+combine = "mean_rank"
+max_staleness_days = 200
+model_update = "refit"
+label_lag_days = 45
+
+[[investability]]
+column = "dollar_volume_3m"
+op = ">="
+value = 100000.0
+
+[portfolio]
+strategy = "buy_and_hold"
+top_k = 10
+weighting = "equal"
+monthly_cash = 1000.0
+max_per_group = 2
+group_column = "sector"
+
+[execution]
+cost_bps = 35.0
+benchmark_cost_bps = 0.0
+max_quote_age_days = 3
+delist_after_days = 30
+
+[window]
+start = 2005-01-01
+end = 2020-12-31
+valuation_end = 2023-12-29

@@ -1,0 +1,14 @@
+{
+  "name": "sweep_xgb_random_search_nonloser_3y",
+  "promoted_utc": "2026-09-30T01:40:27+00:00",
+  "source_report": "reports/sweeps/xgb_random_search_nonloser_3y/xgb_random_search_nonloser_3y_summary.md",
+  "run_id": "",
+  "config_hash": "",
+  "git_sha": "",
+  "dataset_version": "dataset_v1.4",
+  "config_path": "experiments/sweeps/xgb_random_search_nonloser_3y.toml",
+  "note": "v1.4 3y 'not a loser' cell, 20 XGBoost draws on CPU: fold-mean PR-AUC 0.567-0.581, where LightGBM lands and below the forest's 0.585; picks worse than the forest's (losers 0.16-0.24, beat SPY 0.27-0.40); best draws not the shallow ones",
+  "files": [
+    "xgb_random_search_nonloser_3y_summary.md"
+  ]
+}

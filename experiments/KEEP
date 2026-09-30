@@ -1,0 +1,16 @@
+# Configs kept without a promoted report (scripts/check_tracked_configs.py).
+# The candidate portfolio of 2026-09-29 (docs/notes/2026-09-29-decisions.md,
+# decision 10) needs its factor bundle's config and the three promoted
+# backtests' portfolio configs to be reproducible.
+experiments/factor_mom_12_2_3y.toml
+experiments/portfolios/bt_nonloser_dd30_top10.toml
+experiments/portfolios/bt_nonloser_dd30_top10_cap2.toml
+experiments/portfolios/bt_nonloser_mom_top10_cap2.toml
+# Tracked on claude/sweep-review-2026-09-28 before this list existed;
+# each is cited as evidence in docs/notes/ or docs/logbook.md.
+experiments/sweeps/baseline_lowvol_rank_3y.toml
+experiments/sweeps/baseline_pick_outcomes_3y.toml
+experiments/sweeps/forest_random_search_3y-2seeds.toml
+experiments/sweeps/forest_random_search_3y-2seeds2.toml
+experiments/sweeps/forest_v11_column_control_3y.toml
+experiments/sweeps/forest_v14_unchanged_columns_3y.toml

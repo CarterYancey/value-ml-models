@@ -1,0 +1,14 @@
+{
+  "name": "sweep_forest_random_search_nonloser_3y",
+  "promoted_utc": "2026-09-30T01:40:25+00:00",
+  "source_report": "reports/sweeps/forest_random_search_nonloser_3y/forest_random_search_nonloser_3y_summary.md",
+  "run_id": "",
+  "config_hash": "",
+  "git_sha": "",
+  "dataset_version": "dataset_v1.4",
+  "config_path": "experiments/sweeps/forest_random_search_nonloser_3y.toml",
+  "note": "v1.4 3y 'not a loser' cell, 20 forest draws, one seed: fold-mean PR-AUC 0.581-0.585, none above the reference forest's 0.585; entropy draws above gini, depth irrelevant; the candidate's forest stays",
+  "files": [
+    "forest_random_search_nonloser_3y_summary.md"
+  ]
+}

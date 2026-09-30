@@ -1,0 +1,14 @@
+{
+  "name": "bt_nonloser_dd30_top10_058c78752aa3032d",
+  "promoted_utc": "2026-09-30T01:43:19+00:00",
+  "source_report": "reports/backtest/bt_nonloser_dd30_top10_058c78752aa3032d.md",
+  "run_id": "",
+  "config_hash": "",
+  "git_sha": "",
+  "dataset_version": "",
+  "config_path": "",
+  "note": "Cell C forest, no sector cap: 518,612 vs SPY 732,110, drawdown -63.4% vs -52.9%, 2007 -20.7% vs +7.3%. Half the buys utilities, a quarter REITs, every 2005-06 buy a REIT: the models are sector selectors (see the 'What was bought' table of the capped reports)",
+  "files": [
+    "bt_nonloser_dd30_top10_058c78752aa3032d.md"
+  ]
+}
