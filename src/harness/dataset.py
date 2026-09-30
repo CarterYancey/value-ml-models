@@ -40,6 +40,7 @@ from harness.families import (
     family_group_columns,
     parse_family_ref,
 )
+from harness.filters import apply_filters, validate_filter_columns
 
 SNAPSHOT_KEY = ["permaticker", "snapshot_date", "snapshot_kind"]
 
@@ -112,6 +113,39 @@ def _is_boolean_values(vals: pd.Series) -> bool:
             isinstance(v, (bool, np.bool_)) for v in vals
         )
     return False
+
+
+def feature_matrix(frame: pd.DataFrame, feature_cols: Sequence[str]) -> pd.DataFrame:
+    """The feature columns of `frame` as a model input.
+
+    Boolean feature columns (the upstream flags: `negative_equity`,
+    `two_year_loss`, the nine `piotroski_*` signals, ...) are returned
+    as floats, True 1.0 and False 0.0, with NULL kept as NaN. A flag
+    with NULLs reaches pandas as an object column of True/False/None,
+    which no estimator here accepts, and the NULL is information
+    ("unknown", e.g. no prior-year filing; data/features.md) that a cast
+    to bool would turn into False. This changes how a value is stored,
+    row by row; it derives nothing from other rows or columns.
+
+    Every other column is passed through as it is; with no boolean
+    column selected the frame's own columns are returned unchanged.
+    """
+    X = frame[list(feature_cols)]
+    flags = [
+        c
+        for c in X.columns
+        if pd.api.types.is_bool_dtype(X[c].dtype)
+        or (
+            X[c].dtype == object
+            and pd.api.types.infer_dtype(X[c], skipna=True) == "boolean"
+        )
+    ]
+    if not flags:
+        return X
+    X = X.copy()
+    for c in flags:
+        X[c] = X[c].astype("boolean").astype("float64")
+    return X
 
 
 def _target_array(label: str, vals: pd.Series, target: str) -> np.ndarray:
@@ -566,6 +600,27 @@ class Dataset:
             values[outcome_column(label_slug(outcome), binary)] = arr
         return values
 
+    def check_universe(self, universe) -> None:
+        """Refuse a `[[universe]]` that screens on anything but a
+        feature column the manifest declares (never a label or a
+        weight: a universe is what was known at the snapshot)."""
+        validate_filter_columns(universe, self, "[[universe]]")
+
+    def apply_universe(self, frame: pd.DataFrame, universe) -> pd.DataFrame:
+        """The rows of `frame` inside a config's universe (every filter
+        passed; NULL fails). A row filter on feature columns: it builds
+        no split and moves no row between train and test, so the
+        upstream purge and embargo hold for the rows that remain."""
+        if not universe:
+            return frame
+        missing = [f.column for f in universe if f.column not in frame.columns]
+        if missing:
+            raise DatasetValidationError(
+                f"universe columns {missing} are not columns of the frame; "
+                "project them with apply_split(columns=...)"
+            )
+        return apply_filters(frame, tuple(universe))
+
     def sample_weight_column(self, horizon_years: int) -> str:
         """The `sample_weight_{H}y` column for a horizon, verified against
         the manifest's sample_weights group."""
@@ -740,7 +795,7 @@ class Dataset:
         labeled = frame[frame[label].notna()]
         w = self._weights_for(labeled, horizon_years)
         return FitData(
-            X=labeled[list(feature_cols)],
+            X=feature_matrix(labeled, feature_cols),
             y=_target_array(label, labeled[label], target),
             sample_weight=w,
             effective_size=float(w.sum()),

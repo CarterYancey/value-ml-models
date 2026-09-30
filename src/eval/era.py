@@ -367,7 +367,8 @@ def _check_predictions(predictions: pd.DataFrame) -> None:
 
 def collect_predictions(
     fold: int, years: np.ndarray, y_true, scores, sample_weight,
-    outcome=None, stocks=None, pick_outcomes=None,
+    outcome=None, stocks=None, pick_outcomes=None, quarters=None,
+    groups=None,
 ) -> pd.DataFrame:
     """One fold's test predictions in the standard frame layout.
 
@@ -378,7 +379,9 @@ def collect_predictions(
     `pick_outcomes` (frame column -> values, from
     `Dataset.pick_outcome_values`) and `stocks` (the rows'
     `permaticker`) are the report-only outcomes of the picks
-    (eval.picks)."""
+    (eval.picks); `quarters` (the rows' calendar quarter, "2014Q3") and
+    `groups` (the rows' group, e.g. sector) are what its portfolio
+    screen reads."""
     frame = pd.DataFrame(
         {
             "fold": fold,
@@ -390,8 +393,13 @@ def collect_predictions(
     )
     if outcome is not None:
         frame["outcome"] = np.asarray(outcome, dtype=float)
-    if pick_outcomes:
+    if stocks is not None:
         frame["permaticker"] = np.asarray(stocks)
+    if pick_outcomes:
         for col, vals in pick_outcomes.items():
             frame[col] = np.asarray(vals, dtype=float)
+    if quarters is not None:
+        frame["quarter"] = np.asarray(quarters, dtype=object)
+    if groups is not None:
+        frame["group"] = np.asarray(groups, dtype=object)
     return frame

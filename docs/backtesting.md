@@ -16,7 +16,11 @@ five-model AllProb screen):
   against the manifest's feature/rank groups, so a screen can never
   reference a label;
 - a **mandatory investability statement**: `[[investability]]` filters or
-  the explicit `investability = "none"` (reported with a warning);
+  the explicit `investability = "none"` (reported with a warning). A
+  bundle trained inside a `[[universe]]` (docs/experiments.md) is
+  refused unless the same filters are among the backtest's
+  `[[investability]]` or `[[filters]]`: a model only scores stocks of
+  the universe it learned from, and its year-end refits stay inside it;
 - per-model floors via `[signal.min_scores]` (bundle name → floor,
   overriding the scalar `min_score`);
 - the strategy and **mandatory `cost_bps`**: `buy_and_hold` (monthly

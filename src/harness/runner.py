@@ -28,15 +28,22 @@ from eval.era import (
 from eval.metrics import compute_all, regression_diagnostics
 from eval.picks import (
     has_pick_outcomes,
+    has_screen_columns,
     pick_outcome_metrics,
     pick_outcome_table,
+    screen_group_table,
+    screen_metrics,
+    screen_table,
+    threshold_outcome_metrics,
+    threshold_outcome_table,
 )
 from eval.plots import render_calibration_plot, render_pr_curve, render_roc_curve
 from explain.rules import render_tree_diagram, rules_text
 from harness.calibration import PrequentialCalibration
 from harness.config import ExperimentConfig
 from harness.dataset import Dataset, SplitAccess
-from harness.errors import ConfigError
+from harness.errors import ConfigError, DatasetValidationError
+from harness.filters import FILTERABLE_GROUPS
 from harness.model_store import ModelBundle
 from harness.report import write_report
 from harness.results import (
@@ -90,8 +97,9 @@ def run_experiment(
         "horizon_years": config.horizon_years,
         # a continuous-target run is a trial against the binary cell it
         # is *measured* on — logging it under fwd_* would dilute the
-        # per-cell configurations-tried accounting
-        "label": config.eval_label or config.label,
+        # per-cell configurations-tried accounting; a universe qualifies
+        # the cell (ExperimentConfig.cell_label)
+        "label": config.cell_label,
         "model": config.model_name,
     }
     run_log = RunLog(store, base_row)
@@ -105,6 +113,8 @@ def run_experiment(
         dataset = Dataset(Path(data_root) / config.dataset_version)
         config.check_dataset_version(dataset.version)
         feature_cols = config.resolve_feature_columns(dataset)
+        dataset.check_universe(config.universe)
+        check_pick_screen(dataset, config.pick_screen)
         folds = (
             dataset.folds(config.scheme, config.horizon_years)
             if config.folds == "all"
@@ -144,6 +154,7 @@ def run_experiment(
                 + ([config.eval_label] if config.eval_label else [])
                 + list(config.pick_outcomes)
                 + [dataset.sample_weight_column(config.horizon_years)]
+                + selection_columns(config)
             )
         )
         dataset.check_pick_outcomes(config.pick_outcomes, feature_cols)
@@ -155,15 +166,16 @@ def run_experiment(
                 config.scheme, fold, config.horizon_years, access=access,
                 columns=needed_columns,
             )
+            train_rows, test_rows = universe_rows(dataset, config, split)
             fit = dataset.fit_data(
-                split.train, config.label, feature_cols, config.horizon_years,
+                train_rows, config.label, feature_cols, config.horizon_years,
                 target=target,
             )
             model = build_model(config.model_name, config.model_params, config.seed)
             model.fit(fit.X, fit.y, sample_weight=fit.sample_weight)
 
             test_fit = dataset.fit_data(
-                split.test, eval_label, feature_cols, config.horizon_years
+                test_rows, eval_label, feature_cols, config.horizon_years
             )
             scores = model.predict_scores(test_fit.X)
             raw_scores = scores
@@ -188,7 +200,7 @@ def run_experiment(
                 # the realized continuous label on the same test rows —
                 # upstream guarantees it is observable exactly where the
                 # binary eval label is
-                outcome = split.test.loc[
+                outcome = test_rows.loc[
                     test_fit.X.index, config.label
                 ].to_numpy(dtype=float)
                 metrics.update(
@@ -206,6 +218,10 @@ def run_experiment(
                 "n_test_rows": len(test_fit.X),
                 "metrics": metrics,
             }
+            if config.universe:
+                # what the universe left out, for the report's appendix
+                fr["n_train_rows_all"] = len(split.train)
+                fr["n_test_rows_all"] = len(split.test)
             fold_results.append(fr)
             probabilistic = model.probabilistic
             fold_models[fold] = model
@@ -216,21 +232,18 @@ def run_experiment(
             # snapshot_date is a parquet DATE upstream (datetime.date
             # objects after read), not a pandas datetime — normalize first
             test_years = pd.to_datetime(
-                split.test.loc[test_fit.X.index, "snapshot_date"]
+                test_rows.loc[test_fit.X.index, "snapshot_date"]
             ).dt.year.to_numpy()
             fold_predictions = collect_predictions(
                 fold, test_years, test_fit.y, scores,
                 test_fit.sample_weight, outcome=outcome,
-                **_pick_outcome_columns(dataset, config, split.test, test_fit),
+                **_pick_outcome_columns(dataset, config, test_rows, test_fit),
             )
             prediction_frames.append(fold_predictions)
             # report-only outcomes of this fold's picks; same top-K rows
             # as the fold's precision@K
-            metrics.update(
-                pick_outcome_metrics(
-                    fold_predictions, top_k=config.top_k, per_year=False
-                )
-            )
+            metrics.update(report_only_metrics(fold_predictions, config,
+                                               per_year=False))
             if calib is not None:
                 # history is always raw scores; reported scores may differ
                 calib.observe(raw_scores, test_fit.y, test_fit.sample_weight)
@@ -327,7 +340,7 @@ def run_experiment(
             precision_targets=config.precision_targets,
             probabilistic=probabilistic,
         )
-        pooled_block.update(pick_outcome_metrics(pooled, top_k=config.top_k))
+        pooled_block.update(report_only_metrics(pooled, config))
         return {
             "run_id": run_id,
             "status": "completed",
@@ -345,19 +358,82 @@ def run_experiment(
         raise
 
 
+def selection_columns(config) -> list[str]:
+    """Columns a run reads besides its features, label and weight: the
+    universe's filter columns and the portfolio screen's group column."""
+    cols = [f.column for f in config.universe]
+    screen = config.pick_screen
+    if screen is not None and screen.max_per_group is not None:
+        cols.append(screen.group_column)
+    return cols
+
+
+def check_pick_screen(dataset: Dataset, screen) -> None:
+    """Refuse a portfolio screen whose group column is not a feature
+    column of the manifest: the cap groups on what was known at the
+    snapshot, never on an outcome."""
+    if screen is None or screen.max_per_group is None:
+        return
+    allowed = {c for g in FILTERABLE_GROUPS for c in dataset.columns(g)}
+    if screen.group_column not in allowed:
+        raise ConfigError(
+            f"[pick_screen] group_column {screen.group_column!r} is not in "
+            f"the manifest's {list(FILTERABLE_GROUPS)} groups"
+        )
+
+
+def universe_rows(dataset: Dataset, config, split) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """(train rows, test rows) of a fold under the config's universe:
+    test rows are always filtered, train rows unless the scope is
+    "test". Without a universe both are the split's own frames."""
+    if not config.universe:
+        return split.train, split.test
+    test = dataset.apply_universe(split.test, config.universe)
+    train = (
+        dataset.apply_universe(split.train, config.universe)
+        if config.universe_scope == "all"
+        else split.train
+    )
+    if test.empty or train.empty:
+        raise DatasetValidationError(
+            f"the universe leaves fold {split.fold} without "
+            f"{'test' if test.empty else 'train'} rows"
+        )
+    return train, test
+
+
+def report_only_metrics(predictions: pd.DataFrame, config, per_year: bool = True) -> dict:
+    """The report-only metrics of a predictions frame (eval.picks): pick
+    outcomes of the top K, of the portfolio screen, and of every row at
+    or above each score threshold."""
+    out = pick_outcome_metrics(predictions, top_k=config.top_k,
+                               per_year=per_year)
+    out.update(screen_metrics(predictions, config.pick_screen))
+    out.update(threshold_outcome_metrics(predictions, config.score_thresholds))
+    return out
+
+
 def _pick_outcome_columns(dataset: Dataset, config, test, test_fit) -> dict:
     """The `collect_predictions` arguments that carry a run's pick
-    outcomes (eval.picks) for one fold's scored test rows; empty when
-    the config names none."""
-    if not config.pick_outcomes:
+    outcomes and portfolio screen (eval.picks) for one fold's scored
+    test rows; empty when the config names neither."""
+    screen = config.pick_screen
+    if not config.pick_outcomes and screen is None:
         return {}
     rows = test.loc[test_fit.X.index]
-    return {
-        "stocks": rows["permaticker"].to_numpy(),
-        "pick_outcomes": dataset.pick_outcome_values(
+    out: dict = {"stocks": rows["permaticker"].to_numpy()}
+    if config.pick_outcomes:
+        out["pick_outcomes"] = dataset.pick_outcome_values(
             rows, config.pick_outcomes
-        ),
-    }
+        )
+    if screen is not None:
+        dates = pd.to_datetime(rows["snapshot_date"])
+        out["quarters"] = (
+            dates.dt.year.astype(str) + "Q" + dates.dt.quarter.astype(str)
+        ).to_numpy()
+        if screen.max_per_group is not None:
+            out["groups"] = rows[screen.group_column].to_numpy(dtype=object)
+    return out
 
 
 def finalize_run(
@@ -388,7 +464,7 @@ def finalize_run(
     calibration curve is the figure that gets read, so it is the only one
     drawn by default.
     """
-    cell_label = config.eval_label or config.label
+    cell_label = config.cell_label
     configurations_tried = store.configurations_tried(
         config.dataset_version, config.scheme, config.horizon_years, cell_label
     )
@@ -413,6 +489,26 @@ def finalize_run(
         k: pick_outcome_table(predictions, k)
         for k in (config.top_k if has_pick_outcomes(predictions) else ())
     }
+    threshold_tables = {
+        t: threshold_outcome_table(predictions, t)
+        for t in (
+            config.score_thresholds if has_pick_outcomes(predictions) else ()
+        )
+    }
+    screen_tables = None
+    if has_screen_columns(predictions, config.pick_screen):
+        screen_tables = (
+            screen_table(predictions, config.pick_screen),
+            screen_group_table(predictions, config.pick_screen),
+        )
+    label_tried = (
+        store.configurations_tried_any_universe(
+            config.dataset_version, config.scheme, config.horizon_years,
+            config.eval_label or config.label,
+        )
+        if config.universe
+        else None
+    )
 
     calibration_path = pr_curve_path = roc_curve_path = None
     if render_score_figures:
@@ -458,6 +554,9 @@ def finalize_run(
         crash_df=crash_df,
         confidence_df=confidence_df,
         pick_outcome_tables=pick_outcome_tables,
+        threshold_tables=threshold_tables,
+        screen_tables=screen_tables,
+        label_configurations_tried=label_tried,
         baseline_df=baseline_df,
         calibration_path=calibration_path,
         pr_curve_path=pr_curve_path,

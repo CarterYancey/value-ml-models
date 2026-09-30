@@ -71,12 +71,17 @@ from harness.calibration import (
     DEFAULT_CALIBRATION_MIN_ROWS,
 )
 from harness.config import (
+    UNIVERSE_SCOPES,
     ExperimentConfig,
     FeatureSpec,
+    PickScreen,
     infer_horizon_years,
     parse_dataset_version,
     parse_pick_outcomes,
+    parse_universe,
+    universe_qualifier,
 )
+from harness.filters import FilterSpec, describe_filters
 from harness.derived_labels import label_slug, normalize_label
 from harness.errors import ConfigError
 from harness.report import _table
@@ -132,6 +137,9 @@ _SWEEP_ALLOWED = frozenset(
         "calibration_min_rows",
         "min_dataset_version",
         "pick_outcomes",
+        "universe",
+        "universe_scope",
+        "pick_screen",
         # the one-line conclusion `vml-promote --note` writes into a
         # config; not part of the sweep's identity or of any run's hash
         "note",
@@ -198,6 +206,13 @@ class SweepConfig:
     #: report-only outcomes of every run's top-K picks (eval.picks,
     #: ExperimentConfig.pick_outcomes)
     pick_outcomes: tuple[str, ...] = ()
+    #: the rows every run is trained and evaluated on, and the portfolio
+    #: screen of every run (ExperimentConfig.universe / universe_scope /
+    #: pick_screen); one universe per sweep file, so that a sweep's
+    #: runs are compared inside one population
+    universe: tuple[FilterSpec, ...] = ()
+    universe_scope: str = "all"
+    pick_screen: PickScreen | None = None
 
     @classmethod
     def from_file(cls, path: str | Path) -> "SweepConfig":
@@ -548,7 +563,24 @@ class SweepConfig:
             ),
             min_dataset_version=min_dataset_version,
             pick_outcomes=pick_outcomes,
+            universe=parse_universe(raw.get("universe"), f"sweep {source}"),
+            universe_scope=str(raw.get("universe_scope", "all")),
+            pick_screen=(
+                PickScreen.from_table(raw["pick_screen"], f"sweep {source}")
+                if "pick_screen" in raw
+                else None
+            ),
         )
+        if sweep.universe_scope not in UNIVERSE_SCOPES:
+            raise ConfigError(
+                f"sweep config {source}: universe_scope must be one of "
+                f"{list(UNIVERSE_SCOPES)}, got {sweep.universe_scope!r}"
+            )
+        if "universe_scope" in raw and not sweep.universe:
+            raise ConfigError(
+                f"sweep config {source}: universe_scope is set but there "
+                "is no [[universe]]"
+            )
         if not sweep.name:
             sweep = replace(sweep, name=sweep.derived_name())
         return sweep
@@ -631,6 +663,12 @@ class SweepConfig:
             payload["min_dataset_version"] = self.min_dataset_version
         if self.pick_outcomes:
             payload["pick_outcomes"] = list(self.pick_outcomes)
+        if self.universe:
+            payload["universe"] = [f.to_table() for f in self.universe]
+            if self.universe_scope != "all":
+                payload["universe_scope"] = self.universe_scope
+        if self.pick_screen is not None:
+            payload["pick_screen"] = self.pick_screen.to_table()
         blob = json.dumps(payload, sort_keys=True, separators=(",", ":"))
         return hashlib.sha256(blob.encode()).hexdigest()[:8]
 
@@ -720,6 +758,9 @@ class SweepConfig:
                 pick_outcomes=parse_pick_outcomes(
                     self.pick_outcomes, horizon, f"sweep {self.name}"
                 ),
+                universe=self.universe,
+                universe_scope=self.universe_scope,
+                pick_screen=self.pick_screen,
             )
             candidate, name = self._run_names(
                 label, fs_idx, set_idx, combo, draw_idx, seed, config
@@ -1158,8 +1199,14 @@ def _write_sweep_summary(
     n_failed = sum(1 for o in outcomes if o["status"] == "failed")
     # trial accounting is per *evaluation* cell: a continuous-target run
     # counts against the binary eval_label cell it is measured on
+    # ... and per universe: a sweep inside one is counted in the
+    # universe-qualified cell its runs were logged under
+    qualifier = universe_qualifier(sweep.universe)
     cells = sorted(
-        {(o["horizon_years"], o["eval_label"] or o["label"]) for o in outcomes}
+        {
+            (o["horizon_years"], (o["eval_label"] or o["label"]) + qualifier)
+            for o in outcomes
+        }
     )
     tried_lines = [
         f"- `{label}` ({horizon}y): "
@@ -1264,6 +1311,21 @@ def _write_sweep_summary(
                 f"{sweep.search_seed} (deterministic)"
             ]
             if sweep.random
+            else []
+        ),
+        *(
+            [
+                f"- universe: `{describe_filters(sweep.universe)}` "
+                f"(scope `{sweep.universe_scope}`): every number below "
+                "describes this universe and is not comparable with a "
+                "sweep over all rows"
+            ]
+            if sweep.universe
+            else []
+        ),
+        *(
+            [f"- portfolio screen: {sweep.pick_screen.describe()}"]
+            if sweep.pick_screen is not None
             else []
         ),
         f"- expanded runs: {len(outcomes)} ({n_failed} failed), "

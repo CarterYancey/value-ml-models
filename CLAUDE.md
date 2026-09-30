@@ -127,11 +127,22 @@ invariants below are this repo's equivalents.
   Brier against `base_rate_brier` (the no-skill reference), calibration
   plot, PR-AUC. ROC-AUC and recall@K may be logged but never headline
   (base rates are extreme in some label cells).
+- A `[[universe]]` (docs/experiments.md) is a declared row filter on
+  manifest feature columns, e.g. the liquidity floor
+  `dollar_volume_3m >= 100000`: the rows a model is trained and
+  evaluated on. It never reads a label, builds no split and derives no
+  column. A run inside a universe is another ledger cell
+  (`label [universe: ...]`) with its own baselines; its numbers are
+  never compared with a run over all rows. Any other row filter in
+  training or evaluation code is a bug.
 - `pick_outcomes` (docs/experiments.md) reports what the top-K picks
   went on to do on outcomes other than the training label: the screen
   for comparing labels, with `vml-backtest` as the yardstick of record.
   Report-only: label-group columns, never features, never the default
   `rank_metric`, and a label is not chosen on them without a backtest.
+  `[pick_screen]` reads the same outcomes for the backtest template's
+  selection (top K per test quarter, capped per sector): prefer it to
+  the top-K-per-year tables when judging what a portfolio would hold.
 - Pooled ranking metrics pick per year (eval.era) — per-fold model scores
   are not comparable, so a global top-K over pooled scores is a bug, not
   a metric.
