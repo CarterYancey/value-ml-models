@@ -1,0 +1,14 @@
+{
+  "name": "sweep_forest_features_nonloser_dv100k_3y",
+  "promoted_utc": "2026-10-01T06:53:45+00:00",
+  "source_report": "reports/sweeps/forest_features_nonloser_dv100k_3y/forest_features_nonloser_dv100k_3y_summary.md",
+  "run_id": "",
+  "config_hash": "",
+  "git_sha": "",
+  "dataset_version": "dataset_v1.4",
+  "config_path": "experiments/sweeps/forest_features_nonloser_dv100k_3y.toml",
+  "note": "A training-time liquidity floor (dollar_volume_3m >= 100000) changes nothing for the ranks forest: trained inside vs on all rows, measured inside, p@20 0.769 vs 0.784, PR-AUC 0.601 vs 0.602, screen mean excess -0.003 vs -0.001. No feature set beats the ranks inside the floor either. One seed. docs/notes/2026-09-30-features-and-floor.md",
+  "files": [
+    "forest_features_nonloser_dv100k_3y_summary.md"
+  ]
+}

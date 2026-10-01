@@ -1,0 +1,14 @@
+{
+  "name": "bt_nonloser_roc_top10_cap2_sell20_5fc4fd669e5a9d55",
+  "promoted_utc": "2026-10-01T06:54:34+00:00",
+  "source_report": "reports/backtest/bt_nonloser_roc_top10_cap2_sell20_5fc4fd669e5a9d55.md",
+  "run_id": "",
+  "config_hash": "",
+  "git_sha": "",
+  "dataset_version": "",
+  "config_path": "",
+  "note": "The quality blend with the rank sell discipline: 800,456 vs SPY 732,110, time-weighted 10.64%, drawdown -38.8%, costs doubled, 69 sales in sixteen years; seeds 232/1776: 852,325/803,800, 11.09%/10.79%. Meets all four criteria of decision 21 on three seeds. Concentrated: two holdings are a third of the portfolio at the end. docs/notes/2026-09-30-backtests.md",
+  "files": [
+    "bt_nonloser_roc_top10_cap2_sell20_5fc4fd669e5a9d55.md"
+  ]
+}

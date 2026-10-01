@@ -1,0 +1,64 @@
+# forest_nonloser_dd30_isotonic_3y again, after the calibration fix of
+# 2026-09-30 (claude/calibration-label-lag; docs/notes/process-issues.md):
+# a fold is now calibrated only on folds whose 3-year outcomes were
+# known before its year began (fold Y on folds <= Y - 4), and rows on
+# one isotonic step keep their raw order. The first run is not to be
+# read: its calibrators had seen outcomes from the test rows' future.
+#
+# Predictions, written before the run (2026-09-30):
+#   1. p@20 0.788, PR-AUC 0.585 and the screen as in the uncalibrated
+#      run (the ranking is kept now). Folds 2005-2008 stay raw; fold
+#      2009 is the first with a usable history (fold 2005).
+#   2. The calibrated scores do not repair the crash windows: a fold's
+#      map is learned from outcomes at least three years old.
+#      `score >= 0.7` still selects rows among the 2019 entries (its
+#      map has seen 2005-15 entries, of which 2009-15 did well) with a
+#      precision under 0.6 there.
+#   3. Pooled over 2009-2020, rows at a calibrated 0.8 or more have a
+#      precision between 0.70 and 0.90: closer to their score than the
+#      raw scores were (0.42 pooled at a raw 0.8).
+#   4. `score >= 0.8` is met in fewer than half of the years 2009-2020.
+name = "forest_nonloser_dd30_isotonic_lag_3y"
+note = "Calibration after the look-ahead fix (a fold uses only folds whose 3y outcomes were known): ranking unchanged (p@20 0.7875), but the calibrator is four years behind: no row at 0.5 in 2011-13 (top 20 right 95-100%), 42-44% of rows at 0.5 in 2017-19 at precision 0.31-0.48; Brier 0.227 vs raw 0.215. Selection stays by rank within the period. docs/notes/2026-09-30-blends-and-calibration.md"
+dataset_version = "dataset_v1.4"
+min_dataset_version = "1.4"
+scheme = "walkforward"
+folds = "all"
+horizon_years = 3
+label = "fwd_3y_cagr >= 0 & fwd_3y_max_drawdown_from_entry < 0.3"
+feature_groups = ["ranks"]
+seed = 23
+top_k = [20, 50]
+score_thresholds = [0.5, 0.6, 0.7, 0.8, 0.9]
+precision_targets = [0.75, 0.9]
+calibration = "isotonic"
+pick_outcomes = [
+  "label_3y_beat_spy",
+  "fwd_3y_excess_cagr",
+  "fwd_3y_cagr",
+  "fwd_3y_max_drawdown_from_entry",
+  "fwd_3y_cagr < 0",
+  "fwd_3y_cagr < -0.1",
+  "fwd_3y_max_drawdown_from_entry >= 0.4",
+  "fwd_3y_cagr >= 0.15",
+  "fwd_3y_cagr >= 0.25",
+  "fwd_3y_excess_cagr >= 0.05",
+]
+
+[pick_screen]
+per = "quarter"
+top_k = 10
+max_per_group = 2
+group_column = "sector"
+
+[model]
+name = "random_forest"
+bootstrap = true
+class_weight = 1.0
+n_jobs = 8
+criterion = "entropy"
+max_depth = 4
+max_features = 0.205191
+max_samples = 0.663781
+min_samples_leaf = 72
+n_estimators = 490

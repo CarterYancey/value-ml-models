@@ -1,0 +1,14 @@
+{
+  "name": "sweep_baseline_factors_nonloser_1y_dv100k",
+  "promoted_utc": "2026-10-01T06:53:50+00:00",
+  "source_report": "reports/sweeps/baseline_factors_nonloser_1y_dv100k/baseline_factors_nonloser_1y_dv100k_summary.md",
+  "run_id": "",
+  "config_hash": "",
+  "git_sha": "",
+  "dataset_version": "dataset_v1.4",
+  "config_path": "experiments/sweeps/baseline_factors_nonloser_1y_dv100k.toml",
+  "note": "Single-factor bars for the 1-year 'not a loser' cell (cagr >= 0 & drawdown from entry < 0.2) inside the 100k floor, 1-year outcomes on the screen: lowest volatility 0.72 precision / 0.250 losers; conservative score 0.62 / 0.325; momentum 0.22 / 0.614. docs/notes/2026-09-30-one-year-cell.md",
+  "files": [
+    "baseline_factors_nonloser_1y_dv100k_summary.md"
+  ]
+}

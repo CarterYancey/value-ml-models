@@ -1,0 +1,22 @@
+{
+  "name": "forest_nonloser_dd30_isotonic_lag_3y",
+  "promoted_utc": "2026-10-01T06:53:52+00:00",
+  "source_report": "reports/forest_nonloser_dd30_isotonic_lag_3y.md",
+  "run_id": "dbecfe43f31a",
+  "config_hash": "8545d322e8df5741",
+  "git_sha": "5a3065d28af3c2e9eec1c746aa73b813e91c29c8",
+  "dataset_version": "dataset_v1.4",
+  "config_path": "experiments/forest_nonloser_dd30_isotonic_lag_3y.toml",
+  "note": "Calibration after the look-ahead fix (a fold uses only folds whose 3y outcomes were known): ranking unchanged (p@20 0.7875), but the calibrator is four years behind: no row at 0.5 in 2011-13 (top 20 right 95-100%), 42-44% of rows at 0.5 in 2017-19 at precision 0.31-0.48; Brier 0.227 vs raw 0.215. Selection stays by rank within the period. docs/notes/2026-09-30-blends-and-calibration.md",
+  "experiment": "forest_nonloser_dd30_isotonic_lag_3y",
+  "model": "random_forest",
+  "label": "fwd_3y_cagr >= 0.0 & fwd_3y_max_drawdown_from_entry < 0.3",
+  "horizon_years": 3,
+  "scheme": "walkforward",
+  "headline": "p@20=0.787",
+  "baseline": "0.453 rank_factor",
+  "lift": "+0.334",
+  "files": [
+    "forest_nonloser_dd30_isotonic_lag_3y.md"
+  ]
+}

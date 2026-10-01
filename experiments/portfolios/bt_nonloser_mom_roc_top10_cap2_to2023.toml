@@ -1,0 +1,58 @@
+# Decision 26 of docs/notes/2026-09-29-decisions.md (2026-10-01):
+# Carter let the backtest engine trade 2021-23 for the candidate.
+# Buys continue to the end of 2023 (deposits too: 228,000 in all);
+# trade years past the forest's last fold (2020) are served by
+# `model_update = "refit"`, a simulated year-end deployment refit on
+# every row whose 3-year label was observable by Jan 1 of the trade
+# year (snapshots up to about November of the year four years
+# before). The two factors are columns and need no refit. These
+# years overlap the sealed 3-year holdout window (snapshots 2021-),
+# so what they show is read as context for the holdout look, never
+# as selection: the candidate was fixed (decision 24) before this run.
+#
+# Prediction (2026-10-01), written before the run: for 2021-23 the
+# portfolio with new buys and refits is within 3 points a year of the
+# same portfolio without them (which had +(-9.5), +4.6, -2.0 against
+# SPY in 2021, 2022, 2023): behind SPY in 2021 and 2023, ahead in
+# 2022; final value above SPY's under the same deposits; the 2021 and
+# 2022 buys read on their 1-year outcomes within 0.03 of the 2013-20
+# buys' +0.03 a year.
+name = "bt_nonloser_mom_roc_top10_cap2_to2023"
+dataset_version = "dataset_v1.4"
+prices_version = "prices_v1.0"
+
+bundles = [
+    "experiments/models/forest_nonloser_dd30_3y_53ceedd93e6d",
+    "experiments/models/factor_mom_12_2_3y_97c0f095cf48",
+    "experiments/models/factor_roc_greenblatt_3y_da640394cbba",
+]
+
+[signal]
+combine = "mean_rank"
+max_staleness_days = 200
+model_update = "refit"
+label_lag_days = 45
+
+[[investability]]
+column = "dollar_volume_3m"
+op = ">="
+value = 100000.0
+
+[portfolio]
+strategy = "buy_and_hold"
+top_k = 10
+weighting = "equal"
+monthly_cash = 1000.0
+max_per_group = 2
+group_column = "sector"
+
+[execution]
+cost_bps = 35.0
+benchmark_cost_bps = 0.0
+max_quote_age_days = 3
+delist_after_days = 30
+
+[window]
+start = 2005-01-01
+end = 2023-12-29
+valuation_end = 2023-12-29
