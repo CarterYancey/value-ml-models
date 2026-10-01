@@ -14,6 +14,13 @@ read** stub; a correction is a new entry that names the old one.
 
 <!-- entries -->
 
+### 2026-10-01 · bt_nonloser_mom_roc_top10_cap2_{to2023,sell20_to2023,mcap,mcap_s232,mcap_s1776}, _rankfloor (vml-backtest)
+git `8e0cdcd` · [note](notes/2026-09-29-decisions.md)
+- **Did:** Carter's instructions and questions of 2026-10-01 (decision 26): the candidate trading on through 2023 with year-end refits, with and without the sell discipline; a capitalization-weighted variant (new , claude/backtest-marketcap-weighting) on three seeds; and the rank-floor check. 31 backtest configurations on dataset_v1.4.
+- **Got:** Through 2023: 985,668 on 228,000 (SPY 774,140), 12.21%, -41.2%; 2021 -9.6, 2022 +4.3, 2023 -2.2 against SPY; the 2021 buys -15 points a year over their first year (77% lost money), 2022's -2.8. With sells: 1,054,924, 12.70%. Cap-weighted: 1,108,044 / 1,161,451 / 1,090,347, 13.8-14.4%, drawdown -37 to -39%, with 46% of the final portfolio in AAPL and 5.2 buys a month.
+- **Concluded:** The refits and new buys change the path by under 0.3 points a year; the 2021 cohort is the worst one-year cohort of the sample, of a kind with 2006 and 2020, and is the first evidence from years the candidate was not chosen on. Capitalization weighting is a single-stock bet (prediction missed upwards on return and on drawdown); equal weights stay. The rank floor leaves the candidate unchanged.
+- **Next:** Carter: the holdout look; the pull request from claude/backtest-marketcap-weighting (all seven branches); paper trading.
+
 ### 2026-10-01 · bt_nonloser_mom_roc_top10_cap2_rankfloor (vml-backtest); vml-predict applies the universe
 git `204b348` · [note](notes/2026-09-29-decisions.md)
 - **Did:** Carter's questions of 2026-10-01 (decision 25): made vml-predict rank only the inference rows inside a bundle's universe (claude/predict-universe, 485 tests), and ran the candidate with a within-quarter rank floor (dollar_volume_3m_rank >= 0.2) in place of the 100,000 dollar floor: the 27th backtest configuration on these years, a sensitivity check.

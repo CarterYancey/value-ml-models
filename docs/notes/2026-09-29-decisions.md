@@ -806,3 +806,91 @@ answered:
    does so by what the picks earn on their capital, not by a quota.
    The cap stays in the template as a safeguard; with return on
    capital in the blend it binds rarely.
+
+### 26. Carter lets the engine trade 2021–23 for the candidate; three questions on a report
+
+*Carter (2026-10-01):* "Let the backtest engine trade 2021–23 for the
+candidate." Done as two backtests, predictions in the configs:
+`bt_nonloser_mom_roc_top10_cap2_to2023` and the sell-discipline
+variant, buys and deposits through 2023-12-29, the forest served for
+2021–23 by year-end refits on rows whose 3-year label was observable
+by Jan 1 of the trade year. These years overlap the sealed 3-year
+holdout window; the candidate was fixed in decision 24 before they
+were run, and they are read as context for the holdout look, not as
+selection.
+
+Carter also ran `forest_nonloser_dd30_3y` on the host (same config
+hash: no new configuration) and asked three things about its report:
+
+1. *How can the top 20 a year be 0.79 precise when the 37 rows a
+   year at `score >= 0.8` are 0.42?* Because "37 a year" is 597
+   rows pooled over sixteen years, and 517 of them are 2006, 2007
+   and 2008 entries (41, 120, 356; precision 0.39, 0.15, 0.40),
+   where the fold models scored hottest and were most wrong. No row
+   scores 0.8 after 2009. Top 20 *per year* takes the best of each
+   year; a fixed threshold takes the years the model was most
+   confident, which were the pre-crash years (findings, conclusion
+   5). The era table's `n_at_thr_0.8` column shows it per year.
+2. *Do 17% of the picks and 46% of all rows get 0% over three
+   years?* No: `label_3y_cagr_lt_0p0` is the label expression
+   `fwd_3y_cagr < 0`, the share of rows whose 3-year CAGR is
+   negative (losers), not zero. 17% of the top 50 picks lost money
+   over three years against 46% of all test rows. The low/high
+   snapshot kinds are training rows only; every test row is a
+   median-kind snapshot.
+3. *Does the average stock trail SPY by 10 points a year, and would
+   capitalization-weighting the buys help?* Yes to the first: the
+   mean `fwd_3y_excess_cagr` over all test rows is −0.106 (median
+   −0.073), −0.089 inside the 100k floor, −0.07 inside 1m. Three
+   reasons, all real: the test rows are a universe of mostly small
+   companies, equally weighted; a stock's CAGR is pulled below its
+   average return by its volatility (a stock that halves and doubles
+   has a CAGR of zero) and most of the market's return comes from a
+   few large winners; and a delisted stock is carried at 0% to the
+   horizon. The candidate's buys are not the average stock (61% beat
+   SPY over three years, mean excess +0.025). Whether weighting them
+   by capitalization helps is a question the engine can now answer
+   (`weighting = "marketcap"`, `claude/backtest-marketcap-weighting`):
+   `bt_nonloser_mom_roc_top10_cap2_mcap`, the 28th configuration on
+   2005–20, prediction in the config (within 1.5 points either way,
+   more concentrated).
+
+*What came out (2026-10-01, backtests 28 to 31 on `dataset_v1.4`):*
+
+| | final value | deposits | time-weighted | drawdown | 2021 / 2022 / 2023 against SPY |
+|---|---|---|---|---|---|
+| SPY, deposits through 2023 | 774,140 | 228,000 | 9.58% | −52.9% | |
+| candidate, buys through 2023 | 985,668 | 228,000 | 12.21% | −41.2% | −9.6 / +4.3 / −2.2 |
+| the same with the sell discipline | 1,054,924 | 228,000 | 12.70% | −39.5% | −7.9 / +1.2 / −6.7 |
+| (the candidate without buys after 2020, for reference) | 948,956 | 192,000 | 12.24% | −41.2% | −9.5 / +4.6 / −2.0 |
+
+The forest for 2021, 2022 and 2023 was refit at each year end on
+rows whose 3-year label was observable by then; the years with new
+buys are within 0.3 points of the years without them, so the refits
+and the new buys changed the portfolio's path very little. **What
+the new buys did:** the 86 buys of 2021 trailed SPY by 15 points a
+year over their first year (77% lost money; 2022 was the year after),
+the 81 buys of 2022 by 2.8 points (54% lost money); 2023's have no
+outcome yet. In the selection years the worst one-year cohorts were
+2020 (−13.5 points) and 2006 (−11.0): 2021's is the worst of the
+sample, and of a kind with them. The predictions held for the years
+and the final value and missed for the 2021 cohort (within 0.03 of
++0.03 predicted; −0.15 measured). These are the only numbers so far
+from years the candidate was not chosen on, and they overlap the
+holdout era: context for the holdout look.
+
+**Capitalization weighting is an Apple bet.** The candidate with
+`weighting = "marketcap"` ends at 1,108,044 (13.82% a year, drawdown
+−37.0%) on seed 23, 1,161,451 and 1,090,347 on the other two: 1.6 to
+2.2 points a year above equal weights. But the median month puts 54%
+of its cash into one buy, it makes 5.2 buys a month instead of 9.1,
+and at the end 46% of the portfolio is AAPL (the five largest
+holdings are 60%, against 26% equal-weighted). The prediction missed
+on the return (+1.58, predicted within 1.5) and on the drawdown
+(shallower, not deeper); it held on concentration. The answer to
+Carter's question is that the index's advantage over the average
+stock comes from a few very large winners, and weighting the picks
+by size reproduces that by holding the largest of them: a
+single-stock bet, not a sizing rule. Equal weights stay.
+
+Backtest configurations tried on these years: 31.

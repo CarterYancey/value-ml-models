@@ -46,7 +46,11 @@ and return on capital combined by mean rank; top 10 a month, at most
 
 61% of the candidate's buys beat SPY over their first three years,
 20% lost money; 235 stocks bought in sixteen years; utilities and
-real estate 1.4% of buys. **26 backtest configurations were tried on
+real estate 1.4% of buys. **Trading on through 2021–23** (Carter's
+leave, decision 26; overlaps the holdout era): 985,668 on 228,000
+against SPY's 774,140, −9.6 / +4.3 / −2.2 points against SPY in
+2021 / 2022 / 2023, and the 2021 buys trailed SPY by 15 points over
+their first year, the worst cohort of the sample. **31 backtest configurations were tried on
 these years; this is the best of them, and it has not been shown to
 hold outside 2005–2023.** [backtests](notes/2026-09-30-backtests.md)
 

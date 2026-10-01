@@ -696,10 +696,11 @@ docs/notes/2026-09-30-backtests.md). Start a new session there.
 - [ ] **Carter: one holdout look** in cell C's 3y cell with
       `experiments/forest_nonloser_dd30_3y.toml` (unchanged: the
       candidate's forest is the forest of decision 10).
-- [ ] **Carter: decide whether the backtest engine may trade 2021-23
-      for the candidate** (year-end refits; overlaps the holdout era,
-      so it was not run). It is the only evidence outside the buy
-      years short of live trading: every portfolio trailed SPY in 2021.
+- [x] **Carter: decide whether the backtest engine may trade 2021-23
+      for the candidate.** (2026-10-01, Carter said yes: 985,668 on
+      228,000 against SPY's 774,140; 2021 −9.6, 2022 +4.3, 2023 −2.2
+      against SPY; the 2021 buys trailed SPY by 15 points over their
+      first year. Decision 26.)
 - [ ] **Carter: promotion.** Worth keeping: the three-way blend's
       backtests (three seeds, fractional shares, sell discipline),
       the quality blend's, the feature-set and floor sweeps, the
@@ -725,6 +726,10 @@ docs/notes/2026-09-30-backtests.md). Start a new session there.
       C: ranks against ranks + sector, read on the screen and on
       sector shares. Within-sector risk ranks (upstream) are the
       other route.
+- [x] Capitalization-weighted buys (Carter's question, 2026-10-01,
+      `weighting = "marketcap"`): +1.6 to +2.2 points a year on three
+      seeds, with 46% of the portfolio in AAPL at the end. A
+      single-stock bet; equal weights stay. Decision 26.
 - [ ] **Which liquidity floor to deploy with**: 100,000 a day
       (template) or `dollar_volume_3m_rank >= 0.2` (era-neutral; the
       candidate is the same under either, backtest 27). Carter's.
