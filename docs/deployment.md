@@ -41,7 +41,44 @@ long-horizon trend context columns (`revenue_trend_20q`,
 the score columns. A bundle whose config has a `[[universe]]`
 (docs/experiments.md) is refit inside it and ranks only the inference
 rows inside it (a combined run, the rows inside every model's); the
-sidecar names the universe and counts the rows left out. Both deployment
+sidecar names the universe and counts the rows left out.
+
+**The backtest's selection, applied to the ranking.** A backtest does
+three things between a ranking and a buy: it leaves out the rows that
+fail its `[[investability]]` filters *before* the models are ranked, it
+walks the ranking in order, and it skips a stock once `max_per_group`
+of the month's buys share its sector. `vml-predict` does the same with
+
+```sh
+uv run vml-predict <forest> <momentum> <return-on-capital> \
+    data/datasets/inference_2026-10-01 \
+    --filter "dollar_volume_3m_rank >= 0.2" \
+    --pick 10 --max-per-group 2
+```
+
+- `--filter 'COLUMN OP VALUE'` (repeatable, ANDed; a NULL fails) keeps
+  only the rows passing it, after the bundles' universe and before any
+  rank is taken, so `mean_rank` is the backtest's
+  `combine = "mean_rank"` over its investable rows. A mean of ranks
+  taken over every row and filtered afterwards is a different ranking.
+  With an inference `manifest.json` the column must be in its
+  `features`, `ranks` or `sector_ranks` groups.
+- `--pick K` adds a `pick` column (1..K down the ranking) and prints
+  the picks instead of the top rows; `--max-per-group N` skips a row
+  once N of the picks share its `--group-column` (default `sector`; a
+  NULL group counts as one group), the walk of
+  `portfolio.strategy.capped_top_k`. Fewer than K picks come back when
+  the groups run out. The group column is carried into the CSV.
+- The sidecar records the filters, the rows they left out and the
+  selection rule. The full ranking is still written: the picks are a
+  marked subset of it.
+
+The list is what a backtest with the same rule would have bought on
+that cross-section, not a result: a deployment fit has no test set.
+An inference cross-section is ranked fresh on one day, where the
+backtest ranks snapshots up to a quarter old (docs/backtesting.md).
+
+Both deployment
 training and inference runs are logged to `experiments/results.csv` under
 their own schemes (`deployment` / `inference`), so they never mix with
 walk-forward trial accounting.
