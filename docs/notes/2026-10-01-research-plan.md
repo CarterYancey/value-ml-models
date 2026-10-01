@@ -106,7 +106,16 @@ quantiles, which are a label-free way to ask for the same thing.
 
 ### 5. The Piotroski signals against the F-score
 
-Run on 2026-10-01 (`forest_piotroski_3y`); result in the logbook.
+Run on 2026-10-01 (`forest_piotroski_3y`, promoted). A forest on the
+nine signals beats one on their sum: fold-mean PR-AUC 0.507 against
+0.466 in cell C (base rate 0.392) and 0.407 against 0.394 on beat SPY
+(0.348), on every seed and in both halves. It does it by weighting:
+"operating cash flow positive" carries 70% of the importance and
+"return on assets positive" 11%; the seven signals about change and
+improvement, seven of the F-score's nine points, carry the rest. The
+same question could be put to the other composites the dataset ships
+with their parts (the Mohanram score, the conservative score, the
+magic formula).
 
 ## Sessions of their own
 

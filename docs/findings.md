@@ -106,6 +106,9 @@ candidate and its variant, not a selection.
    forest parameters and the seed move little.
    [blends](notes/2026-09-30-blends-and-calibration.md),
    [searches](notes/2026-09-29-searches-nonloser.md)
+   A forest on the nine Piotroski signals beats one on their sum
+   (PR-AUC 0.507 against 0.466 in cell C), mostly through "operating
+   cash flow positive"; both are far below the ranks (0.585).
 8. **A rank sell discipline added 0.7 points a year over 21 years**
    and nothing in 2021–26; it is why that variant ends level with SPY.
 9. **Instruments** ([process issues](notes/process-issues.md)):

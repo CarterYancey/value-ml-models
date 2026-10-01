@@ -51,7 +51,6 @@
 #
 # Expanded: 2 cells x 3 feature sets x 1 set x 3 seeds = 18 runs.
 name = "forest_piotroski_3y"
-note = "The nine Piotroski signals against the composite F-score (v1.4, forests, three seeds, all rows), fold-mean PR-AUC: cell C ('not a loser', base 0.392) composite 0.466, nine signals 0.507; beat SPY (base 0.348) 0.394 and 0.407. A model on the signals beats their sum in both halves; 'operating cash flow positive' carries 70% of its importance and 'return on assets positive' 11%. Read on the whole ranking, not on picks (large ties). docs/logbook.md"
 dataset_version = "dataset_v1.4"
 min_dataset_version = "1.4"
 scheme = "walkforward"
