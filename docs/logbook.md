@@ -14,6 +14,13 @@ read** stub; a correction is a new entry that names the old one.
 
 <!-- entries -->
 
+### 2026-10-01 · bt_nonloser_mom_roc_top10_cap2_rankfloor (vml-backtest); vml-predict applies the universe
+git `204b348` · [note](notes/2026-09-29-decisions.md)
+- **Did:** Carter's questions of 2026-10-01 (decision 25): made vml-predict rank only the inference rows inside a bundle's universe (claude/predict-universe, 485 tests), and ran the candidate with a within-quarter rank floor (dollar_volume_3m_rank >= 0.2) in place of the 100,000 dollar floor: the 27th backtest configuration on these years, a sensitivity check.
+- **Got:** 965,380 against 948,956; time-weighted 12.15% against 12.24%; drawdown -41.4% against -41.2%; per buy +0.026 against +0.025; 3,237 candidates a month against 3,153.
+- **Concluded:** As predicted (within a point and 10%): the candidate does not depend on the form of its floor. A rank floor is one config line and needs nothing upstream. The REIT cohorts of the forest-alone backtest, read per buy: 2005's REITs beat SPY by 0.055 a year over three years and 0.075 over seven; 2006's lost 0.119 a year over three and 0.030 over seven; sector as a model input is proposed in TODO.
+- **Next:** Carter: which floor to deploy with; the pull request from claude/predict-universe.
+
 ### 2026-09-30 · backtests 14 to 26: the quality blend, the three-way blend, a rank sell discipline (vml-backtest)
 git `0b8c053` · [note](notes/2026-09-30-backtests.md)
 - **Did:** Built per-buy outcomes into the backtest report (claude/backtest-buy-outcomes) and a rank sell criterion (claude/backtest-rank-sell). Re-ran the eight capped backtests for the per-buy table (same hashes, figures reproduced to the cent). Thirteen new configurations under decision 6's template with the cap, judged on four criteria fixed beforehand (decision 21): the quality blend (forest + return on capital) on two more seeds; forest + momentum + return on capital on three seeds, with fractional shares and with a sell discipline on three seeds; the sell discipline on the quality blend (three seeds) and on the momentum blend. 26 backtest configurations tried on dataset_v1.4 in all.

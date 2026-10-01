@@ -681,9 +681,9 @@ capital by mean rank (docs/findings.md, "State";
 docs/notes/2026-09-30-backtests.md). Start a new session there.
 
 - [ ] **Carter: pull requests for the session's code.** Five feature
-      branches, stacked; `claude/backtest-buy-outcomes` contains all
+      branches, stacked; `claude/predict-universe` contains all
       of them and is the one to open against `Claude`
-      (`gh pr create --base Claude --head claude/backtest-buy-outcomes`):
+      (`gh pr create --base Claude --head claude/predict-universe`):
       `claude/universe-and-portfolio-screen` (`[[universe]]`,
       `[pick_screen]`, selection by score, boolean flags),
       `claude/eval-blend` (`blend` in vml-eval),
@@ -691,7 +691,8 @@ docs/notes/2026-09-30-backtests.md). Start a new session there.
       was fitted on outcomes not yet known; and isotonic ties),
       `claude/backtest-rank-sell` (`[sell] max_rank_pct`),
       `claude/backtest-buy-outcomes` (per-buy table in every backtest
-      report). 484 tests pass on the combined branch.
+      report), `claude/predict-universe` (the universe at inference;
+      stacked on all of the above, 485 tests pass: open this one).
 - [ ] **Carter: one holdout look** in cell C's 3y cell with
       `experiments/forest_nonloser_dd30_3y.toml` (unchanged: the
       candidate's forest is the forest of decision 10).
@@ -715,6 +716,21 @@ docs/notes/2026-09-30-backtests.md). Start a new session there.
 - [ ] **No further backtests on buys of 2005-2020** (decision 24: 26
       configurations tried). New ideas are screened on
       `[pick_screen]` and on the per-buy table of an existing run.
+- [ ] **`sector` as a model input** (Carter, 2026-10-01: the cap is
+      a bandage; the model might learn that a column means something
+      different for REITs). One-hot of `sector` in
+      `harness.dataset.feature_matrix`, a per-row recoding like the
+      boolean flags (route (b) of the categorical item), with the
+      current-state caveat stated in every report. One sweep in cell
+      C: ranks against ranks + sector, read on the screen and on
+      sector shares. Within-sector risk ranks (upstream) are the
+      other route.
+- [ ] **Which liquidity floor to deploy with**: 100,000 a day
+      (template) or `dollar_volume_3m_rank >= 0.2` (era-neutral; the
+      candidate is the same under either, backtest 27). Carter's.
+- [x] Universe applied at inference (2026-10-01,
+      `claude/predict-universe`): `vml-predict` ranks only the rows
+      inside the bundle's universe; sidecar counts the rest.
 - [ ] **A position cap** in the strategy (`Strategy` interface): the
       quality blend buys 94 stocks in sixteen years and its two
       largest holdings are a third of it with the sell discipline;

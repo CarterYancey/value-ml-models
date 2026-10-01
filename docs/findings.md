@@ -20,9 +20,9 @@ record. Never compared across dataset versions or universes.
    2026-09-30; 1–13 are the day before).
 2. What to do next: TODO.md, "Next, from the second session of
    2026-09-30".
-3. Code not yet in `Claude`: `claude/backtest-buy-outcomes` holds
-   all five feature branches of the session (TODO.md lists them;
-   one is a look-ahead fix in calibration). The lab branch is
+3. Code not yet in `Claude`: `claude/predict-universe` holds all six
+   feature branches of the session (TODO.md lists them; one is a
+   look-ahead fix in calibration). The lab branch is
    `claude/lab-2026-09-30`.
 
 ## State (2026-09-30)

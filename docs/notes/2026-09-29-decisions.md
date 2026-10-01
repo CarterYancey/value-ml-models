@@ -747,3 +747,62 @@ candidate's forest; promotion; the pull requests for the five feature
 branches; deployment. Also his to decide: whether the backtest engine
 may trade 2021–2023 with year-end refits for the candidate (it
 overlaps the holdout era and was not run).
+
+### 25. Carter's questions of 2026-10-01: the universe through to inference, a rank floor, the sector cap
+
+Carter read decisions 14–24 and asked four things. What was done and
+answered:
+
+1. **A universe is used to train, test and deploy, and inference
+   applies it.** `vml-train-deploy` already refit inside it; the gap
+   was `vml-predict`, which ranked every inference row. Fixed on
+   `claude/predict-universe`: the ranking is made over the rows
+   inside the bundle's universe (a combined run, the rows inside
+   every model's), the sidecar names the universe and counts the
+   rows left out, and a missing universe column is an error. The
+   backtest already refuses a bundle trained inside a universe
+   unless its `[[investability]]` or `[[filters]]` carry the same
+   filters, so the investability filter has to match the universe,
+   as Carter expected. *What `universe_scope = "test"` was for:* a
+   floor changes the test population (cell C's base rate is 0.39 on
+   all rows and 0.43 inside 100k), so "trained inside the floor"
+   had to be compared with "trained on everything, measured on the
+   same floored test rows", or the floor's effect on the measurement
+   would be read as an effect on the model. It is the reference arm
+   of one experiment, not a way to deploy.
+2. **A rank floor needs nothing upstream.** `dollar_volume_3m_rank`
+   is a column; `dollar_volume_3m_rank >= 0.2` is one line in a
+   universe or an investability filter, era-neutral by construction.
+   Checked on the candidate (backtest 27, seed 23,
+   `bt_nonloser_mom_roc_top10_cap2_rankfloor`): 965,380 against
+   948,956, 12.15% against 12.24%, drawdown −41.4% against −41.2%,
+   per buy +0.026 against +0.025. The candidate does not depend on
+   the form of its floor. Which floor to deploy with is Carter's:
+   100,000 a day was about the 27th percentile of the test rows in
+   2005 and the 12th in 2020.
+3. **The sector cap is a bandage, and the deeper question is
+   recorded.** Agreed on both counts. What the data says about
+   "what if the REITs had recovered": in the capped forest-alone
+   backtest the REITs bought in 2005 (24 buys) earned +0.055 a year
+   over SPY over three years and +0.075 over seven; those bought in
+   2006 earned −0.119 over three and −0.030 over seven, and 2007's
+   −0.019 and −0.016. The 2005 cohort was right; the 2006 and 2007
+   cohorts never caught up with SPY. Why: the fold models of 2006–07
+   were trained on snapshots up to 2003–04, in which no REIT had
+   fallen 40%; a sector feature would not have helped them, because
+   the lesson was not in their training window. What a sector
+   feature could do is let the model learn that a given column means
+   something different for REITs (book value, cash-flow stability,
+   leverage all do). Two routes, recorded in TODO: (a) upstream
+   within-sector ranks of the risk columns (already requested); (b)
+   `sector` one-hot as a model input here, a per-row recoding like
+   the boolean flags (decision 17), with the current-state caveat of
+   data/features.md (a reclassified company's whole history carries
+   today's sector). Not run in this session.
+4. **Return on capital is the answer that was found**: it moves the
+   portfolio from utilities and real estate (35% of the forest's
+   buys) to operating companies (1.4%) without a cap, because the
+   factor is undefined for most REITs and low for utilities, and it
+   does so by what the picks earn on their capital, not by a quota.
+   The cap stays in the template as a safeguard; with return on
+   capital in the blend it binds rarely.
