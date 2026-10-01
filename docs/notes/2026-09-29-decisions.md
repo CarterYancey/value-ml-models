@@ -1528,3 +1528,66 @@ data. Older data is an upstream question and may be a vendor
 question: the raw tables' own first date has to be checked there
 (TODO, upstream requests).
 
+
+### 36. Carter's direction after the run to 2026: the bubble is the working assumption, the candidate goes to paper trading, the search reopens wider
+
+*Carter (2026-10-01), on decisions 34 and 35:*
+
+1. **Sharadar's history starts in 1998** and he has very low
+   confidence that data of the same quality and columns exists
+   earlier. The "data before 1998" request is closed.
+2. **The working assumption is that 2021–26 is a bubble** in which a
+   value strategy is expected to trail, and that it is waited out.
+   The episode differing from 1999 does not change that: value
+   investing is a proven, principled approach, the work here shows it
+   doing well and better than the market over long periods, and five
+   strange years are not a reason to discount the models. This is
+   Carter's judgment, taken with the evidence of decisions 30, 32 and
+   35 in front of him; it is recorded as the assumption the project
+   proceeds on, and the evidence stays where it is in the notes.
+3. **Priority one: carry the best models, combination and portfolio
+   strategy forward to paper trading**, clearly documented, the
+   models saved and the configs promoted.
+4. **The search continues, and wider** (this lifts decision 34's
+   "closed for now"): other model families, continuous models that
+   predict growth instead of a binary label, perhaps unsupervised
+   models and neural nets (explainability may give way to
+   performance); better-calibrated models and, on them, a
+   confidence-weighted strategy, with market-state features for
+   "hold cash" only once that is exhausted; models of over-priced
+   stocks (a short side is risky and not preferred, but a precise
+   model of a 50% fall from entry could be worth it, and the number
+   of its high-confidence calls might serve as a market-state
+   signal); more creative blending and portfolio construction (for
+   example only stocks in both models' top 100), or cells chosen so
+   that no blend is needed; and, as a side experiment, the nine
+   Piotroski signals against the composite F-score.
+
+*What follows from 2 for how results are read (decided here, so it
+is not decided run by run):*
+
+- A new model or portfolio is judged on walk-forward 2005–2020,
+  against same-size peers (decision 34.3), in both halves, on every
+  seed. 2021–26 is reported beside it as context and is neither a
+  veto nor a selection criterion: under the assumption a value
+  strategy is expected to trail SPY there, and choosing the variant
+  that trailed least would be choosing on the bubble.
+- The cost of that, stated once: with 2021–26 set aside there is no
+  period left on disk that the choices were not made on. 2005–2020
+  has carried 87 configurations in cell C and 35 backtests, and every
+  further search on it makes its best figure less believable. The
+  guards are the ones already in use (the rule before the run,
+  predictions in the config, three seeds, the single-factor bar
+  inside the same universe) and paper trading, which is the only
+  out-of-sample evidence there will be. 1999–2004 stays untouched by
+  any search and is available once, as a check, for whatever is
+  carried forward and can be expressed there.
+
+*Done under this decision, now:* the candidate's three models refit
+for deployment and the prediction path run end to end against the
+backtest's latest month (it had never been run); a paper-trading
+runbook; the factor configs promoted; the Piotroski experiment; and
+the rest of point 4 sorted into TODO.md and a research plan
+([research plan](2026-10-01-research-plan.md)), with what each
+direction needs, what the record already says about it, and which
+ones need a session of their own.
