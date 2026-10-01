@@ -894,3 +894,157 @@ by size reproduces that by holding the largest of them: a
 single-stock bet, not a sizing rule. Equal weights stay.
 
 Backtest configurations tried on these years: 31.
+
+## Session of 2026-10-01 (second), decisions 27 onwards
+
+Carter opened the session with the thesis restated and the same
+freedom as before ("do anything you feel is best to reach this goal",
+the stop rules of agents.md disregarded for now, every decision
+logged, code on a feature branch), and with explicit leave to rewrite
+agents.md to match. Since the last session he merged pull request 18
+into `Claude`, took the one holdout look in cell C's 3y cell
+(`reports/final_eval/forest_nonloser_dd30_3y.md`) and chose the
+era-neutral rank floor for deployment (TODO.md).
+
+Not lifted, as before: the hard invariants of CLAUDE.md (no local
+splits, no feature engineering, the sealed holdout, era-sliced
+reporting, reproducible runs), the branch workflow, the rules under
+"Before writing a conclusion". No holdout look, deployment or merge
+into `Claude` is made under this log.
+
+Lab branch: `claude/lab-2026-10-01`, off `claude/lab-2026-09-30` with
+`Claude` merged in (the session's checkout was `Claude` itself, which
+is never committed to).
+
+### 27. agents.md is rewritten to say what the sessions have done since 2026-09-29
+
+*Decided:* with Carter's leave, docs/agents.md now describes two ways
+of working. The queue loop and its stop rules stay as written for a
+session told to "work the queue". A session told to pursue the goal
+works as these four sessions have: it may open a new direction, extend
+the queue, build code on a feature branch and continue experiments off
+it, on condition that every decision is logged here before it is acted
+on, with its reason and, for a run, its prediction in the config.
+
+*What stays Carter's in both:* a holdout look or re-look, deployment,
+and the merge into `Claude`. *What moves to the agent in a
+goal-directed session:* promoting results (`vml-promote`, as at the
+close of the last two sessions) and building the results branch a pull
+request is opened from.
+
+*What a contradicted prediction does now:* it no longer ends the
+session. It gets a note with the rival explanations, and the next
+experiment is the one that separates them, which the session may run.
+A result far above its baseline, or far below an earlier one, is still
+checked as a bug or a changed input before anything is built on it.
+
+### 28. The candidate is traded to the end of the price panel, once
+
+*Decided:* two backtests, predictions in the configs, before anything
+else: `bt_nonloser_mom_roc_top10_cap2_rankfloor_to2026` and its
+sell-discipline variant. Decision 24's blend with the floor Carter
+chose for deployment (`dollar_volume_3m_rank >= 0.2`), buys and
+deposits through 2026-08-21, valued on that day, year-end refits of
+the forest for 2021 to 2026.
+
+*Why:* the first open question in findings.md is whether the candidate
+holds outside 2005–2023, and "only the holdout, 2021–23 trading and
+time can say". The price panel and the dataset's snapshots both run to
+2026-08-21; every backtest so far stopped its valuation at 2023-12-29
+because decision 6's template did. So 2024, 2025 and most of 2026
+have been seen by no selection in this repository, and the buys of
+2021–22 now have the three-year outcomes that the run to 2023 could
+not show. It is the nearest thing to a paper-trading record that
+exists, and it costs no configuration on the years the candidate was
+chosen on.
+
+*Why it is not a holdout look:* the engine reads no split tags and
+evaluates no label. Its year-end refits train on rows whose label was
+observable by Jan 1 of the trade year (data/manual.md §4 rule 7,
+point-in-time), which from trade year 2025 on includes snapshots of
+2021 that the holdout scheme tags as test rows: that is what a
+deployed model would have been trained on. Carter allowed the same
+for 2021–23 (decision 26) and has since taken the cell's look.
+
+*The condition that keeps it honest:* these two portfolios are the
+only ones traded on 2021–26, and nothing is chosen on what they show.
+A third portfolio on those years needs a decision here that says why
+it is not a selection. If the candidate did badly, that is the
+finding.
+
+*Counted:* backtest configurations 32 and 33 on `dataset_v1.4`. The
+buy-and-hold run's path to the end of 2020 is that of backtest 27 (a
+check before reading); the sell variant has not been run with the rank
+floor before, so its 2005–2020 path is new, the same strategy under
+the floor Carter chose.
+
+### 29. What the holdout look in cell C says, and what it does not
+
+Carter's look (2026-10-01, look 1 of 1 in the cell; run
+`b6707d087996`, config hash `419b84929382132f`, the walk-forward
+config unchanged, one fit on 1,110,907 train rows, effective 38,640;
+47,012 test rows of 2021–2023, the 2023 rows those whose label was
+observable). Read from the report only; no holdout row was read here.
+
+| | 2021 | 2022 | 2023 | pooled, per year | walk-forward 2005–20 |
+|---|---|---|---|---|---|
+| base rate | 0.338 | 0.408 | 0.399 | 0.379 | 0.392 |
+| precision, top 20 | 0.75 | 0.65 | 0.55 | 0.65 | 0.79 (0.23 to 1.00 by year; 2019: 0.53–0.65, 2020: 0.70–0.73) |
+| top 50 | 0.76 | 0.70 | 0.72 | 0.727 | 0.76 |
+| top 100 | 0.70 | 0.67 | 0.71 | 0.693 | |
+| PR-AUC | 0.485 | 0.596 | 0.630 | 0.564 | 0.585 |
+| Brier / no-skill Brier | 0.209 / 0.224 | 0.207 / 0.242 | 0.196 / 0.240 | 0.205 / 0.235 | ahead in 11 of 16 years |
+| top 20: lost money over 3y (all rows) | 0.15 (0.59) | 0.30 (0.51) | 0.40 (0.49) | 0.28 (0.54) | 0.13 (0.45) |
+| top 20: fell 40% from entry (all rows) | 0.05 (0.57) | 0.00 (0.51) | 0.10 (0.51) | 0.05 (0.53) | 0.10 (0.50) |
+| top 20: mean 3y CAGR (all rows) | +0.072 (−0.147) | +0.047 (−0.092) | +0.030 (−0.052) | +0.050 (−0.103) | |
+| top 20: mean excess CAGR (all rows) | −0.022 (−0.242) | −0.077 (−0.252) | −0.177 (−0.261) | −0.092 (−0.251) | about 0 (−0.106) |
+| top 20: CAGR of 0.25 or more (all rows) | 0 (0.07) | 0 (0.11) | 0 (0.15) | 0 (0.11) | 0.03 (0.15) |
+
+The walk-forward column is from the pick-anatomy note (three seeds)
+and the forest's own report; the walk-forward mean excess is the
+top-20 median and the screen's mean, both about zero.
+
+*Measured:*
+
+1. **The label is still predicted on snapshots the forest was not
+   chosen on.** Top 50 a year: 0.73 against a base rate of 0.38 (walk-
+   forward 0.76 against 0.39). Top 20: 0.65, below the walk-forward
+   mean of 0.79 and inside the range of its last two years. PR-AUC
+   0.564 against 0.585; Brier ahead of no skill in each of the three
+   years. 0.65 is the reference precision of the thesis, met at 20 and
+   exceeded at 50 picks a year.
+2. **The picks avoided the losers and gave up the market.** 28% of the
+   top 20 lost money over three years against 54% of all test rows;
+   5% fell 40% from entry against 53%. Their mean CAGR was +5% a year
+   where the average row lost 10%. SPY returned about 14% a year over
+   the same windows: the picks trailed it by 9 points a year, the
+   average row by 25. None of the 60 picks compounded at 25%.
+3. **The top of the ranking weakened towards 2023**: p@20 0.75, 0.65,
+   0.55 and p@5 0.8, 0.4, 0.4, while p@50 and p@100 held at 0.67 to
+   0.76. With 20 picks a year a difference of 0.2 is four picks.
+
+*What it does not say:* anything about the blend. The forest is the
+only fitted part of the candidate, and the forest alone was already
+known to earn SPY's return or less (findings, conclusion 1: return on
+capital and momentum put the winners back). The look does not test
+them. It also has no baselines: the report says "No baseline runs
+recorded for this cell" under the holdout scheme, so whether lowest
+volatility alone would have scored the same 0.65 on these rows is not
+known (on walk-forward, lowest 36-month volatility has the forest's
+loser rate and 0.024 a year less return). A baseline on the holdout
+rows is a further read of them and is Carter's.
+
+*Hypotheses, not tested:* (a) the era: SPY's 14% a year over 2021–26
+came from its largest members, and the mean row's excess of −0.25 is
+the widest gap of any period in the data (−0.106 over 2005–20);
+calm stocks did what the label asks and the index outran them; (b)
+the forest's ranking of the very top is weaker on recent data (item
+3), which would show as the top 20 falling below the top 50 again in
+the next cohort. The run of decision 28 reads the same years for the
+blend through prices.
+
+*Decided:* the look stands as the cell's one look. The forest stays
+the candidate's first leg: it did on the holdout what it was chosen
+for (few losers, shallow drawdowns), at about the precision the
+thesis names. The open problem is unchanged and is now measured out
+of sample as well: the upside.
