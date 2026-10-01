@@ -1511,3 +1511,20 @@ two open choices: it is a reason to paper-trade the fixed candidate
 through whatever comes, and a reason for the market-state features
 upstream, since "an era in which to stand aside" is exactly what a
 stock's own columns cannot say.
+
+*Carter's objection (2026-10-01), and it stands:* the dot-com bubble
+burst in 2000; whether a strategy like this trailed *while the bubble
+grew* (1995 to 1999) is the half of the reading this test cannot
+reach. The price panel and the snapshots begin on 1997-12-31, the
+volatility rank needs twelve months of prices and momentum a year
+more, so the first picks are January 1999. What the test covers is
+the last year of the run-up and the four years after its top: it
+supports "leads again during and after the correction" on six
+cohorts, and says almost nothing about "trails through the bubble"
+(one year, in which the lag was confined to the buys of January to
+June). The comparison that matters for 2021–26, several years of
+trailing a rising, concentrated market, has no counterpart in the
+data. Older data is an upstream question and may be a vendor
+question: the raw tables' own first date has to be checked there
+(TODO, upstream requests).
+
