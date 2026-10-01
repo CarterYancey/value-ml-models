@@ -37,10 +37,14 @@ from portfolio.prices import (
     stock_price_source,
 )
 from portfolio.report import (
+    BUY_OUTCOME_HORIZONS,
+    SIZE_COLUMN,
     buy_outcome_table,
     buy_outcomes,
+    candidate_outcomes,
     headline_table,
     max_drawdown,
+    reference_table,
     render_equity_plot,
     twr_cagr,
     write_backtest_report,
@@ -94,6 +98,10 @@ class CandidateFeed:
         self.evaluate_sells = evaluate_sells
         self.sell_floors = sell_score_floors(config, model_set.names)
         self.sell_filters = sell_filter_specs(config)
+        #: every priced candidate of every rebalance (asset, date,
+        #: price, and size when the cross-section has it): the stocks
+        #: the buys were chosen from, for the report's reference tables
+        self.candidate_log: list[pd.DataFrame] = []
 
     def __call__(self, when: pd.Timestamp, held_assets: list):
         config = self.config
@@ -138,6 +146,11 @@ class CandidateFeed:
             priced["weight_basis"] = np.exp(
                 priced["log_marketcap"].to_numpy(dtype=float)
             )
+        logged = priced[["asset", "price"]].copy()
+        logged["date"] = when
+        if SIZE_COLUMN in priced.columns:
+            logged["size"] = priced[SIZE_COLUMN].to_numpy(dtype=float)
+        self.candidate_log.append(logged)
         keep = [
             "asset", "ticker", "group", "combined_score", "price",
             "weight_basis",
@@ -374,6 +387,13 @@ def run_backtest(
         buy_frame = buy_outcomes(
             strategy_result.trades, panel, valuation_end
         )
+        candidate_frame = candidate_outcomes(
+            pd.concat(feed.candidate_log, ignore_index=True)
+            if feed.candidate_log
+            else pd.DataFrame(),
+            panel,
+            valuation_end,
+        )
         configurations_tried = _backtest_configurations_tried(
             store, config.dataset_version, config.config_hash
         )
@@ -393,6 +413,7 @@ def run_backtest(
             configurations_tried=configurations_tried,
             artifacts=artifacts,
             buy_outcome_frame=buy_frame,
+            candidate_outcome_frame=candidate_frame,
         )
 
         headline = headline_table(strategy_result, benchmark_result)
@@ -410,6 +431,7 @@ def run_backtest(
             "prices_version": panel.version,
             "buy_years": f"{buy_years[0]}-{buy_years[-1]}",
             **_buy_outcome_metrics(buy_frame),
+            **_reference_metrics(buy_frame, candidate_frame),
         }
         store.append(
             {
@@ -455,6 +477,25 @@ def _buy_outcome_metrics(buy_frame: pd.DataFrame) -> dict:
         for key, value in pooled.items()
         if key not in ("year", "buys") and pd.notna(value)
     }
+
+
+def _reference_metrics(
+    buy_frame: pd.DataFrame, candidate_frame: pd.DataFrame
+) -> dict:
+    """The pooled row of each reference table as ledger metrics
+    (`ref_vs_peers_3y`, `ref_candidates_excess_3y`, ...); empty without
+    a candidate log."""
+    out: dict = {}
+    if candidate_frame is None or candidate_frame.empty:
+        return out
+    for h in BUY_OUTCOME_HORIZONS:
+        table = reference_table(buy_frame, candidate_frame, h)
+        if table.empty:
+            continue
+        for key, value in table.iloc[-1].items():
+            if key not in ("year", "buys") and pd.notna(value):
+                out[f"ref_{key}_{h}y"] = float(value)
+    return out
 
 
 def _write_artifacts(
