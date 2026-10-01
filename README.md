@@ -63,6 +63,8 @@ uv run python scripts/run_final_eval.py experiments/<selected>.toml
 # deploy: refit on all labeled data, score today's stocks
 uv run vml-train-deploy experiments/<selected>.toml
 uv run vml-predict experiments/models/<name>_deployment_<run_id> data/datasets/<inference_dir>
+# ... and the historical stocks today's picks most resemble, with what they went on to do
+uv run vml-analogues experiments/models/<name>_deployment_<run_id> data/datasets/<inference_dir> --pick 10
 
 # backtest a portfolio strategy over walk-forward bundles
 uv run vml-backtest experiments/portfolios/allprob_top25_5models.toml
