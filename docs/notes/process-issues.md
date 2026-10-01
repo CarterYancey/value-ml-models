@@ -151,7 +151,7 @@ Found on 2026-10-01:
   straddles it.**
 - **Every backtest stopped its valuation at 2023-12-29 while the
   price panel and the dataset's snapshots ran to 2026-08-21.** The
-  date was the template's (decision 6) and was copied into 33 configs
+  date was the template's (decision 6) and was copied into 32 configs
   over four sessions. Findings said, correctly, that the candidate
   "has not been shown to hold outside 2005–2023"; thirty-two months
   that could show it were on disk. Traded to the end of the panel the
