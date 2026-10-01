@@ -1452,3 +1452,62 @@ consistent with the only precedent the data holds, though one
 precedent and a stand-in. 2 failing (no lead after March 2000) would
 count against it. Either way it cannot say that 2021–26 is a bubble,
 or when a correction comes.
+
+*What came out (2026-10-01; `scratch/2026-10-01-oos-diagnostics/diag_standin.py`,
+git `1d5b4ec`; table in [the out-of-sample note](2026-10-01-out-of-sample.md),
+"The last bubble"):* the stand-in (lowest 12-month volatility,
+momentum and return on capital by mean rank; 120 picks a year).
+
+| buys of | first year: against SPY | against same-size peers | three years: against SPY | against same-size peers | lost money over 3y (peers) |
+|---|---|---|---|---|---|
+| 1999 | −0.027 | −0.147 | +0.082 | +0.071 | 0.34 (0.55) |
+| 2000 | +0.132 | +0.096 | +0.066 | +0.103 | 0.62 (0.64) |
+| 2001 | +0.187 | +0.128 | +0.098 | +0.088 | 0.13 (0.41) |
+| 2002 | +0.150 | +0.072 | +0.112 | +0.084 | 0.02 (0.26) |
+| 2003 | +0.080 | −0.066 | −0.003 | −0.027 | 0.12 (0.21) |
+| 2004 | +0.089 | +0.030 | +0.013 | +0.015 | 0.20 (0.25) |
+
+*Against the predictions:* (1) held: the buys of 1999 trailed SPY
+over their first year (29% beat it) and trailed their same-size
+peers by 15 points. (2) held on return: the buys of 2000–02 led SPY
+by 9.2 points a year over three years and their same-size peers by
+9.2; missed on losers (0.25 against 0.44 of their peers, 0.58 of it,
+not under half: the buys of 2000 lost money as often as their
+peers). (3) held: the stand-in's same-size lead in 2005–12 / 2013–20
+/ 2021–23 is +0.020 / +0.055 / −0.016 against the candidate's +0.046
+/ +0.059 / −0.016.
+
+*Read:* on the one earlier bubble in the data, on six cohorts no
+choice in this repository was ever made on, this kind of selection
+did what Carter's reading says: it lagged in the last year of the
+run-up and was paid for three years after the top, against the index
+and against stocks of its own size. That is real support, of a
+limited kind:
+
+- It is one precedent, read with a stand-in (a volatility rank where
+  the candidate has a forest), and low risk, quality and momentum
+  were chosen here knowing they paid in 2005–2020; that calm,
+  profitable stocks did well after March 2000 is well known.
+- The two episodes differ in kind. In 1999 the run-up was in small
+  stocks: the smaller half of the investable stocks beat SPY by 51
+  points over a year and the largest 5% matched it. In 2021–26 the
+  smaller half trailed SPY by 33 points a year and the largest 1% by
+  3: the excess is in a few giants inside the index. "Returns
+  dominated by stocks that fail a value investor's test" describes
+  both; "the index is the thing that is expensive" describes only
+  the second, and it is the index the candidate is measured against.
+- In the precedent the lag visible here lasted one cohort year and
+  the buys made *during* it were ahead within three years. The buys
+  of 2021, 2022 and 2023 are behind SPY after three years, because
+  no correction has come inside the panel. The reading predicts that
+  they recover relative to SPY when one does; nothing on disk can
+  test that, and the reading cannot say when.
+
+*Decided:* the reading is recorded in findings as the leading
+hypothesis for 2021–26, with what supports it and what it does not
+explain, not as a conclusion. It does not change decision 34 (nothing
+further is run on 2021–26, no new blend). It does bear on Carter's
+two open choices: it is a reason to paper-trade the fixed candidate
+through whatever comes, and a reason for the market-state features
+upstream, since "an era in which to stand aside" is exactly what a
+stock's own columns cannot say.
