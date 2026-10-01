@@ -1275,3 +1275,39 @@ cohorts, 320 picks, one of them 2021; it is evidence, not a verdict.
    is the literal form of the thesis and is recorded in TODO as a
    proposal: it would have left out NVDA, TSLA and META in 2023, and
    it is a 600-stock portfolio, not a screener for one person.
+
+### 33. The screen gets the same-size reference too, and decision 32's rule is read on it
+
+*Decided:* `claude/screen-size-peers` (on top of the sector branch):
+`[pick_screen] peer_column = "log_marketcap_rank"` makes the screen
+report, beside each pick, what the test rows of its own quarter in
+its own 5% band of that rank went on to do (`screen_peer_mean_<o>`,
+`screen_peer_precision`, and a `peers` column in the screen table).
+It is the harness counterpart of the backtest report's `vs_peers`
+(`claude/backtest-universe-outcomes`).
+
+*Why now:* decision 16 made the screen the way every sweep is read,
+and its reference was all test rows. Decision 32 found that reference
+dominated by size. Reading inside a large-cap universe is a
+workaround for one experiment; the reference belongs in the screen,
+so that a sweep over all rows can be read net of size and old bundles
+can be re-read without a refit.
+
+*Used at once:* the three large-cap sweeps and the four large-cap
+evaluations of decision 32 carry the peer column (none had run; the
+rule that carries an arm forward is now "0.02 over its same-size
+peers in both periods on every seed", with the lead over the
+universe's all rows reported beside it). And the candidate's bundles
+are evaluated again inside the 100k floor with the peer column
+(`eval_*_peers_dv100k`): the forest alone and its three blends, the
+screens of decision 19 read net of size. Four more evaluation hashes
+inside the 100k floor.
+
+*Prediction for those four (2026-10-01):* the screen's lead over
+same-size peers, entries of 2005–12 and of 2013–20: forest alone
++0.01 to +0.04 in both; with return on capital 0.00 to +0.03 and
++0.03 to +0.07; all three legs +0.02 to +0.06 in both. That is the
+diagnostic's reading (+0.023 / +0.027, +0.015 / +0.052, +0.046 /
++0.059 on monthly picks and price-panel outcomes) within 0.02: the
+screen picks quarterly from test rows and reads label outcomes, where
+an acquired stock is carried flat.

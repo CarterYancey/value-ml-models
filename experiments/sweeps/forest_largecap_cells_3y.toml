@@ -33,10 +33,13 @@
 # universe and cells: baseline_factors_largecap_3y.
 #
 # What carries an arm forward (fixed here, before the run): its
-# screen's mean excess CAGR exceeds the universe's all-rows mean by
-# 0.02 or more for entries of 2005-12 and of 2013-20, on every seed,
-# and exceeds the best single factor's lead in the same cell by 0.01
-# or more in both periods. An arm that passes is the one new model
+# screen's mean excess CAGR exceeds its same-size peers' (decision 33:
+# the test rows of the pick's quarter in its 5% band of
+# log_marketcap_rank; inside this universe that is four bands) by 0.02
+# or more for entries of 2005-12 and of 2013-20, on every seed, and
+# exceeds the best single factor's lead in the same cell by 0.01 or
+# more in both periods. The lead over the universe's all-rows mean is
+# reported beside it. An arm that passes is the one new model
 # that gets a backtest, and one run on 2021-26.
 #
 # Predictions, written before the run (2026-10-01):
@@ -88,6 +91,8 @@ per = "quarter"
 top_k = 10
 max_per_group = 2
 group_column = "sector"
+peer_column = "log_marketcap_rank"
+peer_bins = 20
 
 [[universe]]
 column = "log_marketcap_rank"

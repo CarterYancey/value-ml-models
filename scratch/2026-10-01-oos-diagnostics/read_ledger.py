@@ -24,6 +24,9 @@ KEYS = {
     "scr_prec": "screen_precision",
     "scr_ex": "screen_mean_fwd_3y_excess_cagr",
     "all_ex": "all_mean_fwd_3y_excess_cagr",
+    "peer_ex": "screen_peer_mean_fwd_3y_excess_cagr",
+    "peer_lost": "screen_peer_mean_label_3y_cagr_lt_0p0",
+    "peer_prec": "screen_peer_precision",
     "scr_med": "screen_median_fwd_3y_excess_cagr",
     "scr_beat": "screen_mean_label_3y_beat_spy",
     "all_beat": "all_mean_label_3y_beat_spy",
@@ -59,6 +62,7 @@ def load(prefixes):
         rows.append(row)
     out = pd.DataFrame(rows)
     out["lead"] = out["scr_ex"] - out["all_ex"]
+    out["lead_peers"] = out["scr_ex"] - pd.to_numeric(out["peer_ex"], errors="coerce")
     out["lost_gap"] = out["scr_lost"] - out["all_lost"]
     return out
 
@@ -83,13 +87,14 @@ def main():
         return
     df["run"] = df["experiment"].map(lambda e: shorten(e, prefixes))
     periods = {"all": (2005, 2020), "05-12": (2005, 2012), "13-20": (2013, 2020)}
-    cols = ["base", "p@20", "prauc", "scr_prec", "scr_ex", "all_ex", "lead",
+    cols = ["base", "p@20", "prauc", "scr_prec", "peer_prec", "scr_ex", "all_ex", "lead",
+            "peer_ex", "lead_peers", "peer_lost",
             "scr_beat", "all_beat", "scr_lost", "all_lost", "scr_win25",
             "all_win25", "top_grp", "stocks"]
     print(f"folds per run: {df.groupby('run')['fold'].count().unique().tolist()}")
     for name, (a, b) in periods.items():
         sub = df[(df["fold"] >= a) & (df["fold"] <= b)]
-        t = sub.groupby("run")[cols].mean()
+        t = sub.groupby("run")[cols].apply(lambda g: g.apply(pd.to_numeric, errors="coerce").mean())
         print(f"\n=== {name}")
         print(t.round(3).to_string())
 

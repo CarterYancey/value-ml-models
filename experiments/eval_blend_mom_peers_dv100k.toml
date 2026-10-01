@@ -1,0 +1,37 @@
+# Decision 33 of docs/notes/2026-09-29-decisions.md (2026-10-01): a
+# saved all-rows bundle evaluated inside the 100k floor (as in
+# eval_screen_dv100k and the blend configs of decision 19) with the
+# screen's same-size reference: each pick beside the test rows of its
+# own quarter in its own 5% band of log_marketcap_rank. The earlier
+# evaluations of the same bundles set the picks beside all rows; this
+# is the same screen read net of size.
+name = "blend_mom_peers_dv100k"
+blend = [
+  "experiments/models/factor_mom_12_2_3y_97c0f095cf48",
+]
+top_k = [20, 50]
+pick_outcomes = [
+  "label_3y_beat_spy",
+  "fwd_3y_excess_cagr",
+  "fwd_3y_cagr",
+  "fwd_3y_max_drawdown_from_entry",
+  "fwd_3y_cagr < 0",
+  "fwd_3y_cagr < -0.1",
+  "fwd_3y_max_drawdown_from_entry >= 0.4",
+  "fwd_3y_cagr >= 0.15",
+  "fwd_3y_cagr >= 0.25",
+  "fwd_3y_excess_cagr >= 0.05",
+]
+
+[pick_screen]
+per = "quarter"
+top_k = 10
+max_per_group = 2
+group_column = "sector"
+peer_column = "log_marketcap_rank"
+peer_bins = 20
+
+[[universe]]
+column = "dollar_volume_3m"
+op = ">="
+value = 100000

@@ -27,6 +27,8 @@ per = "quarter"
 top_k = 10
 max_per_group = 2
 group_column = "sector"
+peer_column = "log_marketcap_rank"
+peer_bins = 20
 
 [[universe]]
 column = "log_marketcap_rank"
