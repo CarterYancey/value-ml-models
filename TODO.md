@@ -686,7 +686,7 @@ capital by mean rank; 31 backtest configurations were tried on buys of
 
 Carter's, in order:
 
-- [ ] **Open and merge the pull request** from
+- [x] **Open and merge the pull request** from
       `claude/results-2026-10-01` into `Claude`
       (`gh pr create --base Claude --head claude/results-2026-10-01 --fill`).
       It carries seven code changes (486 tests pass), the docs, 20
@@ -702,15 +702,15 @@ Carter's, in order:
       `claude/backtest-rank-sell`, `claude/backtest-buy-outcomes`,
       `claude/predict-universe`, `claude/backtest-marketcap-weighting`)
       are stacked and all contained in it; delete them after the merge.
-- [ ] **One holdout look** in cell C's 3y cell:
+- [x] **One holdout look** in cell C's 3y cell:
       `python scripts/run_final_eval.py experiments/forest_nonloser_dd30_3y.toml`.
       The forest is the only fitted part of the candidate. It says
       whether "not a loser" is still predicted on 2021+ snapshots
       (walk-forward: p@20 0.79, base 0.39); it does not test the
       blend. Read it beside the 2021-23 trading run (decision 26).
-- [ ] **Which liquidity floor to deploy with**: 100,000 a day (the
+- [x] **Which liquidity floor to deploy with**: 100,000 a day (the
       template) or `dollar_volume_3m_rank >= 0.2` (era-neutral). The
-      candidate is the same under either (12.24% and 12.15%).
+      candidate is the same under either (12.24% and 12.15%). Carter's answer: era-neutral rank.
 - [ ] **Deploy and paper-trade the candidate** beside its
       sell-discipline variant: docs/notes/2026-10-01-candidate.md,
       "Run it on today's stocks". Not run yet; needs an
