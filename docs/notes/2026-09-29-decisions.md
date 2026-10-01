@@ -1174,3 +1174,104 @@ Carter's rival in the config. Six more configurations in cell C.
 for, it is half an hour, and whether the forest's sector habit is in
 its inputs or in its target is a fact about the forest that every
 later use of it rests on.
+
+### 32. What the diagnostics say: size first, then the era; the next question is selection inside large caps
+
+*What came out (2026-10-01; tables in
+[the out-of-sample note](2026-10-01-out-of-sample.md)):*
+
+1. **Not the template.** With fractional shares (backtests 34, 35)
+   the candidate ends at 1,172,560 and the sell variant at 1,329,280
+   (whole shares: 1,193,902 and 1,344,630); every year of 2021–26 is
+   within a point of the whole-share run. Reading (c) is out.
+2. **The average investable stock trailed SPY by 22 points a year**
+   over the three-year windows of the 2021–23 cohorts (equal weight,
+   every candidate of every month): −0.057 for 2005–12, −0.111 for
+   2013–20, −0.218 for 2021–23. 52% lost money.
+3. **Size decides more than any model.** Mean three-year excess over
+   SPY by market-capitalization rank, the three periods: smaller half
+   −0.116 / −0.179 / −0.333; 50th to 80th percentile −0.033 / −0.083 /
+   −0.176; 80th to 95th −0.002 / −0.049 / −0.120; largest 5% +0.002 /
+   −0.025 / −0.065; largest 1% +0.010 / −0.022 / −0.033. In 2021–26
+   SPY beat the equal-weighted mean of its own thirty largest members.
+4. **Against stocks of their own size the candidate's lead is gone
+   after 2020, and the forest's is small throughout.** Mean
+   three-year excess of the picks minus that of the same month's
+   candidates in the same 5% size band:
+
+   | | 2005–12 | 2013–20 | buys of 2021–23 |
+   |---|---|---|---|
+   | forest alone | +0.023 | +0.027 | +0.006 |
+   | forest + return on capital | +0.015 | +0.052 | +0.005 |
+   | forest + momentum | +0.033 | +0.034 | +0.027 |
+   | **the candidate (all three)** | **+0.046** | **+0.059** | **−0.016** |
+
+   Against all candidates the candidate "led" by 0.090, 0.122 and
+   0.100: most of that was its picks being large (mean
+   capitalization rank 0.83 to 0.91).
+5. **Loser avoidance held, net of size.** Share of picks losing money
+   over three years, against their same-size peers': forest alone
+   0.24 / 0.12 / 0.22 against 0.35 / 0.25 / 0.34; the candidate 0.25
+   / 0.16 / 0.34 against 0.36 / 0.27 / 0.37.
+6. **Inside the largest fifth the forest separates the worst quintile
+   and nothing above it.** Three-year excess by forest-score quintile
+   among large caps, worst to best: 2005–12 −0.038 … +0.016; 2013–20
+   −0.088 … −0.022; 2021–23 −0.203, −0.088, −0.077, −0.077, −0.087.
+7. **The forest ranks the index's most volatile giants in the middle
+   of the list.** January 2023, of 3,673 investable stocks: NVDA
+   1,599th on the forest (1,477th combined), TSLA 1,987th, META
+   1,940th, AMZN 1,209th. The calm ones rank high (AAPL 38th
+   combined, LLY 14th).
+
+*Read against the three readings of decision 30:* (c) no. (a) the
+era, yes, and larger than the question: SPY outran equal-weighted
+stocks of every size in 2021–26, so no equal-weighted selection from
+this universe could have kept up without holding a handful of
+giants. (b) the fit, yes for the blend's increment: what momentum and
+return on capital added to the forest in 2005–2020 (2 to 3 points a
+year against same-size stocks) was −2 for the 2021–23 buys. Three
+cohorts, 320 picks, one of them 2021; it is evidence, not a verdict.
+
+*What it changes about how anything here is read:*
+
+- "Beats the average stock" is not skill. Every screen, pick-outcome
+  table and per-buy table in this repository compares picks with all
+  rows or with SPY, and both comparisons are dominated by size. From
+  now on a selection is read against same-size stocks:
+  `claude/backtest-universe-outcomes` puts that reference in every
+  backtest report (`vs_peers`), and on the screen a run is read
+  inside the universe `log_marketcap_rank >= 0.8`, where the all-rows
+  statistic is a same-size reference.
+- The thesis, on this evidence: a high precision on "not a loser"
+  is achievable and holds out of sample (decision 29), and it buys
+  fewer losers and shallower falls. It does not by itself buy the
+  index's return when the index is led by its largest and more
+  volatile members: those are the stocks a loser-avoiding model
+  ranks in the middle. Condition (2), the era, is the whole of
+  2021–26.
+
+*Decided:*
+
+1. **The record first**: the out-of-sample note, findings.md
+   rewritten around it, the yearly figures restated on calendar
+   years, a process note on the yearly table.
+2. **One experiment on the open question, selection inside large
+   caps** (`forest_largecap_cells_3y`, `baseline_factors_largecap_3y`,
+   and the existing bundles evaluated inside the same universe):
+   three targets (not a loser; beat SPY; beat SPY without a deep
+   fall), the candidate's forest, three seeds, seven single-factor
+   bars, all trained and read inside `log_marketcap_rank >= 0.8`.
+   The rule that carries an arm forward is in the sweep's header
+   (a lead of 0.02 over the universe in both halves of 2005–2020 on
+   every seed, and 0.01 over the best single factor). An arm that
+   passes is the one new model that gets a backtest and one run on
+   2021–26. If none passes, the finding is that these features rank
+   risk and not return among investable large companies, and the
+   upside has to come from new information upstream.
+3. **Not done:** no new blend is tried on 2005–2020 backtests, and
+   no variant of the candidate is run on 2021–26. A
+   capitalization-weighted portfolio of large caps without the
+   forest's worst quintile ("the index minus the predicted losers")
+   is the literal form of the thesis and is recorded in TODO as a
+   proposal: it would have left out NVDA, TSLA and META in 2023, and
+   it is a 600-stock portfolio, not a screener for one person.
