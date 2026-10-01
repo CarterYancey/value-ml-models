@@ -760,6 +760,15 @@ The first three are new and come from decision 32:
 - [ ] **Market-state features** (PLAN 5.6): the thesis's condition
       (2), the era, is the whole of 2021-26, and a stock's own columns
       cannot say what era it is. Carried from the section below.
+- [ ] **Data before 1998, if it can be had** (Carter, 2026-10-01).
+      The panel and the snapshots begin on 1997-12-31, so the first
+      possible picks are January 1999: the test of decision 35 saw
+      the last year of the dot-com run-up and its aftermath, not the
+      years the bubble grew. Whether a low-risk, quality selection
+      trails for years while a bubble inflates, the question 2021-26
+      raises, needs 1990-1998. Check where the raw tables start; if
+      the vendor's history starts there too, this needs another
+      source for prices and statements.
 - [ ] **An equal-weighted benchmark series in the price panel** (the
       investable universe, and its largest fifth), so a backtest can
       be set beside "the average large stock" as a portfolio, not

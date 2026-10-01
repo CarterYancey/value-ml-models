@@ -383,6 +383,14 @@ after three years. The buys of 2003–04 had no lead. Predictions 1
 and 3 held; 2 held on return and missed on losers (the buys of 2000
 lost money as often as their peers).
 
+**What the test cannot reach** (Carter, 2026-10-01): the growth of
+the bubble. The data begins at the end of 1997 and the first picks
+are January 1999, so this is the run-up's last year and its
+aftermath. It supports "leads again during and after the
+correction"; on "trails while the bubble grows" it has one year. The
+several years of trailing a rising market that 2021–26 would have to
+be compared with are before the data.
+
 **What it supports, and what it does not** (decision 35): the
 pattern Carter describes happened once before in this data, with
 this kind of selection. One precedent, a stand-in, and factors that

@@ -142,7 +142,9 @@ was ever chosen on, a stand-in for the candidate (lowest volatility,
 momentum, return on capital) trailed in 1999 (15 points behind
 same-size stocks over a year) and led for the buys of 2000–02 by 9
 points a year over three years, against SPY and against same-size
-stocks alike. *Not explained by it:* the candidate's same-size lead
+stocks alike. That covers the aftermath; the years the bubble grew
+(1995–98) are before the data, so "trails through a bubble" is
+untested. *Not explained by it:* the candidate's same-size lead
 had already gone for the buys of 2019–20. *Different this time:* 1999
 was a run-up in small stocks with the largest level with SPY; now the
 excess is in a few giants inside the index. *Untestable on disk:*
