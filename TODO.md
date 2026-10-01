@@ -677,7 +677,7 @@ in [PLAN.md](PLAN.md); check items off (and add new ones) as work proceeds.
       `n_estimators`) at full budget via a follow-up sweep file — no
       harness change needed, just two sweep configs.
 
-### Next, from the second session of 2026-10-01 (decisions 27-34)
+### Next, from the second session of 2026-10-01 (decisions 27-35)
 
 Start with docs/findings.md, then docs/notes/2026-10-01-out-of-sample.md
 and docs/notes/2026-10-01-large-caps.md. In one paragraph: traded to
@@ -719,7 +719,12 @@ Carter's, in order:
       the upside has to come from somewhere these columns do not
       reach; if the aim is market-like return with fewer losers, it is
       a result. Findings, "What this says about the thesis".
-- [ ] **Paper-trade the fixed candidate, or not.** Mechanics as in
+- [ ] **Paper-trade the fixed candidate, or not.** (Your reading of
+      2021-26 as a bubble the strategy sits out, decision 35, is a
+      reason to: on 1999-2004 a stand-in for the candidate trailed in
+      the last year of the run-up and led by 9 points a year for the
+      buys of 2000-02. One precedent, and a different kind of
+      run-up.) Mechanics as in
       docs/notes/2026-10-01-candidate.md ("Run it on today's stocks":
       `vml-train-deploy` the three configs, then `vml-predict ...
       --filter "dollar_volume_3m_rank >= 0.2" --pick 10

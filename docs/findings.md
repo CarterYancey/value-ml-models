@@ -18,7 +18,7 @@ record. Never compared across dataset versions or universes.
 1. What happened to the candidate after 2023, and why:
    [out of sample](notes/2026-10-01-out-of-sample.md). What was tried
    next: [large caps](notes/2026-10-01-large-caps.md). How:
-   [decisions](notes/2026-09-29-decisions.md) 27–34.
+   [decisions](notes/2026-09-29-decisions.md) 27–35.
 2. What to do next: TODO.md, "Next, from the second session of
    2026-10-01". The first items are Carter's.
 3. One branch carries everything for `Claude`:
@@ -133,13 +133,29 @@ more than every size of stock. Beating SPY needs the upside, which
 these columns do not rank, or an era in which the largest companies
 do not lead, as in 2005–2020.
 
+**Carter's reading (2026-10-01), the leading hypothesis for 2021–26:**
+a temporary change in market behaviour, perhaps a bubble, led by
+stocks that fail a value investor's test; the strategy trails through
+it and leads again during and after the correction. *For it:* item 4,
+and the one precedent in the data. On 1999–2004, years nothing here
+was ever chosen on, a stand-in for the candidate (lowest volatility,
+momentum, return on capital) trailed in 1999 (15 points behind
+same-size stocks over a year) and led for the buys of 2000–02 by 9
+points a year over three years, against SPY and against same-size
+stocks alike. *Not explained by it:* the candidate's same-size lead
+had already gone for the buys of 2019–20. *Different this time:* 1999
+was a run-up in small stocks with the largest level with SPY; now the
+excess is in a few giants inside the index. *Untestable on disk:*
+whether and when the buys of 2021–23 recover. Decision 35;
+[out of sample](notes/2026-10-01-out-of-sample.md), "The last bubble".
+
 ## Open questions
 
 - What the portfolio is for and what it is measured against (SPY, or
   stocks of the picks' own size). Carter's; it decides whether the
   candidate is a result.
-- Whether the 2 to 5 points over same-size stocks of 2005–2018 come
-  back. Only paper trading can say; nothing on disk can.
+- Whether the lead comes back when the index's largest members stop
+  leading (Carter's reading). Only paper trading and time can say.
 - Whether information outside prices and statements ranks upside
   (insider and institutional transactions, market state). Upstream.
 

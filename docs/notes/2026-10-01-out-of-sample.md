@@ -332,6 +332,68 @@ The 36-month volatility ranks of NVDA, TSLA and META were 0.32 to
   but "is there any ranking that chooses well among large companies":
   decision 32's experiment.
 
+## The last bubble: a stand-in on 1999–2004 (decision 35)
+
+Carter's reading of 2021–26 (2026-10-01): a temporary change in
+market behaviour, perhaps a bubble, in which returns are dominated by
+stocks that fail a value investor's test; a value strategy trails
+through it and dominates again during and after the correction. The
+dataset's snapshots begin at the end of 1997 and nothing here was ever
+run before 2005, so 1999–2004 can be read. No fold model exists
+there; the stand-in is the lowest `vol_12m_rank` (the forest's
+largest input), 12-month momentum and return on capital by mean rank,
+with the candidate's rule (rank floor, top 10 a month, at most 2 per
+sector), every pick read as in the diagnostics above
+(`scratch/2026-10-01-oos-diagnostics/diag_standin.py`, git `1d5b4ec`;
+columns and the price panel only). Predictions were written in the
+decision log before the run.
+
+Is the stand-in the candidate? Same-size lead over three years,
+2005–12 / 2013–20 / 2021–23: +0.020 / +0.055 / −0.016, against the
+candidate's +0.046 / +0.059 / −0.016; against SPY +0.013 / +0.010 /
+−0.127 against +0.033 / +0.011 / −0.118. Close enough to read.
+
+| buys of | 1y: against SPY | against same-size peers | beat SPY | 3y: against SPY | against same-size peers | beat SPY | lost money (peers) | all candidates against SPY, 1y / 3y |
+|---|---|---|---|---|---|---|---|---|
+| 1999 | −0.027 | −0.147 | 0.29 | +0.082 | +0.071 | 0.83 | 0.34 (0.55) | +0.295 / −0.010 |
+| 2000 | +0.132 | +0.096 | 0.64 | +0.066 | +0.103 | 0.61 | 0.62 (0.64) | +0.045 |
+| 2001 | +0.187 | +0.128 | 0.87 | +0.098 | +0.088 | 0.88 | 0.13 (0.41) | +0.120 |
+| 2002 | +0.150 | +0.072 | 0.68 | +0.112 | +0.084 | 0.80 | 0.02 (0.26) | +0.184 |
+| 2000–02 | +0.156 | +0.098 | 0.73 | +0.092 | +0.092 | 0.76 | 0.25 (0.44) | +0.113 / +0.009 |
+| 2003 | +0.080 | −0.066 | 0.61 | −0.003 | −0.027 | 0.43 | 0.12 (0.21) | +0.323 |
+| 2004 | +0.089 | +0.030 | 0.57 | +0.013 | +0.015 | 0.62 | 0.20 (0.25) | +0.048 |
+
+Within 1999, the first-year excess over SPY was −0.137 for the buys
+of January to June and +0.082 for July to December. The stand-in's
+1999 picks: General Mills, Ecolab, Abbott, Waters, McGraw-Hill.
+
+The two run-ups, by size (mean excess over SPY of all candidates):
+
+| | smaller half | 50th–80th | 80th–95th | largest 5% |
+|---|---|---|---|---|
+| buys of 1999, first year | +0.513 | +0.201 | +0.158 | +0.007 |
+| buys of 2021–23, three years, a year | −0.333 | −0.176 | −0.120 | −0.065 |
+
+**Measured:** on six cohorts no choice here was made on, the stand-in
+lagged in the last year of the run-up (behind SPY, 15 points behind
+its same-size peers) and then led for the buys of 2000 to 2002 by 9
+points a year over three years, against SPY and against same-size
+stocks alike; the buys of 1999 themselves were 8 points a year ahead
+after three years. The buys of 2003–04 had no lead. Predictions 1
+and 3 held; 2 held on return and missed on losers (the buys of 2000
+lost money as often as their peers).
+
+**What it supports, and what it does not** (decision 35): the
+pattern Carter describes happened once before in this data, with
+this kind of selection. One precedent, a stand-in, and factors that
+are known to have paid after 2000. The episodes differ in kind: 1999
+was a run-up in small stocks with the largest level with the index;
+2021–26 is the reverse, the excess sitting in a few giants inside
+the index the candidate is measured against. And in the precedent
+the correction came within a year of the lag seen here; the buys of
+2021–23 have had none in their three years. Whether they recover
+against SPY when one comes cannot be read from anything on disk.
+
 ## The report's own table
 
 `claude/backtest-universe-outcomes` reads every candidate of every
