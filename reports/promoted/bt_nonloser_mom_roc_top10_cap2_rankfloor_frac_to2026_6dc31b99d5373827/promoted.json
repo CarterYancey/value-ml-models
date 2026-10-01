@@ -1,0 +1,14 @@
+{
+  "name": "bt_nonloser_mom_roc_top10_cap2_rankfloor_frac_to2026_6dc31b99d5373827",
+  "promoted_utc": "2026-10-01T09:17:26+00:00",
+  "source_report": "reports/backtest/bt_nonloser_mom_roc_top10_cap2_rankfloor_frac_to2026_6dc31b99d5373827.md",
+  "run_id": "",
+  "config_hash": "",
+  "git_sha": "",
+  "dataset_version": "",
+  "config_path": "",
+  "note": "The candidate to 2026-08-21 with fractional shares (every order filled): 1,172,560 against the whole-share run's 1,193,902, every year of 2021-26 within a point: the whole-share rule is not the shortfall. All 2,240 buys with a three-year outcome: +0.2 points a year over SPY, +4.3 over same-size peers pooled, -3.4 / +1.1 / -3.0 for 2021 / 2022 / 2023. docs/notes/2026-10-01-out-of-sample.md",
+  "files": [
+    "bt_nonloser_mom_roc_top10_cap2_rankfloor_frac_to2026_6dc31b99d5373827.md"
+  ]
+}
