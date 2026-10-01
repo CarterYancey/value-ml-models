@@ -677,6 +677,85 @@ in [PLAN.md](PLAN.md); check items off (and add new ones) as work proceeds.
       `n_estimators`) at full budget via a follow-up sweep file — no
       harness change needed, just two sweep configs.
 
+### Next, from Carter's direction of 2026-10-01 (decision 36)
+
+The working assumption is that 2021-26 is a bubble a value strategy
+trails through; the candidate goes to paper trading as it is; the
+search continues, wider. Each item below is laid out in
+docs/notes/2026-10-01-research-plan.md (what the record already says,
+what it needs, how it is read). New arms are judged on walk-forward
+2005-2020 against same-size peers; 2021-26 is context.
+
+Carter's:
+
+- [ ] **Open and merge the pull request** from
+      `claude/results-2026-10-01b` (the item in the section below; it
+      now also carries docs/paper-trading.md, the research plan, the
+      three queued sweeps and the Piotroski result).
+- [ ] **Set up paper trading on the host**: docs/paper-trading.md.
+      Three `vml-train-deploy` commands (the bundles built in the
+      sandbox stay in the sandbox), an `inference_<date>` dataset
+      from upstream each month, one `vml-predict` command. Two paper
+      portfolios: buy and hold, and the rank sell discipline. The
+      path was checked end to end on 2026-10-01 (9 of the backtest's
+      10 picks for August 2026).
+- [ ] **Two rules to accept or change** before a session on other
+      model families (research plan, item 7): fold-internal median
+      imputation with an is-missing indicator for models that cannot
+      take NULLs; and "a learned transform (clusters, embeddings) is
+      allowed when it is fitted on the fold's training rows and saved
+      in the fold's bundle, never otherwise". And whether PyTorch may
+      join the dependencies (scikit-learn's MLP needs nothing new).
+
+Ready to run ("work the queue"; `vml-queue status`):
+
+- [ ] `baseline_factors_crash_dd50`, `forest_crash_dd50`: the
+      over-priced-stock model, "fell 50% from entry" within one and
+      three years inside the liquid half. Read on precision at the
+      top by year, on what the calls went on to do, and on whether
+      the count of high-confidence calls rises before 2008 and 2020
+      or after (the market-state question).
+- [ ] `lgbm_regressor_growth_allrows_3y`: continuous models, LightGBM
+      on 3y CAGR and excess CAGR, huber and three quantiles, read
+      against same-size peers.
+
+Small code, then a sweep (each on its own `claude/<topic>` branch):
+
+- [ ] **`combine = "worst_rank"`** in `vml-backtest` and in
+      `vml-eval`'s `blend`: rank by the worse of the models' ranks,
+      which is "in every model's top N" for any N. Then the
+      candidate's three legs by worst rank against by mean rank, on
+      the screen with peers.
+- [ ] **`vml-predict --holdings <file>`**: mark which held stocks the
+      rank sell rule would sell this month, so portfolio B's sells do
+      not have to be read off the CSV by hand.
+- [ ] **A cash rule as a `Strategy`**, if `forest_crash_dd50` shows
+      the count of high-confidence calls leading the market.
+- [ ] A position cap (carried from below; low priority).
+
+Sessions of their own (research plan, items 6 and 7):
+
+- [ ] **Calibration and confidence-weighted sizing.** Start by
+      measuring whether outcome rises with rank inside the forest's
+      top 50 of a month at all; then the design of a target whose
+      base rate does not move with the market (the peer-relative
+      label, upstream).
+- [ ] **Other model families**: a regularised logistic regression on
+      the ranks, an MLP, a fold-internal clustering as an input; on
+      the continuous and peer-relative targets first.
+- [ ] **A short leg**, only if `forest_crash_dd50` reaches a
+      precision that justifies it: borrow costs, recalls and
+      unbounded loss are not in the engine.
+
+Done under decision 36 on 2026-10-01:
+
+- [x] The candidate's three models refit for deployment and the
+      prediction path run end to end; docs/paper-trading.md; the two
+      factor configs promoted.
+- [x] The nine Piotroski signals against the composite F-score
+      (`forest_piotroski_3y`): docs/logbook.md.
+- [x] "Data before 1998": closed by Carter (Sharadar starts in 1998).
+
 ### Next, from the second session of 2026-10-01 (decisions 27-35)
 
 Start with docs/findings.md, then docs/notes/2026-10-01-out-of-sample.md
@@ -710,7 +789,9 @@ Carter's, in order:
       `claude/screen-size-peers` (`[pick_screen] peer_column`: the
       same-size reference on the sweep screen). docs/agents.md is
       rewritten in it, with your leave: read "Two ways of working".
-- [ ] **Decide what the portfolio is for, and its yardstick.** Against
+- [x] **Decide what the portfolio is for, and its yardstick.**
+      (Carter, 2026-10-01, decision 36: to beat the market over the
+      long term; 2021-26 is taken as a bubble and waited out.) Against
       SPY the candidate is level over 21.6 years (11.3% to 12.0% a
       year against 10.9%) with three quarters of the worst drawdown,
       37% ahead at the end of 2020 and 10% behind now. Against stocks
@@ -719,7 +800,8 @@ Carter's, in order:
       the upside has to come from somewhere these columns do not
       reach; if the aim is market-like return with fewer losers, it is
       a result. Findings, "What this says about the thesis".
-- [ ] **Paper-trade the fixed candidate, or not.** (Your reading of
+- [x] **Paper-trade the fixed candidate, or not.** (Yes: decision 36;
+      carried to the section above.) (Your reading of
       2021-26 as a bubble the strategy sits out, decision 35, is a
       reason to: on 1999-2004 a stand-in for the candidate trailed in
       the last year of the run-up and led by 9 points a year for the
@@ -760,7 +842,9 @@ The first three are new and come from decision 32:
 - [ ] **Market-state features** (PLAN 5.6): the thesis's condition
       (2), the era, is the whole of 2021-26, and a stock's own columns
       cannot say what era it is. Carried from the section below.
-- [ ] **Data before 1998, if it can be had** (Carter, 2026-10-01).
+- [x] **Data before 1998, if it can be had** (closed by Carter the
+      same day: Sharadar starts in 1998 and nothing comparable goes
+      further back).
       The panel and the snapshots begin on 1997-12-31, so the first
       possible picks are January 1999: the test of decision 35 saw
       the last year of the dot-com run-up and its aftermath, not the

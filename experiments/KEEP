@@ -44,3 +44,8 @@ experiments/eval_screen_peers_dv100k.toml
 experiments/eval_blend_mom_roc_peers_dv100k.toml
 experiments/eval_screen_large.toml
 experiments/eval_blend_mom_roc_large.toml
+# Queued on 2026-10-01 (experiments/queue.toml, decision 36): not run
+# yet, so no promoted result names them; the queue needs them tracked.
+experiments/sweeps/baseline_factors_crash_dd50.toml
+experiments/sweeps/forest_crash_dd50.toml
+experiments/sweeps/lgbm_regressor_growth_allrows_3y.toml

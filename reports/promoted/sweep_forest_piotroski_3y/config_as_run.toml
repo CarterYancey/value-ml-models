@@ -1,0 +1,104 @@
+# Decision 36 of docs/notes/2026-09-29-decisions.md (2026-10-01,
+# Carter): the nine Piotroski signals against the composite F-score.
+# The F-score is the count of nine yes/no accounting signals, each
+# weighted one. Can a model that sees the nine separately find a more
+# informative weighting, or combinations, than their sum?
+#
+# Three feature sets, nothing else in the model:
+#
+#   fs0  `piotroski_f` alone: the composite, 0 to 9
+#   fs1  the nine signals (`piotroski_roa_positive`, `_cfo_positive`,
+#        `_roa_up`, `_cfo_gt_ni`, `_leverage_down`, `_liquidity_up`,
+#        `_no_issuance`, `_margin_up`, `_turnover_up`), 0/1 with NULL
+#        kept
+#   fs2  the nine and the composite together (if the sum adds nothing
+#        to its parts, fs2 = fs1)
+#
+# Two cells, all rows: cell C ("not a loser", the candidate's) and
+# `label_3y_beat_spy` (Piotroski's own claim was about returns).
+# A forest of depth 4 with every feature offered at every split
+# (`max_features = 1.0`: with one to ten inputs the candidate's 0.2
+# would offer a tree a single column), otherwise the candidate's
+# forest; three seeds.
+#
+# How it is read. Nine yes/no inputs give at most a few hundred
+# distinct scores for a million rows, and the composite gives ten, so
+# the top 20 of a year and the screen's top 10 of a quarter are picked
+# from large ties: **p@20 and the screen say little here and are not
+# what is compared.** The comparison is on the whole ranking:
+# fold-mean PR-AUC against the base rate and Brier against the
+# no-skill reference, in each cell, by half (2005-12, 2013-20), and
+# the forest's importances for which signals carry it.
+#
+# Predictions, written before the run (2026-10-01):
+#   1. fs0, cell C: PR-AUC 0.02 to 0.05 above the base rate (0.39):
+#      the F-score has some skill at "not a loser" and far less than
+#      the 112 ranks (0.585).
+#   2. fs1 above fs0 in cell C by 0.01 to 0.03 of PR-AUC on every
+#      seed, in both halves: the signals are not equally informative
+#      (positive operating cash flow and positive return on assets say
+#      more about not losing than a rising current ratio), and a count
+#      cannot say which three of nine a 3 is.
+#   3. fs2 within 0.003 of fs1 in both cells.
+#   4. beat SPY: fs0 and fs1 both within 0.015 of the base rate, fs1
+#      above fs0 by less than 0.01. Relative return has not been
+#      learnable from far richer inputs.
+#   5. The two profitability-level signals (`roa_positive`,
+#      `cfo_positive`) carry more than half of fs1's importance in
+#      cell C.
+#   Rival for 2: the sum is the sufficient statistic (Piotroski's
+#   equal weights are about right) and fs1 is within 0.005 of fs0.
+#
+# Expanded: 2 cells x 3 feature sets x 1 set x 3 seeds = 18 runs.
+name = "forest_piotroski_3y"
+dataset_version = "dataset_v1.4"
+min_dataset_version = "1.4"
+scheme = "walkforward"
+folds = "all"
+seeds = [23, 232, 1776]
+top_k = [20, 50]
+precision_targets = [0.75, 0.9]
+rank_metric = "pr_auc"
+pick_outcomes = [
+  "label_3y_beat_spy",
+  "fwd_3y_excess_cagr",
+  "fwd_3y_cagr",
+  "fwd_3y_cagr < 0",
+]
+
+sets = [
+  {criterion = "entropy", max_depth = 4, max_features = 1.0, max_samples = 0.663781, min_samples_leaf = 72, n_estimators = 490},
+]
+
+[[cells]]
+label = "fwd_3y_cagr >= 0 & fwd_3y_max_drawdown_from_entry < 0.3"
+
+[[cells]]
+label = "label_3y_beat_spy"
+
+# fs0: the composite alone
+[[features]]
+columns = ["piotroski_f"]
+
+# fs1: the nine signals
+[[features]]
+columns = [
+  "piotroski_roa_positive", "piotroski_cfo_positive", "piotroski_roa_up",
+  "piotroski_cfo_gt_ni", "piotroski_leverage_down", "piotroski_liquidity_up",
+  "piotroski_no_issuance", "piotroski_margin_up", "piotroski_turnover_up",
+]
+
+# fs2: the nine and the composite
+[[features]]
+columns = [
+  "piotroski_f",
+  "piotroski_roa_positive", "piotroski_cfo_positive", "piotroski_roa_up",
+  "piotroski_cfo_gt_ni", "piotroski_leverage_down", "piotroski_liquidity_up",
+  "piotroski_no_issuance", "piotroski_margin_up", "piotroski_turnover_up",
+]
+
+[model]
+name = "random_forest"
+bootstrap = true
+class_weight = 1.0
+n_jobs = 8

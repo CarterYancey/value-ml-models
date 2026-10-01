@@ -1,0 +1,98 @@
+# Decision 36 of docs/notes/2026-09-29-decisions.md (2026-10-01,
+# Carter): a model that is very good at identifying over-priced
+# stocks. A precise call that a stock will fall 50% from entry would
+# be one way to profit from an accurate model (a short side: risky,
+# not preferred), and the number of high-confidence calls might say
+# what kind of market it is (many: an era for holding cash).
+#
+# The candidate's forest configuration on "fell 50% or more from
+# entry" within one year and within three, three seeds, trained and
+# measured inside the more liquid half of the stocks
+# (`dollar_volume_3m_rank >= 0.5`: what could plausibly be borrowed;
+# the falls of the illiquid half are easy to predict and impossible
+# to trade). Folds 2005-2020 for both horizons, as in the 1-year cell
+# of decision 22. Single-factor bars: baseline_factors_crash_dd50.
+#
+# What the label looks like (median snapshots of 2005-2020 inside the
+# universe): 13.9% of rows fall 50% within a year and 31.8% within
+# three; by entry year the one-year rate runs from 0.04 (2009, 2013)
+# to 0.29 (2007), 0.53 (2008) and 0.31 (2019). Most of the label is
+# the market's year, not the stock's.
+#
+# Read on three things:
+#   (a) precision at the top (top 20 and 50 a year, the screen's top
+#       10 a quarter against same-size peers' rate), by year: is there
+#       a level of precision that would justify a short at all, and in
+#       which years;
+#   (b) what the calls went on to do: mean one-year return and the
+#       share that rose 30% or more (what a short loses on);
+#   (c) the number of rows at or above each score threshold by year
+#       (`n_at_thr_*`) beside what the market did next: does the count
+#       rise *before* 2008 and 2020, or after.
+#
+# Predictions, written before the run (2026-10-01):
+#   1. One-year cell: fold-mean PR-AUC 0.10 or more above the base
+#      rate; p@20 0.50 or more in most years and under 0.30 in the
+#      calm years with a base rate under 0.06 (2009, 2010, 2012, 2013,
+#      2016, 2017).
+#   2. The top 20's mean one-year return is negative in 12 or more of
+#      16 years, and 10% or more of them rise 30% or more: the stocks
+#      most likely to halve are also the ones that sometimes double.
+#   3. (c): the count of rows at score >= 0.5 is highest for entries
+#      of 2009-2010 and 2021-style years, after the crash is in the
+#      training rows, not for 2007 or 2019. A fold model for year Y
+#      has seen outcomes only to Y-2 (one-year label) or Y-4 (three):
+#      the count lags, as the forest's confidence did (decision 20).
+#   Rival for 3: the ranks that mark fragile stocks (leverage,
+#   unprofitability, volatility) are more common before a crash, and
+#   the count for 2007 entries is above 2005's and 2006's by half.
+#
+# Expanded: 2 cells x 1 feature set x 1 set x 3 seeds = 6 runs.
+# Run: vml-sweep experiments/sweeps/forest_crash_dd50.toml --save-models
+name = "forest_crash_dd50"
+seeds = [23, 232, 1776]
+sets = [
+  {criterion = "entropy", max_depth = 4, max_features = 0.205191, max_samples = 0.663781, min_samples_leaf = 72, n_estimators = 490},
+]
+dataset_version = "dataset_v1.4"
+min_dataset_version = "1.4"
+scheme = "walkforward"
+folds = [2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020]
+top_k = [20, 50, 100]
+score_thresholds = [0.3, 0.4, 0.5, 0.6, 0.7]
+precision_targets = [0.75, 0.9]
+rank_metric = "precision_at_20"
+pick_outcomes = [
+  "fwd_1y_cagr",
+  "fwd_1y_excess_cagr",
+  "fwd_1y_max_drawdown_from_entry",
+  "fwd_1y_cagr < -0.3",
+  "fwd_1y_cagr >= 0.3",
+  "fwd_1y_max_drawdown_from_entry >= 0.5",
+]
+
+[pick_screen]
+per = "quarter"
+top_k = 10
+peer_column = "log_marketcap_rank"
+peer_bins = 20
+
+[[universe]]
+column = "dollar_volume_3m_rank"
+op = ">="
+value = 0.5
+
+[[cells]]
+label = "fwd_1y_max_drawdown_from_entry >= 0.5"
+
+[[cells]]
+label = "fwd_3y_max_drawdown_from_entry >= 0.5"
+
+[[features]]
+groups = ["ranks"]
+
+[model]
+name = "random_forest"
+bootstrap = true
+class_weight = 1.0
+n_jobs = 8

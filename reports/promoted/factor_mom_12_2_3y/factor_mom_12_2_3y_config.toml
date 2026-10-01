@@ -11,7 +11,6 @@
 # candidate on its own; its report is read for what its picks went on
 # to do.
 name = "factor_mom_12_2_3y"
-note = "A LEG OF THE CANDIDATE: 12-month momentum as a rank factor (mom_12_2_rank, no fit). Alone it is the worst factor on the screen (losers 0.66 inside the 100k floor); beside the forest and return on capital it adds the winners. docs/paper-trading.md"
 dataset_version = "dataset_v1.4"
 min_dataset_version = "1.4"
 scheme = "walkforward"
