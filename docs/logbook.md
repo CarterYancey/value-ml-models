@@ -14,6 +14,13 @@ read** stub; a correction is a new entry that names the old one.
 
 <!-- entries -->
 
+### 2026-10-01 · session close 2026-10-01 (second session)
+git `0234c06`
+- **Did:** Promoted 11 results (the candidate to 2026-08-21: buy and hold, the sell discipline, fractional shares; the sector sweep; the three large-cap sweeps; four evaluations against same-size peers). Wrote docs/notes/2026-10-01-out-of-sample.md and 2026-10-01-large-caps.md, decisions 27 to 34, three process issues, rewrote docs/findings.md, the next steps in TODO.md and docs/agents.md (the queue loop and the goal-directed session, with Carter's leave). Built claude/results-2026-10-01b for the pull request: five code changes (vml-predict's selection; calendar years in backtest reports; the buys against same-size candidates in backtest reports; sector as a model input; the screen's peer column), docs, promoted results, the ledger shard.
+- **Got:** 35 backtest configurations on dataset_v1.4, four of them valued to 2026-08-21. Cell C: 87 configurations on all rows, 38 inside the 100k floor, 14 inside large caps; one holdout look (Carter's). 506 tests pass on the merged code.
+- **Concluded:** The candidate is not shown to beat SPY; the forest's precision and loser avoidance held out of sample; selection is read against same-size peers from here on; the search on these columns is closed for now (decision 34). The record for the next session: docs/findings.md ('Next session: start here'), the two notes, the decision log 27-34, TODO.md.
+- **Next:** Carter: the pull request; what the portfolio is for and its yardstick; whether to paper-trade the fixed candidate; the upstream requests.
+
 ### 2026-10-01 · forest_largecap_cells_3y
 9 runs · `dataset_v1.4` · 3 cells · git `cca9ca0` · [summary](../reports/sweeps/forest_largecap_cells_3y/forest_largecap_cells_3y_summary.md) · [note](notes/2026-10-01-large-caps.md)
 - **Did:** Decision 32: is there a ranking that chooses well among large companies? Trained and measured inside log_marketcap_rank >= 0.8 (about 790 investable stocks a month; 3,167 test rows a year), read on the screen against same-size peers: the candidate's forest on three targets (C not a loser; S beat SPY; CS beat SPY without a 30% fall), three seeds (this sweep, 9 hashes); seven single-factor bars (baseline_factors_largecap_3y, 21); LightGBM regressions on the excess return (lgbm_regressor_largecap_excess_3y, 6). The rule was fixed before the runs: a lead of 0.02 over same-size peers in both halves on every seed, and 0.01 above the best single factor's. All at git 88572e1. Trials: C inside large caps 14, beat SPY 16, CS 10.
