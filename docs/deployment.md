@@ -78,6 +78,49 @@ that cross-section, not a result: a deployment fit has no test set.
 An inference cross-section is ranked fresh on one day, where the
 backtest ranks snapshots up to a quarter old (docs/backtesting.md).
 
+## Historical analogues: what today's picks resemble
+
+`vml-analogues` takes the same bundles, inference data and selection
+flags as `vml-predict`, and for each pick lists the historical stocks
+most similar to it **as the models see it**, with what they went on
+to do:
+
+```sh
+uv run vml-analogues <forest> <momentum> <return-on-capital> \
+    data/datasets/inference_2026-10-01 \
+    --filter "dollar_volume_3m_rank >= 0.2" --pick 10 --max-per-group 2
+# or named stocks instead of the picks:
+uv run vml-analogues <bundles...> <inference> --tickers JNJ,AAPL --top 25
+```
+
+- **Similarity** is defined per model and averaged over the models of
+  a blend. For a tree model (forest, single tree, LightGBM, XGBoost)
+  it is the share of trees in which the historical row lands in the
+  same leaf as the pick: the model's own thresholds and NULL routing,
+  no distance metric, no imputation, no scaling. For a rank factor it
+  is one minus the distance on its column (NULL matches NULL).
+- **The pool** is the dataset version the bundles were trained on:
+  median-kind rows with an observable outcome over the longest bundle
+  horizon, every era, delisted stocks included. One row per stock is
+  listed (its most similar snapshot); the pick's own history is left
+  out unless `--include-self`.
+- **Output**, beside the ranking `vml-predict` would write: a report
+  (`..__analogues.md`) with a summary per pick against the whole pool,
+  the features the tree model split on along the pick's paths with the
+  pick's values, and the `--top` analogues (default 15) with ticker,
+  snapshot date, similarity per model, outcomes and those features;
+  every row in `..__analogues.csv`; a `.meta.json` sidecar.
+
+**Explanation, not evaluation.** A deployment model was fitted on
+these very rows: the rows sharing a pick's leaves are the rows that
+made those leaves, so the analogues' outcome rates are in-sample by
+construction. They say what kind of history a pick resembles; they
+are not an accuracy or a probability for it, and nothing here is ever
+a model input. Outcomes follow the dataset's label convention (a
+delisted stock's final price is carried flat to the horizon), and
+inference ranks are pooled over one day where training ranks are
+within a quarter.
+
 Both deployment
 training and inference runs are logged to `experiments/results.csv` under
 their own schemes (`deployment` / `inference`), so they never mix with
