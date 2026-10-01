@@ -97,7 +97,12 @@ Reports land in
 `reports/backtest/<name>_<config-hash>.*` (report, equity/trades/
 rebalances CSVs — trades carry tickers, per-model scores, and realized
 profit on sells — and the equity plot), lead with money- and
-time-weighted results, the per-year era slice with crash years tagged,
+time-weighted results, the per-year era slice with crash years tagged
+(a year runs from the first trading day of January to the first of the
+next January: the portfolio is valued monthly, and a month's return is
+counted in the year the month starts in; reports written before
+2026-10-01 counted it in the year it ended in, so their "2022" is
+December 2021 to December 2022),
 and the defensive-hypothesis check; runs are logged to
 `experiments/results.csv` under scheme `backtest`.
 

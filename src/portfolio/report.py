@@ -91,13 +91,23 @@ def yearly_table(
     strategy: SimulationResult, benchmark: SimulationResult
 ) -> pd.DataFrame:
     """Per-calendar-year TWR of both legs, with crash years tagged —
-    the era slice of a backtest."""
+    the era slice of a backtest.
+
+    A row of `monthly` carries the return from the previous valuation
+    date to its own, so the return belongs to the year that period
+    *starts* in: with valuations on the first trading day of each month
+    the January row is December's return. Year Y therefore runs from
+    the first valuation of January Y to the first of January Y+1 (the
+    last year, to the final valuation). Grouping on the row's own date
+    would label 1 December to 1 December as the year."""
 
     def per_year(result: SimulationResult) -> pd.Series:
-        m = result.monthly[result.monthly["twr_return"].notna()]
+        monthly = result.monthly
+        period_start = monthly["date"].shift(1)
+        m = monthly[monthly["twr_return"].notna() & period_start.notna()]
         if m.empty:
             return pd.Series(dtype=float)
-        grouped = m.groupby(m["date"].dt.year)["twr_return"]
+        grouped = m.groupby(period_start[m.index].dt.year)["twr_return"]
         return grouped.apply(lambda r: float((1.0 + r).prod() - 1.0))
 
     strat, bench = per_year(strategy), per_year(benchmark)
