@@ -1,0 +1,97 @@
+# Decision 32 of docs/notes/2026-09-29-decisions.md (2026-10-01), with
+# forest_largecap_cells_3y and baseline_factors_largecap_3y: the same
+# question (is there a ranking that chooses well among large
+# companies?) put as a regression. A classifier on "beat SPY" counts a
+# stock that beat it by one point and one that beat it by forty as the
+# same hit; a portfolio earns the mean. LightGBM on the continuous
+# `fwd_3y_excess_cagr`, measured on the binary cell `label_3y_beat_spy`
+# (the regression reframe: scores are predicted returns, no Brier),
+# trained and read inside `log_marketcap_rank >= 0.8`, three seeds, two
+# objectives:
+#
+#   huber           the (robust) mean: who is expected to earn most
+#   quantile 0.25   the lower quartile: whose bad case is best, which is
+#                   "low risk with upside" as an objective
+#
+# Parameters are those of experiments/lgbm_regressor_3y_cagr_ge_10.toml
+# (the repository's one regression example), not searched: this asks
+# whether the reframe finds anything, not for its best setting.
+#
+# Read as the forests are: the screen's mean excess CAGR against the
+# universe's all-rows mean, entries of 2005-12 and of 2013-20, and the
+# same rule carries an arm forward (a lead of 0.02 in both periods on
+# every seed, and 0.01 over the best single factor's).
+#
+# Predictions, written before the run (2026-10-01):
+#   1. Both arms: fold-mean PR-AUC on beat_spy within 0.03 of the base
+#      rate; screen lead within 0.02 of zero for 2013-20 entries.
+#   2. The quantile arm picks calm stocks: its screen's losers are at
+#      most two thirds of the universe's, and its lead is within 0.015
+#      of the large-cap forest's on cell C.
+#   3. The huber arm's picks have losers within 0.05 of the universe's
+#      and more big winners than the quantile arm's.
+#   4. Neither arm passes the rule.
+#   Rival: the magnitude of the outcome is learnable where its sign is
+#   not, and the huber arm leads the universe by 0.02 or more in both
+#   periods.
+#
+# Expanded: 1 cell x 1 feature set x 2 sets x 3 seeds = 6 runs.
+name = "lgbm_regressor_largecap_excess_3y"
+note = "LightGBM regression on fwd_3y_excess_cagr inside large caps, measured on beat_spy, lead over same-size peers for entries of 2005-12 / 2013-20: huber +0.016 to +0.024 / -0.024 to -0.036; quantile 0.25 +0.028 to +0.031 / +0.016 to +0.020; PR-AUC within 0.03 of the base rate. The magnitude of the excess return is no more learnable than its sign. docs/notes/2026-10-01-large-caps.md"
+dataset_version = "dataset_v1.4"
+min_dataset_version = "1.4"
+scheme = "walkforward"
+folds = "all"
+seeds = [23, 232, 1776]
+top_k = [20, 50]
+precision_targets = [0.75, 0.9]
+rank_metric = "precision_at_20"
+pick_outcomes = [
+  "label_3y_beat_spy",
+  "fwd_3y_excess_cagr",
+  "fwd_3y_cagr",
+  "fwd_3y_max_drawdown_from_entry",
+  "fwd_3y_cagr < 0",
+  "fwd_3y_cagr < -0.1",
+  "fwd_3y_max_drawdown_from_entry >= 0.4",
+  "fwd_3y_cagr >= 0.15",
+  "fwd_3y_cagr >= 0.25",
+  "fwd_3y_excess_cagr >= 0.05",
+]
+
+sets = [
+  {objective = "huber"},
+  {objective = "quantile", alpha = 0.25},
+]
+
+[pick_screen]
+per = "quarter"
+top_k = 10
+max_per_group = 2
+group_column = "sector"
+peer_column = "log_marketcap_rank"
+peer_bins = 20
+
+[[universe]]
+column = "log_marketcap_rank"
+op = ">="
+value = 0.8
+
+[[cells]]
+label = "fwd_3y_excess_cagr"
+eval_label = "label_3y_beat_spy"
+
+[[features]]
+groups = ["ranks"]
+
+[model]
+name = "lightgbm_regressor"
+winsorize = 0.01
+n_estimators = 300
+learning_rate = 0.05
+num_leaves = 15
+min_child_samples = 60
+subsample = 0.8
+subsample_freq = 1
+colsample_bytree = 0.8
+reg_lambda = 1.0

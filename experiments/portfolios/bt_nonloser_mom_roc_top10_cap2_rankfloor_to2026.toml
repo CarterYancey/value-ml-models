@@ -1,0 +1,95 @@
+# Decision 28 of docs/notes/2026-09-29-decisions.md (2026-10-01): the
+# candidate as it would be deployed, traded to the end of the price
+# panel. Decision 24's blend (cell C's forest, 12-month momentum,
+# return on capital by mean rank; top 10 a month, at most 2 per
+# sector, equal weights, never sells), with the liquidity floor Carter
+# chose for deployment on 2026-10-01 (`dollar_volume_3m_rank >= 0.2`,
+# decision 25, backtest 27), buys and deposits through 2026-08-21,
+# valued on that day. Nothing about the strategy is new: the window is.
+#
+# Why: findings.md's first open question is whether the candidate
+# holds outside 2005-2023. The price panel and the dataset's snapshots
+# run to 2026-08-21, and the candidate was fixed (decision 24) on buys
+# of 2005-2020 valued at the end of 2023. The calendar years 2024,
+# 2025 and 2026 to August have been seen by no selection in this
+# repository; the buys of 2021-22 now have three-year outcomes, which
+# the run to 2023 could not show.
+#
+# Trade years past the forest's last fold (2020) are served by
+# `model_update = "refit"`: a simulated year-end deployment refit on
+# every row whose 3-year label was observable by Jan 1 of the trade
+# year. The refits for 2021-23 are those of decision 26 (cached);
+# 2024-26 are new. No split tags are read. These years overlap the
+# sealed 3-year holdout window (snapshots 2021-), whose one look in
+# cell C was taken by Carter on 2026-10-01.
+#
+# This run is not a selection: the candidate and its sell-discipline
+# variant (decision 24) are the only two portfolios traded on these
+# years, and no variant is to be chosen on what they show. A further
+# portfolio run on 2021-26 is a decision that says why.
+#
+# Check before reading (not a prediction): the equity path to
+# 2020-12-31 equals that of bt_nonloser_mom_roc_top10_cap2_rankfloor
+# (config 6005c9c0a2869bc9) to the cent.
+#
+# Predictions (2026-10-01), written before the run:
+# 1. 2021 / 2022 / 2023 against SPY within 1.5 points of the dollar-
+#    floor run's -9.6 / +4.3 / -2.2 (the floor's form does not matter).
+# 2. 2024: behind SPY by 2 to 12 points (a rise led by the index's
+#    largest members; an equal-weighted portfolio of calm, profitable
+#    companies trails it, as in 2021 and 2023).
+# 3. 2025 and 2026 to August: within 6 points of SPY either way; no
+#    sign predicted.
+# 4. Final value above SPY's under the same deposits (it was 27% ahead
+#    at the end of 2023), with the lead smaller than 27%.
+# 5. Per buy over three years: the 2021 buys behind SPY (mean excess
+#    between -0.10 and -0.02 a year), the 2022 buys within 0.04 of
+#    zero, the 2023 buys that have a three-year outcome behind SPY.
+#    Losers (negative three-year return) under 0.30 in each cohort.
+#
+# Rival readings of a shortfall, to be told apart where the data can:
+# (a) the era: the portfolio trails a rising, concentrated index and
+#     leads in falls (2008 +9.5, 2022 +4.3). Predicts ahead of SPY in
+#     any month-to-month fall of 2024-26 and the buys' loser rate
+#     still low;
+# (b) the edge was fitted to 2005-2020: predicts behind in falls as
+#     well, and a loser rate near the universe's.
+name = "bt_nonloser_mom_roc_top10_cap2_rankfloor_to2026"
+dataset_version = "dataset_v1.4"
+prices_version = "prices_v1.0"
+
+bundles = [
+    "experiments/models/forest_nonloser_dd30_3y_53ceedd93e6d",
+    "experiments/models/factor_mom_12_2_3y_97c0f095cf48",
+    "experiments/models/factor_roc_greenblatt_3y_da640394cbba",
+]
+
+[signal]
+combine = "mean_rank"
+max_staleness_days = 200
+model_update = "refit"
+label_lag_days = 45
+
+[[investability]]
+column = "dollar_volume_3m_rank"
+op = ">="
+value = 0.2
+
+[portfolio]
+strategy = "buy_and_hold"
+top_k = 10
+weighting = "equal"
+monthly_cash = 1000.0
+max_per_group = 2
+group_column = "sector"
+
+[execution]
+cost_bps = 35.0
+benchmark_cost_bps = 0.0
+max_quote_age_days = 3
+delist_after_days = 30
+
+[window]
+start = 2005-01-01
+end = 2026-08-21
+valuation_end = 2026-08-21

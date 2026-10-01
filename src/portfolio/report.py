@@ -17,6 +17,7 @@ import matplotlib
 matplotlib.use("Agg")
 
 import matplotlib.pyplot as plt  # noqa: E402
+import numpy as np  # noqa: E402
 import pandas as pd  # noqa: E402
 
 from eval.era import crash_label  # noqa: E402
@@ -91,13 +92,23 @@ def yearly_table(
     strategy: SimulationResult, benchmark: SimulationResult
 ) -> pd.DataFrame:
     """Per-calendar-year TWR of both legs, with crash years tagged —
-    the era slice of a backtest."""
+    the era slice of a backtest.
+
+    A row of `monthly` carries the return from the previous valuation
+    date to its own, so the return belongs to the year that period
+    *starts* in: with valuations on the first trading day of each month
+    the January row is December's return. Year Y therefore runs from
+    the first valuation of January Y to the first of January Y+1 (the
+    last year, to the final valuation). Grouping on the row's own date
+    would label 1 December to 1 December as the year."""
 
     def per_year(result: SimulationResult) -> pd.Series:
-        m = result.monthly[result.monthly["twr_return"].notna()]
+        monthly = result.monthly
+        period_start = monthly["date"].shift(1)
+        m = monthly[monthly["twr_return"].notna() & period_start.notna()]
         if m.empty:
             return pd.Series(dtype=float)
-        grouped = m.groupby(m["date"].dt.year)["twr_return"]
+        grouped = m.groupby(period_start[m.index].dt.year)["twr_return"]
         return grouped.apply(lambda r: float((1.0 + r).prod() - 1.0))
 
     strat, bench = per_year(strategy), per_year(benchmark)
@@ -183,6 +194,96 @@ def group_tables(
 #: Horizons, in years, the buy-outcome table reads each buy on.
 BUY_OUTCOME_HORIZONS = (1, 3)
 
+#: The cross-section column a buy's same-size peers are matched on, and
+#: the number of equal-width bins it is cut into (a 5% band of the
+#: market-capitalization rank). Size is matched because it decides more
+#: of a stock's return against a capitalization-weighted benchmark than
+#: anything a model adds: the smaller half of the investable stocks
+#: trailed SPY by 12 to 33 points a year in every period of 2005-2026,
+#: so a selection that merely prefers large companies "beats the
+#: average stock" without any skill.
+SIZE_COLUMN = "log_marketcap_rank"
+SIZE_BINS = 20
+
+
+def position_outcomes(
+    frame: pd.DataFrame,
+    panel,
+    valuation_end,
+    horizons: tuple[int, ...] = BUY_OUTCOME_HORIZONS,
+    early_exit_days: int = 30,
+) -> pd.DataFrame:
+    """What a position opened at `price` on `date` went on to do, for
+    every row of `frame` (`asset`, `date`, `price`): per horizon H its
+    annualized return over the H years after the date, that return's
+    excess over the benchmark's, and whether it exited early.
+
+    A stock that stops printing before the horizon (a delisting, most
+    often an acquisition) exits at its final print and the proceeds
+    ride the benchmark to the horizon: a portfolio gets the cash back
+    and reinvests it, it does not hold it at zero. (The dataset's label
+    convention carries the final price flat to the horizon, which is
+    why an acquired stock looks worse on `fwd_*_excess_cagr` than it
+    was for a portfolio.) Costs are not included. A row whose horizon
+    ends after `valuation_end`, or whose stock the panel has never
+    seen, has no outcome at that horizon (NaN).
+
+    Returns the three columns per horizon, indexed like `frame`.
+    Vectorized per stock: the backtest reads every candidate of every
+    rebalance through it, a million rows on the real dataset."""
+    columns = [
+        f"{key}_{h}y"
+        for h in horizons
+        for key in ("return", "excess", "early_exit")
+    ]
+    if frame.empty:
+        return pd.DataFrame(np.nan, index=frame.index, columns=columns)
+    bench = panel.benchmark
+    bench_dates = bench.index.values
+    bench_values = bench.to_numpy(dtype=float)
+    end = np.datetime64(pd.Timestamp(valuation_end))
+
+    def bench_asof(when: np.ndarray) -> np.ndarray:
+        idx = np.searchsorted(bench_dates, when, side="right") - 1
+        return np.where(
+            idx >= 0, bench_values[np.clip(idx, 0, None)], np.nan
+        )
+
+    dates = pd.to_datetime(frame["date"])
+    price = frame["price"].to_numpy(dtype=float)
+    start = bench_asof(dates.values)
+    targets = {
+        h: (dates + pd.DateOffset(years=h)).values for h in horizons
+    }
+    values = np.full((len(frame), len(columns)), np.nan)
+    for asset, rows in frame.groupby("asset", sort=False).indices.items():
+        series = panel.series(int(asset))
+        if series is None or series.empty:
+            continue
+        print_dates = series.index.values
+        prints = series.to_numpy(dtype=float)
+        for n, h in enumerate(horizons):
+            target = targets[h][rows]
+            idx = np.searchsorted(print_dates, target, side="right") - 1
+            ok = (target <= end) & (idx >= 0) & (price[rows] > 0)
+            idx = np.clip(idx, 0, None)
+            exit_date = print_dates[idx]
+            at_exit, at_target = bench_asof(exit_date), bench_asof(target)
+            with np.errstate(invalid="ignore", divide="ignore"):
+                # the stock to its exit, then the benchmark to the horizon
+                total = prints[idx] / price[rows] * at_target / at_exit
+                bench_total = at_target / start[rows]
+                annual = total ** (1.0 / h)
+                excess = annual - bench_total ** (1.0 / h)
+            ok &= ~np.isnan(excess)
+            early = (
+                (target - exit_date) / np.timedelta64(1, "D")
+            ) > early_exit_days
+            values[rows, 3 * n] = np.where(ok, annual - 1.0, np.nan)
+            values[rows, 3 * n + 1] = np.where(ok, excess, np.nan)
+            values[rows, 3 * n + 2] = np.where(ok, early.astype(float), np.nan)
+    return pd.DataFrame(values, index=frame.index, columns=columns)
+
 
 def buy_outcomes(
     trades: pd.DataFrame,
@@ -193,72 +294,135 @@ def buy_outcomes(
 ) -> pd.DataFrame:
     """What each buy went on to do, from the price panel: one row per
     buy with, per horizon H, its annualized return over the H years
-    after the trade date and that return's excess over the benchmark's.
+    after the trade date and that return's excess over the benchmark's
+    (`position_outcomes`, which states the delisting convention).
 
     A portfolio figure weights a year by what the portfolio then held:
     time-weighted return gives the first years, when a deposit-driven
     portfolio is small and young, the weight of the last ones, and
     money-weighted return does the opposite. Neither says whether the
     *selection* was good year by year. This does: every buy counts
-    once, read over a fixed horizon from its own trade date.
-
-    A stock that stops printing before the horizon (a delisting, most
-    often an acquisition) exits at its final print and the proceeds
-    ride the benchmark to the horizon: a portfolio gets the cash back
-    and reinvests it, it does not hold it at zero. (The dataset's label
-    convention carries the final price flat to the horizon, which is
-    why an acquired stock looks worse on `fwd_*_excess_cagr` than it
-    was for a portfolio.) Costs are not included. A buy whose horizon
-    ends after `valuation_end` has no outcome at that horizon (NaN)."""
+    once, read over a fixed horizon from its own trade date."""
     columns = ["asset", "date", "year", "gross"]
     for h in horizons:
         columns += [f"return_{h}y", f"excess_{h}y", f"early_exit_{h}y"]
     if trades.empty:
         return pd.DataFrame(columns=columns)
     buys = trades[trades["side"] == "buy"]
-    bench = panel.benchmark
-    end = pd.Timestamp(valuation_end)
-
-    def asof(series: pd.Series, when: pd.Timestamp):
-        idx = series.index.searchsorted(when, side="right") - 1
-        if idx < 0:
-            return None
-        return float(series.iloc[idx]), series.index[idx]
-
-    rows = []
-    for asset, when, price, gross in zip(
-        buys["asset"], pd.to_datetime(buys["date"]), buys["price"],
-        buys["gross"],
-    ):
-        row: dict = {
-            "asset": asset, "date": when, "year": int(when.year),
-            "gross": float(gross),
+    if buys.empty:
+        return pd.DataFrame(columns=columns)
+    frame = pd.DataFrame(
+        {
+            "asset": buys["asset"].to_numpy(),
+            "date": pd.to_datetime(buys["date"]).to_numpy(),
+            "price": buys["price"].to_numpy(dtype=float),
+            "gross": buys["gross"].to_numpy(dtype=float),
         }
-        series = panel.series(int(asset))
-        start = asof(bench, when)
-        for h in horizons:
-            target = when + pd.DateOffset(years=h)
-            row[f"return_{h}y"] = row[f"excess_{h}y"] = float("nan")
-            row[f"early_exit_{h}y"] = float("nan")
-            if series is None or start is None or target > end:
-                continue
-            exit_quote = asof(series, target)
-            if exit_quote is None or not price > 0:
-                continue
-            exit_price, exit_date = exit_quote
-            at_exit, at_target = asof(bench, exit_date), asof(bench, target)
-            if at_exit is None or at_target is None:
-                continue
-            # the stock to its exit, then the benchmark to the horizon
-            total = (exit_price / float(price)) * (at_target[0] / at_exit[0])
-            bench_total = at_target[0] / start[0]
-            row[f"return_{h}y"] = total ** (1.0 / h) - 1.0
-            row[f"excess_{h}y"] = total ** (1.0 / h) - bench_total ** (1.0 / h)
-            row[f"early_exit_{h}y"] = float(
-                (target - exit_date).days > early_exit_days
+    )
+    frame["year"] = frame["date"].dt.year.astype(int)
+    outcomes = position_outcomes(
+        frame, panel, valuation_end, horizons, early_exit_days
+    )
+    return pd.concat([frame, outcomes], axis=1)[columns]
+
+
+def candidate_outcomes(
+    candidates: pd.DataFrame,
+    panel,
+    valuation_end,
+    horizons: tuple[int, ...] = BUY_OUTCOME_HORIZONS,
+) -> pd.DataFrame:
+    """`position_outcomes` for every candidate of every rebalance (the
+    feed's log: `asset`, `date`, `price`, and `size` when the
+    cross-section has `SIZE_COLUMN`), with the candidate's size bin:
+    the stocks the buys were chosen from, read as the buys are."""
+    if candidates is None or candidates.empty:
+        return pd.DataFrame()
+    frame = candidates.reset_index(drop=True).copy()
+    frame["date"] = pd.to_datetime(frame["date"])
+    frame["year"] = frame["date"].dt.year.astype(int)
+    if "size" in frame.columns:
+        size = frame["size"].to_numpy(dtype=float)
+        bins = np.floor(np.clip(size, 0.0, 1.0) * SIZE_BINS)
+        bins = np.minimum(bins, SIZE_BINS - 1)
+        frame["size_bin"] = np.where(np.isnan(size), -1, bins).astype(int)
+    outcomes = position_outcomes(frame, panel, valuation_end, horizons)
+    return pd.concat([frame, outcomes], axis=1)
+
+
+def reference_table(
+    buys: pd.DataFrame,
+    candidates: pd.DataFrame,
+    horizon: int,
+) -> pd.DataFrame:
+    """The buys against the stocks they were chosen from, at one
+    horizon, by buy year with a pooled row.
+
+    Two references, both equal-weighted and read exactly as the buys
+    are. *All candidates*: every stock that passed the screens and had
+    a quote at a rebalance of the year. *Same-size peers*: for each
+    buy, the candidates of its own rebalance in its own band of
+    `SIZE_COLUMN` (`SIZE_BINS` bands); the row gives the mean of the
+    buys' peer means and the mean difference. The second is the one
+    that reads selection: against a capitalization-weighted benchmark
+    the average small stock loses by a wide margin in every period, so
+    a ranking that only prefers large companies beats "all candidates"
+    without choosing well among them.
+
+    Columns: `buys` (with an outcome), `buys_excess`, `candidates_excess`,
+    `vs_candidates`, `peers_excess`, `vs_peers`, `buys_lost`,
+    `candidates_lost`, `peers_lost` (shares with a negative return).
+    The peer columns are absent when the cross-section has no size
+    column."""
+    exc, ret = f"excess_{horizon}y", f"return_{horizon}y"
+    if buys.empty or candidates.empty or exc not in candidates.columns:
+        return pd.DataFrame()
+    cand = candidates[candidates[exc].notna()]
+    seen = buys[buys[exc].notna()].copy()
+    if cand.empty or seen.empty:
+        return pd.DataFrame()
+    sized = "size_bin" in cand.columns
+    if sized:
+        peers = (
+            cand.assign(lost=(cand[ret] < 0).astype(float))
+            .groupby(["date", "size_bin"])
+            .agg(peer_excess=(exc, "mean"), peer_lost=("lost", "mean"))
+            .reset_index()
+        )
+        own = cand[["date", "asset", "size_bin"]].drop_duplicates(
+            ["date", "asset"]
+        )
+        seen = seen.merge(own, on=["date", "asset"], how="left").merge(
+            peers, on=["date", "size_bin"], how="left"
+        )
+
+    def row(label, b: pd.DataFrame, c: pd.DataFrame) -> dict:
+        r = {
+            "year": label,
+            "buys": int(len(b)),
+            "buys_excess": float(b[exc].mean()),
+            "candidates_excess": float(c[exc].mean()),
+        }
+        r["vs_candidates"] = r["buys_excess"] - r["candidates_excess"]
+        if sized:
+            matched = b[b["peer_excess"].notna()]
+            r["peers_excess"] = float(matched["peer_excess"].mean())
+            r["vs_peers"] = float(
+                (matched[exc] - matched["peer_excess"]).mean()
             )
-        rows.append(row)
-    return pd.DataFrame(rows, columns=columns)
+        r["buys_lost"] = float((b[ret] < 0).mean())
+        r["candidates_lost"] = float((c[ret] < 0).mean())
+        if sized:
+            r["peers_lost"] = float(b["peer_lost"].mean())
+        return r
+
+    rows = [
+        row(int(y), g, cand[cand["year"] == y])
+        for y, g in seen.groupby("year", sort=True)
+        if (cand["year"] == y).any()
+    ]
+    rows.append(row("all buys", seen, cand[cand["year"].isin(seen["year"])]))
+    return pd.DataFrame(rows)
 
 
 def buy_outcome_table(
@@ -292,6 +456,55 @@ def buy_outcome_table(
     rows = [row(int(y), g) for y, g in outcomes.groupby("year", sort=True)]
     rows.append(row("all buys", outcomes))
     return pd.DataFrame(rows)
+
+
+def _reference_lines(
+    buys: pd.DataFrame, candidates: pd.DataFrame | None
+) -> list[str]:
+    """The report section that sets the buys beside their candidates
+    (`reference_table`), longest horizon first; empty without a
+    candidate log."""
+    if candidates is None or candidates.empty:
+        return []
+    tables = []
+    for h in sorted(BUY_OUTCOME_HORIZONS, reverse=True):
+        table = reference_table(buys, candidates, h)
+        if table.empty:
+            continue
+        view = table.copy()
+        for col in view.columns:
+            if col not in ("year", "buys"):
+                view[col] = view[col].map(_pct)
+        tables += [f"Over {h} year{'s' if h > 1 else ''}:", "", _table(view), ""]
+    if not tables:
+        return []
+    sized = "size_bin" in candidates.columns
+    lines = [
+        "### Against the stocks they were chosen from",
+        "",
+        "The same reading for every candidate of every rebalance (each "
+        "stock that passed the screens and had a quote), equal-weighted: "
+        "`candidates_excess` is their mean annualized return minus the "
+        "benchmark's, `vs_candidates` the buys' mean minus theirs, "
+        "`*_lost` the shares with a negative return."
+        + (
+            " `peers_excess` is the mean, over the buys, of the candidates "
+            f"of the same rebalance in the same band of `{SIZE_COLUMN}` "
+            f"({SIZE_BINS} bands), and `vs_peers` the buys' mean lead over "
+            "them. **Read `vs_peers` for the selection.** Against a "
+            "capitalization-weighted benchmark the average small stock "
+            "trails by a wide margin in every period, so a ranking that "
+            "only prefers large companies beats `candidates` without "
+            "choosing well among them; and when `candidates_excess` and "
+            "`peers_excess` are far below zero, the benchmark outran "
+            "equal-weighted stocks of every kind and no equal-weighted "
+            "selection from this universe kept up with it."
+            if sized
+            else ""
+        ),
+        "",
+    ]
+    return lines + tables
 
 
 def headline_table(
@@ -378,6 +591,7 @@ def write_backtest_report(
     configurations_tried: int,
     artifacts: dict,
     buy_outcome_frame: pd.DataFrame | None = None,
+    candidate_outcome_frame: pd.DataFrame | None = None,
 ) -> Path:
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -465,6 +679,9 @@ def write_backtest_report(
             _table(view),
             "",
         ]
+        buy_lines += _reference_lines(
+            buy_outcome_frame, candidate_outcome_frame
+        )
 
     coverage_lines = []
     if n_months:

@@ -1,0 +1,14 @@
+{
+  "name": "forest_nonloser_dd30_3y__screen_large",
+  "promoted_utc": "2026-10-01T09:17:29+00:00",
+  "source_report": "reports/forest_nonloser_dd30_3y__screen_large.md",
+  "run_id": "27c27e4996e3",
+  "config_hash": "d14c6964b843d3ba",
+  "git_sha": "88572e12c94aa693fdc65de98344598d7cb6cc21",
+  "dataset_version": "1.4",
+  "config_path": "",
+  "note": "The candidate's all-rows forest measured inside large caps (log_marketcap_rank >= 0.8): lead over same-size peers +0.030 / +0.028 for entries of 2005-12 / 2013-20, losers 0.17 / 0.12 against 0.31 / 0.26: more than a forest trained inside large caps (+0.022 / +0.021). docs/notes/2026-10-01-large-caps.md",
+  "files": [
+    "forest_nonloser_dd30_3y__screen_large.md"
+  ]
+}

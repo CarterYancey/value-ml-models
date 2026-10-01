@@ -1,0 +1,112 @@
+# Decision 36 of docs/notes/2026-09-29-decisions.md (2026-10-01,
+# Carter): more weight on continuous models that predict growth
+# instead of classifying a binary label. The first step with what the
+# harness already has (the regression reframe, `lightgbm_regressor`):
+# LightGBM trained on every row to predict the realised three-year
+# CAGR and the three-year excess CAGR, four objectives each:
+#
+#   huber           the (robust) mean: who is expected to earn most
+#   quantile 0.5    the median: the typical outcome
+#   quantile 0.25   the lower quartile: whose bad case is best (low
+#                   risk with upside, as one objective)
+#   quantile 0.1    the lower decile: a continuous "not a loser"
+#
+# Measured on a binary cell each (continuous-target models need one:
+# `label_3y_cagr_ge_10` for the CAGR target, `label_3y_beat_spy` for
+# the excess target) and read, as every sweep now is, on the screen
+# against same-size peers inside the 100k floor (scope "test": trained
+# on every row). Scores are predicted returns, not probabilities: no
+# Brier, no calibration. One seed; an arm that passes is run on three.
+#
+# The bars it is read against (same floor, same screen, same peers,
+# entries of 2005-12 / 2013-20): the candidate's forest leads its
+# same-size peers by +0.030 / +0.027 with losers 0.20 / 0.12; the
+# candidate (three legs) by +0.022 / +0.053.
+# What carries an arm forward (decision 34.3): a lead over same-size
+# peers 0.01 or more above the forest's in both periods, losers no
+# higher than the forest's by more than 0.03.
+#
+# What is already known: inside large caps the same reframe on the
+# excess return had no lead after 2013 with huber (-0.024 to -0.036)
+# and +0.016 to +0.020 with quantile 0.25 (docs/notes/2026-10-01-large-caps.md).
+# Parameters are those of that run, not searched.
+#
+# Predictions, written before the run (2026-10-01):
+#   1. The low quantiles (0.1, 0.25) of either target pick calm stocks
+#      and land within 0.015 of the forest's lead in both periods, with
+#      losers within 0.05 of the forest's.
+#   2. huber and the median pick more volatile stocks: losers 0.10 or
+#      more above the forest's, more big winners, and a lead under the
+#      forest's for 2013-20.
+#   3. No arm passes the rule.
+#   Rival: predicting the size of the outcome on every row (where a
+#   classifier only sees its sign) orders the calm stocks by return,
+#   and a low-quantile arm leads the forest by 0.01 in both periods.
+#
+# Expanded: 2 cells x 1 feature set x 4 sets x 1 seed = 8 runs, an
+# hour or two (not measured on all rows).
+name = "lgbm_regressor_growth_allrows_3y"
+dataset_version = "dataset_v1.4"
+min_dataset_version = "1.4"
+scheme = "walkforward"
+folds = "all"
+seeds = [23]
+top_k = [20, 50]
+precision_targets = [0.75, 0.9]
+rank_metric = "precision_at_20"
+universe_scope = "test"
+pick_outcomes = [
+  "label_3y_beat_spy",
+  "fwd_3y_excess_cagr",
+  "fwd_3y_cagr",
+  "fwd_3y_max_drawdown_from_entry",
+  "fwd_3y_cagr < 0",
+  "fwd_3y_cagr < -0.1",
+  "fwd_3y_max_drawdown_from_entry >= 0.4",
+  "fwd_3y_cagr >= 0.15",
+  "fwd_3y_cagr >= 0.25",
+  "fwd_3y_excess_cagr >= 0.05",
+]
+
+sets = [
+  {objective = "huber"},
+  {objective = "quantile", alpha = 0.5},
+  {objective = "quantile", alpha = 0.25},
+  {objective = "quantile", alpha = 0.1},
+]
+
+[pick_screen]
+per = "quarter"
+top_k = 10
+max_per_group = 2
+group_column = "sector"
+peer_column = "log_marketcap_rank"
+peer_bins = 20
+
+[[universe]]
+column = "dollar_volume_3m"
+op = ">="
+value = 100000
+
+[[cells]]
+label = "fwd_3y_cagr"
+eval_label = "label_3y_cagr_ge_10"
+
+[[cells]]
+label = "fwd_3y_excess_cagr"
+eval_label = "label_3y_beat_spy"
+
+[[features]]
+groups = ["ranks"]
+
+[model]
+name = "lightgbm_regressor"
+winsorize = 0.01
+n_estimators = 300
+learning_rate = 0.05
+num_leaves = 15
+min_child_samples = 60
+subsample = 0.8
+subsample_freq = 1
+colsample_bytree = 0.8
+reg_lambda = 1.0

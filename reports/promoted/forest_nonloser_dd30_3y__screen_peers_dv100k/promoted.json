@@ -1,0 +1,14 @@
+{
+  "name": "forest_nonloser_dd30_3y__screen_peers_dv100k",
+  "promoted_utc": "2026-10-01T09:17:27+00:00",
+  "source_report": "reports/forest_nonloser_dd30_3y__screen_peers_dv100k.md",
+  "run_id": "4f103ed4dff4",
+  "config_hash": "f7aa5d21017e8b47",
+  "git_sha": "74c5637e25a13e282708e3a384f5f1a5982d7e22",
+  "dataset_version": "1.4",
+  "config_path": "",
+  "note": "The candidate's forest on the screen against same-size peers, inside the 100k floor: lead +0.030 / +0.027 a year for entries of 2005-12 / 2013-20 (against all rows 0.071 / 0.106); precision 0.71 / 0.83 against the peers' 0.53 / 0.60; losers 0.20 / 0.12 against 0.33 / 0.26. docs/notes/2026-10-01-large-caps.md",
+  "files": [
+    "forest_nonloser_dd30_3y__screen_peers_dv100k.md"
+  ]
+}

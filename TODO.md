@@ -185,7 +185,12 @@ in [PLAN.md](PLAN.md); check items off (and add new ones) as work proceeds.
       from the inference data into the output CSV (single and
       multi-bundle; missing columns are an error, and the sidecar
       records `extra_columns`).
-- [ ] Historical analogues ("stocks that looked like this before"): pick
+- [x] Historical analogues (built 2026-10-01 as `vml-analogues` on
+      `claude/analogues`, decision 37: the picks or named tickers, the
+      blend read as one, forests by shared leaves and rank factors by
+      closeness on their column; docs/deployment.md. Not built: boosted
+      trees weighted by leaf value, a per-model report.)
+      ("stocks that looked like this before"): pick
       one stock from an inference dataset, score it with several
       deployment bundles (e.g. the best 1y/3y/5y configs), and for each
       model show the labeled historical rows that **land in the same
@@ -677,6 +682,219 @@ in [PLAN.md](PLAN.md); check items off (and add new ones) as work proceeds.
       `n_estimators`) at full budget via a follow-up sweep file — no
       harness change needed, just two sweep configs.
 
+### Next, from Carter's direction of 2026-10-01 (decision 36)
+
+The working assumption is that 2021-26 is a bubble a value strategy
+trails through; the candidate goes to paper trading as it is; the
+search continues, wider. Each item below is laid out in
+docs/notes/2026-10-01-research-plan.md (what the record already says,
+what it needs, how it is read). New arms are judged on walk-forward
+2005-2020 against same-size peers; 2021-26 is context.
+
+Carter's:
+
+- [ ] **Open and merge the pull request** from
+      `claude/results-2026-10-01b` (the item in the section below; it
+      now also carries docs/paper-trading.md, the research plan, the
+      three queued sweeps and the Piotroski result).
+- [ ] **Set up paper trading on the host**: docs/paper-trading.md.
+      Three `vml-train-deploy` commands (the bundles built in the
+      sandbox stay in the sandbox), an `inference_<date>` dataset
+      from upstream each month, one `vml-predict` command. Two paper
+      portfolios: buy and hold, and the rank sell discipline. The
+      path was checked end to end on 2026-10-01 (9 of the backtest's
+      10 picks for August 2026).
+- [ ] **Two rules to accept or change** before a session on other
+      model families (research plan, item 7): fold-internal median
+      imputation with an is-missing indicator for models that cannot
+      take NULLs; and "a learned transform (clusters, embeddings) is
+      allowed when it is fitted on the fold's training rows and saved
+      in the fold's bundle, never otherwise". And whether PyTorch may
+      join the dependencies (scikit-learn's MLP needs nothing new).
+
+Ready to run ("work the queue"; `vml-queue status`):
+
+- [ ] `baseline_factors_crash_dd50`, `forest_crash_dd50`: the
+      over-priced-stock model, "fell 50% from entry" within one and
+      three years inside the liquid half. Read on precision at the
+      top by year, on what the calls went on to do, and on whether
+      the count of high-confidence calls rises before 2008 and 2020
+      or after (the market-state question).
+- [ ] `lgbm_regressor_growth_allrows_3y`: continuous models, LightGBM
+      on 3y CAGR and excess CAGR, huber and three quantiles, read
+      against same-size peers.
+
+Small code, then a sweep (each on its own `claude/<topic>` branch):
+
+- [ ] **`combine = "worst_rank"`** in `vml-backtest` and in
+      `vml-eval`'s `blend`: rank by the worse of the models' ranks,
+      which is "in every model's top N" for any N. Then the
+      candidate's three legs by worst rank against by mean rank, on
+      the screen with peers.
+- [ ] **`vml-predict --holdings <file>`**: mark which held stocks the
+      rank sell rule would sell this month, so portfolio B's sells do
+      not have to be read off the CSV by hand.
+- [ ] **A cash rule as a `Strategy`**, if `forest_crash_dd50` shows
+      the count of high-confidence calls leading the market.
+- [ ] A position cap (carried from below; low priority).
+
+Sessions of their own (research plan, items 6 and 7):
+
+- [ ] **Calibration and confidence-weighted sizing.** Start by
+      measuring whether outcome rises with rank inside the forest's
+      top 50 of a month at all; then the design of a target whose
+      base rate does not move with the market (the peer-relative
+      label, upstream).
+- [ ] **Other model families**: a regularised logistic regression on
+      the ranks, an MLP, a fold-internal clustering as an input; on
+      the continuous and peer-relative targets first.
+- [ ] **A short leg**, only if `forest_crash_dd50` reaches a
+      precision that justifies it: borrow costs, recalls and
+      unbounded loss are not in the engine.
+
+Done under decision 36 on 2026-10-01:
+
+- [x] The candidate's three models refit for deployment and the
+      prediction path run end to end; docs/paper-trading.md; the two
+      factor configs promoted.
+- [x] The nine Piotroski signals against the composite F-score
+      (`forest_piotroski_3y`): docs/logbook.md.
+- [x] "Data before 1998": closed by Carter (Sharadar starts in 1998).
+- [x] `vml-analogues`: the historical stocks today's picks resemble,
+      and what they went on to do (decision 37; docs/deployment.md,
+      docs/paper-trading.md step 5).
+
+### Next, from the second session of 2026-10-01 (decisions 27-35)
+
+Start with docs/findings.md, then docs/notes/2026-10-01-out-of-sample.md
+and docs/notes/2026-10-01-large-caps.md. In one paragraph: traded to
+the end of the price panel (2026-08-21) the candidate ends 10% behind
+SPY (its sell-discipline variant level). The forest's precision held on
+the holdout (0.65 at 20 picks a year, 0.73 at 50, base rate 0.38) and
+it kept avoiding losers; but SPY outran equal-weighted stocks of every
+size in 2021-26, and against stocks of their own size the candidate's
+picks led by 5 to 6 points a year in 2005-2020 and by nothing after.
+Inside large caps no model chooses better than return on capital
+alone. Nothing more is run on 2021-26 and the search on these columns
+is closed for now (decision 34).
+
+Carter's, in order:
+
+- [ ] **Open and merge the pull request** from
+      `claude/results-2026-10-01b` into `Claude`
+      (`gh pr create --base Claude --head claude/results-2026-10-01b --fill`).
+      Six code changes (510 tests pass; the sixth is
+      `claude/analogues`, `vml-analogues`), the docs, the promoted
+      results and the ledger shard; passes
+      `scripts/check_tracked_configs.py`. The code, by branch (all
+      contained in it; delete them after the merge):
+      `claude/predict-selection` (`vml-predict --filter --pick
+      --max-per-group`: the backtest's floor and sector cap on the
+      ranking); `claude/backtest-calendar-years` (**a fix**: the
+      reports' yearly table ran December to December);
+      `claude/backtest-universe-outcomes` (every backtest report sets
+      its buys beside all candidates and beside same-size peers);
+      `claude/sector-feature` (`sector` as a model input);
+      `claude/screen-size-peers` (`[pick_screen] peer_column`: the
+      same-size reference on the sweep screen). docs/agents.md is
+      rewritten in it, with your leave: read "Two ways of working".
+- [x] **Decide what the portfolio is for, and its yardstick.**
+      (Carter, 2026-10-01, decision 36: to beat the market over the
+      long term; 2021-26 is taken as a bubble and waited out.) Against
+      SPY the candidate is level over 21.6 years (11.3% to 12.0% a
+      year against 10.9%) with three quarters of the worst drawdown,
+      37% ahead at the end of 2020 and 10% behind now. Against stocks
+      of its picks' own size it led until 2018 and has not since. If
+      the aim is to beat SPY, the candidate is a starting point and
+      the upside has to come from somewhere these columns do not
+      reach; if the aim is market-like return with fewer losers, it is
+      a result. Findings, "What this says about the thesis".
+- [x] **Paper-trade the fixed candidate, or not.** (Yes: decision 36;
+      carried to the section above.) (Your reading of
+      2021-26 as a bubble the strategy sits out, decision 35, is a
+      reason to: on 1999-2004 a stand-in for the candidate trailed in
+      the last year of the run-up and led by 9 points a year for the
+      buys of 2000-02. One precedent, and a different kind of
+      run-up.) Mechanics as in
+      docs/notes/2026-10-01-candidate.md ("Run it on today's stocks":
+      `vml-train-deploy` the three configs, then `vml-predict ...
+      --filter "dollar_volume_3m_rank >= 0.2" --pick 10
+      --max-per-group 2`); needs an `inference_<date>` dataset from
+      upstream. Buy and hold beside the sell discipline, both judged
+      on `vs_peers` as well as on SPY. No other blend is proposed:
+      choosing one now would be choosing it on 2021-26.
+- [ ] **A baseline on the holdout rows of cell C**, if you want one:
+      the look's report has none ("No baseline runs recorded for this
+      cell"), so whether lowest volatility alone would have scored the
+      forest's 0.65 there is not known. It is a further read of the
+      holdout rows (`--reopen`, counted).
+
+Upstream requests (a new dataset version; nothing is derived here).
+The first three are new and come from decision 32:
+
+- [ ] **An outcome and a label measured against same-size peers**:
+      per horizon, `fwd_{H}y_cagr` minus the mean of the same quarter's
+      stocks in the same band of market-capitalization rank, and its
+      sign as a label. This is the target that asks a model to choose
+      well rather than to prefer large companies. A cross-row label:
+      it belongs upstream, beside the split machinery (a peer's window
+      can outlive the row's embargo).
+- [ ] **Size-neutral ranks** of the columns the models lean on
+      (volatility, return on capital, momentum, the conservative
+      score): ranked within a size band, like the sector ranks.
+- [ ] **Information about upside that prices and statements do not
+      carry**, if the raw tables have it: insider transactions
+      (Sharadar SF2: net buying, clustered buys) and institutional
+      holdings (SF3: changes in ownership), point-in-time by filing
+      date. Inside large caps the 112 ranks rank risk and one quality
+      factor and nothing else (docs/notes/2026-10-01-large-caps.md).
+- [ ] **Market-state features** (PLAN 5.6): the thesis's condition
+      (2), the era, is the whole of 2021-26, and a stock's own columns
+      cannot say what era it is. Carried from the section below.
+- [x] **Data before 1998, if it can be had** (closed by Carter the
+      same day: Sharadar starts in 1998 and nothing comparable goes
+      further back).
+      The panel and the snapshots begin on 1997-12-31, so the first
+      possible picks are January 1999: the test of decision 35 saw
+      the last year of the dot-com run-up and its aftermath, not the
+      years the bubble grew. Whether a low-risk, quality selection
+      trails for years while a bubble inflates, the question 2021-26
+      raises, needs 1990-1998. Check where the raw tables start; if
+      the vendor's history starts there too, this needs another
+      source for prices and statements.
+- [ ] **An equal-weighted benchmark series in the price panel** (the
+      investable universe, and its largest fifth), so a backtest can
+      be set beside "the average large stock" as a portfolio, not
+      only per buy.
+- [ ] Delisting-aware outcomes and within-sector risk ranks: carried
+      from the section below.
+
+Proposed, not built (each on its own `claude/<topic>` branch):
+
+- [ ] **"The index minus the predicted losers"**: a
+      capitalization-weighted portfolio of large caps without the
+      forest's worst quintile, the literal form of the thesis and the
+      use the forest's ranking supports (among large caps it separates
+      the worst quintile and nothing above it). Needs a "buy every
+      candidate above a rank" strategy. Recorded with its two
+      problems: it would have left out NVDA, TSLA and META in 2023
+      (they rank in the forest's middle), and it is a 600-stock
+      portfolio, not a screener for one person.
+- [ ] **A position cap** in the strategy. Carried from below; low
+      priority (the candidate's largest holding is 8%).
+- [ ] `peer_column` in the sweep configs that are run from here on,
+      and in `eval_screen_dv100k.toml`'s successors: a sweep without
+      it is read against all rows, which is mostly size.
+
+Settled in this session (details in docs/findings.md):
+
+- [x] The holdout look in cell C read (decision 29); the candidate
+      traded to 2026-08-21 (28); why it ended behind SPY (30, 32);
+      `sector` as a model input: built, changes nothing (31); the
+      floor and the sector cap in `vml-predict`; selection inside
+      large caps: no arm passes (32, 34); docs/agents.md rewritten
+      (27).
+
 ### Next, from the sessions of 2026-09-30 and 2026-10-01 (decisions 14-26)
 
 Start with docs/findings.md and docs/notes/2026-10-01-candidate.md.
@@ -712,13 +930,14 @@ Carter's, in order:
       template) or `dollar_volume_3m_rank >= 0.2` (era-neutral). The
       candidate is the same under either (12.24% and 12.15%). Carter's answer: era-neutral rank.
 - [ ] **Deploy and paper-trade the candidate** beside its
-      sell-discipline variant: docs/notes/2026-10-01-candidate.md,
-      "Run it on today's stocks". Not run yet; needs an
-      `inference_<date>` dataset from upstream.
+      sell-discipline variant: carried to the section above, with
+      what the run to 2026 showed.
 
 Code worth building next (each on its own `claude/<topic>` branch):
 
-- [ ] **The floor and the sector cap in `vml-predict`**
+- [x] **The floor and the sector cap in `vml-predict`**
+      (2026-10-01: `--filter`, `--pick`, `--max-per-group` on
+      `claude/predict-selection`.)
       (`--filter "dollar_volume_3m >= 100000"`, `--max-per-group 2`),
       so the deployed list is the backtest's selection and not a
       ranking to be filtered by hand.
@@ -727,7 +946,10 @@ Code worth building next (each on its own `claude/<topic>` branch):
       blend buys 94 stocks in sixteen years and two holdings are a
       third of it with the sell discipline; the candidate's largest
       is 8%.
-- [ ] **`sector` as a model input** (Carter, 2026-10-01: the cap is a
+- [x] **`sector` as a model input** (2026-10-01, second session:
+      built on `claude/sector-feature` and run,
+      `forest_sector_nonloser_3y`: the same picks, the same sectors,
+      the same precision; decision 31.) (Carter, 2026-10-01: the cap is a
       bandage; the model might learn that a column means something
       different for REITs). One-hot of `sector` in
       `harness.dataset.feature_matrix`, a per-row recoding like the

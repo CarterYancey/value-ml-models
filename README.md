@@ -63,6 +63,8 @@ uv run python scripts/run_final_eval.py experiments/<selected>.toml
 # deploy: refit on all labeled data, score today's stocks
 uv run vml-train-deploy experiments/<selected>.toml
 uv run vml-predict experiments/models/<name>_deployment_<run_id> data/datasets/<inference_dir>
+# ... and the historical stocks today's picks most resemble, with what they went on to do
+uv run vml-analogues experiments/models/<name>_deployment_<run_id> data/datasets/<inference_dir> --pick 10
 
 # backtest a portfolio strategy over walk-forward bundles
 uv run vml-backtest experiments/portfolios/allprob_top25_5models.toml
@@ -83,6 +85,7 @@ uv run pytest
 | [docs/workflow.md](docs/workflow.md) | what is tracked, promotion, the experiment catalog, the sealed final eval |
 | [docs/deployment.md](docs/deployment.md) | deployment refits and `vml-predict` |
 | [docs/backtesting.md](docs/backtesting.md) | portfolio configs, strategies, the price panel |
+| [docs/paper-trading.md](docs/paper-trading.md) | **the candidate carried to paper trading**: its three models, the monthly procedure, what it has shown |
 | [docs/diagnostics.md](docs/diagnostics.md) | registered diagnostics (era probe) |
 | [PLAN.md](PLAN.md) | architecture, design principles, phase roadmap, evaluation methodology |
 | [TODO.md](TODO.md) | development tasks, in order |

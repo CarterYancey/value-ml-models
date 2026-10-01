@@ -115,6 +115,68 @@ def _is_boolean_values(vals: pd.Series) -> bool:
     return False
 
 
+#: Classification columns a model may take as an input, each with the
+#: fixed vocabulary it is one-hot encoded against (Sharadar's sector
+#: scheme, data/features.md "Classification"). A fixed list keeps
+#: `feature_matrix` stateless: the train frame, every test frame, a
+#: backtest cross-section and an inference frame all get the same
+#: indicator columns in the same order, and a value outside the list is
+#: an error (an upstream scheme change must be noticed, not zeroed).
+#:
+#: Only `sector`. The other classification columns stay out on purpose:
+#: `scalemarketcap` is *today's* size bucket stamped on a firm's whole
+#: history, so it tells a 2005 row how large the company became;
+#: `industry` and `famaindustry` are the same current-state labels at a
+#: grain fine enough to name single companies. `sector` carries the
+#: caveat too (a reclassified firm's history has today's sector; a
+#: delisted firm's froze at delisting) and every report that uses it
+#: says so.
+CATEGORICAL_FEATURES: dict[str, tuple[str, ...]] = {
+    "sector": (
+        "Basic Materials",
+        "Communication Services",
+        "Consumer Cyclical",
+        "Consumer Defensive",
+        "Energy",
+        "Financial Services",
+        "Healthcare",
+        "Industrials",
+        "Real Estate",
+        "Technology",
+        "Utilities",
+    ),
+}
+
+#: classification columns that are never model inputs, and why
+_REFUSED_CLASSIFICATION = {
+    "scalemarketcap": (
+        "today's size bucket stamped on the whole history: it tells a "
+        "past row how large the company became"
+    ),
+    "industry": "a current-state label fine enough to name companies",
+    "famaindustry": "a current-state label fine enough to name companies",
+}
+
+
+def indicator_name(column: str, value: str) -> str:
+    """The model-input column for one value of a categorical feature."""
+    return f"{column}={value}"
+
+
+def model_input_columns(feature_cols: Sequence[str]) -> list[str]:
+    """The columns `feature_matrix` hands a model for a feature
+    selection: each categorical feature replaced by its indicators,
+    everything else by name. What a fitted estimator's importances,
+    rules and diagrams are indexed by."""
+    out: list[str] = []
+    for c in feature_cols:
+        if c in CATEGORICAL_FEATURES:
+            out.extend(indicator_name(c, v) for v in CATEGORICAL_FEATURES[c])
+        else:
+            out.append(c)
+    return out
+
+
 def feature_matrix(frame: pd.DataFrame, feature_cols: Sequence[str]) -> pd.DataFrame:
     """The feature columns of `frame` as a model input.
 
@@ -127,25 +189,68 @@ def feature_matrix(frame: pd.DataFrame, feature_cols: Sequence[str]) -> pd.DataF
     to bool would turn into False. This changes how a value is stored,
     row by row; it derives nothing from other rows or columns.
 
-    Every other column is passed through as it is; with no boolean
-    column selected the frame's own columns are returned unchanged.
+    A categorical feature (`CATEGORICAL_FEATURES`: `sector`) is replaced,
+    in place, by one 0/1 indicator column per value of its fixed
+    vocabulary (`sector=Technology`, ...), NULL kept as NaN in every
+    indicator. The same per-row recoding: a row's indicators read that
+    row's value and nothing else, and no vocabulary is learned from the
+    frame, so every frame of one feature selection has the same columns.
+
+    Every other column is passed through as it is; with neither kind
+    selected the frame's own columns are returned unchanged.
     """
     X = frame[list(feature_cols)]
+    refused = [c for c in X.columns if c in _REFUSED_CLASSIFICATION]
+    if refused:
+        raise DatasetValidationError(
+            "classification columns that are not model inputs: "
+            + "; ".join(
+                f"{c} ({_REFUSED_CLASSIFICATION[c]})" for c in refused
+            )
+        )
+    categorical = [c for c in X.columns if c in CATEGORICAL_FEATURES]
     flags = [
         c
         for c in X.columns
-        if pd.api.types.is_bool_dtype(X[c].dtype)
-        or (
-            X[c].dtype == object
-            and pd.api.types.infer_dtype(X[c], skipna=True) == "boolean"
+        if c not in CATEGORICAL_FEATURES
+        and (
+            pd.api.types.is_bool_dtype(X[c].dtype)
+            or (
+                X[c].dtype == object
+                and pd.api.types.infer_dtype(X[c], skipna=True) == "boolean"
+            )
         )
     ]
-    if not flags:
+    if not flags and not categorical:
         return X
     X = X.copy()
     for c in flags:
         X[c] = X[c].astype("boolean").astype("float64")
-    return X
+    if not categorical:
+        return X
+    parts: list[pd.DataFrame | pd.Series] = []
+    for c in X.columns:
+        if c not in CATEGORICAL_FEATURES:
+            parts.append(X[c])
+            continue
+        vocabulary = CATEGORICAL_FEATURES[c]
+        values = X[c]
+        known = values.isna() | values.isin(vocabulary)
+        if not known.all():
+            unknown = sorted(set(values[~known].astype(str)))
+            raise DatasetValidationError(
+                f"feature {c!r} has values outside its vocabulary "
+                f"{list(vocabulary)}: {unknown[:10]} (an upstream scheme "
+                "change: update harness.dataset.CATEGORICAL_FEATURES)"
+            )
+        missing = values.isna().to_numpy()
+        indicators = {}
+        for v in vocabulary:
+            col = (values == v).to_numpy(dtype="float64")
+            col[missing] = np.nan
+            indicators[indicator_name(c, v)] = col
+        parts.append(pd.DataFrame(indicators, index=X.index))
+    return pd.concat(parts, axis=1)
 
 
 def _target_array(label: str, vals: pd.Series, target: str) -> np.ndarray:

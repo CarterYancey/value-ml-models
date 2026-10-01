@@ -1,0 +1,56 @@
+# Decision 30 of docs/notes/2026-09-29-decisions.md (2026-10-01): the
+# sell-discipline variant with `fractional_shares = true`, the same
+# check of the template as
+# bt_nonloser_mom_roc_top10_cap2_rankfloor_frac_to2026.toml (read
+# that header). The whole-share run filled 83 to 97 buys a year in
+# 2021-25 and ended at 1,344,630 against SPY's 1,326,084.
+#
+# Predictions (2026-10-01), written before the run:
+# 1. 2024, 2025 and 2026 to August each within 5 points of the
+#    whole-share sell run's -9.1 / -12.4 / -9.3, and behind SPY.
+# 2. Final value within 10% of the whole-share sell run's 1,344,630.
+# Rival: as in the buy-and-hold check.
+name = "bt_nonloser_mom_roc_top10_cap2_rankfloor_sell20_frac_to2026"
+dataset_version = "dataset_v1.4"
+prices_version = "prices_v1.0"
+
+bundles = [
+    "experiments/models/forest_nonloser_dd30_3y_53ceedd93e6d",
+    "experiments/models/factor_mom_12_2_3y_97c0f095cf48",
+    "experiments/models/factor_roc_greenblatt_3y_da640394cbba",
+]
+
+[signal]
+combine = "mean_rank"
+max_staleness_days = 200
+model_update = "refit"
+label_lag_days = 45
+
+[[investability]]
+column = "dollar_volume_3m_rank"
+op = ">="
+value = 0.2
+
+[portfolio]
+strategy = "sell_below_criteria"
+top_k = 10
+weighting = "equal"
+monthly_cash = 1000.0
+max_per_group = 2
+group_column = "sector"
+
+[sell]
+max_rank_pct = 0.2
+filters = []
+
+[execution]
+cost_bps = 35.0
+benchmark_cost_bps = 0.0
+max_quote_age_days = 3
+delist_after_days = 30
+fractional_shares = true
+
+[window]
+start = 2005-01-01
+end = 2026-08-21
+valuation_end = 2026-08-21

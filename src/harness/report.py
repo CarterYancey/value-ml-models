@@ -18,6 +18,7 @@ import pandas as pd
 
 from eval.era import crash_label
 from eval.metrics import threshold_tag
+from harness.dataset import CATEGORICAL_FEATURES
 from harness.derived_labels import is_derived_label, parse_label_expression
 from harness.filters import describe_filters
 
@@ -271,6 +272,25 @@ def write_report(
             "derives no column. `sample_weight` is the upstream "
             "uniqueness weight, not recomputed for the rows left out."
         )
+    resolver = getattr(config, "resolve_feature_columns", None)
+    categorical = (
+        [c for c in resolver(dataset) if c in CATEGORICAL_FEATURES]
+        if resolver is not None
+        else []
+    )
+    if categorical:
+        lines.append(
+            "- **categorical model input: "
+            + ", ".join(f"`{c}`" for c in categorical)
+            + "** — one 0/1 indicator per value of a fixed vocabulary "
+            "(harness.dataset.CATEGORICAL_FEATURES), NULL kept as NULL. "
+            "Upstream classification columns are **current-state** "
+            "(data/features.md): a reclassified company's whole history "
+            "carries today's label and a delisted company's label froze "
+            "at delisting, so the model sees a mild form of the future "
+            "in this column. Compare with the same run without it before "
+            "reading anything into the difference."
+        )
     lines.append(
         f"- **configurations tried against this cell "
         f"(dataset, scheme, horizon, label"
@@ -391,6 +411,19 @@ def write_report(
             "costs, entry at the snapshot, held to the horizon: closer "
             "to a portfolio than the top-K-per-year tables, and still a "
             "screen for `vml-backtest`, not a substitute. Report-only."
+            + (
+                " The `peers` columns give the same statistic for the "
+                "picks' peers: the test rows of the same "
+                f"{screen.per} in the same band of `{screen.peer_column}`"
+                f" ({screen.peer_bins} bands), averaged over the picks. "
+                "**Read a selection against its peers**: against a "
+                "capitalization-weighted benchmark small stocks trail by "
+                "a wide margin in every period, so the all-rows reference "
+                "of the pick-outcome tables flatters any ranking that "
+                "prefers large companies."
+                if getattr(screen, "peer_column", None) is not None
+                else ""
+            )
         )
         lines.append("")
         lines.append(_table(_screen_view(table)))

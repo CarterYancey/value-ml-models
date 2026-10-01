@@ -1,0 +1,22 @@
+{
+  "name": "factor_mom_12_2_3y",
+  "promoted_utc": "2026-10-01T17:41:50+00:00",
+  "source_report": "reports/factor_mom_12_2_3y.md",
+  "run_id": "97c0f095cf48",
+  "config_hash": "e7032461b70bc338",
+  "git_sha": "52f2ccda31ca487d3a79a5e38c8ddb6dfcf6cf8f",
+  "dataset_version": "dataset_v1.4",
+  "config_path": "experiments/factor_mom_12_2_3y.toml",
+  "note": "A LEG OF THE CANDIDATE: 12-month momentum as a rank factor (mom_12_2_rank, no fit). Alone it is the worst factor on the screen (losers 0.66 inside the 100k floor); beside the forest and return on capital it adds the winners. docs/paper-trading.md",
+  "experiment": "factor_mom_12_2_3y",
+  "model": "rank_factor",
+  "label": "fwd_3y_cagr >= 0.0 & fwd_3y_max_drawdown_from_entry < 0.3",
+  "horizon_years": 3,
+  "scheme": "walkforward",
+  "headline": "p@10=0.188",
+  "baseline": "0.475 rank_factor",
+  "lift": "-0.287",
+  "files": [
+    "factor_mom_12_2_3y.md"
+  ]
+}

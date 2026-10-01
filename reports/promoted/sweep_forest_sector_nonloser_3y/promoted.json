@@ -1,0 +1,14 @@
+{
+  "name": "sweep_forest_sector_nonloser_3y",
+  "promoted_utc": "2026-10-01T09:17:03+00:00",
+  "source_report": "reports/sweeps/forest_sector_nonloser_3y/forest_sector_nonloser_3y_summary.md",
+  "run_id": "",
+  "config_hash": "",
+  "git_sha": "",
+  "dataset_version": "dataset_v1.4",
+  "config_path": "experiments/sweeps/forest_sector_nonloser_3y.toml",
+  "note": "sector as a model input changes nothing in cell C (v1.4, the candidate's forest, three seeds): ranks p@20 0.788 / 0.778 / 0.781, ranks + sector 0.766 / 0.756 / 0.772, PR-AUC 0.585 both; screen mean excess, losers and the 34% of picks from utilities and real estate unchanged; the eleven sector indicators carry 0.9% of the importance. docs/notes/2026-10-01-large-caps.md",
+  "files": [
+    "forest_sector_nonloser_3y_summary.md"
+  ]
+}

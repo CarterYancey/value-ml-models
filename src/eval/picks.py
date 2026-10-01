@@ -69,6 +69,19 @@ GROUP_COLUMN = "group"
 #: the group a row without one is counted in (as in the backtest)
 UNKNOWN_GROUP = "unknown"
 
+#: Prediction-frame column holding each test row's peer band (an
+#: integer; -1 for a row with no value in the screen's `peer_column`).
+PEER_COLUMN = "peer"
+
+
+def peer_bands(values: np.ndarray, bins: int) -> np.ndarray:
+    """The band of each value of a 0..1 rank column: `bins` equal-width
+    bands, 0 the lowest; a NULL is band -1 (it matches other NULLs)."""
+    values = np.asarray(values, dtype=float)
+    bands = np.floor(np.clip(values, 0.0, 1.0) * bins)
+    bands = np.minimum(bands, bins - 1)
+    return np.where(np.isnan(values), -1, bands).astype(int)
+
 
 def outcome_column(slug: str, binary: bool) -> str:
     return f"{BINARY_PREFIX if binary else CONTINUOUS_PREFIX}{slug}"
@@ -257,6 +270,48 @@ def screen_picks(predictions: pd.DataFrame, screen) -> pd.DataFrame:
     return pd.concat(picked) if picked else predictions.iloc[:0]
 
 
+def has_peer_column(predictions: pd.DataFrame, screen) -> bool:
+    return (
+        screen is not None
+        and getattr(screen, "peer_column", None) is not None
+        and PEER_COLUMN in predictions.columns
+    )
+
+
+def _peer_means(
+    predictions: pd.DataFrame, picks: pd.DataFrame, screen, columns: list[str]
+) -> pd.DataFrame:
+    """For every pick, the mean of each of `columns` over the test rows
+    of its own period in its own peer band (the pick included: it is
+    one of a few dozen to a few hundred rows). Indexed like `picks`,
+    one `peer__<column>` column each. NULL outcomes are left out of a
+    mean, as everywhere in this module."""
+    period = QUARTER_COLUMN if screen.per == "quarter" else "year"
+    keys = [period, PEER_COLUMN]
+    means = predictions.groupby(keys, sort=False)[columns].mean()
+    means.columns = [f"peer__{c}" for c in columns]
+    joined = picks[keys].join(means, on=keys)
+    return joined.drop(columns=keys)
+
+
+def _peer_mean(frame: pd.DataFrame, col: str) -> float:
+    """The mean peer value of `col` over the rows of `frame` that have
+    `col` themselves, so that a mean of the picks minus this is the
+    picks' mean lead over their own peers."""
+    own = frame[col].to_numpy(dtype=float)
+    ref = frame[f"peer__{col}"].to_numpy(dtype=float)
+    return _mean(ref[~np.isnan(own)])
+
+
+def _with_peers(predictions: pd.DataFrame, picks: pd.DataFrame, screen, outcomes):
+    """`picks` with a `peer__<column>` column for the run's label and
+    every pick outcome."""
+    columns = ["y_true"] + [col for col, _, _ in outcomes]
+    return pd.concat(
+        [picks, _peer_means(predictions, picks, screen, columns)], axis=1
+    )
+
+
 def _outcome_stats(prefix: str, rows: pd.DataFrame, outcomes, suffix: str = "") -> dict:
     out: dict = {}
     for col, slug, binary in outcomes:
@@ -277,7 +332,10 @@ def screen_metrics(predictions: pd.DataFrame, screen) -> dict:
     (the picks' hit rate on the run's own label), `screen_n_stocks`
     distinct stocks, `screen_top_group_share` (the largest group's share
     of the picks, when the frame carries groups), and per pick outcome
-    `screen_mean_<o>` / `screen_median_<o>`."""
+    `screen_mean_<o>` / `screen_median_<o>`. With a `peer_column`, also
+    `screen_peer_precision` and `screen_peer_mean_<o>`: the same
+    statistics for the picks' peers (the test rows of the pick's own
+    period in its own band), averaged over the picks."""
     if not has_screen_columns(predictions, screen):
         return {}
     picks = screen_picks(predictions, screen)
@@ -293,16 +351,27 @@ def screen_metrics(predictions: pd.DataFrame, screen) -> dict:
         out["screen_top_group_share"] = float(
             groups.value_counts(normalize=True).iloc[0]
         )
-    out.update(_outcome_stats("screen", picks, outcome_columns(predictions)))
+    outcomes = outcome_columns(predictions)
+    out.update(_outcome_stats("screen", picks, outcomes))
+    if has_peer_column(predictions, screen) and len(picks):
+        peered = _with_peers(predictions, picks, screen, outcomes)
+        out["screen_peer_precision"] = _peer_mean(peered, "y_true")
+        for col, slug, _ in outcomes:
+            out[f"screen_peer_mean_{slug}"] = _peer_mean(peered, col)
     return out
 
 
 def screen_table(predictions: pd.DataFrame, screen) -> pd.DataFrame:
     """The screen by test year, with a pooled row: picks, distinct
     stocks, the largest group and its share, precision on the run's
-    label, and every pick outcome's statistics over the picks."""
+    label, and every pick outcome's statistics over the picks. With a
+    `peer_column`, the precision and each mean are followed by the same
+    statistic for the picks' peers (`... peers`)."""
     outcomes = outcome_columns(predictions)
     picks = screen_picks(predictions, screen)
+    peered = has_peer_column(predictions, screen) and len(picks) > 0
+    if peered:
+        picks = _with_peers(predictions, picks, screen, outcomes)
 
     def row(era: str, frame: pd.DataFrame) -> dict:
         r: dict = {"era": era, "picks": int(len(frame))}
@@ -315,12 +384,17 @@ def screen_table(predictions: pd.DataFrame, screen) -> pd.DataFrame:
             r["largest group"] = str(counts.index[0]) if len(counts) else "—"
             r["its share"] = float(counts.iloc[0]) if len(counts) else math.nan
         r["precision"] = _mean(frame["y_true"].to_numpy(dtype=float))
+        if peered:
+            r["precision peers"] = _peer_mean(frame, "y_true")
         for col, slug, binary in outcomes:
             vals = frame[col].to_numpy(dtype=float)
             if binary:
                 r[f"{slug} hit rate"] = _mean(vals)
             else:
                 r[f"{slug} mean"] = _mean(vals)
+            if peered:
+                r[f"{slug} peers"] = _peer_mean(frame, col)
+            if not binary:
                 r[f"{slug} median"] = _median(vals)
         return r
 
