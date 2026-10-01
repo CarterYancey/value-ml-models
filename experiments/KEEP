@@ -14,3 +14,19 @@ experiments/sweeps/forest_random_search_3y-2seeds.toml
 experiments/sweeps/forest_random_search_3y-2seeds2.toml
 experiments/sweeps/forest_v11_column_control_3y.toml
 experiments/sweeps/forest_v14_unchanged_columns_3y.toml
+# The candidate of 2026-09-30 (docs/notes/2026-10-01-candidate.md,
+# decision 24) and the promoted backtests and blend evaluations of
+# that session: a promoted backtest or evaluation does not name its
+# config, so the portfolio configs, the return-on-capital factor's
+# config and the evaluation configs are kept here.
+experiments/factor_roc_greenblatt_3y.toml
+experiments/portfolios/bt_nonloser_mom_roc_top10_cap2.toml
+experiments/portfolios/bt_nonloser_mom_roc_top10_cap2_to2023.toml
+experiments/portfolios/bt_nonloser_mom_roc_top10_cap2_sell20.toml
+experiments/portfolios/bt_nonloser_mom_roc_top10_cap2_mcap.toml
+experiments/portfolios/bt_nonloser_roc_top10_cap2.toml
+experiments/portfolios/bt_nonloser_roc_top10_cap2_sell20.toml
+experiments/eval_screen_dv100k.toml
+experiments/eval_blend_roc_dv100k.toml
+experiments/eval_blend_mom_dv100k.toml
+experiments/eval_blend_mom_roc_dv100k.toml

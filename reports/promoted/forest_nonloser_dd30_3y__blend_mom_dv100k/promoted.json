@@ -1,0 +1,14 @@
+{
+  "name": "forest_nonloser_dd30_3y__blend_mom_dv100k",
+  "promoted_utc": "2026-10-01T06:54:57+00:00",
+  "source_report": "reports/evals/forest_nonloser_dd30_3y__blend_mom_dv100k.md",
+  "run_id": "478fc4ddd2aa",
+  "config_hash": "89630d8177139cb7",
+  "git_sha": "1f0f79bf6c3eee1197ee2a830df78db73f2f7812",
+  "dataset_version": "1.4",
+  "config_path": "",
+  "note": "Forest + 12-month momentum on the screen: mean excess -0.018, losers 0.244 (forest alone -0.001, 0.156). The check of the screen against the backtests failed here: momentum was predicted 0.01 above the forest alone. 15% of its picks were acquired inside the window and are carried flat by the label convention; the backtest's own buys are +0.005 a year. docs/notes/2026-09-30-blends-and-calibration.md",
+  "files": [
+    "forest_nonloser_dd30_3y__blend_mom_dv100k.md"
+  ]
+}

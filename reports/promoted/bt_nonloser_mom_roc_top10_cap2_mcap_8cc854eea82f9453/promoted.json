@@ -1,0 +1,14 @@
+{
+  "name": "bt_nonloser_mom_roc_top10_cap2_mcap_8cc854eea82f9453",
+  "promoted_utc": "2026-10-01T06:54:35+00:00",
+  "source_report": "reports/backtest/bt_nonloser_mom_roc_top10_cap2_mcap_8cc854eea82f9453.md",
+  "run_id": "",
+  "config_hash": "",
+  "git_sha": "",
+  "dataset_version": "",
+  "config_path": "",
+  "note": "NOT ADOPTED. The candidate with buys weighted by market capitalization (Carter's question, 2026-10-01): 1,108,044, 13.82% time-weighted (seeds 232/1776: 14.40%/13.91%), drawdown -37.0%; but 46% of the final portfolio is AAPL, the median month puts 54% of its cash in one buy and makes 5.2 buys instead of 9.1. A single-stock bet; equal weights stay. Decision 26",
+  "files": [
+    "bt_nonloser_mom_roc_top10_cap2_mcap_8cc854eea82f9453.md"
+  ]
+}

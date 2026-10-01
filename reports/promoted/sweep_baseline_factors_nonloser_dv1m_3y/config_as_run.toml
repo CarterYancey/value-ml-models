@@ -1,0 +1,63 @@
+# Single-factor bars for cell C inside the universe
+# dollar_volume_3m >= 1000000 (decision 15): a universe is its own
+# ledger cell and needs its own baselines. Deterministic.
+#
+#   set0  highest conservative_score_rank (the best single factor so far)
+#   set1  lowest vol_36m_rank
+#   set2  highest roc_greenblatt_rank (quality)
+#   set3  highest mom_12_2_rank (momentum)
+#   set4  highest earnings_yield_rank (value)
+#
+# Expected (2026-09-30): the same order as on all rows, with fewer
+# losers for every factor than on all rows (the floor removes the
+# rows with the lowest base rate): conservative score and low
+# volatility ahead on precision, value last.
+name = "baseline_factors_nonloser_dv1m_3y"
+dataset_version = "dataset_v1.4"
+min_dataset_version = "1.4"
+scheme = "walkforward"
+folds = "all"
+seeds = [7]
+top_k = [20, 50]
+precision_targets = [0.75, 0.9]
+rank_metric = "precision_at_20"
+pick_outcomes = [
+  "label_3y_beat_spy",
+  "fwd_3y_excess_cagr",
+  "fwd_3y_cagr",
+  "fwd_3y_max_drawdown_from_entry",
+  "fwd_3y_cagr < 0",
+  "fwd_3y_cagr < -0.1",
+  "fwd_3y_max_drawdown_from_entry >= 0.4",
+  "fwd_3y_cagr >= 0.15",
+  "fwd_3y_cagr >= 0.25",
+  "fwd_3y_excess_cagr >= 0.05",
+]
+
+sets = [
+  {rank_column = "conservative_score_rank", higher_is_better = true},
+  {rank_column = "vol_36m_rank", higher_is_better = false},
+  {rank_column = "roc_greenblatt_rank", higher_is_better = true},
+  {rank_column = "mom_12_2_rank", higher_is_better = true},
+  {rank_column = "earnings_yield_rank", higher_is_better = true},
+]
+
+[pick_screen]
+per = "quarter"
+top_k = 10
+max_per_group = 2
+group_column = "sector"
+
+[[universe]]
+column = "dollar_volume_3m"
+op = ">="
+value = 1000000
+
+[[cells]]
+label = "fwd_3y_cagr >= 0 & fwd_3y_max_drawdown_from_entry < 0.3"
+
+[[features]]
+groups = ["ranks"]
+
+[model]
+name = "rank_factor"

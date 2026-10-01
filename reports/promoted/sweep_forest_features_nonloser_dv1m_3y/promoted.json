@@ -1,0 +1,14 @@
+{
+  "name": "sweep_forest_features_nonloser_dv1m_3y",
+  "promoted_utc": "2026-10-01T06:53:46+00:00",
+  "source_report": "reports/sweeps/forest_features_nonloser_dv1m_3y/forest_features_nonloser_dv1m_3y_summary.md",
+  "run_id": "",
+  "config_hash": "",
+  "git_sha": "",
+  "dataset_version": "dataset_v1.4",
+  "config_path": "experiments/sweeps/forest_features_nonloser_dv1m_3y.toml",
+  "note": "The same five feature sets trained inside dollar_volume_3m >= 1000000: ranks forest unchanged (p@20 0.788 vs 0.797 trained on all rows); sets without risk ranks gain 0.003-0.056 on p@20 from the floor and stay 0.013-0.026 a year below the ranks on the screen. docs/notes/2026-09-30-features-and-floor.md",
+  "files": [
+    "forest_features_nonloser_dv1m_3y_summary.md"
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "name": "forest_nonloser_dd30_3y__blend_mom_roc_dv100k",
+  "promoted_utc": "2026-10-01T06:54:58+00:00",
+  "source_report": "reports/evals/forest_nonloser_dd30_3y__blend_mom_roc_dv100k.md",
+  "run_id": "29afaf53ea4c",
+  "config_hash": "8ddd4e7de1ee5f32",
+  "git_sha": "5a3065d28af3c2e9eec1c746aa73b813e91c29c8",
+  "dataset_version": "1.4",
+  "config_path": "",
+  "note": "The candidate's three-way blend on the screen: mean excess +0.006 (+0.013 / -0.001 by half), losers 0.214, big winners 0.153. The screen is about 0.02 a year harsher than the backtest's own buys (+0.025) on every blend with momentum in it: a shortlist, not a verdict.",
+  "files": [
+    "forest_nonloser_dd30_3y__blend_mom_roc_dv100k.md"
+  ]
+}

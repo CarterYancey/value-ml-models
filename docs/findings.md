@@ -15,15 +15,17 @@ record. Never compared across dataset versions or universes.
 
 ## Next session: start here
 
-1. The candidate and how it was reached: "State" below, then
-   [decisions](notes/2026-09-29-decisions.md) 14–24 (the session of
-   2026-09-30; 1–13 are the day before).
-2. What to do next: TODO.md, "Next, from the second session of
-   2026-09-30".
-3. Code not yet in `Claude`: `claude/predict-universe` holds all six
-   feature branches of the session (TODO.md lists them; one is a
-   look-ahead fix in calibration). The lab branch is
-   `claude/lab-2026-09-30`.
+1. The candidate, its evidence, how to reproduce and run it:
+   [the candidate](notes/2026-10-01-candidate.md). How it was
+   reached: [decisions](notes/2026-09-29-decisions.md) 14–26.
+2. What to do next: TODO.md, "Next, from the sessions of 2026-09-30
+   and 2026-10-01".
+3. One branch carries everything for `Claude`:
+   `claude/results-2026-10-01` (seven code changes, docs, 20 promoted
+   results, the ledger shard). Until it is merged, the code is not in
+   `Claude`. Every config and report of the sessions, promoted or
+   not, is on the lab branch `claude/lab-2026-09-30` (not for
+   merging).
 
 ## State (2026-09-30)
 
@@ -135,16 +137,17 @@ corrected 2026-09-30).
 
 ## Plan
 
-1. Carter's: the pull requests; one holdout look in cell C's 3y cell
-   with `forest_nonloser_dd30_3y`; whether the engine may trade
-   2021–23 for the candidate (it overlaps the holdout era);
-   promotion; deployment and paper trading of the candidate beside
-   its sell-discipline variant.
-2. No further backtests on buys of 2005–2020 (decision 24).
-3. Proposed, not built: a position cap (the quality blend's two
-   largest holdings are a third of it); upstream requests
+1. Carter's: the pull request from `claude/results-2026-10-01`; one
+   holdout look in cell C's 3y cell with `forest_nonloser_dd30_3y`;
+   which liquidity floor to deploy with; deployment and paper trading
+   of the candidate beside its sell-discipline variant.
+2. No further backtests on buys of 2005–2020 (decisions 24, 26: 31
+   tried). New ideas are read on the portfolio screen and on the
+   per-buy table of an existing run.
+3. Proposed, not built: `sector` as a model input; a position cap;
+   the floor and sector cap in `vml-predict`; upstream requests
    (delisting-aware outcomes, within-sector risk ranks, market-state
-   features).
+   features). TODO.md has each with its reason.
 
 ## Sealed holdout record
 

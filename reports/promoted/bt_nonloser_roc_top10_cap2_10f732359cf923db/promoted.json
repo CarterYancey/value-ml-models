@@ -1,0 +1,14 @@
+{
+  "name": "bt_nonloser_roc_top10_cap2_10f732359cf923db",
+  "promoted_utc": "2026-10-01T06:54:33+00:00",
+  "source_report": "reports/backtest/bt_nonloser_roc_top10_cap2_10f732359cf923db.md",
+  "run_id": "",
+  "config_hash": "",
+  "git_sha": "",
+  "dataset_version": "",
+  "config_path": "",
+  "note": "Cell C forest + return on capital (the quality blend), buy and hold: 694,945 vs SPY 732,110, time-weighted 9.65%, drawdown -41.2%; per buy +0.013 a year over SPY over three years, +0.013 and +0.012 for the buys of 2005-12 and 2013-20, the only two-model blend positive in both halves (seeds 232/1776: +0.019/+0.012). 94 stocks in sixteen years; five largest holdings 42% at the end. docs/notes/2026-09-30-backtests.md",
+  "files": [
+    "bt_nonloser_roc_top10_cap2_10f732359cf923db.md"
+  ]
+}

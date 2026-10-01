@@ -1,13 +1,13 @@
 {
   "name": "bt_nonloser_mom_top10_cap2_4ff2378d07eb9919",
-  "promoted_utc": "2026-09-30T01:43:17+00:00",
+  "promoted_utc": "2026-10-01T06:54:36+00:00",
   "source_report": "reports/backtest/bt_nonloser_mom_top10_cap2_4ff2378d07eb9919.md",
   "run_id": "",
   "config_hash": "",
   "git_sha": "",
   "dataset_version": "",
   "config_path": "",
-  "note": "THE CANDIDATE. Cell C forest + 12-month momentum by mean rank, top 10 a month, at most 2 per sector, equal weights, buy and hold, 35 bps, dollar_volume_3m >= 1e5, buys 2005-2020 valued end 2023: 711,494 on 192,000 deposited vs SPY 732,110; time-weighted 11.07% vs 9.58%; worst drawdown -47.8% vs -52.9%; seeds 232/1776 give 11.73%/11.11%. Best of three factors, 9th of 13 backtests on these years",
+  "note": "Decision 10's candidate (cell C forest + 12-month momentum), replaced on 2026-09-30 by the three-way blend (decision 24). 711,494 vs SPY 732,110; time-weighted 11.07% vs 9.58%; drawdown -47.8%. Re-run 2026-09-30 for the per-buy table (same config hash, same figures): per buy +0.005 a year over three years, +0.025 for the buys of 2005-12 and -0.016 for 2013-20: its time-weighted lead sat in 2005-11. Meets two of decision 21's four criteria. docs/notes/2026-09-30-backtests.md",
   "files": [
     "bt_nonloser_mom_top10_cap2_4ff2378d07eb9919.md"
   ]

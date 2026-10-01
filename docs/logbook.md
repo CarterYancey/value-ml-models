@@ -14,6 +14,13 @@ read** stub; a correction is a new entry that names the old one.
 
 <!-- entries -->
 
+### 2026-10-01 · session close 2026-10-01
+git `af06d45`
+- **Did:** Promoted 20 results (the candidate's backtests and its variants, the quality blend's, the feature-set, floor and bar sweeps, the 1-year cell, the calibrated run after the fix, four blend evaluations; two earlier backtests re-promoted with the per-buy table). Wrote docs/notes/2026-10-01-candidate.md (what the candidate is, its evidence, how to reproduce and run it), rewrote the next steps in TODO.md and the start of docs/findings.md. Built claude/results-2026-10-01 for the pull request: seven code changes, docs, promoted results, the ledger shard.
+- **Got:** 31 backtest configurations on dataset_v1.4; cell C: 80 configurations on all rows, 23 inside the 100k floor, 15 inside 1m; the 1-year cell 6. 486 tests pass; scripts/check_tracked_configs.py reports nothing on the results branch.
+- **Concluded:** The record for the next session is docs/findings.md ('Next session: start here'), docs/notes/2026-10-01-candidate.md, the decision log 14-26 and TODO.md. The lab branch claude/lab-2026-09-30 keeps every config and report; the results branch carries only what the tracked-configs check allows.
+- **Next:** Carter: the pull request; a holdout look in cell C's 3y cell; the floor to deploy with; paper trading.
+
 ### 2026-10-01 · bt_nonloser_mom_roc_top10_cap2_{to2023,sell20_to2023,mcap,mcap_s232,mcap_s1776}, _rankfloor (vml-backtest)
 git `8e0cdcd` · [note](notes/2026-09-29-decisions.md)
 - **Did:** Carter's instructions and questions of 2026-10-01 (decision 26): the candidate trading on through 2023 with year-end refits, with and without the sell discipline; a capitalization-weighted variant (new `weighting = "marketcap"`, claude/backtest-marketcap-weighting) on three seeds; and the rank-floor check. 31 backtest configurations on dataset_v1.4.

@@ -1,0 +1,14 @@
+{
+  "name": "forest_nonloser_dd30_3y__screen_dv100k",
+  "promoted_utc": "2026-10-01T06:54:55+00:00",
+  "source_report": "reports/evals/forest_nonloser_dd30_3y__screen_dv100k.md",
+  "run_id": "b0150e1d2f16",
+  "config_hash": "cfdcc2ead38d5cb0",
+  "git_sha": "1f0f79bf6c3eee1197ee2a830df78db73f2f7812",
+  "dataset_version": "1.4",
+  "config_path": "",
+  "note": "Cell C forest alone on the portfolio screen (top 10 per test quarter, at most 2 per sector) inside dollar_volume_3m >= 100000: precision 0.766, picks beat SPY 0.51, mean 3y excess CAGR -0.001, losers 0.156, big winners 0.061. The reference for every blend on the screen. vml-eval experiments/eval_screen_dv100k.toml on run 53ceedd93e6d",
+  "files": [
+    "forest_nonloser_dd30_3y__screen_dv100k.md"
+  ]
+}
