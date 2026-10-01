@@ -1152,3 +1152,25 @@ costs 9.3 times (predicted 3 to 6), missed.
 The fractional runs and the per-leg reading are diagnostics of the
 fixed candidate. Whatever they show, a new candidate is not picked
 by its 2021–26 numbers.
+
+### 31. `sector` as a model input: built, and one sweep
+
+*Decided:* route (b) of decision 25.3, on `claude/sector-feature`:
+`sector` is handed to models as eleven 0/1 indicators against a fixed
+vocabulary, NULL kept (`harness.dataset.CATEGORICAL_FEATURES`). A
+per-row recoding like the flags of decision 17; no vocabulary is
+learned from a frame, so every fold, cross-section and inference frame
+has the same columns. The other classification columns are refused in
+code: `scalemarketcap` is today's size bucket on a firm's whole
+history, which is the future. Every report that uses `sector` states
+the current-state caveat.
+
+One sweep, `forest_sector_nonloser_3y`: cell C, the candidate's
+forest, three seeds, the ranks against the ranks with `sector`; read
+on the screen and on the picks' sector shares, predictions and
+Carter's rival in the config. Six more configurations in cell C.
+
+*Why now, when the candidate has just ended behind SPY:* it was asked
+for, it is half an hour, and whether the forest's sector habit is in
+its inputs or in its target is a fact about the forest that every
+later use of it rests on.
