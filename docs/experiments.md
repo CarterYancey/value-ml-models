@@ -256,10 +256,18 @@ What it is and is not:
   universe. Baselines have to be run inside the universe too. The
   sealed holdout is per label whatever the universe: a look inside a
   universe consumes the label's cell.
-- **Part of the model.** It is in the config hash, in the bundle,
-  in a deployment refit and in the backtest's year-end refits. A
-  backtest refuses a bundle trained inside a universe unless its own
-  `[[investability]]` or `[[filters]]` carry the same filters.
+- **Part of the model, all the way to inference.** It is in the
+  config hash and the bundle; `vml-train-deploy` refits inside it;
+  `vml-predict` ranks only the inference rows inside it (a combined
+  run, the rows inside every model's) and the sidecar says how many
+  rows were left out; the backtest's year-end refits stay inside it,
+  and a backtest refuses a bundle trained inside a universe unless
+  its own `[[investability]]` or `[[filters]]` carry the same
+  filters. The universe's columns must be in the inference data.
+- **A rank floor is one line.** `dollar_volume_3m_rank >= 0.2` is as
+  valid a filter as the dollar amount, era-neutral by construction
+  (a within-quarter rank; pooled over the cross-section at
+  inference), and needs nothing upstream.
 - `sample_weight_{H}y` is the upstream uniqueness weight and is not
   recomputed for the rows left out.
 - One universe per sweep file (top-level `[[universe]]`), so a sweep's
