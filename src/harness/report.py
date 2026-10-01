@@ -411,6 +411,19 @@ def write_report(
             "costs, entry at the snapshot, held to the horizon: closer "
             "to a portfolio than the top-K-per-year tables, and still a "
             "screen for `vml-backtest`, not a substitute. Report-only."
+            + (
+                " The `peers` columns give the same statistic for the "
+                "picks' peers: the test rows of the same "
+                f"{screen.per} in the same band of `{screen.peer_column}`"
+                f" ({screen.peer_bins} bands), averaged over the picks. "
+                "**Read a selection against its peers**: against a "
+                "capitalization-weighted benchmark small stocks trail by "
+                "a wide margin in every period, so the all-rows reference "
+                "of the pick-outcome tables flatters any ranking that "
+                "prefers large companies."
+                if getattr(screen, "peer_column", None) is not None
+                else ""
+            )
         )
         lines.append("")
         lines.append(_table(_screen_view(table)))

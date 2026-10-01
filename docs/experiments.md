@@ -186,6 +186,37 @@ Report-only and part of the config hash when set, like
 screen: equal weights, no costs, entry at the snapshot, held to the
 horizon.
 
+**Same-size peers.** The all-rows reference beside every pick outcome
+is the average test row, and the average test row is a small company.
+Against a capitalization-weighted benchmark small stocks trail by a
+wide margin in every period (on `dataset_v1.4` the smaller half of the
+investable stocks by 12 to 33 points a year over three years), so any
+ranking that prefers large, calm companies "beats all rows" without
+choosing well among them. Give the screen a peer column and it reports
+what stocks of the picks' own size did:
+
+```toml
+[pick_screen]
+per = "quarter"
+top_k = 10
+max_per_group = 2
+peer_column = "log_marketcap_rank"   # a rank column of the manifest
+peer_bins = 20                        # equal-width bands (default 20)
+```
+
+A pick's peers are the test rows of its own quarter (or year) in its
+own band of the column. The screen table gains a `... peers` column
+after the precision and after each outcome's mean, and the metrics
+`screen_peer_precision` and `screen_peer_mean_<o>`: the peers'
+statistic averaged over the picks, so `screen_mean_<o> -
+screen_peer_mean_<o>` is the picks' mean lead over stocks of their own
+size. **That difference, not the lead over all rows, is what reads a
+selection.** The column is read from the test rows as of the snapshot
+and need not be a model input; it must be in the manifest's `ranks` or
+`sector_ranks` (the bands are cuts of a 0..1 rank). Part of the config
+hash only when set. `vml-backtest` reports print the same reference
+for the buys (docs/backtesting.md, `vs_peers`).
+
 ### Two models as one ranking (`blend`)
 
 The backtest can rank on two bundles at once (`combine = "mean_rank"`);
