@@ -328,3 +328,53 @@ def test_twr_cagr_flat_is_zero():
         }
     )
     assert twr_cagr(monthly) == pytest.approx(0.0)
+
+
+def test_yearly_table_counts_a_month_in_the_year_it_starts_in():
+    """Valuations fall on the first trading day of each month, so the
+    January row is December's return. The yearly table must put it in
+    December's year: a table grouped on the row's own date would call
+    1 December to 1 December a year."""
+    import pandas as pd
+
+    from portfolio.engine import SimulationResult
+    from portfolio.report import yearly_table
+
+    dates = pd.to_datetime(
+        ["2021-12-01", "2022-01-03", "2022-02-01", "2022-12-01",
+         "2023-01-03", "2023-01-20"]
+    )
+    # December 2021 +10%, January 2022 -20%, February to November flat,
+    # December 2022 +50%, January 2023 to the final valuation -10%
+    returns = [None, 0.10, -0.20, 0.0, 0.50, -0.10]
+
+    def result(scale: float) -> SimulationResult:
+        monthly = pd.DataFrame(
+            {
+                "date": dates,
+                "deposit": 0.0,
+                "twr_return": [
+                    None if r is None else r * scale for r in returns
+                ],
+            }
+        )
+        return SimulationResult(
+            monthly=monthly, trades=pd.DataFrame(),
+            rebalance_log=pd.DataFrame(), total_deposits=0.0,
+            total_costs=0.0, final_value=0.0,
+        )
+
+    table = yearly_table(result(1.0), result(0.5)).set_index("year")
+    assert list(table.index) == ["2021", "2022 (rate-shock)", "2023"]
+    assert table.loc["2021", "strategy_twr"] == pytest.approx(0.10)
+    # 2022: January -20%, then flat, then December +50%
+    assert table.loc["2022 (rate-shock)", "strategy_twr"] == pytest.approx(
+        0.8 * 1.5 - 1.0
+    )
+    assert table.loc["2023", "strategy_twr"] == pytest.approx(-0.10)
+    assert table.loc["2022 (rate-shock)", "benchmark_twr"] == pytest.approx(
+        0.9 * 1.25 - 1.0
+    )
+    assert table.loc["2022 (rate-shock)", "excess"] == pytest.approx(
+        (0.8 * 1.5) - (0.9 * 1.25)
+    )
