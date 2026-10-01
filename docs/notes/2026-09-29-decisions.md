@@ -1048,3 +1048,107 @@ the candidate's first leg: it did on the holdout what it was chosen
 for (few losers, shallow drawdowns), at about the precision the
 thesis names. The open problem is unchanged and is now measured out
 of sample as well: the upside.
+
+### 30. The candidate ended behind SPY: tell the era from the fit before anything else
+
+*What came out (2026-10-01, backtests 32 and 33, both at git
+`5ed44ef`; the buy-and-hold path to the end of 2020 equals backtest
+27's to the cent):*
+
+| | deposits | final value 2026-08-21 | time-weighted | money-weighted | worst drawdown |
+|---|---|---|---|---|---|
+| SPY | 260,000 | 1,326,084 | 10.93% | 13.20% | −52.9% |
+| candidate, buy and hold | 260,000 | 1,193,902 | 11.31% | 12.42% | −41.4% |
+| candidate, rank sell discipline | 260,000 | 1,344,630 | 11.99% | 13.31% | −39.6% |
+
+Calendar years against SPY, points (computed from the equity curves,
+first trading day of January to the next; the report's own yearly
+table runs December to December, see below):
+
+| | 2021 | 2022 | 2023 | 2024 | 2025 | 2026 to 08-21 | sum 2005–12 | 2013–20 | 2021–26 |
+|---|---|---|---|---|---|---|---|---|---|
+| SPY's return | +31.3% | −19.0% | +26.0% | +25.3% | +18.2% | +12.7% | | | |
+| buy and hold | −8.6 | +3.2 | −2.9 | −12.5 | −14.4 | −12.7 | +25.3 | +26.1 | −47.9 |
+| sell discipline | −8.2 | +0.6 | −7.9 | −9.1 | −12.4 | −9.3 | +26.5 | +35.5 | −46.3 |
+
+Per buy over three years (buy and hold): the 2021 buys −0.116 a year
+against SPY with 41% losing money, 2022's −0.109 and 32%, 2023's (50
+of 75 with an outcome) −0.169 and 38%. The buys of 2005–2020 averaged
++0.025 with 20% losing money. Buy and hold was 37% ahead of SPY in
+money at the end of 2020, 29% ahead at the end of 2023 and is 10%
+behind now.
+
+*Against the predictions:* 2021–23 within 1.5 points of the
+dollar-floor run, held. 2024 behind by 2 to 12: −12.5, missed by half
+a point. 2025 and 2026 within 6 points either way: missed (−14.4,
+−12.7). Final value above SPY's: missed for buy and hold. Per buy:
+all three cohorts behind SPY, held in sign and missed in size and in
+losers (32% to 41%, predicted under 30%). The sell variant: within 4
+points of buy and hold each year, held; above SPY, held by 1.4%;
+costs 9.3 times (predicted 3 to 6), missed.
+
+*Three things found while reading it, none of them the strategy's:*
+
+1. **The reports' yearly table is a month off.** `yearly_table`
+   groups each monthly return by the year of the date it *ends* on,
+   and the equity curve is sampled on the first trading day of each
+   month, so "2022" runs from 2021-12-01 to 2022-12-01. SPY's
+   "2022" reads −8.2% where the calendar year was −19.0%; the
+   candidate's excess reads +4.3 where the calendar year's is +3.2.
+   Both legs share the window, so no comparison was wrong, but the
+   label was, in every backtest report and in the yearly figures of
+   findings.md. Fixed on a feature branch; the candidate's years are
+   restated above from the equity curve.
+2. **The whole-share rule binds after 2020.** 64 to 87 buys a year
+   from 120 orders in 2020–26 (106 to 120 in 2005–12): at about 100
+   a pick, a stock priced above the budget is never bought, and
+   adjusted prices are low early in the sample and real late in it.
+   Decision 23's fractional-share check was on buys of 2005–2020.
+3. **There is no reference for "the average stock" in a backtest
+   report.** The holdout look says the average row trailed SPY by 25
+   points a year over 2021–26 windows and the forest's picks by 9.
+   Whether the candidate's buys still beat the stocks they were
+   chosen from is the question that separates a selection that
+   stopped working from an index that outran every equal-weighted
+   portfolio, and no report answers it.
+
+*Decided,* in this order, before any new modelling:
+
+1. **Fractional shares to 2026** for both portfolios (backtests 34
+   and 35; predictions in the configs). A check of the template: if
+   the result depends on the whole-share rule it is not the blend's.
+   Not a selection: the deployed form is one or the other by what a
+   real account can do, not by which did better.
+2. **The buys against the stocks they were chosen from.** For every
+   rebalance, the per-buy outcomes of *all* investable candidates
+   (equal weight, the same horizon, the same delisting convention),
+   beside the picks'. First as a scratch diagnostic on these runs,
+   then built into the backtest report on a feature branch, because
+   every later backtest needs it.
+3. **Which leg.** The same per-pick reading for the forest alone,
+   the forest with each factor, and each factor alone, 2021–26
+   against 2005–20: picks only, no portfolio is simulated and no
+   configuration is added.
+4. **Where the index's largest winners ranked** on each leg at the
+   start of 2023, 2024 and 2025, from the cross-sections (features
+   and fold or refit models only; no label is read).
+
+*What each reading would mean, written before the diagnostics run:*
+
+- (a) *The era.* The candidates' own mean excess over SPY fell as far
+  as the picks' did (the holdout look suggests −0.2 or worse), and
+  the picks stayed ahead of their candidates by about as much as in
+  2005–20. Then the selection kept its skill and an index led by its
+  largest members outran every equal-weighted portfolio. The thesis
+  condition (2), the era, in its plainest form.
+- (b) *The fit.* The picks' lead over their own candidates shrank
+  towards zero after 2020, or their loser rate rose towards the
+  candidates'. Then the blend was fitted to 2005–2020.
+- (c) *The template.* The fractional run is 5 or more points a year
+  better in 2024–26.
+- They are not exclusive; the diagnostics size each.
+
+*The condition of decision 28 stands:* nothing is chosen on 2021–26.
+The fractional runs and the per-leg reading are diagnostics of the
+fixed candidate. Whatever they show, a new candidate is not picked
+by its 2021–26 numbers.
