@@ -65,7 +65,12 @@ from harness.config import (
     parse_dataset_version,
     parse_feature_selection,
 )
-from harness.dataset import DIAGNOSTIC_SCHEMES, Dataset, SplitAccess
+from harness.dataset import (
+    DIAGNOSTIC_SCHEMES,
+    Dataset,
+    SplitAccess,
+    model_input_columns,
+)
 from harness.errors import ConfigError, DiagnosticSchemeError
 from harness.results import ResultsStore, RunLog, git_sha, new_run_id
 from harness.runner import DEFAULT_DATA_ROOT, DEFAULT_RESULTS
@@ -473,7 +478,8 @@ def run_era_probe(
                 names = [str(c) for c in model.classes_]
                 fold_rules.append(
                     (fold, rules_text_multiclass(
-                        estimator, feature_cols, class_names=names,
+                        estimator, model_input_columns(feature_cols),
+                        class_names=names,
                         target_name="year",
                     ))
                 )
@@ -541,7 +547,8 @@ def run_era_probe(
         if last_tree is not None:
             diagram_fold, estimator, names = last_tree
             artifacts["tree_diagram"] = render_tree_diagram(
-                estimator, feature_cols, reports_dir / f"{config.name}_tree.png",
+                estimator, model_input_columns(feature_cols),
+                reports_dir / f"{config.name}_tree.png",
                 class_names=names,
             )
             artifacts["tree_diagram_fold"] = diagram_fold
