@@ -1100,7 +1100,7 @@ costs 9.3 times (predicted 3 to 6), missed.
    findings.md. Fixed on a feature branch; the candidate's years are
    restated above from the equity curve.
 2. **The whole-share rule binds after 2020.** 64 to 87 buys a year
-   from 120 orders in 2020–26 (106 to 120 in 2005–12): at about 100
+   from 120 orders in 2020–25 (108 to 120 in 2005–12): at about 100
    a pick, a stock priced above the budget is never bought, and
    adjusted prices are low early in the sample and real late in it.
    Decision 23's fractional-share check was on buys of 2005–2020.
