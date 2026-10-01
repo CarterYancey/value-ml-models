@@ -128,7 +128,9 @@ def parse_pick_outcomes(raw, horizon_years: int, source: str) -> tuple[str, ...]
 UNIVERSE_SCOPES = ("all", "test")
 
 SCREEN_PERIODS = ("quarter", "year")
-_SCREEN_KEYS = frozenset({"per", "top_k", "max_per_group", "group_column"})
+_SCREEN_KEYS = frozenset(
+    {"per", "top_k", "max_per_group", "group_column", "peer_column", "peer_bins"}
+)
 
 
 def parse_universe(raw, source: str) -> tuple[FilterSpec, ...]:
@@ -187,6 +189,16 @@ class PickScreen:
     top_k: int = 10
     max_per_group: int | None = None
     group_column: str = "sector"
+    #: a rank column (0..1) to match each pick with its peers on: the
+    #: test rows of the same period in the same of `peer_bins`
+    #: equal-width bands of it. With `log_marketcap_rank` the screen
+    #: reports what stocks of the picks' own size went on to do, which
+    #: is the reference a selection is read against (the all-rows
+    #: reference is dominated by small stocks, which trail a
+    #: capitalization-weighted benchmark by a wide margin whatever the
+    #: model). None = no peer reference.
+    peer_column: str | None = None
+    peer_bins: int = 20
 
     @classmethod
     def from_table(cls, table, source: str) -> "PickScreen":
@@ -219,11 +231,29 @@ class PickScreen:
                 f"config {source}: [pick_screen] group_column is set "
                 "without max_per_group; it only names what the cap groups on"
             )
+        peer_column = table.get("peer_column")
+        peer_bins = table.get("peer_bins", 20)
+        if "peer_bins" in table and peer_column is None:
+            raise ConfigError(
+                f"config {source}: [pick_screen] peer_bins is set without "
+                "peer_column; it only says how finely the peers are matched"
+            )
+        if (
+            isinstance(peer_bins, bool)
+            or not isinstance(peer_bins, int)
+            or peer_bins < 2
+        ):
+            raise ConfigError(
+                f"config {source}: [pick_screen] peer_bins must be an "
+                f"integer of 2 or more, got {peer_bins!r}"
+            )
         return cls(
             per=per,
             top_k=int(top_k),
             max_per_group=cap,
             group_column=str(table.get("group_column", "sector")),
+            peer_column=None if peer_column is None else str(peer_column),
+            peer_bins=int(peer_bins),
         )
 
     def to_table(self) -> dict:
@@ -231,6 +261,10 @@ class PickScreen:
         if self.max_per_group is not None:
             table["max_per_group"] = self.max_per_group
             table["group_column"] = self.group_column
+        # only when set: a screen without peers keeps its config hash
+        if self.peer_column is not None:
+            table["peer_column"] = self.peer_column
+            table["peer_bins"] = self.peer_bins
         return table
 
     def describe(self) -> str:
@@ -238,6 +272,11 @@ class PickScreen:
         if self.max_per_group is not None:
             text += (
                 f", at most {self.max_per_group} per `{self.group_column}`"
+            )
+        if self.peer_column is not None:
+            text += (
+                f"; peers: the test rows of the same {self.per} in the "
+                f"same of {self.peer_bins} bands of `{self.peer_column}`"
             )
         return text
 

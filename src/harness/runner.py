@@ -29,6 +29,7 @@ from eval.metrics import compute_all, regression_diagnostics
 from eval.picks import (
     has_pick_outcomes,
     has_screen_columns,
+    peer_bands,
     pick_outcome_metrics,
     pick_outcome_table,
     screen_group_table,
@@ -371,6 +372,8 @@ def selection_columns(config) -> list[str]:
     screen = config.pick_screen
     if screen is not None and screen.max_per_group is not None:
         cols.append(screen.group_column)
+    if screen is not None and screen.peer_column is not None:
+        cols.append(screen.peer_column)
     return cols
 
 
@@ -378,7 +381,20 @@ def check_pick_screen(dataset: Dataset, screen) -> None:
     """Refuse a portfolio screen whose group column is not a feature
     column of the manifest: the cap groups on what was known at the
     snapshot, never on an outcome."""
-    if screen is None or screen.max_per_group is None:
+    if screen is None:
+        return
+    if screen.peer_column is not None:
+        # a rank (0..1) known at the snapshot: the bands are cut on it
+        ranks = {
+            c for g in ("ranks", "sector_ranks") for c in dataset.columns(g)
+        }
+        if screen.peer_column not in ranks:
+            raise ConfigError(
+                f"[pick_screen] peer_column {screen.peer_column!r} is not "
+                "a rank column of the manifest (`ranks`, `sector_ranks`): "
+                "the peer bands are equal-width cuts of a 0..1 rank"
+            )
+    if screen.max_per_group is None:
         return
     allowed = {c for g in FILTERABLE_GROUPS for c in dataset.columns(g)}
     if screen.group_column not in allowed:
@@ -439,6 +455,11 @@ def _pick_outcome_columns(dataset: Dataset, config, test, test_fit) -> dict:
         ).to_numpy()
         if screen.max_per_group is not None:
             out["groups"] = rows[screen.group_column].to_numpy(dtype=object)
+        if screen.peer_column is not None:
+            out["peers"] = peer_bands(
+                rows[screen.peer_column].to_numpy(dtype=float),
+                screen.peer_bins,
+            )
     return out
 
 
