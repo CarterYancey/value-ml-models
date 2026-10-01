@@ -1311,3 +1311,74 @@ diagnostic's reading (+0.023 / +0.027, +0.015 / +0.052, +0.046 /
 +0.059 on monthly picks and price-panel outcomes) within 0.02: the
 screen picks quarterly from test rows and reads label outcomes, where
 an acquired stock is carried flat.
+
+### 34. No arm passes inside large caps; what is carried forward
+
+*What came out (2026-10-01; [large-caps note](2026-10-01-large-caps.md)):*
+
+- `sector` as an input changes nothing (decision 31's five
+  predictions held): the forest picks the same utilities and REITs
+  with the sector in view.
+- On the harness screen, against same-size peers, the candidate's
+  forest leads by +0.030 / +0.027 a year for entries of 2005–12 /
+  2013–20, the candidate by +0.022 / +0.053 (inside large caps +0.038
+  / +0.047): decision 33's predictions held, and the screen agrees
+  with the diagnostic and with the backtest reports' new `vs_peers`.
+- Inside large caps no model passes decision 32's rule. Forests on
+  "not a loser" lead their peers by +0.020 to +0.025 in both halves,
+  which is less than return on capital alone (+0.039 / +0.030) or the
+  conservative score alone (+0.031 / +0.029). "Beat SPY" is not
+  learned with size held fixed (2013–20: −0.001 to +0.013), a
+  regression on the size of the excess return is worse, and "beat
+  SPY without a 30% fall" has a p@20 below its base rate.
+
+*Decided:*
+
+1. **No new model goes to a backtest, and nothing more is run on
+   2021–26.** The rule was fixed before the runs and no arm met it.
+   The one surprise, two single factors leading by 3 points in both
+   halves, is in-sample: for the buys of 2021–23 return on capital
+   alone trailed its same-size peers by 3.4 points (out-of-sample
+   note). It is recorded, not chased.
+2. **The candidate's definition stands and its claim is restated.**
+   Cell C's forest, momentum and return on capital by mean rank, top
+   10 a month, 2 per sector, `dollar_volume_3m_rank >= 0.2`; buy and
+   hold, and the rank sell discipline beside it. What it has shown:
+   over 2005 to 2026-08, the index's return (11.3% to 12.0% a year
+   time-weighted against 10.9%) with three quarters of its worst
+   drawdown; 37% ahead of SPY in money at the end of 2020 and between
+   10% behind and 1% ahead in August 2026. What it has not shown: a
+   lead over SPY, or over stocks of its picks' own size, on any buy
+   after 2018. It is a low-risk equity portfolio, not a
+   market-beating one, on this evidence.
+3. **A selection is read against same-size peers from here on.**
+   Decision 16's rule is amended: an arm goes to a backtest when its
+   screen's lead over same-size peers (`peer_column =
+   "log_marketcap_rank"`) is 0.01 or more above the reference arm's in
+   both halves, with losers no higher; backtests are read on
+   `vs_peers` beside the headline. Sweep configs carry the peer
+   column.
+4. **The search over labels, features and models on these columns is
+   closed for now.** Four sessions have tried 87 configurations in
+   cell C on all rows, 38 inside the 100k floor, 14 inside large
+   caps, and 35 backtests. Every arm that leads its same-size peers
+   does so by 2 to 5 points in-sample, through low risk and one
+   quality factor, and none of it carried to the buys of 2021–23.
+   More configurations on 2005–2020 cannot change that; what can is
+   information the columns do not hold and years that have not
+   happened.
+
+*What is Carter's (in TODO.md, with the reason for each):*
+
+- What the portfolio is for, and its yardstick: SPY, or stocks of the
+  picks' own size. The answer decides whether the candidate is a
+  result or a starting point.
+- Whether to paper-trade the fixed candidate (both forms) as the
+  low-risk portfolio it is. Nothing else is proposed for paper
+  trading: choosing a different blend now would be choosing it on
+  2021–26.
+- The pull request (five code changes, the docs, the promoted
+  results), and the upstream requests: an outcome and a label
+  measured against same-size peers, size-neutral ranks, market-state
+  features, and information about upside that prices and statements
+  do not carry (insider and institutional transactions).
