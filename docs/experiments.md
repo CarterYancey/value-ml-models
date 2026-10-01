@@ -280,8 +280,41 @@ The upstream flags (`negative_equity`, `two_year_loss`, the nine
 every model as floats, True 1.0 and False 0.0, NULL kept as NaN
 ("unknown" is not "failed": data/features.md). This changes how a
 value is stored, not what it says, and reads no other row or column.
-String and date columns (`sector`, `industry`, `fund_datekey`, ...)
-are still not model inputs.
+Date columns (`fund_datekey`, ...) are still not model inputs.
+
+## `sector` as a model input
+
+```toml
+[features]
+groups = ["ranks"]
+columns = ["sector"]
+```
+
+`sector` is the one string column a model may take. It is handed to
+every model as eleven 0/1 indicator columns, one per sector of the
+upstream scheme (`sector=Technology`, ...), NULL kept as NULL in all
+of them (`harness.dataset.CATEGORICAL_FEATURES`, `feature_matrix`).
+The vocabulary is a fixed list in the code, not learned from a frame:
+the train rows, every test fold, a backtest cross-section and an
+inference frame get the same columns, and a value outside the list is
+an error. Like the flags, a per-row recoding that reads no other row
+or column (invariant 4). A bundle keeps the manifest name (`sector`);
+importances and tree rules are indexed by the indicator columns.
+
+Two things to keep in mind when reading a run that uses it:
+
+- **It is a current-state column** (data/features.md,
+  "Classification"): a reclassified company's whole history carries
+  today's sector, and a delisted company's froze at delisting. The
+  model sees a mild form of the future in it. The run's report says
+  so. Compare against the same run without the column, on the screen
+  and on the sector shares of the picks, before reading anything
+  into a difference.
+- The other classification columns are refused: `scalemarketcap` is
+  today's size bucket stamped on a firm's whole history (it tells a
+  2005 row how large the company became), and `industry` and
+  `famaindustry` are current-state labels fine enough to name single
+  companies.
 
 ## Models
 

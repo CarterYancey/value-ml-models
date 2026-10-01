@@ -18,6 +18,7 @@ import pandas as pd
 
 from eval.era import crash_label
 from eval.metrics import threshold_tag
+from harness.dataset import CATEGORICAL_FEATURES
 from harness.derived_labels import is_derived_label, parse_label_expression
 from harness.filters import describe_filters
 
@@ -270,6 +271,25 @@ def write_report(
             "the purge and embargo hold for the rows that remain) and "
             "derives no column. `sample_weight` is the upstream "
             "uniqueness weight, not recomputed for the rows left out."
+        )
+    resolver = getattr(config, "resolve_feature_columns", None)
+    categorical = (
+        [c for c in resolver(dataset) if c in CATEGORICAL_FEATURES]
+        if resolver is not None
+        else []
+    )
+    if categorical:
+        lines.append(
+            "- **categorical model input: "
+            + ", ".join(f"`{c}`" for c in categorical)
+            + "** — one 0/1 indicator per value of a fixed vocabulary "
+            "(harness.dataset.CATEGORICAL_FEATURES), NULL kept as NULL. "
+            "Upstream classification columns are **current-state** "
+            "(data/features.md): a reclassified company's whole history "
+            "carries today's label and a delisted company's label froze "
+            "at delisting, so the model sees a mild form of the future "
+            "in this column. Compare with the same run without it before "
+            "reading anything into the difference."
         )
     lines.append(
         f"- **configurations tried against this cell "

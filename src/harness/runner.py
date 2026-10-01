@@ -41,7 +41,7 @@ from eval.plots import render_calibration_plot, render_pr_curve, render_roc_curv
 from explain.rules import render_tree_diagram, rules_text
 from harness.calibration import PrequentialCalibration
 from harness.config import ExperimentConfig
-from harness.dataset import Dataset, SplitAccess
+from harness.dataset import Dataset, SplitAccess, model_input_columns
 from harness.errors import ConfigError, DatasetValidationError
 from harness.filters import FILTERABLE_GROUPS
 from harness.model_store import ModelBundle
@@ -113,6 +113,9 @@ def run_experiment(
         dataset = Dataset(Path(data_root) / config.dataset_version)
         config.check_dataset_version(dataset.version)
         feature_cols = config.resolve_feature_columns(dataset)
+        # what the estimators see: a categorical feature is several
+        # indicator columns (harness.dataset.feature_matrix)
+        input_cols = model_input_columns(feature_cols)
         dataset.check_universe(config.universe)
         check_pick_screen(dataset, config.pick_screen)
         folds = (
@@ -253,7 +256,7 @@ def run_experiment(
                 raw_score_arrays.append(np.asarray(raw_scores, dtype=float))
             estimator = getattr(model, "estimator_", None)
             if isinstance(estimator, DecisionTreeClassifier):
-                fold_rules.append((fold, rules_text(estimator, feature_cols)))
+                fold_rules.append((fold, rules_text(estimator, input_cols)))
                 last_tree = (fold, estimator)
             imp_fn = getattr(model, "feature_importances", None)
             if imp_fn is not None:
@@ -281,13 +284,13 @@ def run_experiment(
         if last_tree is not None:
             diagram_fold, estimator = last_tree
             artifacts["tree_diagram"] = render_tree_diagram(
-                estimator, feature_cols, reports_dir / f"{config.name}_tree.png"
+                estimator, input_cols, reports_dir / f"{config.name}_tree.png"
             )
             artifacts["tree_diagram_fold"] = diagram_fold
         if fold_importances:
             artifacts["importances"] = _write_importances_file(
                 reports_dir / f"{config.name}_importances.csv",
-                feature_cols,
+                input_cols,
                 fold_importances,
             )
         if calib is not None:
