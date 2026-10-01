@@ -1,0 +1,102 @@
+# Decision 31 of docs/notes/2026-09-29-decisions.md (2026-10-01).
+# Carter's question of 2026-10-01 (decision 25.3): the sector cap is a
+# bandage; would a model that can see the sector learn that a column
+# means something different for a REIT or a utility, and stop picking
+# them for their steady cash flows? `sector` as a model input
+# (claude/sector-feature: eleven 0/1 indicators against a fixed
+# vocabulary, NULL kept; docs/experiments.md).
+#
+# Cell C ('not a loser'), the candidate's forest, three seeds, two
+# feature sets:
+#
+#   fs0  the ranks group, 112 columns: the reference (the candidate)
+#   fs1  fs0 plus `sector`, 123 model inputs
+#
+# Read on the portfolio screen (top 10 per test quarter, at most 2 per
+# sector) in the order of decision 16, and on the picks' share by
+# sector. Bundles are saved (--save-models) and evaluated inside the
+# 100k floor with vml-eval (experiments/eval_screen_dv100k.toml), as
+# the feature sets of decision 18 were.
+#
+# `sector` is current-state upstream (data/features.md): a reclassified
+# company's history carries today's sector. A gain from it is read
+# with that in mind, and the run's report says so.
+#
+# What sends fs1 on (decision 16): screen mean excess CAGR at least
+# 0.01 above fs0's, not more than 0.01 below it in 2005-12 or 2013-20,
+# losers at 0.20 or less, on all three seeds.
+#
+# Predictions, written before the run (2026-10-01):
+#   1. fs0 reproduces the candidate's forest on each seed: p@20 0.788 /
+#      0.778 / 0.781, fold-mean PR-AUC 0.585.
+#   2. fs1: fold-mean PR-AUC within 0.005 of fs0's and p@20 within 0.03
+#      on every seed. The ranks already say most of what the sector
+#      says (a utility is recognisable by its volatility, leverage and
+#      cash-flow ranks).
+#   3. The eleven sector indicators together carry under 5% of fs1's
+#      importance; `sector=Utilities` and `sector=Real Estate` are the
+#      two largest of them.
+#   4. Utilities and real estate stay above 0.30 of fs1's screen picks
+#      (0.35 for fs0): the forest picks them because they did not lose,
+#      which is what it is asked, and knowing their name does not
+#      change that.
+#   5. fs1's screen mean excess CAGR within 0.01 of fs0's; fs1 does not
+#      pass decision 16's rule.
+#   Rival (Carter's): with the sector visible the forest discounts the
+#   steady cash flows of REITs and utilities; then their share of the
+#   screen falls under 0.20 and the screen's precision for 2006-08
+#   entries (0.55, 0.23, 0.38 on the top 20) rises.
+#
+# Expanded: 1 cell x 2 feature sets x 1 set x 3 seeds = 6 runs, about
+# half an hour.
+# Run: vml-sweep experiments/sweeps/forest_sector_nonloser_3y.toml --save-models
+name = "forest_sector_nonloser_3y"
+note = "sector as a model input changes nothing in cell C (v1.4, the candidate's forest, three seeds): ranks p@20 0.788 / 0.778 / 0.781, ranks + sector 0.766 / 0.756 / 0.772, PR-AUC 0.585 both; screen mean excess, losers and the 34% of picks from utilities and real estate unchanged; the eleven sector indicators carry 0.9% of the importance. docs/notes/2026-10-01-large-caps.md"
+dataset_version = "dataset_v1.4"
+min_dataset_version = "1.4"
+scheme = "walkforward"
+folds = "all"
+seeds = [23, 232, 1776]
+top_k = [20, 50]
+precision_targets = [0.75, 0.9]
+rank_metric = "precision_at_20"
+pick_outcomes = [
+  "label_3y_beat_spy",
+  "fwd_3y_excess_cagr",
+  "fwd_3y_cagr",
+  "fwd_3y_max_drawdown_from_entry",
+  "fwd_3y_cagr < 0",
+  "fwd_3y_cagr < -0.1",
+  "fwd_3y_max_drawdown_from_entry >= 0.4",
+  "fwd_3y_cagr >= 0.15",
+  "fwd_3y_cagr >= 0.25",
+  "fwd_3y_excess_cagr >= 0.05",
+]
+
+sets = [
+  {criterion = "entropy", max_depth = 4, max_features = 0.205191, max_samples = 0.663781, min_samples_leaf = 72, n_estimators = 490},  # the candidate's forest (forest_candidate_sets_3y set1)
+]
+
+[pick_screen]
+per = "quarter"
+top_k = 10
+max_per_group = 2
+group_column = "sector"
+
+[[cells]]
+label = "fwd_3y_cagr >= 0 & fwd_3y_max_drawdown_from_entry < 0.3"
+
+# fs0: the reference, 112 rank columns
+[[features]]
+groups = ["ranks"]
+
+# fs1: the ranks and the sector, 123 model inputs
+[[features]]
+groups = ["ranks"]
+columns = ["sector"]
+
+[model]
+name = "random_forest"
+bootstrap = true
+class_weight = 1.0
+n_jobs = 8

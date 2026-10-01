@@ -894,3 +894,492 @@ by size reproduces that by holding the largest of them: a
 single-stock bet, not a sizing rule. Equal weights stay.
 
 Backtest configurations tried on these years: 31.
+
+## Session of 2026-10-01 (second), decisions 27 onwards
+
+Carter opened the session with the thesis restated and the same
+freedom as before ("do anything you feel is best to reach this goal",
+the stop rules of agents.md disregarded for now, every decision
+logged, code on a feature branch), and with explicit leave to rewrite
+agents.md to match. Since the last session he merged pull request 18
+into `Claude`, took the one holdout look in cell C's 3y cell
+(`reports/final_eval/forest_nonloser_dd30_3y.md`) and chose the
+era-neutral rank floor for deployment (TODO.md).
+
+Not lifted, as before: the hard invariants of CLAUDE.md (no local
+splits, no feature engineering, the sealed holdout, era-sliced
+reporting, reproducible runs), the branch workflow, the rules under
+"Before writing a conclusion". No holdout look, deployment or merge
+into `Claude` is made under this log.
+
+Lab branch: `claude/lab-2026-10-01`, off `claude/lab-2026-09-30` with
+`Claude` merged in (the session's checkout was `Claude` itself, which
+is never committed to).
+
+### 27. agents.md is rewritten to say what the sessions have done since 2026-09-29
+
+*Decided:* with Carter's leave, docs/agents.md now describes two ways
+of working. The queue loop and its stop rules stay as written for a
+session told to "work the queue". A session told to pursue the goal
+works as these four sessions have: it may open a new direction, extend
+the queue, build code on a feature branch and continue experiments off
+it, on condition that every decision is logged here before it is acted
+on, with its reason and, for a run, its prediction in the config.
+
+*What stays Carter's in both:* a holdout look or re-look, deployment,
+and the merge into `Claude`. *What moves to the agent in a
+goal-directed session:* promoting results (`vml-promote`, as at the
+close of the last two sessions) and building the results branch a pull
+request is opened from.
+
+*What a contradicted prediction does now:* it no longer ends the
+session. It gets a note with the rival explanations, and the next
+experiment is the one that separates them, which the session may run.
+A result far above its baseline, or far below an earlier one, is still
+checked as a bug or a changed input before anything is built on it.
+
+### 28. The candidate is traded to the end of the price panel, once
+
+*Decided:* two backtests, predictions in the configs, before anything
+else: `bt_nonloser_mom_roc_top10_cap2_rankfloor_to2026` and its
+sell-discipline variant. Decision 24's blend with the floor Carter
+chose for deployment (`dollar_volume_3m_rank >= 0.2`), buys and
+deposits through 2026-08-21, valued on that day, year-end refits of
+the forest for 2021 to 2026.
+
+*Why:* the first open question in findings.md is whether the candidate
+holds outside 2005–2023, and "only the holdout, 2021–23 trading and
+time can say". The price panel and the dataset's snapshots both run to
+2026-08-21; every backtest so far stopped its valuation at 2023-12-29
+because decision 6's template did. So 2024, 2025 and most of 2026
+have been seen by no selection in this repository, and the buys of
+2021–22 now have the three-year outcomes that the run to 2023 could
+not show. It is the nearest thing to a paper-trading record that
+exists, and it costs no configuration on the years the candidate was
+chosen on.
+
+*Why it is not a holdout look:* the engine reads no split tags and
+evaluates no label. Its year-end refits train on rows whose label was
+observable by Jan 1 of the trade year (data/manual.md §4 rule 7,
+point-in-time), which from trade year 2025 on includes snapshots of
+2021 that the holdout scheme tags as test rows: that is what a
+deployed model would have been trained on. Carter allowed the same
+for 2021–23 (decision 26) and has since taken the cell's look.
+
+*The condition that keeps it honest:* these two portfolios are the
+only ones traded on 2021–26, and nothing is chosen on what they show.
+A third portfolio on those years needs a decision here that says why
+it is not a selection. If the candidate did badly, that is the
+finding.
+
+*Counted:* backtest configurations 32 and 33 on `dataset_v1.4`. The
+buy-and-hold run's path to the end of 2020 is that of backtest 27 (a
+check before reading); the sell variant has not been run with the rank
+floor before, so its 2005–2020 path is new, the same strategy under
+the floor Carter chose.
+
+### 29. What the holdout look in cell C says, and what it does not
+
+Carter's look (2026-10-01, look 1 of 1 in the cell; run
+`b6707d087996`, config hash `419b84929382132f`, the walk-forward
+config unchanged, one fit on 1,110,907 train rows, effective 38,640;
+47,012 test rows of 2021–2023, the 2023 rows those whose label was
+observable). Read from the report only; no holdout row was read here.
+
+| | 2021 | 2022 | 2023 | pooled, per year | walk-forward 2005–20 |
+|---|---|---|---|---|---|
+| base rate | 0.338 | 0.408 | 0.399 | 0.379 | 0.392 |
+| precision, top 20 | 0.75 | 0.65 | 0.55 | 0.65 | 0.79 (0.23 to 1.00 by year; 2019: 0.53–0.65, 2020: 0.70–0.73) |
+| top 50 | 0.76 | 0.70 | 0.72 | 0.727 | 0.76 |
+| top 100 | 0.70 | 0.67 | 0.71 | 0.693 | |
+| PR-AUC | 0.485 | 0.596 | 0.630 | 0.564 | 0.585 |
+| Brier / no-skill Brier | 0.209 / 0.224 | 0.207 / 0.242 | 0.196 / 0.240 | 0.205 / 0.235 | ahead in 11 of 16 years |
+| top 20: lost money over 3y (all rows) | 0.15 (0.59) | 0.30 (0.51) | 0.40 (0.49) | 0.28 (0.54) | 0.13 (0.45) |
+| top 20: fell 40% from entry (all rows) | 0.05 (0.57) | 0.00 (0.51) | 0.10 (0.51) | 0.05 (0.53) | 0.10 (0.50) |
+| top 20: mean 3y CAGR (all rows) | +0.072 (−0.147) | +0.047 (−0.092) | +0.030 (−0.052) | +0.050 (−0.103) | |
+| top 20: mean excess CAGR (all rows) | −0.022 (−0.242) | −0.077 (−0.252) | −0.177 (−0.261) | −0.092 (−0.251) | about 0 (−0.106) |
+| top 20: CAGR of 0.25 or more (all rows) | 0 (0.07) | 0 (0.11) | 0 (0.15) | 0 (0.11) | 0.03 (0.15) |
+
+The walk-forward column is from the pick-anatomy note (three seeds)
+and the forest's own report; the walk-forward mean excess is the
+top-20 median and the screen's mean, both about zero.
+
+*Measured:*
+
+1. **The label is still predicted on snapshots the forest was not
+   chosen on.** Top 50 a year: 0.73 against a base rate of 0.38 (walk-
+   forward 0.76 against 0.39). Top 20: 0.65, below the walk-forward
+   mean of 0.79 and inside the range of its last two years. PR-AUC
+   0.564 against 0.585; Brier ahead of no skill in each of the three
+   years. 0.65 is the reference precision of the thesis, met at 20 and
+   exceeded at 50 picks a year.
+2. **The picks avoided the losers and gave up the market.** 28% of the
+   top 20 lost money over three years against 54% of all test rows;
+   5% fell 40% from entry against 53%. Their mean CAGR was +5% a year
+   where the average row lost 10%. SPY returned about 14% a year over
+   the same windows: the picks trailed it by 9 points a year, the
+   average row by 25. None of the 60 picks compounded at 25%.
+3. **The top of the ranking weakened towards 2023**: p@20 0.75, 0.65,
+   0.55 and p@5 0.8, 0.4, 0.4, while p@50 and p@100 held at 0.67 to
+   0.76. With 20 picks a year a difference of 0.2 is four picks.
+
+*What it does not say:* anything about the blend. The forest is the
+only fitted part of the candidate, and the forest alone was already
+known to earn SPY's return or less (findings, conclusion 1: return on
+capital and momentum put the winners back). The look does not test
+them. It also has no baselines: the report says "No baseline runs
+recorded for this cell" under the holdout scheme, so whether lowest
+volatility alone would have scored the same 0.65 on these rows is not
+known (on walk-forward, lowest 36-month volatility has the forest's
+loser rate and 0.024 a year less return). A baseline on the holdout
+rows is a further read of them and is Carter's.
+
+*Hypotheses, not tested:* (a) the era: SPY's 14% a year over 2021–26
+came from its largest members, and the mean row's excess of −0.25 is
+the widest gap of any period in the data (−0.106 over 2005–20);
+calm stocks did what the label asks and the index outran them; (b)
+the forest's ranking of the very top is weaker on recent data (item
+3), which would show as the top 20 falling below the top 50 again in
+the next cohort. The run of decision 28 reads the same years for the
+blend through prices.
+
+*Decided:* the look stands as the cell's one look. The forest stays
+the candidate's first leg: it did on the holdout what it was chosen
+for (few losers, shallow drawdowns), at about the precision the
+thesis names. The open problem is unchanged and is now measured out
+of sample as well: the upside.
+
+### 30. The candidate ended behind SPY: tell the era from the fit before anything else
+
+*What came out (2026-10-01, backtests 32 and 33, both at git
+`5ed44ef`; the buy-and-hold path to the end of 2020 equals backtest
+27's to the cent):*
+
+| | deposits | final value 2026-08-21 | time-weighted | money-weighted | worst drawdown |
+|---|---|---|---|---|---|
+| SPY | 260,000 | 1,326,084 | 10.93% | 13.20% | −52.9% |
+| candidate, buy and hold | 260,000 | 1,193,902 | 11.31% | 12.42% | −41.4% |
+| candidate, rank sell discipline | 260,000 | 1,344,630 | 11.99% | 13.31% | −39.6% |
+
+Calendar years against SPY, points (computed from the equity curves,
+first trading day of January to the next; the report's own yearly
+table runs December to December, see below):
+
+| | 2021 | 2022 | 2023 | 2024 | 2025 | 2026 to 08-21 | sum 2005–12 | 2013–20 | 2021–26 |
+|---|---|---|---|---|---|---|---|---|---|
+| SPY's return | +31.3% | −19.0% | +26.0% | +25.3% | +18.2% | +12.7% | | | |
+| buy and hold | −8.6 | +3.2 | −2.9 | −12.5 | −14.4 | −12.7 | +25.3 | +26.1 | −47.9 |
+| sell discipline | −8.2 | +0.6 | −7.9 | −9.1 | −12.4 | −9.3 | +26.5 | +35.5 | −46.3 |
+
+Per buy over three years (buy and hold): the 2021 buys −0.116 a year
+against SPY with 41% losing money, 2022's −0.109 and 32%, 2023's (50
+of 75 with an outcome) −0.169 and 38%. The buys of 2005–2020 averaged
++0.025 with 20% losing money. Buy and hold was 37% ahead of SPY in
+money at the end of 2020, 29% ahead at the end of 2023 and is 10%
+behind now.
+
+*Against the predictions:* 2021–23 within 1.5 points of the
+dollar-floor run, held. 2024 behind by 2 to 12: −12.5, missed by half
+a point. 2025 and 2026 within 6 points either way: missed (−14.4,
+−12.7). Final value above SPY's: missed for buy and hold. Per buy:
+all three cohorts behind SPY, held in sign and missed in size and in
+losers (32% to 41%, predicted under 30%). The sell variant: within 4
+points of buy and hold each year, held; above SPY, held by 1.4%;
+costs 9.3 times (predicted 3 to 6), missed.
+
+*Three things found while reading it, none of them the strategy's:*
+
+1. **The reports' yearly table is a month off.** `yearly_table`
+   groups each monthly return by the year of the date it *ends* on,
+   and the equity curve is sampled on the first trading day of each
+   month, so "2022" runs from 2021-12-01 to 2022-12-01. SPY's
+   "2022" reads −8.2% where the calendar year was −19.0%; the
+   candidate's excess reads +4.3 where the calendar year's is +3.2.
+   Both legs share the window, so no comparison was wrong, but the
+   label was, in every backtest report and in the yearly figures of
+   findings.md. Fixed on a feature branch; the candidate's years are
+   restated above from the equity curve.
+2. **The whole-share rule binds after 2020.** 64 to 87 buys a year
+   from 120 orders in 2020–25 (108 to 120 in 2005–12): at about 100
+   a pick, a stock priced above the budget is never bought, and
+   adjusted prices are low early in the sample and real late in it.
+   Decision 23's fractional-share check was on buys of 2005–2020.
+3. **There is no reference for "the average stock" in a backtest
+   report.** The holdout look says the average row trailed SPY by 25
+   points a year over 2021–26 windows and the forest's picks by 9.
+   Whether the candidate's buys still beat the stocks they were
+   chosen from is the question that separates a selection that
+   stopped working from an index that outran every equal-weighted
+   portfolio, and no report answers it.
+
+*Decided,* in this order, before any new modelling:
+
+1. **Fractional shares to 2026** for both portfolios (backtests 34
+   and 35; predictions in the configs). A check of the template: if
+   the result depends on the whole-share rule it is not the blend's.
+   Not a selection: the deployed form is one or the other by what a
+   real account can do, not by which did better.
+2. **The buys against the stocks they were chosen from.** For every
+   rebalance, the per-buy outcomes of *all* investable candidates
+   (equal weight, the same horizon, the same delisting convention),
+   beside the picks'. First as a scratch diagnostic on these runs,
+   then built into the backtest report on a feature branch, because
+   every later backtest needs it.
+3. **Which leg.** The same per-pick reading for the forest alone,
+   the forest with each factor, and each factor alone, 2021–26
+   against 2005–20: picks only, no portfolio is simulated and no
+   configuration is added.
+4. **Where the index's largest winners ranked** on each leg at the
+   start of 2023, 2024 and 2025, from the cross-sections (features
+   and fold or refit models only; no label is read).
+
+*What each reading would mean, written before the diagnostics run:*
+
+- (a) *The era.* The candidates' own mean excess over SPY fell as far
+  as the picks' did (the holdout look suggests −0.2 or worse), and
+  the picks stayed ahead of their candidates by about as much as in
+  2005–20. Then the selection kept its skill and an index led by its
+  largest members outran every equal-weighted portfolio. The thesis
+  condition (2), the era, in its plainest form.
+- (b) *The fit.* The picks' lead over their own candidates shrank
+  towards zero after 2020, or their loser rate rose towards the
+  candidates'. Then the blend was fitted to 2005–2020.
+- (c) *The template.* The fractional run is 5 or more points a year
+  better in 2024–26.
+- They are not exclusive; the diagnostics size each.
+
+*The condition of decision 28 stands:* nothing is chosen on 2021–26.
+The fractional runs and the per-leg reading are diagnostics of the
+fixed candidate. Whatever they show, a new candidate is not picked
+by its 2021–26 numbers.
+
+### 31. `sector` as a model input: built, and one sweep
+
+*Decided:* route (b) of decision 25.3, on `claude/sector-feature`:
+`sector` is handed to models as eleven 0/1 indicators against a fixed
+vocabulary, NULL kept (`harness.dataset.CATEGORICAL_FEATURES`). A
+per-row recoding like the flags of decision 17; no vocabulary is
+learned from a frame, so every fold, cross-section and inference frame
+has the same columns. The other classification columns are refused in
+code: `scalemarketcap` is today's size bucket on a firm's whole
+history, which is the future. Every report that uses `sector` states
+the current-state caveat.
+
+One sweep, `forest_sector_nonloser_3y`: cell C, the candidate's
+forest, three seeds, the ranks against the ranks with `sector`; read
+on the screen and on the picks' sector shares, predictions and
+Carter's rival in the config. Six more configurations in cell C.
+
+*Why now, when the candidate has just ended behind SPY:* it was asked
+for, it is half an hour, and whether the forest's sector habit is in
+its inputs or in its target is a fact about the forest that every
+later use of it rests on.
+
+### 32. What the diagnostics say: size first, then the era; the next question is selection inside large caps
+
+*What came out (2026-10-01; tables in
+[the out-of-sample note](2026-10-01-out-of-sample.md)):*
+
+1. **Not the template.** With fractional shares (backtests 34, 35)
+   the candidate ends at 1,172,560 and the sell variant at 1,329,280
+   (whole shares: 1,193,902 and 1,344,630); every year of 2021–26 is
+   within a point of the whole-share run. Reading (c) is out.
+2. **The average investable stock trailed SPY by 22 points a year**
+   over the three-year windows of the 2021–23 cohorts (equal weight,
+   every candidate of every month): −0.057 for 2005–12, −0.111 for
+   2013–20, −0.218 for 2021–23. 52% lost money.
+3. **Size decides more than any model.** Mean three-year excess over
+   SPY by market-capitalization rank, the three periods: smaller half
+   −0.116 / −0.179 / −0.333; 50th to 80th percentile −0.033 / −0.083 /
+   −0.176; 80th to 95th −0.002 / −0.049 / −0.120; largest 5% +0.002 /
+   −0.025 / −0.065; largest 1% +0.010 / −0.022 / −0.033. In 2021–26
+   SPY beat the equal-weighted mean of its own thirty largest members.
+4. **Against stocks of their own size the candidate's lead is gone
+   after 2020, and the forest's is small throughout.** Mean
+   three-year excess of the picks minus that of the same month's
+   candidates in the same 5% size band:
+
+   | | 2005–12 | 2013–20 | buys of 2021–23 |
+   |---|---|---|---|
+   | forest alone | +0.023 | +0.027 | +0.006 |
+   | forest + return on capital | +0.015 | +0.052 | +0.005 |
+   | forest + momentum | +0.033 | +0.034 | +0.027 |
+   | **the candidate (all three)** | **+0.046** | **+0.059** | **−0.016** |
+
+   Against all candidates the candidate "led" by 0.090, 0.122 and
+   0.100: most of that was its picks being large (mean
+   capitalization rank 0.83 to 0.91).
+5. **Loser avoidance held, net of size.** Share of picks losing money
+   over three years, against their same-size peers': forest alone
+   0.24 / 0.12 / 0.22 against 0.35 / 0.25 / 0.34; the candidate 0.25
+   / 0.16 / 0.34 against 0.36 / 0.27 / 0.37.
+6. **Inside the largest fifth the forest separates the worst quintile
+   and nothing above it.** Three-year excess by forest-score quintile
+   among large caps, worst to best: 2005–12 −0.038 … +0.016; 2013–20
+   −0.088 … −0.022; 2021–23 −0.203, −0.088, −0.077, −0.077, −0.087.
+7. **The forest ranks the index's most volatile giants in the middle
+   of the list.** January 2023, of 3,673 investable stocks: NVDA
+   1,599th on the forest (1,477th combined), TSLA 1,987th, META
+   1,940th, AMZN 1,209th. The calm ones rank high (AAPL 38th
+   combined, LLY 14th).
+
+*Read against the three readings of decision 30:* (c) no. (a) the
+era, yes, and larger than the question: SPY outran equal-weighted
+stocks of every size in 2021–26, so no equal-weighted selection from
+this universe could have kept up without holding a handful of
+giants. (b) the fit, yes for the blend's increment: what momentum and
+return on capital added to the forest in 2005–2020 (2 to 3 points a
+year against same-size stocks) was −2 for the 2021–23 buys. Three
+cohorts, 320 picks, one of them 2021; it is evidence, not a verdict.
+
+*What it changes about how anything here is read:*
+
+- "Beats the average stock" is not skill. Every screen, pick-outcome
+  table and per-buy table in this repository compares picks with all
+  rows or with SPY, and both comparisons are dominated by size. From
+  now on a selection is read against same-size stocks:
+  `claude/backtest-universe-outcomes` puts that reference in every
+  backtest report (`vs_peers`), and on the screen a run is read
+  inside the universe `log_marketcap_rank >= 0.8`, where the all-rows
+  statistic is a same-size reference.
+- The thesis, on this evidence: a high precision on "not a loser"
+  is achievable and holds out of sample (decision 29), and it buys
+  fewer losers and shallower falls. It does not by itself buy the
+  index's return when the index is led by its largest and more
+  volatile members: those are the stocks a loser-avoiding model
+  ranks in the middle. Condition (2), the era, is the whole of
+  2021–26.
+
+*Decided:*
+
+1. **The record first**: the out-of-sample note, findings.md
+   rewritten around it, the yearly figures restated on calendar
+   years, a process note on the yearly table.
+2. **One experiment on the open question, selection inside large
+   caps** (`forest_largecap_cells_3y`, `baseline_factors_largecap_3y`,
+   and the existing bundles evaluated inside the same universe):
+   three targets (not a loser; beat SPY; beat SPY without a deep
+   fall), the candidate's forest, three seeds, seven single-factor
+   bars, all trained and read inside `log_marketcap_rank >= 0.8`.
+   The rule that carries an arm forward is in the sweep's header
+   (a lead of 0.02 over the universe in both halves of 2005–2020 on
+   every seed, and 0.01 over the best single factor). An arm that
+   passes is the one new model that gets a backtest and one run on
+   2021–26. If none passes, the finding is that these features rank
+   risk and not return among investable large companies, and the
+   upside has to come from new information upstream.
+3. **Not done:** no new blend is tried on 2005–2020 backtests, and
+   no variant of the candidate is run on 2021–26. A
+   capitalization-weighted portfolio of large caps without the
+   forest's worst quintile ("the index minus the predicted losers")
+   is the literal form of the thesis and is recorded in TODO as a
+   proposal: it would have left out NVDA, TSLA and META in 2023, and
+   it is a 600-stock portfolio, not a screener for one person.
+
+### 33. The screen gets the same-size reference too, and decision 32's rule is read on it
+
+*Decided:* `claude/screen-size-peers` (on top of the sector branch):
+`[pick_screen] peer_column = "log_marketcap_rank"` makes the screen
+report, beside each pick, what the test rows of its own quarter in
+its own 5% band of that rank went on to do (`screen_peer_mean_<o>`,
+`screen_peer_precision`, and a `peers` column in the screen table).
+It is the harness counterpart of the backtest report's `vs_peers`
+(`claude/backtest-universe-outcomes`).
+
+*Why now:* decision 16 made the screen the way every sweep is read,
+and its reference was all test rows. Decision 32 found that reference
+dominated by size. Reading inside a large-cap universe is a
+workaround for one experiment; the reference belongs in the screen,
+so that a sweep over all rows can be read net of size and old bundles
+can be re-read without a refit.
+
+*Used at once:* the three large-cap sweeps and the four large-cap
+evaluations of decision 32 carry the peer column (none had run; the
+rule that carries an arm forward is now "0.02 over its same-size
+peers in both periods on every seed", with the lead over the
+universe's all rows reported beside it). And the candidate's bundles
+are evaluated again inside the 100k floor with the peer column
+(`eval_*_peers_dv100k`): the forest alone and its three blends, the
+screens of decision 19 read net of size. Four more evaluation hashes
+inside the 100k floor.
+
+*Prediction for those four (2026-10-01):* the screen's lead over
+same-size peers, entries of 2005–12 and of 2013–20: forest alone
++0.01 to +0.04 in both; with return on capital 0.00 to +0.03 and
++0.03 to +0.07; all three legs +0.02 to +0.06 in both. That is the
+diagnostic's reading (+0.023 / +0.027, +0.015 / +0.052, +0.046 /
++0.059 on monthly picks and price-panel outcomes) within 0.02: the
+screen picks quarterly from test rows and reads label outcomes, where
+an acquired stock is carried flat.
+
+### 34. No arm passes inside large caps; what is carried forward
+
+*What came out (2026-10-01; [large-caps note](2026-10-01-large-caps.md)):*
+
+- `sector` as an input changes nothing (decision 31's five
+  predictions held): the forest picks the same utilities and REITs
+  with the sector in view.
+- On the harness screen, against same-size peers, the candidate's
+  forest leads by +0.030 / +0.027 a year for entries of 2005–12 /
+  2013–20, the candidate by +0.022 / +0.053 (inside large caps +0.038
+  / +0.047): decision 33's predictions held, and the screen agrees
+  with the diagnostic and with the backtest reports' new `vs_peers`.
+- Inside large caps no model passes decision 32's rule. Forests on
+  "not a loser" lead their peers by +0.020 to +0.025 in both halves,
+  which is less than return on capital alone (+0.039 / +0.030) or the
+  conservative score alone (+0.031 / +0.029). "Beat SPY" is not
+  learned with size held fixed (2013–20: −0.001 to +0.013), a
+  regression on the size of the excess return is worse, and "beat
+  SPY without a 30% fall" has a p@20 below its base rate.
+
+*Decided:*
+
+1. **No new model goes to a backtest, and nothing more is run on
+   2021–26.** The rule was fixed before the runs and no arm met it.
+   The one surprise, two single factors leading by 3 points in both
+   halves, is in-sample: for the buys of 2021–23 return on capital
+   alone trailed its same-size peers by 3.4 points (out-of-sample
+   note). It is recorded, not chased.
+2. **The candidate's definition stands and its claim is restated.**
+   Cell C's forest, momentum and return on capital by mean rank, top
+   10 a month, 2 per sector, `dollar_volume_3m_rank >= 0.2`; buy and
+   hold, and the rank sell discipline beside it. What it has shown:
+   over 2005 to 2026-08, the index's return (11.3% to 12.0% a year
+   time-weighted against 10.9%) with three quarters of its worst
+   drawdown; 37% ahead of SPY in money at the end of 2020 and between
+   10% behind and 1% ahead in August 2026. What it has not shown: a
+   lead over SPY on the buys of any year after 2018, or a lead of
+   more than about a point over stocks of its picks' own size on any
+   of them. It is a low-risk equity portfolio, not a market-beating
+   one, on this evidence.
+3. **A selection is read against same-size peers from here on.**
+   Decision 16's rule is amended: an arm goes to a backtest when its
+   screen's lead over same-size peers (`peer_column =
+   "log_marketcap_rank"`) is 0.01 or more above the reference arm's in
+   both halves, with losers no higher; backtests are read on
+   `vs_peers` beside the headline. Sweep configs carry the peer
+   column.
+4. **The search over labels, features and models on these columns is
+   closed for now.** Four sessions have tried 87 configurations in
+   cell C on all rows, 38 inside the 100k floor, 14 inside large
+   caps, and 35 backtests. Every arm that leads its same-size peers
+   does so by 2 to 5 points in-sample, through low risk and one
+   quality factor, and none of it carried to the buys of 2021–23.
+   More configurations on 2005–2020 cannot change that; what can is
+   information the columns do not hold and years that have not
+   happened.
+
+*What is Carter's (in TODO.md, with the reason for each):*
+
+- What the portfolio is for, and its yardstick: SPY, or stocks of the
+  picks' own size. The answer decides whether the candidate is a
+  result or a starting point.
+- Whether to paper-trade the fixed candidate (both forms) as the
+  low-risk portfolio it is. Nothing else is proposed for paper
+  trading: choosing a different blend now would be choosing it on
+  2021–26.
+- The pull request (five code changes, the docs, the promoted
+  results), and the upstream requests: an outcome and a label
+  measured against same-size peers, size-neutral ranks, market-state
+  features, and information about upside that prices and statements
+  do not carry (insider and institutional transactions).

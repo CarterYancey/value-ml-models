@@ -1,0 +1,14 @@
+{
+  "name": "sweep_baseline_factors_largecap_3y",
+  "promoted_utc": "2026-10-01T09:17:05+00:00",
+  "source_report": "reports/sweeps/baseline_factors_largecap_3y/baseline_factors_largecap_3y_summary.md",
+  "run_id": "",
+  "config_hash": "",
+  "git_sha": "",
+  "dataset_version": "dataset_v1.4",
+  "config_path": "experiments/sweeps/baseline_factors_largecap_3y.toml",
+  "note": "Single-factor bars inside large caps, screen lead over same-size peers for entries of 2005-12 / 2013-20: return on capital +0.039 / +0.030; conservative score +0.031 / +0.029; lowest 36m volatility -0.011 / +0.020; gross profitability -0.017 / +0.040; revenue growth -0.010 / +0.017; momentum -0.033 / -0.033; earnings yield -0.052 / -0.031. In-sample: return on capital alone trailed its peers by 3.4 points for the buys of 2021-23. docs/notes/2026-10-01-large-caps.md",
+  "files": [
+    "baseline_factors_largecap_3y_summary.md"
+  ]
+}

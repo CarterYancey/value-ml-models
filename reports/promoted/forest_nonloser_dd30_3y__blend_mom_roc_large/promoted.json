@@ -1,0 +1,14 @@
+{
+  "name": "forest_nonloser_dd30_3y__blend_mom_roc_large",
+  "promoted_utc": "2026-10-01T09:17:30+00:00",
+  "source_report": "reports/forest_nonloser_dd30_3y__blend_mom_roc_large.md",
+  "run_id": "da10450f0e35",
+  "config_hash": "838d9970eac6a1e4",
+  "git_sha": "88572e12c94aa693fdc65de98344598d7cb6cc21",
+  "dataset_version": "1.4",
+  "config_path": "",
+  "note": "The candidate measured inside large caps: lead over same-size peers +0.038 / +0.047 for entries of 2005-12 / 2013-20; return on capital alone +0.039 / +0.030. docs/notes/2026-10-01-large-caps.md",
+  "files": [
+    "forest_nonloser_dd30_3y__blend_mom_roc_large.md"
+  ]
+}

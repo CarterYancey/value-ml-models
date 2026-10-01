@@ -30,3 +30,17 @@ experiments/eval_screen_dv100k.toml
 experiments/eval_blend_roc_dv100k.toml
 experiments/eval_blend_mom_dv100k.toml
 experiments/eval_blend_mom_roc_dv100k.toml
+# The second session of 2026-10-01 (docs/notes/2026-10-01-out-of-sample.md,
+# docs/notes/2026-10-01-large-caps.md; decisions 28, 30, 32, 33): the
+# candidate traded to the end of the price panel and the evaluations
+# against same-size peers. A promoted backtest or evaluation does not
+# name its config.
+experiments/portfolios/bt_nonloser_mom_roc_top10_cap2_rankfloor.toml
+experiments/portfolios/bt_nonloser_mom_roc_top10_cap2_rankfloor_to2026.toml
+experiments/portfolios/bt_nonloser_mom_roc_top10_cap2_rankfloor_sell20_to2026.toml
+experiments/portfolios/bt_nonloser_mom_roc_top10_cap2_rankfloor_frac_to2026.toml
+experiments/portfolios/bt_nonloser_mom_roc_top10_cap2_rankfloor_sell20_frac_to2026.toml
+experiments/eval_screen_peers_dv100k.toml
+experiments/eval_blend_mom_roc_peers_dv100k.toml
+experiments/eval_screen_large.toml
+experiments/eval_blend_mom_roc_large.toml

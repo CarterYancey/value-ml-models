@@ -1,0 +1,14 @@
+{
+  "name": "forest_nonloser_dd30_3y__blend_mom_roc_peers_dv100k",
+  "promoted_utc": "2026-10-01T09:17:28+00:00",
+  "source_report": "reports/forest_nonloser_dd30_3y__blend_mom_roc_peers_dv100k.md",
+  "run_id": "beb97b79b75a",
+  "config_hash": "6b9cdf68d2d1bb86",
+  "git_sha": "88572e12c94aa693fdc65de98344598d7cb6cc21",
+  "dataset_version": "1.4",
+  "config_path": "",
+  "note": "The candidate (forest + momentum + return on capital) on the screen against same-size peers, inside the 100k floor: lead +0.022 / +0.053 a year for entries of 2005-12 / 2013-20 (against all rows 0.066 / 0.124). In-sample: the backtest's buys of 2021-23 trailed their peers. docs/notes/2026-10-01-large-caps.md",
+  "files": [
+    "forest_nonloser_dd30_3y__blend_mom_roc_peers_dv100k.md"
+  ]
+}
