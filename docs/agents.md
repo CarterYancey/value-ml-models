@@ -4,6 +4,73 @@ How an agent runs experiments on its own in a sandbox, and what Carter
 sets up once so that it can. The rules in CLAUDE.md all apply; this file
 adds the ones that only matter when nobody is watching.
 
+## Two ways of working
+
+Which one a session is in depends on what Carter asked for.
+
+- **"Work the queue."** The loop and the stop rules below, as written.
+  The agent runs what the queue holds, extends it only with items the
+  plan in findings.md already names, and stops at the first surprise.
+- **"Do whatever is best to reach the goal."** A goal-directed
+  session (the sessions of 2026-09-29 to 2026-10-01 worked this way;
+  Carter made it the standing arrangement on 2026-10-01). The agent
+  may open a new direction, write and run new configs, build code and
+  continue experiments off it, and is not stopped by a contradicted
+  prediction. What it owes in return is under "A goal-directed
+  session".
+
+In both, the hard invariants of CLAUDE.md, its branch workflow and
+its rules under "Before writing a conclusion" hold without exception,
+and these stay Carter's: **a holdout look or re-look, deployment, and
+the merge into `Claude`**.
+
+## A goal-directed session
+
+The goal is in findings.md ("State") and in the decision log
+([notes/2026-09-29-decisions.md](notes/2026-09-29-decisions.md)).
+The freedom is conditional on the record:
+
+1. **Every decision is logged before it is acted on**: a numbered
+   entry in the decision log saying what was decided, why, and what
+   it rests on. A decision is anything a later session would
+   otherwise have to guess: a new direction, a new cell or universe,
+   a criterion, a candidate carried forward or dropped, a rule about
+   what will not be run.
+2. **Every run carries its prediction**, written in the config before
+   the run, with the rival explanation where there is one. The
+   logbook entry says which predictions held.
+3. **A contradicted prediction is read, not skipped.** It gets a note
+   with the rival explanations and what would separate them; the
+   session may then run the experiment that separates them. A result
+   far above its baseline (leakage first) or far below an earlier one
+   (a changed input first) is checked as a bug before anything is
+   built on it.
+4. **Code goes on a feature branch**, `claude/<topic>`, off `Claude`,
+   with tests, pushed; it is merged into the lab branch between runs
+   and experiments continue off the lab branch. Develop in a separate
+   worktree while a run is going: each step of a chain is a new
+   process and would pick up a half-edited `src/`.
+5. **Criteria before results.** What would send a candidate to a
+   backtest, or carry it forward, is written in the decision log
+   before the runs that are judged on it.
+6. **Evidence is spent once.** Years a candidate was not chosen on
+   (the holdout window; trading past the last fold) are read for the
+   fixed candidate and never used to choose between variants. A
+   further portfolio or model run on those years needs a decision
+   that says why it is not a selection. The number of configurations
+   tried on a set of years is stated with every figure from them.
+7. **The session ends with the record in order**: logbook entries for
+   every run, findings.md rewritten, TODO.md's next steps for a
+   reader with no context, results worth keeping promoted
+   (`vml-promote`), and a `claude/results-<date>` branch that passes
+   `scripts/check_tracked_configs.py` for Carter to open the pull
+   request from.
+
+What a goal-directed session may do that the queue loop may not:
+open a new direction, extend the queue or run configs outside it,
+promote results, and build the results branch. What it still may not
+do is listed above.
+
 ## The loop
 
 One turn per finished sweep. Nothing in between.
@@ -41,6 +108,10 @@ One turn per finished sweep. Nothing in between.
    item or stop.
 
 ## Stop rules
+
+These bind a session working the queue. A goal-directed session
+treats the second and third as "read it and log a decision" (above),
+and keeps the rest.
 
 Stop and leave a logbook entry saying why, instead of launching the
 next item, when:
