@@ -1,0 +1,47 @@
+# Decision 26: the seed check of the capitalization-weighted candidate
+# (forest seed 1776). Seed 23: 1,108,044, time-weighted 13.82%,
+# drawdown -37.0%, predicted within 1.5 points of 12.24% and came out
+# 1.58 above, with a shallower drawdown where a deeper one was
+# predicted: a prediction missed upwards, so checked before it is read.
+#
+# Prediction (2026-10-01): time-weighted within 1.0 point of 13.82%
+# (the forest's seed moves this blend by 0.03 points).
+name = "bt_nonloser_mom_roc_top10_cap2_mcap_s1776"
+dataset_version = "dataset_v1.4"
+prices_version = "prices_v1.0"
+
+bundles = [
+    "experiments/models/forest_nonloser_dd30_3y_s1776_003a8739d3d5",
+    "experiments/models/factor_mom_12_2_3y_97c0f095cf48",
+    "experiments/models/factor_roc_greenblatt_3y_da640394cbba",
+]
+
+[signal]
+combine = "mean_rank"
+max_staleness_days = 200
+model_update = "refit"
+label_lag_days = 45
+
+[[investability]]
+column = "dollar_volume_3m"
+op = ">="
+value = 100000.0
+
+[portfolio]
+strategy = "buy_and_hold"
+top_k = 10
+weighting = "marketcap"
+monthly_cash = 1000.0
+max_per_group = 2
+group_column = "sector"
+
+[execution]
+cost_bps = 35.0
+benchmark_cost_bps = 0.0
+max_quote_age_days = 3
+delist_after_days = 30
+
+[window]
+start = 2005-01-01
+end = 2020-12-31
+valuation_end = 2023-12-29
