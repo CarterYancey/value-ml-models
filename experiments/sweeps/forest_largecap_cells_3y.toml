@@ -1,0 +1,113 @@
+# Decision 32 of docs/notes/2026-09-29-decisions.md (2026-10-01).
+# What the run to 2026 showed (docs/notes/2026-10-01-out-of-sample.md):
+# against stocks of their own size the candidate's picks led by 4.6 and
+# 5.9 points a year in the two halves of 2005-2020 and trailed by 1.6
+# for the buys of 2021-23, and the forest alone led by 2.3, 2.7 and
+# 0.6. Most of every arm's lead over "the average stock" was a
+# preference for large companies, which a forest trained on every row
+# earns from the size and volatility ranks. Inside the largest fifth
+# the forest's own ranking separated the worst quintile and nothing
+# above it.
+#
+# The question here: trained and measured **inside large caps only**
+# (`log_marketcap_rank >= 0.8`, about 790 investable stocks a month,
+# the population the candidate's picks come from), where size cannot
+# be the answer, is there a ranking that chooses well among them?
+# Three targets, the candidate's forest configuration, three seeds:
+#
+#   C   fwd_3y_cagr >= 0 & fwd_3y_max_drawdown_from_entry < 0.3
+#       the candidate's cell: is "not a loser" still predicted among
+#       large companies, and do its top picks earn more than their
+#       peers?
+#   S   label_3y_beat_spy
+#       the relative target. On every row it has had no skill since
+#       2013 (findings, conclusion 10); inside one size band the
+#       model no longer has to learn that small stocks lose.
+#   CS  fwd_3y_excess_cagr > 0 & fwd_3y_max_drawdown_from_entry < 0.3
+#       beat the index without a deep fall: the low-risk pick with
+#       upside the goal describes, as a label.
+#
+# Read on the screen (top 10 per test quarter, at most 2 per sector)
+# against the all-rows mean of the same universe, which inside one
+# size band is a same-size reference. Single-factor bars in the same
+# universe and cells: baseline_factors_largecap_3y.
+#
+# What carries an arm forward (fixed here, before the run): its
+# screen's mean excess CAGR exceeds the universe's all-rows mean by
+# 0.02 or more for entries of 2005-12 and of 2013-20, on every seed,
+# and exceeds the best single factor's lead in the same cell by 0.01
+# or more in both periods. An arm that passes is the one new model
+# that gets a backtest, and one run on 2021-26.
+#
+# Predictions, written before the run (2026-10-01):
+#   1. C: base rate about 0.55; p@20 0.85 or more; fold-mean PR-AUC
+#      0.05 or more above the base rate. Screen lead over the universe
+#      +0.01 to +0.03 in both periods (the all-rows forest measured
+#      here: eval_screen_large), losers under half the universe's.
+#   2. S: fold-mean PR-AUC within 0.03 of its base rate; p@20 within
+#      0.10 of the base rate for 2013-20 entries; screen lead within
+#      0.015 of zero for 2013-20. No skill, as on every row.
+#   3. CS: p@20 1.3 to 1.8 times its base rate; picks close to C's
+#      (calm stocks); screen lead between S's and C's.
+#   4. No arm passes the rule above.
+#   Rival for 2: with size held fixed the relative label is learnable
+#   (profitability and growth among large companies), and S's screen
+#   leads the universe by 0.02 or more in both periods.
+#
+# Expanded: 3 cells x 1 feature set x 1 set x 3 seeds = 9 runs, a fifth
+# of the rows of an all-rows run each.
+# Run: vml-sweep experiments/sweeps/forest_largecap_cells_3y.toml --save-models
+name = "forest_largecap_cells_3y"
+dataset_version = "dataset_v1.4"
+min_dataset_version = "1.4"
+scheme = "walkforward"
+folds = "all"
+seeds = [23, 232, 1776]
+top_k = [20, 50]
+precision_targets = [0.75, 0.9]
+rank_metric = "precision_at_20"
+pick_outcomes = [
+  "label_3y_beat_spy",
+  "fwd_3y_excess_cagr",
+  "fwd_3y_cagr",
+  "fwd_3y_max_drawdown_from_entry",
+  "fwd_3y_cagr < 0",
+  "fwd_3y_cagr < -0.1",
+  "fwd_3y_max_drawdown_from_entry >= 0.4",
+  "fwd_3y_cagr >= 0.15",
+  "fwd_3y_cagr >= 0.25",
+  "fwd_3y_excess_cagr >= 0.05",
+]
+
+sets = [
+  {criterion = "entropy", max_depth = 4, max_features = 0.205191, max_samples = 0.663781, min_samples_leaf = 72, n_estimators = 490},  # the candidate's forest (forest_candidate_sets_3y set1)
+]
+
+[pick_screen]
+per = "quarter"
+top_k = 10
+max_per_group = 2
+group_column = "sector"
+
+[[universe]]
+column = "log_marketcap_rank"
+op = ">="
+value = 0.8
+
+[[cells]]
+label = "fwd_3y_cagr >= 0 & fwd_3y_max_drawdown_from_entry < 0.3"
+
+[[cells]]
+label = "label_3y_beat_spy"
+
+[[cells]]
+label = "fwd_3y_excess_cagr > 0 & fwd_3y_max_drawdown_from_entry < 0.3"
+
+[[features]]
+groups = ["ranks"]
+
+[model]
+name = "random_forest"
+bootstrap = true
+class_weight = 1.0
+n_jobs = 8

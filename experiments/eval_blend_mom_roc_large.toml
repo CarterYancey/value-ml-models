@@ -1,0 +1,37 @@
+# Decision 32 of docs/notes/2026-09-29-decisions.md (2026-10-01): a saved
+# all-rows bundle evaluated inside the large-capitalization universe
+# log_marketcap_rank >= 0.8 (scope "test": the models are as trained,
+# the test rows are the largest fifth of each quarter's stocks), with
+# the portfolio screen of decision 16. Inside one size band the
+# all-rows statistic beside every pick outcome is a same-size
+# reference: the screen's mean excess minus the all-rows mean is the
+# selection net of size.
+name = "blend_mom_roc_large"
+blend = [
+  "experiments/models/factor_mom_12_2_3y_97c0f095cf48",
+  "experiments/models/factor_roc_greenblatt_3y_da640394cbba",
+]
+top_k = [20, 50]
+pick_outcomes = [
+  "label_3y_beat_spy",
+  "fwd_3y_excess_cagr",
+  "fwd_3y_cagr",
+  "fwd_3y_max_drawdown_from_entry",
+  "fwd_3y_cagr < 0",
+  "fwd_3y_cagr < -0.1",
+  "fwd_3y_max_drawdown_from_entry >= 0.4",
+  "fwd_3y_cagr >= 0.15",
+  "fwd_3y_cagr >= 0.25",
+  "fwd_3y_excess_cagr >= 0.05",
+]
+
+[pick_screen]
+per = "quarter"
+top_k = 10
+max_per_group = 2
+group_column = "sector"
+
+[[universe]]
+column = "log_marketcap_rank"
+op = ">="
+value = 0.8

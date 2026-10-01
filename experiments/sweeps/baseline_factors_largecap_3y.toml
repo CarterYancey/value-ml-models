@@ -1,0 +1,79 @@
+# Decision 32 of docs/notes/2026-09-29-decisions.md (2026-10-01): the
+# single-factor bars for forest_largecap_cells_3y, inside the same
+# universe (`log_marketcap_rank >= 0.8`) and the same three cells, on
+# the same screen. Seven factors, each named for what it stands for:
+# lowest 36-month volatility (the forest's main input), the
+# conservative score, return on capital, gross profitability, 12-month
+# momentum, earnings yield and 3-year revenue growth (the plainest
+# growth column; the index's largest winners of 2023-26 were growing
+# fast). Deterministic: one seed.
+#
+# Predictions (2026-10-01), on the screen's lead over the universe's
+# all-rows mean excess CAGR, entries of 2005-12 and of 2013-20:
+#   1. lowest volatility: within 0.015 of zero in both (it has the
+#      forest's losers and no return of its own);
+#   2. return on capital and gross profitability: +0.00 to +0.03 for
+#      2013-20 (the quintile reading of the diagnostics), smaller for
+#      2005-12;
+#   3. momentum: negative in both; earnings yield: negative for
+#      2013-20; revenue growth: within 0.02 of zero in both.
+#   4. no factor leads by 0.02 or more in both periods.
+#
+# Expanded: 3 cells x 7 factors = 21 runs, minutes.
+name = "baseline_factors_largecap_3y"
+dataset_version = "dataset_v1.4"
+min_dataset_version = "1.4"
+scheme = "walkforward"
+folds = "all"
+seeds = [7]
+top_k = [20, 50]
+precision_targets = [0.75, 0.9]
+rank_metric = "precision_at_20"
+pick_outcomes = [
+  "label_3y_beat_spy",
+  "fwd_3y_excess_cagr",
+  "fwd_3y_cagr",
+  "fwd_3y_max_drawdown_from_entry",
+  "fwd_3y_cagr < 0",
+  "fwd_3y_cagr < -0.1",
+  "fwd_3y_max_drawdown_from_entry >= 0.4",
+  "fwd_3y_cagr >= 0.15",
+  "fwd_3y_cagr >= 0.25",
+  "fwd_3y_excess_cagr >= 0.05",
+]
+
+sets = [
+  {rank_column = "vol_36m_rank", higher_is_better = false},
+  {rank_column = "conservative_score_rank", higher_is_better = true},
+  {rank_column = "roc_greenblatt_rank", higher_is_better = true},
+  {rank_column = "gp_to_assets_rank", higher_is_better = true},
+  {rank_column = "mom_12_2_rank", higher_is_better = true},
+  {rank_column = "earnings_yield_rank", higher_is_better = true},
+  {rank_column = "revenue_growth_3y_rank", higher_is_better = true},
+]
+
+[pick_screen]
+per = "quarter"
+top_k = 10
+max_per_group = 2
+group_column = "sector"
+
+[[universe]]
+column = "log_marketcap_rank"
+op = ">="
+value = 0.8
+
+[[cells]]
+label = "fwd_3y_cagr >= 0 & fwd_3y_max_drawdown_from_entry < 0.3"
+
+[[cells]]
+label = "label_3y_beat_spy"
+
+[[cells]]
+label = "fwd_3y_excess_cagr > 0 & fwd_3y_max_drawdown_from_entry < 0.3"
+
+[[features]]
+groups = ["ranks"]
+
+[model]
+name = "rank_factor"
