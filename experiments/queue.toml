@@ -71,3 +71,20 @@ why = "the same five sets trained inside the 1m floor; 5 runs, 15 minutes"
 [[item]]
 config = "experiments/sweeps/baseline_factors_nonloser_1y_dv100k.toml"
 why = "single-factor bars for the 1-year 'not a loser' cell inside the 100k floor (decision 22); 5 runs, two minutes"
+
+# Added 2026-10-01 (docs/notes/2026-09-29-decisions.md, decision 36;
+# docs/notes/2026-10-01-research-plan.md): the first two of Carter's
+# directions that need no new code. Each config carries its
+# predictions and the rule it is read on.
+
+[[item]]
+config = "experiments/sweeps/baseline_factors_crash_dd50.toml"
+why = "single-factor bars for 'fell 50% from entry' (1y and 3y) inside the liquid half; 14 runs, minutes"
+
+[[item]]
+config = "experiments/sweeps/forest_crash_dd50.toml"
+why = "the over-priced-stock model: forests on 'fell 50% from entry', precision at the top and the count of high-confidence calls by year; 6 runs, about half an hour"
+
+[[item]]
+config = "experiments/sweeps/lgbm_regressor_growth_allrows_3y.toml"
+why = "continuous models: LightGBM on 3y CAGR and excess CAGR, four objectives, read against same-size peers; 8 runs, an hour or two"

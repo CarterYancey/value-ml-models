@@ -19,8 +19,9 @@ record. Never compared across dataset versions or universes.
    [out of sample](notes/2026-10-01-out-of-sample.md). What was tried
    next: [large caps](notes/2026-10-01-large-caps.md). How:
    [decisions](notes/2026-09-29-decisions.md) 27–35.
-2. What to do next: TODO.md, "Next, from the second session of
-   2026-10-01". The first items are Carter's.
+2. What to do next: TODO.md, "Next, from Carter's direction of
+   2026-10-01", and [the research plan](notes/2026-10-01-research-plan.md).
+   The candidate's runbook: [paper-trading.md](paper-trading.md).
 3. One branch carries everything for `Claude`:
    `claude/results-2026-10-01b` (five code changes, docs, promoted
    results, the ledger shard). Every config and report is on the lab
@@ -153,9 +154,6 @@ whether and when the buys of 2021–23 recover. Decision 35;
 
 ## Open questions
 
-- What the portfolio is for and what it is measured against (SPY, or
-  stocks of the picks' own size). Carter's; it decides whether the
-  candidate is a result.
 - Whether the lead comes back when the index's largest members stop
   leading (Carter's reading). Only paper trading and time can say.
 - Whether information outside prices and statements ranks upside
@@ -163,14 +161,20 @@ whether and when the buys of 2021–23 recover. Decision 35;
 
 ## Plan
 
-1. Carter's: the pull request from `claude/results-2026-10-01b`; the
-   yardstick; whether to paper-trade the fixed candidate (both forms)
-   as a low-risk portfolio; the upstream requests.
-2. Nothing more is run on 2021–26, and no new blend on 2005–2020
-   backtests (decisions 28, 34). The search over labels, features and
-   models on these columns is closed for now.
-3. A sweep is read on the screen against same-size peers
-   (`peer_column = "log_marketcap_rank"`); a backtest on `vs_peers`.
+Carter's direction (2026-10-01, decision 36): the bubble reading is
+the working assumption; the candidate goes to paper trading as it is;
+the search continues and widens.
+
+1. Paper trading: [paper-trading.md](paper-trading.md). The path was
+   run end to end (9 of the backtest's 10 picks for August 2026).
+2. Queued, no new code: an over-priced-stock model ("fell 50% from
+   entry") and continuous growth models. Then blends by worst rank,
+   and sessions on calibration and on other model families:
+   [research plan](notes/2026-10-01-research-plan.md).
+3. New arms are judged on walk-forward 2005–2020 against same-size
+   peers, both halves, three seeds, the rule before the run; 2021–26
+   is context. With it set aside nothing on disk is untouched by the
+   choices: paper trading is the out-of-sample evidence.
 
 ## Sealed holdout record
 
