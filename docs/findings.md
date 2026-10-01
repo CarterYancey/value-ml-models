@@ -109,15 +109,12 @@ candidate and its variant, not a selection.
 8. **A rank sell discipline added 0.7 points a year over 21 years**
    and nothing in 2021–26 (−46 against −48 points of yearly excess);
    it is why that variant ends level with SPY.
-9. **The dataset's delisting convention understates acquired
-   stocks**; the backtest's per-buy reading does not (proceeds ride
-   SPY). Upstream request in TODO.
-10. **Three things about the instruments** (process issues,
-    2026-10-01): backtest reports before today print years that run
-    December to December; every backtest before today stopped its
-    valuation at 2023-12-29 with data to 2026-08-21 on disk; whole
-    shares at 100 a pick fill 64 to 87 of 120 orders a year after
-    2020 (it does not change the result).
+9. **Instruments** ([process issues](notes/process-issues.md)): the
+   dataset's delisting convention understates acquired stocks (the
+   backtest's per-buy reading does not); backtest reports before
+   2026-10-01 print years that run December to December; whole
+   shares at 100 a pick fill 64 to 87 of 120 orders a year after
+   2020, which does not change the result.
 
 Earlier work: [backtests to 2023](notes/2026-09-30-backtests.md),
 [pick anatomy](notes/2026-09-29-pick-anatomy.md),
@@ -130,11 +127,11 @@ Earlier work: [backtests to 2023](notes/2026-09-30-backtests.md),
 A high precision on a modest target is achievable and held out of
 sample. It bought fewer losers and shallower falls: over 21.6 years
 the index's return with three quarters of its worst drawdown. It did
-not buy the index's return in 2021–26, because picks chosen for not
-losing earn about what calm stocks of their size earn, and the index
-earned more than every size of stock. Beating SPY needs either the
-upside (which these columns do not rank) or an era in which the
-largest companies do not lead (2005–2020 was one).
+not buy the index's return in 2021–26: picks chosen for not losing
+earn about what calm stocks of their size earn, and the index earned
+more than every size of stock. Beating SPY needs the upside, which
+these columns do not rank, or an era in which the largest companies
+do not lead, as in 2005–2020.
 
 ## Open questions
 
