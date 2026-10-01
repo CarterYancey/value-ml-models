@@ -7,6 +7,11 @@ Evidence: [backtests](2026-09-30-backtests.md).
 
 ## Read this first (added 2026-10-01, second session)
 
+**The runbook is now [docs/paper-trading.md](../paper-trading.md)**
+(what is traded, the three models, the monthly procedure, the
+assumption it is traded under). This note is the record of how the
+candidate stood at the end of the first session of 2026-10-01.
+
 Traded to the end of the price panel, 2026-08-21, the candidate ends
 **10% behind SPY** in money (1,193,902 against 1,326,084 on 260,000
 deposited) and its sell-discipline variant 1.4% ahead; both trailed

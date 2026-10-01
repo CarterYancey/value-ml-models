@@ -1,6 +1,6 @@
 # A single factor as a fold bundle, to be combined by mean rank with
 # cell C's forest in a backtest (docs/notes/2026-09-29-decisions.md,
-# decision 8): the momentum factor, highest mom_12_2_rank first.
+# decision 8): the quality factor, highest roc_greenblatt_rank first.
 #
 # A rank factor fits nothing; the folds only fix which rows are
 # scored. Run in cell C so that its report reads against the same
@@ -10,8 +10,7 @@
 # Expected: p@20 far below the forest's 0.79. The factor is not a
 # candidate on its own; its report is read for what its picks went on
 # to do.
-name = "factor_mom_12_2_3y"
-note = "A LEG OF THE CANDIDATE: 12-month momentum as a rank factor (mom_12_2_rank, no fit). Alone it is the worst factor on the screen (losers 0.66 inside the 100k floor); beside the forest and return on capital it adds the winners. docs/paper-trading.md"
+name = "factor_roc_greenblatt_3y"
 dataset_version = "dataset_v1.4"
 min_dataset_version = "1.4"
 scheme = "walkforward"
@@ -36,5 +35,5 @@ pick_outcomes = [
 
 [model]
 name = "rank_factor"
-rank_column = "mom_12_2_rank"
+rank_column = "roc_greenblatt_rank"
 higher_is_better = true

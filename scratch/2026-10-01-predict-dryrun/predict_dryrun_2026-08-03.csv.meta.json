@@ -1,0 +1,53 @@
+{
+  "filters": "dollar_volume_3m_rank >= 0.2",
+  "git_sha": "4c338df33afb4eb51d1baf70b56fea26c6f7dcad",
+  "inference_source": "/tmp/claude-1000/-home-carter-value-ml-models/922ddb18-197b-4693-82dc-1567cb0083cf/scratchpad/crosssection_2026-08-03.parquet",
+  "models": [
+    {
+      "bundle_dir": "experiments/models/forest_nonloser_dd30_3y_deployment_dcd9b27699fb",
+      "bundle_run_id": "dcd9b27699fb",
+      "column_suffix": "forest_nonloser_dd30_3y",
+      "config_hash": "087f2d7dfea489b2",
+      "horizon_years": 3,
+      "label": "fwd_3y_cagr >= 0.0 & fwd_3y_max_drawdown_from_entry < 0.3",
+      "model": "random_forest",
+      "probabilistic": true,
+      "run_id": "a622072829da",
+      "trained_on": "dataset_v1.4"
+    },
+    {
+      "bundle_dir": "experiments/models/factor_mom_12_2_3y_deployment_2ea22f846681",
+      "bundle_run_id": "2ea22f846681",
+      "column_suffix": "factor_mom_12_2_3y",
+      "config_hash": "e7032461b70bc338",
+      "horizon_years": 3,
+      "label": "fwd_3y_cagr >= 0.0 & fwd_3y_max_drawdown_from_entry < 0.3",
+      "model": "rank_factor",
+      "probabilistic": false,
+      "run_id": "4267ff10da60",
+      "trained_on": "dataset_v1.4"
+    },
+    {
+      "bundle_dir": "experiments/models/factor_roc_greenblatt_3y_deployment_b1c93c1041e2",
+      "bundle_run_id": "b1c93c1041e2",
+      "column_suffix": "factor_roc_greenblatt_3y",
+      "config_hash": "306c61a9fe13b111",
+      "horizon_years": 3,
+      "label": "fwd_3y_cagr >= 0.0 & fwd_3y_max_drawdown_from_entry < 0.3",
+      "model": "rank_factor",
+      "probabilistic": false,
+      "run_id": "d7ca660b06d8",
+      "trained_on": "dataset_v1.4"
+    }
+  ],
+  "n_rows_filtered_out": 768,
+  "n_rows_scored": 3057,
+  "note": "Deployment scores: ranked by models refit on all labeled data (data/manual.md \u00a74 rule 7). No test set exists for these fits \u2014 never report these as performance. Scores are per-model scales; compare models via the rank_* columns.",
+  "scored_utc": "2026-10-01T17:41:37+00:00",
+  "selection": {
+    "group_column": "sector",
+    "max_per_group": 2,
+    "n_picked": 10,
+    "pick": 10
+  }
+}
