@@ -17,6 +17,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+import numpy as np
 import pandas as pd
 
 from harness.errors import ConfigError
@@ -70,7 +71,9 @@ def capped_top_k(
 class BuyAndHoldTopK:
     """Deposit-driven accumulation: at every rebalance date, invest all
     available cash across the top-K candidates, weighted by combined
-    score (or equally); never sell. Delisting proceeds land back in cash
+    score, equally, or by market capitalization (`weight_basis`, the
+    candidates' `exp(log_marketcap)`; a pick without one gets no
+    cash); never sell. Delisting proceeds land back in cash
     and are reinvested at the next date. Months with no qualifying
     candidates hold cash — that drag is real strategy behavior and is
     reported, not hidden. `max_per_group` caps how many of one date's
@@ -101,6 +104,17 @@ class BuyAndHoldTopK:
                 )
             if raw.sum() <= 0:
                 # zero conviction across the board: hold cash this month
+                return []
+            weights = raw / raw.sum()
+        elif self.weighting == "marketcap":
+            if "weight_basis" not in picks.columns:
+                raise ConfigError(
+                    "weighting = 'marketcap' needs a `weight_basis` column "
+                    "on the candidates (the feed sets it from log_marketcap)"
+                )
+            raw = picks["weight_basis"].to_numpy(dtype=float)
+            raw = np.where(np.isfinite(raw) & (raw > 0), raw, 0.0)
+            if raw.sum() <= 0:
                 return []
             weights = raw / raw.sum()
         else:

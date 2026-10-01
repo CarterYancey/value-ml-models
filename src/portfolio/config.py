@@ -26,7 +26,11 @@ from harness.errors import ConfigError
 from harness.filters import FILTER_OPS, FilterSpec  # noqa: F401
 
 COMBINE_MODES = ("product", "mean", "min", "mean_rank")
-WEIGHTINGS = ("score", "equal")
+#: how a rebalance's cash is split over the picks: by combined score,
+#: equally, or by market capitalization (`exp(log_marketcap)` of the
+#: snapshot, the cross-section's size column) — the last sizes picks
+#: the way a capitalization-weighted index does
+WEIGHTINGS = ("score", "equal", "marketcap")
 MODEL_UPDATE_POLICIES = ("refit", "frozen")
 
 

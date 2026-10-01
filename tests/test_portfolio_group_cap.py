@@ -95,3 +95,28 @@ def test_group_tables_count_buys_by_group_and_year():
 def test_group_tables_need_a_group_column():
     trades = pd.DataFrame({"date": [], "asset": [], "side": []})
     assert group_tables(trades) is None
+
+
+def test_marketcap_weighting_sizes_by_capitalization():
+    import numpy as np
+    import pytest
+
+    from harness.errors import ConfigError
+    from portfolio.strategy import BuyAndHoldTopK
+
+    picks = pd.DataFrame(
+        {
+            "asset": [1, 2, 3],
+            "combined_score": [0.9, 0.8, 0.7],
+            "price": [10.0, 10.0, 10.0],
+            "weight_basis": [300.0, 100.0, np.nan],
+        }
+    )
+    orders = BuyAndHoldTopK(top_k=3, weighting="marketcap").orders(
+        None, picks, 400.0, {}
+    )
+    assert [(o.asset, o.cash_amount) for o in orders] == [(1, 300.0), (2, 100.0)]
+    with pytest.raises(ConfigError, match="weight_basis"):
+        BuyAndHoldTopK(top_k=3, weighting="marketcap").orders(
+            None, picks.drop(columns=["weight_basis"]), 400.0, {}
+        )
