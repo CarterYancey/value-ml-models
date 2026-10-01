@@ -24,7 +24,8 @@ from harness.deploy import (
     predict_with_bundles,
     train_deployment_model,
 )
-from harness.errors import DatasetValidationError
+from harness.errors import ConfigError, DatasetValidationError
+from harness.filters import FilterSpec
 from harness.model_store import DeploymentBundle, ModelBundle, ModelBundleError
 from harness.results import ResultsStore
 
@@ -557,3 +558,215 @@ def test_predict_scores_only_the_universe(data_root, dataset_dir, inference_dir,
             floored["bundle_path"], tmp_path / "inference_short.parquet",
             results_path=results, predictions_dir=tmp_path / "predictions",
         )
+
+
+# ------------------------------------------------- selection: floor and cap
+
+
+@pytest.fixture()
+def inference_sectors(inference_dir, tmp_path) -> Path:
+    """The inference parquet with a `sector` column: three groups, one
+    of them NULL for a few rows."""
+    frame = pd.read_parquet(inference_dir / "dataset.parquet")
+    sectors = ["Utilities", "Technology", "Industrials"]
+    frame["sector"] = [
+        None if i % 7 == 0 else sectors[i % 3] for i in range(len(frame))
+    ]
+    out = tmp_path / "inference_sectors.parquet"
+    frame.to_parquet(out)
+    return out
+
+
+def test_filter_text_parses_like_a_universe_entry():
+    spec = FilterSpec.parse("dollar_volume_3m_rank >= 0.2")
+    assert (spec.column, spec.op, spec.value) == (
+        "dollar_volume_3m_rank", ">=", 0.2
+    )
+    assert FilterSpec.parse("a>=1").canonical() == "a >= 1"
+    assert FilterSpec.parse('sector != "Utilities"').value == "Utilities"
+    assert FilterSpec.parse("negative_equity == false").value is False
+    with pytest.raises(ConfigError, match="column op value"):
+        FilterSpec.parse("dollar_volume_3m_rank => 0.2")
+    with pytest.raises(ConfigError, match="numeric"):
+        FilterSpec.parse("sector >= Utilities")
+
+
+def test_filter_leaves_rows_out_before_ranking(
+    trained_pair, inference_dir, tmp_path
+):
+    """A filtered combined run ranks each model inside the kept rows:
+    every rank column runs 1..n over them, as the backtest's mean_rank
+    does over its investable rows."""
+    (first, second), results = trained_pair
+    frame = pd.read_parquet(inference_dir / "dataset.parquet")
+    floor = FilterSpec.parse("book_to_market >= 1.0")
+    kept = int((frame["book_to_market"] >= 1.0).sum())
+    assert 0 < kept < len(frame)
+
+    combined = predict_with_bundles(
+        [first["bundle_path"], second["bundle_path"]], inference_dir,
+        results_path=results, predictions_dir=tmp_path / "predictions",
+        filters=[floor],
+    )
+    ranked = pd.read_csv(combined["output_path"])
+    assert len(ranked) == kept
+    for col in [c for c in ranked.columns if c.startswith("rank_")]:
+        assert ranked[col].min() == 1 and ranked[col].max() <= kept
+    meta = json.loads(
+        Path(str(combined["output_path"]) + ".meta.json").read_text()
+    )
+    assert meta["filters"] == "book_to_market >= 1"
+    assert meta["n_rows_filtered_out"] == len(frame) - kept
+
+    single = predict_with_bundle(
+        first["bundle_path"], inference_dir, results_path=results,
+        predictions_dir=tmp_path / "predictions", filters=[floor],
+    )
+    assert len(pd.read_csv(single["output_path"])) == kept
+    assert "pick" not in pd.read_csv(single["output_path"]).columns
+
+
+def test_filter_column_must_exist_and_be_filterable(
+    trained, inference_dir, tmp_path
+):
+    summary, results = trained
+    with pytest.raises(DatasetValidationError, match="filter columns"):
+        predict_with_bundle(
+            summary["bundle_path"], inference_dir, results_path=results,
+            predictions_dir=tmp_path / "predictions",
+            filters=[FilterSpec.parse("no_such_column >= 1")],
+        )
+    # with a manifest, a column outside its filterable groups is refused
+    (inference_dir / "manifest.json").write_text(
+        json.dumps({"columns": {"key_meta": ["permaticker", "ticker"],
+                                "features": ["book_to_market"],
+                                "ranks": [], "sector_ranks": []}})
+    )
+    with pytest.raises(ConfigError, match="filterable|groups"):
+        predict_with_bundle(
+            summary["bundle_path"], inference_dir, results_path=results,
+            predictions_dir=tmp_path / "predictions",
+            filters=[FilterSpec.parse("ticker == AAA")],
+        )
+    ok = predict_with_bundle(
+        summary["bundle_path"], inference_dir, results_path=results,
+        predictions_dir=tmp_path / "predictions",
+        filters=[FilterSpec.parse("book_to_market >= 1.0")],
+    )
+    assert ok["status"] == "completed"
+
+
+def test_pick_walks_the_ranking_with_a_group_cap(
+    trained_pair, inference_sectors, tmp_path
+):
+    """`pick` with `max_per_group` marks what the backtest's capped
+    walk would buy: in ranking order, never more than the cap from one
+    group, a NULL group counted as one group."""
+    from portfolio.strategy import capped_top_k
+
+    (first, second), results = trained_pair
+    # one sector for every row but the NULL ones, so the cap must bind
+    frame = pd.read_parquet(inference_sectors)
+    frame["sector"] = frame["sector"].where(frame["sector"].isna(), "Utilities")
+    crowded = tmp_path / "inference_crowded.parquet"
+    frame.to_parquet(crowded)
+    combined = predict_with_bundles(
+        [first["bundle_path"], second["bundle_path"]], crowded,
+        results_path=results, predictions_dir=tmp_path / "predictions",
+        pick=5, max_per_group=2,
+    )
+    ranked = pd.read_csv(combined["output_path"])
+    assert list(ranked.columns[:2]) == ["pick", "sector"]
+    picks = ranked[ranked["pick"].notna()]
+    assert list(picks["pick"].astype(int)) == list(range(1, len(picks) + 1))
+    # two groups (Utilities and the NULL one), at most two picks each:
+    # the groups ran out before five picks were made
+    counts = picks["sector"].fillna("unknown").value_counts().to_dict()
+    assert counts["Utilities"] == 2 and 1 <= counts["unknown"] <= 2
+    assert len(picks) < 5 < len(ranked)
+    # the same rows as the backtest's walk over the same order
+    expected = capped_top_k(ranked.assign(group=ranked["sector"]), 5, 2)
+    assert list(picks["permaticker"]) == list(expected["permaticker"])
+    # the cap changed something: the picks are not the first rows
+    assert list(picks.index) != list(range(len(picks)))
+    assert list(combined["picks"]["permaticker"]) == list(picks["permaticker"])
+    meta = json.loads(
+        Path(str(combined["output_path"]) + ".meta.json").read_text()
+    )
+    assert meta["selection"] == {
+        "pick": 5, "max_per_group": 2, "group_column": "sector",
+        "n_picked": len(picks),
+    }
+
+    # without a cap: the first K rows, no group column carried
+    plain = predict_with_bundle(
+        first["bundle_path"], inference_sectors, results_path=results,
+        predictions_dir=tmp_path / "predictions", pick=3,
+    )
+    top = pd.read_csv(plain["output_path"])
+    assert list(top["pick"].dropna().astype(int)) == [1, 2, 3]
+    assert top["pick"].notna().tolist()[:3] == [True, True, True]
+    assert "sector" not in top.columns
+
+
+def test_selection_arguments_are_checked(trained, inference_dir, tmp_path):
+    summary, results = trained
+    kwargs = dict(results_path=results, predictions_dir=tmp_path / "p")
+    with pytest.raises(ConfigError, match="needs --pick"):
+        predict_with_bundle(
+            summary["bundle_path"], inference_dir, max_per_group=2, **kwargs
+        )
+    with pytest.raises(ConfigError, match="1 or more"):
+        predict_with_bundle(
+            summary["bundle_path"], inference_dir, pick=0, **kwargs
+        )
+    # the group column has to be in the inference data
+    with pytest.raises(DatasetValidationError, match="group column"):
+        predict_with_bundle(
+            summary["bundle_path"], inference_dir, pick=3, max_per_group=1,
+            **kwargs,
+        )
+
+
+def test_cli_filter_pick_and_cap(
+    trained_pair, inference_sectors, tmp_path, capsys
+):
+    (first, second), results = trained_pair
+    out_csv = tmp_path / "selected.csv"
+    assert (
+        _main_predict(
+            [
+                str(first["bundle_path"]),
+                str(second["bundle_path"]),
+                str(inference_sectors),
+                "--output", str(out_csv),
+                "--results", str(results),
+                "--filter", "book_to_market >= 0.5",
+                "--pick", "4",
+                "--max-per-group", "1",
+            ]
+        )
+        == 0
+    )
+    printed = capsys.readouterr().out
+    assert "picks by mean rank, at most 1 per sector" in printed
+    ranked = pd.read_csv(out_csv)
+    picks = ranked[ranked["pick"].notna()]
+    assert picks["sector"].fillna("unknown").value_counts().max() == 1
+    assert (
+        pd.read_parquet(inference_sectors)
+        .set_index("permaticker")
+        .loc[ranked["permaticker"], "book_to_market"]
+        >= 0.5
+    ).all()
+    # a filter that does not parse fails the run, it does not rank everything
+    assert (
+        _main_predict(
+            [
+                str(first["bundle_path"]), str(inference_sectors),
+                "--results", str(results), "--filter", "book_to_market",
+            ]
+        )
+        == 1
+    )
+    capsys.readouterr()
