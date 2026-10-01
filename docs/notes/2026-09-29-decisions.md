@@ -1628,5 +1628,5 @@ value (boosted models get the plain share of trees); a per-model
 report (the blend is read as one). *Checked:* run on the three
 deployment bundles for the August 2026 cross-section, eight seconds;
 the ten picks' fifteen analogues each resemble the pool's safest
-corner (13% to 47% lost money over three years against 46% of the
+corner (0% to 47% lost money over three years against 46% of the
 pool), as the in-sample caveat predicts they must.
