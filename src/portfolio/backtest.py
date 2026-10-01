@@ -16,6 +16,7 @@ import traceback
 from datetime import date
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
 
 from harness.dataset import Dataset
@@ -36,6 +37,8 @@ from portfolio.prices import (
     stock_price_source,
 )
 from portfolio.report import (
+    buy_outcome_table,
+    buy_outcomes,
     headline_table,
     max_drawdown,
     render_equity_plot,
@@ -47,6 +50,7 @@ from portfolio.signals import (
     ModelSet,
     apply_filters,
     apply_min_score,
+    candidate_rank_pct,
     combine_scores,
     review_held,
     score_floors,
@@ -97,16 +101,6 @@ class CandidateFeed:
         scored = self.model_set.score(xs, int(when.year))
         cols = self.model_set.score_columns
 
-        # the held book is judged on the scored, unfiltered
-        # cross-section: dropping out of the top-K or the buy screen is
-        # not a sell — failing the sell criteria is
-        held_review = (
-            review_held(scored, held_assets, self.sell_floors,
-                        self.sell_filters)
-            if self.evaluate_sells
-            else pd.DataFrame(columns=["passes_sell", "sell_reason"])
-        )
-
         after_floor = apply_min_score(scored, self.floors)
         after_filters = apply_filters(after_floor, config.filters)
         after_inv = apply_filters(after_filters, config.investability)
@@ -135,12 +129,42 @@ class CandidateFeed:
                 "of the cross-section (key_meta, features, ranks, "
                 "sector_ranks)"
             )
-        keep = ["asset", "ticker", "group", "combined_score", "price"] + cols
+        if config.weighting == "marketcap":
+            if "log_marketcap" not in priced.columns:
+                raise ConfigError(
+                    "weighting = 'marketcap' needs `log_marketcap` in the "
+                    "cross-section (a manifest feature column)"
+                )
+            priced["weight_basis"] = np.exp(
+                priced["log_marketcap"].to_numpy(dtype=float)
+            )
+        keep = [
+            "asset", "ticker", "group", "combined_score", "price",
+            "weight_basis",
+        ] + cols
         priced = priced[[c for c in keep if c in priced.columns]]
         priced = priced.sort_values(
             ["combined_score", "asset"], ascending=[False, True],
             kind="mergesort",
         ).reset_index(drop=True)
+
+        # the held book is judged on the scored, unfiltered
+        # cross-section: dropping out of the top-K or the buy screen is
+        # not a sell — failing the sell criteria is. A rank criterion
+        # ([sell] max_rank_pct) reads the month's candidate ranking.
+        held_review = (
+            review_held(
+                scored, held_assets, self.sell_floors, self.sell_filters,
+                rank_pct=(
+                    candidate_rank_pct(priced)
+                    if config.sell_max_rank_pct is not None
+                    else None
+                ),
+                max_rank_pct=config.sell_max_rank_pct,
+            )
+            if self.evaluate_sells
+            else pd.DataFrame(columns=["passes_sell", "sell_reason"])
+        )
 
         diagnostics = {
             "n_cross_section": len(xs),
@@ -347,6 +371,9 @@ def run_backtest(
             f"{config.name} — strategy vs {panel.benchmark_name}, "
             "identical monthly deposits",
         )
+        buy_frame = buy_outcomes(
+            strategy_result.trades, panel, valuation_end
+        )
         configurations_tried = _backtest_configurations_tried(
             store, config.dataset_version, config.config_hash
         )
@@ -365,6 +392,7 @@ def run_backtest(
             valuation_end=pd.Timestamp(valuation_end),
             configurations_tried=configurations_tried,
             artifacts=artifacts,
+            buy_outcome_frame=buy_frame,
         )
 
         headline = headline_table(strategy_result, benchmark_result)
@@ -381,6 +409,7 @@ def run_backtest(
             "benchmark_twr_cagr": twr_cagr(benchmark_result.monthly),
             "prices_version": panel.version,
             "buy_years": f"{buy_years[0]}-{buy_years[-1]}",
+            **_buy_outcome_metrics(buy_frame),
         }
         store.append(
             {
@@ -412,6 +441,20 @@ def run_backtest(
             }
         )
         raise
+
+
+def _buy_outcome_metrics(buy_frame: pd.DataFrame) -> dict:
+    """The pooled row of the buy-outcome table as ledger metrics
+    (`buy_mean_excess_3y`, `buy_beat_3y`, ...); empty without buys."""
+    table = buy_outcome_table(buy_frame)
+    if table.empty:
+        return {}
+    pooled = table.iloc[-1]
+    return {
+        f"buy_{key}": float(value)
+        for key, value in pooled.items()
+        if key not in ("year", "buys") and pd.notna(value)
+    }
 
 
 def _write_artifacts(

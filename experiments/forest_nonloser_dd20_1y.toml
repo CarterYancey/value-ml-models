@@ -1,0 +1,100 @@
+# A one-year version of the "not a loser" cell (decision 22 of
+# docs/notes/2026-09-29-decisions.md; proposed in decision 12.3).
+#
+# Why a shorter horizon:
+#   - The label is known sooner. A walk-forward fold for year Y of a
+#     3-year label is trained on snapshots up to Y-3; of a 1-year
+#     label, up to Y-1. The 3-year model that scored 2008 had not seen
+#     an outcome later than 2007.
+#   - Calibration can only use outcomes that are known. For a 3-year
+#     label the calibrator of year Y has seen nothing after fold Y-4,
+#     and its probabilities follow the regime of four years before
+#     (forest_nonloser_dd30_isotonic_lag_3y: no row at 0.5 in 2011-13,
+#     the best entry years; 45% of rows at 0.5 in 2017-19 with a
+#     precision of 0.31-0.48). For a 1-year label the lag is two folds.
+#   - A portfolio with a sell discipline re-decides every month; a
+#     one-year view fits it better than a three-year one.
+#
+# Cell: fwd_1y_cagr >= 0 & fwd_1y_max_drawdown_from_entry < 0.2 (base
+# rate 0.42 on all test rows of 2005-2020, 0.45 inside the 100k floor;
+# 0.09 for 2008 entries, 0.61 for 2013). The candidate's forest
+# configuration, the ranks group, seed 23, trained on every row and
+# measured inside the 100k floor (scope "test": decision 15; the floor
+# at training changed nothing for the ranks forest).
+#
+# Folds 2005-2020 only. The 1-year fold calendar also has 2003-04 and
+# 2021-22; 2021-22 snapshots are in the sealed 3-year holdout window,
+# and their 1-year outcomes are part of what that holdout measures, so
+# they are left unseen. The test rows are the 3-year cells' test rows
+# (256,351 on all rows), which makes the comparison below row for row.
+#
+# Compared with: cell C's 3-year forest read on the same 1-year
+# outcomes (vml-eval experiments/eval_screen_1y_outcomes_dv100k.toml).
+#
+# Predictions, written before the run (2026-09-30):
+#   1. p@20 0.70-0.80 against a base rate near 0.45; under 0.40 for
+#      2007 and 2008 entries.
+#   2. On the screen, 1-year outcomes: losers (fwd_1y_cagr < 0) between
+#      0.20 and 0.30 (all rows inside the floor: 0.43); mean 1-year
+#      excess between -0.01 and +0.02.
+#   3. Against the 3-year forest on the same 1-year outcomes: losers
+#      and mean excess within 0.02 of each other. The two labels ask
+#      the same question of the same columns. Rival: the 1-year model,
+#      trained on outcomes two years fresher, has fewer losers among
+#      2008-09 and 2020 entries by 0.05 or more.
+#   4. Calibrated `score >= 0.7`, pooled over the calibrated folds:
+#      precision within 0.10 of the mean score of the rows selected.
+#      Not in crash windows: for 2008 entries precision under 0.4 at
+#      any threshold that selects rows.
+#   If the rival of 3 holds, or 4 holds and a threshold selects rows in
+#   12 or more of the 16 years, the 1-year forest goes to a backtest
+#   with a sell discipline.
+name = "forest_nonloser_dd20_1y"
+note = "NEGATIVE: a 1-year 'not a loser' forest (p@20 0.67, base 0.46) picks worse for one year ahead than the 3-year forest (screen losers 0.275 vs 0.236, mean 1y excess -0.004 vs +0.008), sees crashes no sooner (p@20 0.15 / 0.05 for 2007 / 2008 entries), and its lagged calibration is unusable (precision at 0.5 from 0.10 to 0.84 by year). Cell closed. docs/notes/2026-09-30-one-year-cell.md"
+dataset_version = "dataset_v1.4"
+min_dataset_version = "1.4"
+scheme = "walkforward"
+folds = [2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020]
+horizon_years = 1
+label = "fwd_1y_cagr >= 0 & fwd_1y_max_drawdown_from_entry < 0.2"
+feature_groups = ["ranks"]
+seed = 23
+top_k = [20, 50]
+score_thresholds = [0.5, 0.6, 0.7, 0.8]
+precision_targets = [0.75, 0.9]
+calibration = "isotonic"
+universe_scope = "test"
+pick_outcomes = [
+  "label_1y_beat_spy",
+  "fwd_1y_excess_cagr",
+  "fwd_1y_cagr",
+  "fwd_1y_max_drawdown_from_entry",
+  "fwd_1y_cagr < 0",
+  "fwd_1y_cagr < -0.1",
+  "fwd_1y_max_drawdown_from_entry >= 0.3",
+  "fwd_1y_cagr >= 0.15",
+  "fwd_1y_cagr >= 0.3",
+]
+
+[pick_screen]
+per = "quarter"
+top_k = 10
+max_per_group = 2
+group_column = "sector"
+
+[[universe]]
+column = "dollar_volume_3m"
+op = ">="
+value = 100000
+
+[model]
+name = "random_forest"
+bootstrap = true
+class_weight = 1.0
+n_jobs = 16
+criterion = "entropy"
+max_depth = 4
+max_features = 0.205191
+max_samples = 0.663781
+min_samples_leaf = 72
+n_estimators = 490

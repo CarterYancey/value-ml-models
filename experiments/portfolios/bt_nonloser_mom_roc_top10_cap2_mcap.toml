@@ -1,0 +1,54 @@
+# Decision 26 of docs/notes/2026-09-29-decisions.md (2026-10-01):
+# Carter asked whether the portfolio would do better with its buys
+# weighted by market capitalization, as the index is, since the
+# average stock trails SPY by 10 points a year of 3-year CAGR. The
+# candidate on 2005-20 with `weighting = "marketcap"` (each month's
+# ten buys sized by the snapshot's exp(log_marketcap)); nothing else
+# changes. The 28th backtest configuration on these years.
+#
+# Prediction (2026-10-01): the per-buy edge (+0.025 a year over
+# three years, 61% of buys beating SPY) belongs to the picks, not to
+# their size, and the two largest picks of a month would take most
+# of its cash: time-weighted CAGR within 1.5 points of 12.24% in
+# either direction, a deeper drawdown (more concentrated), and a
+# larger share of the final value in the five largest holdings than
+# 26%.
+name = "bt_nonloser_mom_roc_top10_cap2_mcap"
+dataset_version = "dataset_v1.4"
+prices_version = "prices_v1.0"
+
+bundles = [
+    "experiments/models/forest_nonloser_dd30_3y_53ceedd93e6d",
+    "experiments/models/factor_mom_12_2_3y_97c0f095cf48",
+    "experiments/models/factor_roc_greenblatt_3y_da640394cbba",
+]
+
+[signal]
+combine = "mean_rank"
+max_staleness_days = 200
+model_update = "refit"
+label_lag_days = 45
+
+[[investability]]
+column = "dollar_volume_3m"
+op = ">="
+value = 100000.0
+
+[portfolio]
+strategy = "buy_and_hold"
+top_k = 10
+weighting = "marketcap"
+monthly_cash = 1000.0
+max_per_group = 2
+group_column = "sector"
+
+[execution]
+cost_bps = 35.0
+benchmark_cost_bps = 0.0
+max_quote_age_days = 3
+delist_after_days = 30
+
+[window]
+start = 2005-01-01
+end = 2020-12-31
+valuation_end = 2023-12-29

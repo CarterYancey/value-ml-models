@@ -5,6 +5,8 @@ deposits, everything logged."""
 
 import json
 
+import numpy as np
+
 import pandas as pd
 import pytest
 
@@ -433,3 +435,122 @@ def test_window_before_first_fold_year_is_refused(
             results_path=tmp_path / "results.csv",
             reports_dir=tmp_path / "reports",
         )
+
+
+def test_rank_sell_criterion(wf_bundle_dir):
+    from portfolio.signals import candidate_rank_pct
+
+    candidates = pd.DataFrame(
+        {"asset": [7, 1, 2, 3], "combined_score": [0.9, 0.8, 0.5, 0.1]}
+    )
+    pct = candidate_rank_pct(candidates)
+    assert pct.loc[7] == 0.25 and pct.loc[3] == 1.0
+    assert candidate_rank_pct(candidates.iloc[:0]).empty
+
+    scored = pd.DataFrame({"permaticker": [1, 2, 3, 4], "score_m": 0.9})
+    review = review_held(
+        scored, held_assets=[1, 2, 3, 4], floors={}, filters=(),
+        rank_pct=pct, max_rank_pct=0.5,
+    )
+    assert review.loc[1, "passes_sell"]  # second of four: top half
+    assert not review.loc[2, "passes_sell"]
+    assert review.loc[2, "sell_reason"] == "rank:below_top_share"
+    # scored but screened out of the month's candidates
+    assert review.loc[4, "sell_reason"] == "rank:not_a_candidate"
+    # without the criterion nothing changes
+    plain = review_held(scored, held_assets=[2, 4], floors={}, filters=())
+    assert plain["passes_sell"].all()
+
+    ranked = _bt_config(
+        wf_bundle_dir, sell={"max_rank_pct": 0.3},
+        portfolio={"strategy": "sell_below_criteria"},
+    )
+    band = _bt_config(
+        wf_bundle_dir, sell={}, portfolio={"strategy": "sell_below_criteria"},
+    )
+    assert ranked.sell_max_rank_pct == 0.3 and band.sell_max_rank_pct is None
+    assert ranked.config_hash != band.config_hash
+    assert "max_rank_pct" not in band.canonical_json()
+    for bad in (0, 1.5, True, "half"):
+        with pytest.raises(ConfigError, match="max_rank_pct"):
+            _bt_config(wf_bundle_dir, sell={"max_rank_pct": bad})
+
+
+def test_rank_sell_backtest_end_to_end(
+    data_root, prices_dir, wf_bundle_dir, tmp_path
+):
+    # six stocks, two bought a month: a holding outside the top third
+    # of the month's candidates is sold
+    config = _bt_config(
+        wf_bundle_dir,
+        name="bt_rank_sell",
+        signal={"combine": "mean_rank"},
+        portfolio={"strategy": "sell_below_criteria", "top_k": 2,
+                   "weighting": "equal", "monthly_cash": 1000.0},
+        sell={"max_rank_pct": 0.34},
+        window={"end": __import__("datetime").date(2017, 12, 31)},
+    )
+    summary = run_backtest(
+        config,
+        data_root=data_root,
+        results_path=tmp_path / "results.csv",
+        reports_dir=tmp_path / "reports",
+        refit_cache_dir=tmp_path / "refits",
+    )
+    trades = summary["strategy_result"].trades
+    reasons = set(trades.loc[trades["side"] == "sell", "reason"].astype(str))
+    assert any(r.startswith("criteria:rank:") for r in reasons)
+    report = (
+        tmp_path / "reports" / "backtest"
+        / f"bt_rank_sell_{config.config_hash}.md"
+    ).read_text()
+    assert "sell rank: a held position is sold once it is no longer among the top 34%" in report
+
+def test_buy_outcomes_read_each_buy_against_the_benchmark():
+    from portfolio.report import buy_outcome_table, buy_outcomes
+
+    days = pd.bdate_range("2010-01-04", "2014-12-31")
+    n = np.arange(len(days), dtype=float)
+    bench = pd.Series(100.0 * 1.10 ** (n / 261.0), index=days)
+    grower = pd.Series(10.0 * 1.20 ** (n / 261.0), index=days)
+    # stops printing after six months, 30% up: an acquisition
+    acquired = pd.Series(
+        np.linspace(10.0, 13.0, 130), index=days[:130]
+    )
+
+    class Panel:
+        benchmark = bench
+
+        def series(self, asset):
+            return {1: grower, 2: acquired}.get(asset)
+
+    trades = pd.DataFrame(
+        {
+            "asset": [1, 2, 1, 3],
+            "date": [days[0], days[0], days[-100], days[0]],
+            "side": ["buy", "buy", "buy", "sell"],
+            "price": [10.0, 10.0, float(grower.iloc[-100]), 1.0],
+            "gross": [100.0, 100.0, 100.0, 5.0],
+        }
+    )
+    out = buy_outcomes(trades, Panel(), days[-1])
+    assert len(out) == 3  # the sell is not a buy
+    first, second, late = out.iloc[0], out.iloc[1], out.iloc[2]
+    assert first["excess_1y"] == pytest.approx(0.10, abs=0.01)
+    assert first["excess_3y"] == pytest.approx(0.10, abs=0.01)
+    assert first["early_exit_3y"] == 0.0
+    # +30% in six months, then the benchmark's 10% a year: about +37%
+    # over the year against the benchmark's 10%, not +30% held flat
+    assert second["early_exit_1y"] == 1.0
+    assert second["return_1y"] == pytest.approx(1.30 * 1.10 ** 0.5 - 1, abs=0.02)
+    assert second["excess_3y"] > 0
+    # a buy whose horizon ends after the valuation date has no outcome
+    assert np.isnan(late["excess_1y"]) and np.isnan(late["excess_3y"])
+
+    table = buy_outcome_table(out)
+    assert table["year"].tolist() == [2010, 2014, "all buys"]
+    pooled = table.iloc[-1]
+    assert pooled["buys"] == 3 and pooled["n_3y"] == 2
+    assert pooled["beat_3y"] == 1.0 and pooled["lost_3y"] == 0.0
+    assert pooled["early_exit_3y"] == 0.5
+    assert buy_outcome_table(out.iloc[:0]).empty

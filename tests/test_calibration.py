@@ -61,24 +61,69 @@ def test_calibrator_refuses_degenerate_history():
 
 
 def test_prequential_first_fold_raw_then_calibrated():
-    state = PrequentialCalibration("isotonic", min_rows=100)
+    state = PrequentialCalibration("isotonic", min_rows=100, label_lag_folds=1)
     s0, y0, w0 = _history(500, seed=1)
     out0 = state.calibrate(2016, s0)
     np.testing.assert_array_equal(out0, s0)  # no history yet -> raw
-    state.observe(s0, y0, w0)
+    state.observe(2016, s0, y0, w0)
 
     s1, _, _ = _history(500, seed=2)
-    out1 = state.calibrate(2017, s1)
-    assert not np.array_equal(out1, s1)  # history present -> calibrated
+    # a 1-year label of 2016 snapshots is not complete until the end of
+    # 2017: fold 2017 has no usable history, fold 2018 has
+    np.testing.assert_array_equal(state.calibrate(2017, s1), s1)
+    out1 = state.calibrate(2018, s1)
+    assert not np.array_equal(out1, s1)
     summary = state.summary()
-    assert summary["calibrated_folds"] == [2017]
-    assert summary["uncalibrated_folds"] == [2016]
+    assert summary["calibrated_folds"] == [2018]
+    assert summary["uncalibrated_folds"] == [2016, 2017]
+    assert summary["fold_history"][2018] == [2016]
+    assert summary["label_lag_folds"] == 1
+
+
+def test_a_fold_is_calibrated_only_on_outcomes_known_before_it():
+    """A 3-year label of fold f is complete at the end of f + 3, so fold
+    Y may use fold f only when f + 3 < Y. Using every earlier fold
+    calibrated the 2008 entries on what the 2005-07 entries went on to
+    do in the crash they were scored before."""
+    state = PrequentialCalibration("isotonic", min_rows=100, label_lag_folds=3)
+    for fold in (2005, 2006, 2007):
+        s, y, w = _history(400, seed=fold)
+        state.observe(fold, s, y, w)
+    assert state.usable_folds(2008) == []
+    assert state.usable_folds(2009) == [2005]
+    assert state.usable_folds(2011) == [2005, 2006, 2007]
+    s, _, _ = _history(400, seed=1)
+    np.testing.assert_array_equal(state.calibrate(2008, s), s)
+    assert not np.array_equal(state.calibrate(2009, s), s)
+    # the order folds are observed in does not matter, only their years
+    late = PrequentialCalibration("isotonic", min_rows=100, label_lag_folds=3)
+    late.observe(2010, *_history(400, seed=3))
+    np.testing.assert_array_equal(late.calibrate(2012, s), s)
+    with pytest.raises(ConfigError, match="label_lag_folds"):
+        PrequentialCalibration("isotonic", min_rows=100, label_lag_folds=0)
+
+
+def test_calibration_keeps_the_raw_ranking():
+    """An isotonic map is a step function; rows on one step must keep
+    the order of their raw scores or a top-K is a top-K in row order."""
+    state = PrequentialCalibration("isotonic", min_rows=100, label_lag_folds=1)
+    s0, y0, w0 = _history(2000, seed=1)
+    state.observe(2016, s0, y0, w0)
+    raw = np.random.default_rng(5).uniform(0, 1, 3000)
+    out = state.calibrate(2018, raw)
+    assert len(np.unique(out)) == len(np.unique(raw))  # no ties introduced
+    np.testing.assert_array_equal(np.argsort(raw, kind="stable"),
+                                  np.argsort(out, kind="stable"))
+    assert out.min() >= 0.0 and out.max() <= 1.0
+    # and no calibrated value moved by more than the tie-break weight
+    steps = fit_calibrator("isotonic", s0, y0, w0)(raw)
+    assert np.abs(out - steps).max() <= 1e-6
 
 
 def test_prequential_respects_min_rows():
-    state = PrequentialCalibration("platt", min_rows=10_000)
+    state = PrequentialCalibration("platt", min_rows=10_000, label_lag_folds=1)
     s, y, w = _history(500)
-    state.observe(s, y, w)
+    state.observe(2015, s, y, w)
     out = state.calibrate(2017, s)
     np.testing.assert_array_equal(out, s)  # below the floor -> raw
 
@@ -147,13 +192,14 @@ def test_calibrated_run_reports_and_flags_folds(calibrated_run):
     assert summary["status"] == "completed"
     report = summary["report_path"].read_text()
     assert "prequential calibration" in report
-    # fixture walkforward folds are 2016, 2017: the first has no history
-    assert "raw for lack of" in report
-    assert "2017" in report
+    # fixture walkforward folds are 2016, 2017 on a 3-year label: the
+    # outcomes of 2016 snapshots are not known in 2017, so neither fold
+    # has a usable history and both stay raw
+    assert "Calibrated folds: none; raw for lack of history: 2016, 2017" in report
+    assert "complete 3 years after it" in report
     # raw-vs-calibrated reliability curves both rendered
     assert (tmp / "reports" / "cal_test_calibration_raw.png").exists()
     assert (tmp / "reports" / "cal_test_calibration.png").exists()
-    # calibrated fold's scores are probabilities
     fold_2017 = next(
         fr for fr in summary["fold_results"] if fr["fold"] == 2017
     )

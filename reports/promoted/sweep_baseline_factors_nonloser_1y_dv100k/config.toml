@@ -1,0 +1,57 @@
+# Single-factor bars for the 1-year "not a loser" cell inside the 100k
+# floor (decision 22). Deterministic. Same five factors as the 3-year
+# cell's bars, same screen, 1-year outcomes.
+#
+# Expected (2026-09-30): the 3-year order: conservative score and low
+# volatility ahead on precision, momentum and earnings yield last.
+# Momentum is the one that might differ: its premium is a 3-12 month
+# effect, so its picks should look better on 1-year outcomes than they
+# did on 3-year ones (losers under 0.55 against 0.66).
+name = "baseline_factors_nonloser_1y_dv100k"
+note = "Single-factor bars for the 1-year 'not a loser' cell (cagr >= 0 & drawdown from entry < 0.2) inside the 100k floor, 1-year outcomes on the screen: lowest volatility 0.72 precision / 0.250 losers; conservative score 0.62 / 0.325; momentum 0.22 / 0.614. docs/notes/2026-09-30-one-year-cell.md"
+dataset_version = "dataset_v1.4"
+min_dataset_version = "1.4"
+scheme = "walkforward"
+folds = [2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020]
+seeds = [7]
+top_k = [20, 50]
+rank_metric = "precision_at_20"
+pick_outcomes = [
+  "label_1y_beat_spy",
+  "fwd_1y_excess_cagr",
+  "fwd_1y_cagr",
+  "fwd_1y_max_drawdown_from_entry",
+  "fwd_1y_cagr < 0",
+  "fwd_1y_cagr < -0.1",
+  "fwd_1y_max_drawdown_from_entry >= 0.3",
+  "fwd_1y_cagr >= 0.15",
+  "fwd_1y_cagr >= 0.3",
+]
+
+sets = [
+  {rank_column = "conservative_score_rank", higher_is_better = true},
+  {rank_column = "vol_36m_rank", higher_is_better = false},
+  {rank_column = "roc_greenblatt_rank", higher_is_better = true},
+  {rank_column = "mom_12_2_rank", higher_is_better = true},
+  {rank_column = "earnings_yield_rank", higher_is_better = true},
+]
+
+[pick_screen]
+per = "quarter"
+top_k = 10
+max_per_group = 2
+group_column = "sector"
+
+[[universe]]
+column = "dollar_volume_3m"
+op = ">="
+value = 100000
+
+[[cells]]
+label = "fwd_1y_cagr >= 0 & fwd_1y_max_drawdown_from_entry < 0.2"
+
+[[features]]
+groups = ["ranks"]
+
+[model]
+name = "rank_factor"

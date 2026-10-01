@@ -100,11 +100,13 @@ def pick_outcome_headline(sweep, available) -> list[str]:
         if m.startswith(("pick_mean_", "pick_median_"))
         and m.endswith(f"_at_{k}")
     ]
+    # the portfolio screen reads closest to a backtest, so it leads
+    screen = [m for m in avail if m.startswith("screen_")]
     if not picks:
-        return []
+        return screen
     stocks = [m for m in avail if m == f"n_stocks_at_{k}"]
     reference = [m for m in avail if m.startswith(("all_mean_", "all_median_"))]
-    return stocks + picks + reference
+    return screen + stocks + picks + reference
 
 
 def aggregate_candidates(outcomes: list[dict]) -> list[dict]:

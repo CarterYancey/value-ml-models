@@ -44,6 +44,7 @@ from harness.derived_labels import (
 )
 from harness.errors import ConfigError
 from harness.families import FEATURE_GROUPS, parse_family_ref
+from harness.filters import FilterSpec, describe_filters
 
 _REQUIRED = ("dataset_version", "scheme", "label", "model")
 
@@ -118,6 +119,127 @@ def parse_pick_outcomes(raw, horizon_years: int, source: str) -> tuple[str, ...]
                 "the run's, so it is not observable on the run's test rows"
             )
     return outcomes
+
+
+#: Which rows a `[[universe]]` applies to: "all" trains and evaluates
+#: inside the universe; "test" trains on every row and evaluates inside
+#: it (the reference arm for a training-time floor, and what an eval
+#: config's universe does to a saved bundle).
+UNIVERSE_SCOPES = ("all", "test")
+
+SCREEN_PERIODS = ("quarter", "year")
+_SCREEN_KEYS = frozenset({"per", "top_k", "max_per_group", "group_column"})
+
+
+def parse_universe(raw, source: str) -> tuple[FilterSpec, ...]:
+    """The `[[universe]]` tables of a config: row filters over feature
+    columns, in a canonical order with numeric values as floats, so one
+    universe is one hash and one ledger cell however it was spelled.
+    That the columns sit in a filterable manifest group is checked
+    against the dataset at run time."""
+    if raw is None or raw == []:
+        return ()
+    if not isinstance(raw, list):
+        raise ConfigError(
+            f"config {source}: universe must be [[universe]] tables of "
+            f"column/op/value, got {raw!r}"
+        )
+    specs = []
+    for table in raw:
+        spec = FilterSpec.from_table(table, source, "[[universe]]")
+        value = spec.value
+        if isinstance(value, int) and not isinstance(value, bool):
+            spec = FilterSpec(spec.column, spec.op, float(value))
+        specs.append(spec)
+    canon = [sp.canonical() for sp in specs]
+    if len(set(canon)) != len(canon):
+        raise ConfigError(f"config {source}: [[universe]] repeats a filter")
+    return tuple(sorted(specs, key=lambda sp: sp.canonical()))
+
+
+def universe_qualifier(universe: tuple[FilterSpec, ...]) -> str:
+    """The text a universe adds to a ledger cell's label ("" for none)."""
+    if not universe:
+        return ""
+    return f" [universe: {describe_filters(universe)}]"
+
+
+def split_cell_label(cell_label: str) -> tuple[str, str]:
+    """(label, universe text) of a ledger cell label; the universe text
+    is "" for a cell over every row."""
+    marker = " [universe: "
+    if cell_label.endswith("]") and marker in cell_label:
+        label, _, rest = cell_label.partition(marker)
+        return label, rest[:-1]
+    return cell_label, ""
+
+
+@dataclass(frozen=True)
+class PickScreen:
+    """The portfolio screen (eval.picks): the top `top_k` rows of every
+    test quarter (or year) by score, at most `max_per_group` of them
+    sharing a value of `group_column`. It is the backtest template's
+    selection rule applied to the test rows, so a run's report says what
+    a capped, periodic portfolio of its picks went on to do. Report-only,
+    like `pick_outcomes`, whose outcomes it reports."""
+
+    per: str = "quarter"
+    top_k: int = 10
+    max_per_group: int | None = None
+    group_column: str = "sector"
+
+    @classmethod
+    def from_table(cls, table, source: str) -> "PickScreen":
+        if not isinstance(table, dict):
+            raise ConfigError(f"config {source}: [pick_screen] must be a table")
+        unknown = sorted(set(table) - _SCREEN_KEYS)
+        if unknown:
+            raise ConfigError(
+                f"config {source}: unknown [pick_screen] keys {unknown}; "
+                f"expected {sorted(_SCREEN_KEYS)}"
+            )
+        per = str(table.get("per", "quarter"))
+        if per not in SCREEN_PERIODS:
+            raise ConfigError(
+                f"config {source}: [pick_screen] per must be one of "
+                f"{list(SCREEN_PERIODS)}, got {per!r}"
+            )
+        top_k = table.get("top_k", 10)
+        cap = table.get("max_per_group")
+        for key, value in (("top_k", top_k), ("max_per_group", cap)):
+            if value is None:
+                continue
+            if isinstance(value, bool) or not isinstance(value, int) or value < 1:
+                raise ConfigError(
+                    f"config {source}: [pick_screen] {key} must be a "
+                    f"positive integer, got {value!r}"
+                )
+        if "group_column" in table and cap is None:
+            raise ConfigError(
+                f"config {source}: [pick_screen] group_column is set "
+                "without max_per_group; it only names what the cap groups on"
+            )
+        return cls(
+            per=per,
+            top_k=int(top_k),
+            max_per_group=cap,
+            group_column=str(table.get("group_column", "sector")),
+        )
+
+    def to_table(self) -> dict:
+        table: dict = {"per": self.per, "top_k": self.top_k}
+        if self.max_per_group is not None:
+            table["max_per_group"] = self.max_per_group
+            table["group_column"] = self.group_column
+        return table
+
+    def describe(self) -> str:
+        text = f"top {self.top_k} per test {self.per}"
+        if self.max_per_group is not None:
+            text += (
+                f", at most {self.max_per_group} per `{self.group_column}`"
+            )
+        return text
 
 
 @dataclass(frozen=True)
@@ -271,6 +393,21 @@ class ExperimentConfig:
     #: group and none at a horizon beyond the run's. Never model inputs;
     #: the run stays counted in its own label's trial-ledger cell.
     pick_outcomes: tuple[str, ...] = ()
+    #: row filters over feature columns (`[[universe]]`, harness.filters):
+    #: the rows the model is trained and evaluated on, e.g. a liquidity
+    #: floor. NULL fails. A universe changes the population the metrics
+    #: describe, so it qualifies the ledger cell (`cell_label`).
+    universe: tuple[FilterSpec, ...] = ()
+    #: "all": train and test rows are filtered; "test": only test rows
+    #: (train on everything, evaluate inside the universe)
+    universe_scope: str = "all"
+    #: the portfolio screen (`[pick_screen]`, see `PickScreen`)
+    pick_screen: PickScreen | None = None
+    #: config hashes of the bundles whose scores `vml-eval` combined
+    #: with this config's by mean rank (harness.evaluate, `blend`). Set
+    #: by an evaluation only, never read from a file: it is what makes a
+    #: blended evaluation its own configuration in the trial ledger.
+    blend: tuple[str, ...] = ()
 
     @classmethod
     def from_file(cls, path: str | Path) -> "ExperimentConfig":
@@ -324,7 +461,24 @@ class ExperimentConfig:
             pick_outcomes=parse_pick_outcomes(
                 raw.get("pick_outcomes", ()), horizon, source
             ),
+            universe=parse_universe(raw.get("universe"), source),
+            universe_scope=str(raw.get("universe_scope", "all")),
+            pick_screen=(
+                PickScreen.from_table(raw["pick_screen"], source)
+                if "pick_screen" in raw
+                else None
+            ),
         )
+        if config.universe_scope not in UNIVERSE_SCOPES:
+            raise ConfigError(
+                f"config {source}: universe_scope must be one of "
+                f"{list(UNIVERSE_SCOPES)}, got {config.universe_scope!r}"
+            )
+        if "universe_scope" in raw and not config.universe:
+            raise ConfigError(
+                f"config {source}: universe_scope is set but there is no "
+                "[[universe]]"
+            )
         if config.calibration and config.calibration not in CALIBRATION_METHODS:
             raise ConfigError(
                 f"config {source}: calibration must be one of "
@@ -384,6 +538,17 @@ class ExperimentConfig:
                 "data/versions.md for what each dataset version provides"
             )
 
+    @property
+    def cell_label(self) -> str:
+        """The label this run is counted under in the trial ledger: the
+        binary cell it is measured on, qualified by the universe when
+        one is set. Metrics inside a universe describe another
+        population (other base rates, other baselines), so they are
+        another cell, whatever rows the model was trained on."""
+        return (self.eval_label or self.label) + universe_qualifier(
+            self.universe
+        )
+
     def derived_name(self) -> str:
         """Default experiment name: `{model}_{features}_{label}_{hash}`.
 
@@ -437,6 +602,12 @@ class ExperimentConfig:
             raw["calibration_min_rows"] = self.calibration_min_rows
         if self.pick_outcomes:
             raw["pick_outcomes"] = list(self.pick_outcomes)
+        if self.universe:
+            raw["universe"] = [f.to_table() for f in self.universe]
+            if self.universe_scope != "all":
+                raw["universe_scope"] = self.universe_scope
+        if self.pick_screen is not None:
+            raw["pick_screen"] = self.pick_screen.to_table()
         if self.features is not None:
             raw["features"] = self.features.to_table()
         else:
@@ -485,6 +656,14 @@ class ExperimentConfig:
             payload["calibration_min_rows"] = self.calibration_min_rows
         if self.pick_outcomes:
             payload["pick_outcomes"] = list(self.pick_outcomes)
+        if self.universe:
+            payload["universe"] = [f.to_table() for f in self.universe]
+            if self.universe_scope != "all":
+                payload["universe_scope"] = self.universe_scope
+        if self.pick_screen is not None:
+            payload["pick_screen"] = self.pick_screen.to_table()
+        if self.blend:
+            payload["blend"] = list(self.blend)
         return payload
 
     def canonical_json(self) -> str:
@@ -528,8 +707,23 @@ def _resolve_horizon(raw: dict, label: str, source: str) -> int:
     return inferred
 
 
+def _parse_blend(raw, source: str) -> tuple[str, ...]:
+    if isinstance(raw, str) or not isinstance(raw, (list, tuple)):
+        raise ConfigError(
+            f"eval config {source}: blend must be a list of bundle "
+            f"directories, got {raw!r}"
+        )
+    paths = tuple(str(p) for p in raw)
+    if len(set(paths)) != len(paths):
+        raise ConfigError(f"eval config {source}: blend repeats a bundle")
+    return paths
+
+
 _EVAL_ALLOWED = frozenset(
-    {"name", "top_k", "score_thresholds", "precision_targets", "pick_outcomes"}
+    {
+        "name", "top_k", "score_thresholds", "precision_targets",
+        "pick_outcomes", "pick_screen", "universe", "blend",
+    }
 )
 
 
@@ -552,6 +746,21 @@ class EvalConfig:
     #: nothing about what is evaluated, so an evaluation may set them.
     #: Checked against the bundle's horizon by `evaluate_bundle`.
     pick_outcomes: tuple[str, ...] | None = None
+    #: the portfolio screen (report-only, like pick outcomes); None
+    #: keeps the bundle's own
+    pick_screen: PickScreen | None = None
+    #: evaluate the bundle's models inside a universe of test rows. Only
+    #: for a bundle trained without one (a bundle's own universe is
+    #: pinned): the models are as trained, the rows they are measured
+    #: on are fewer, and the evaluation is counted in the
+    #: universe-qualified cell.
+    universe: tuple[FilterSpec, ...] = ()
+    #: other walk-forward bundles (directories) whose fold scores are
+    #: combined with the evaluated bundle's by mean rank within each
+    #: test quarter: the backtest's `combine = "mean_rank"` on the test
+    #: rows, so a two-model candidate can be read on the screen before
+    #: it is backtested
+    blend: tuple[str, ...] = ()
 
     @classmethod
     def from_file(cls, path: str | Path) -> "EvalConfig":
@@ -597,4 +806,11 @@ class EvalConfig:
                 if pick_outcomes is None
                 else tuple(str(o) for o in pick_outcomes)
             ),
+            pick_screen=(
+                PickScreen.from_table(raw["pick_screen"], source)
+                if "pick_screen" in raw
+                else None
+            ),
+            universe=parse_universe(raw.get("universe"), source),
+            blend=_parse_blend(raw.get("blend", ()), source),
         )

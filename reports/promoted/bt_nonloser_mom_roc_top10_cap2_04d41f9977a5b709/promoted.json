@@ -1,0 +1,14 @@
+{
+  "name": "bt_nonloser_mom_roc_top10_cap2_04d41f9977a5b709",
+  "promoted_utc": "2026-10-01T06:54:29+00:00",
+  "source_report": "reports/backtest/bt_nonloser_mom_roc_top10_cap2_04d41f9977a5b709.md",
+  "run_id": "",
+  "config_hash": "",
+  "git_sha": "",
+  "dataset_version": "",
+  "config_path": "",
+  "note": "THE CANDIDATE (decision 24). Cell C forest + 12-month momentum + return on capital by mean rank, top 10 a month, at most 2 per sector, equal weights, buy and hold, 35 bps, dollar_volume_3m >= 1e5, buys 2005-2020 valued end 2023: 948,956 on 192,000 vs SPY 732,110; time-weighted 12.24% vs 9.58%; worst drawdown -41.2% vs -52.9%; per buy +0.025 a year over SPY over three years (+0.034 for 2005-12 buys, +0.016 for 2013-20), 61% of buys beat SPY, 20% lost money. Seeds 232/1776: 959,660/949,366, 12.26%/12.23%; fractional shares 12.12%; rank floor 12.15%. Best of 31 backtest configurations on these years: not shown to hold outside 2005-2023. docs/notes/2026-09-30-backtests.md",
+  "files": [
+    "bt_nonloser_mom_roc_top10_cap2_04d41f9977a5b709.md"
+  ]
+}

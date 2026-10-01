@@ -1,0 +1,14 @@
+{
+  "name": "sweep_forest_features_nonloser_allrows_3y",
+  "promoted_utc": "2026-10-01T06:53:44+00:00",
+  "source_report": "reports/sweeps/forest_features_nonloser_allrows_3y/forest_features_nonloser_allrows_3y_summary.md",
+  "run_id": "",
+  "config_hash": "",
+  "git_sha": "",
+  "dataset_version": "dataset_v1.4",
+  "config_path": "experiments/sweeps/forest_features_nonloser_allrows_3y.toml",
+  "note": "NEGATIVE for theory-led features. v1.4 cell C ('not a loser'), five feature sets, the candidate's forest, seed 23, read on the portfolio screen (top 10 per quarter, 2 per sector): the 112 ranks p@20 0.788, screen mean excess CAGR -0.000, losers 0.164; ranks without technical, with 47 unranked scores/shares/flags, and without the eight risk/size/liquidity ranks: p@20 0.64-0.67, mean excess -0.023 to -0.031, losers 0.23-0.25, and the same utilities and REITs picked (35-39%). docs/notes/2026-09-30-features-and-floor.md",
+  "files": [
+    "forest_features_nonloser_allrows_3y_summary.md"
+  ]
+}

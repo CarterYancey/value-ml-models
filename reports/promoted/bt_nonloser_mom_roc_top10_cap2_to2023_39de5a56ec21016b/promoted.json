@@ -1,0 +1,14 @@
+{
+  "name": "bt_nonloser_mom_roc_top10_cap2_to2023_39de5a56ec21016b",
+  "promoted_utc": "2026-10-01T06:54:31+00:00",
+  "source_report": "reports/backtest/bt_nonloser_mom_roc_top10_cap2_to2023_39de5a56ec21016b.md",
+  "run_id": "",
+  "config_hash": "",
+  "git_sha": "",
+  "dataset_version": "",
+  "config_path": "",
+  "note": "The candidate trading on through 2023 with year-end refits (Carter, 2026-10-01; overlaps the 3y holdout era, context only): 985,668 on 228,000 vs SPY 774,140; 12.21% time-weighted; 2021 -9.6, 2022 +4.3, 2023 -2.2 points against SPY; the 2021 buys trailed SPY by 15 points over their first year (77% lost money), the 2022 buys by 2.8. docs/notes/2026-09-29-decisions.md, decision 26",
+  "files": [
+    "bt_nonloser_mom_roc_top10_cap2_to2023_39de5a56ec21016b.md"
+  ]
+}

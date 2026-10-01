@@ -228,6 +228,9 @@ def run_final_eval(
     config = holdout_variant(ExperimentConfig.from_file(config_path))
     dataset = Dataset(Path(data_root) / config.dataset_version)
     window = holdout_window(dataset, config.horizon_years)
+    # the seal is on the label, whatever the universe: a holdout row
+    # inside a universe is a holdout row, so a look inside one consumes
+    # (and counts in) the label's cell
     label = config.eval_label or config.label
 
     ledger_path = Path(ledger_path)

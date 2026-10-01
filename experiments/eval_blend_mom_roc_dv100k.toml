@@ -1,0 +1,32 @@
+# Cell C's forest blended by mean rank with n2: momentum and return on capital.
+# Decision 19 of docs/notes/2026-09-29-decisions.md: named before any
+# blend was run. Read on the portfolio screen inside the 100k floor.
+name = "blend_mom_roc_dv100k"
+blend = [
+  "experiments/models/factor_mom_12_2_3y_97c0f095cf48",
+  "experiments/models/factor_roc_greenblatt_3y_da640394cbba",
+]
+top_k = [20, 50]
+pick_outcomes = [
+  "label_3y_beat_spy",
+  "fwd_3y_excess_cagr",
+  "fwd_3y_cagr",
+  "fwd_3y_max_drawdown_from_entry",
+  "fwd_3y_cagr < 0",
+  "fwd_3y_cagr < -0.1",
+  "fwd_3y_max_drawdown_from_entry >= 0.4",
+  "fwd_3y_cagr >= 0.15",
+  "fwd_3y_cagr >= 0.25",
+  "fwd_3y_excess_cagr >= 0.05",
+]
+
+[pick_screen]
+per = "quarter"
+top_k = 10
+max_per_group = 2
+group_column = "sector"
+
+[[universe]]
+column = "dollar_volume_3m"
+op = ">="
+value = 100000

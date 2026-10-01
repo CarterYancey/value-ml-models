@@ -21,15 +21,15 @@ import traceback
 from dataclasses import replace
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
 
 from eval.era import collect_predictions
 from eval.metrics import compute_all, regression_diagnostics
-from eval.picks import pick_outcome_metrics
 from harness.calibration import PrequentialCalibration
 from harness.config import EvalConfig, parse_pick_outcomes
-from harness.dataset import Dataset, SplitAccess
-from harness.errors import DatasetValidationError
+from harness.dataset import Dataset, SplitAccess, feature_matrix
+from harness.errors import ConfigError, DatasetValidationError
 from harness.model_store import ModelBundle
 from harness.results import ResultsStore, RunLog, git_sha, new_run_id
 from harness.runner import (
@@ -37,8 +37,58 @@ from harness.runner import (
     DEFAULT_REPORTS,
     DEFAULT_RESULTS,
     _pick_outcome_columns,
+    check_pick_screen,
     finalize_run,
+    report_only_metrics,
+    selection_columns,
+    universe_rows,
 )
+
+
+def blend_scores(score_arrays, periods) -> np.ndarray:
+    """Several models' scores on the same rows as one ranking: within
+    each period, every model's scores are ranked as a share of the
+    period's rows (the best at 1.0) and the shares averaged. This is
+    the backtest's `combine = "mean_rank"` on test rows: a row one model
+    has no score for (NaN) is ranked on the others alone, and ties share
+    the better rank. Shares, not rank numbers, so that periods of
+    different sizes give scores on one scale."""
+    frame = pd.DataFrame(
+        {i: np.asarray(s, dtype=float) for i, s in enumerate(score_arrays)}
+    )
+    shares = frame.groupby(np.asarray(periods), sort=False).rank(
+        method="max", pct=True
+    )
+    return shares.mean(axis=1, skipna=True).to_numpy(dtype=float)
+
+
+def _load_blend(paths, bundle: ModelBundle) -> list[ModelBundle]:
+    """The bundles an evaluation blends with `bundle`, checked to be
+    measured on the same thing: same dataset version and scheme, and a
+    fold model for every fold of `bundle`."""
+    others = []
+    primary = bundle.train_config
+    for path in paths:
+        other = ModelBundle.load(path)
+        config = other.train_config
+        if (config.dataset_version, config.scheme) != (
+            primary.dataset_version, primary.scheme
+        ):
+            raise ConfigError(
+                f"blend bundle {path} was trained on "
+                f"{config.dataset_version!r} under {config.scheme!r}; the "
+                f"evaluated bundle on {primary.dataset_version!r} under "
+                f"{primary.scheme!r}"
+            )
+        missing = sorted(set(bundle.folds) - set(other.folds))
+        if missing:
+            raise ConfigError(
+                f"blend bundle {path} has no model for folds {missing}"
+            )
+        if config.config_hash == primary.config_hash:
+            raise ConfigError(f"blend bundle {path} is the evaluated bundle")
+        others.append(other)
+    return others
 
 
 def evaluate_bundle(
@@ -54,6 +104,20 @@ def evaluate_bundle(
     parameters. Returns a summary dict; raises after logging on failure."""
     bundle = ModelBundle.load(bundle_dir)
     train_config = bundle.train_config
+    if eval_config.universe and train_config.universe:
+        raise ConfigError(
+            "the eval config sets a universe but the bundle was trained "
+            "with one; a bundle's own universe is pinned"
+        )
+    blended = _load_blend(eval_config.blend, bundle)
+    if blended and train_config.calibration:
+        raise ConfigError(
+            "a blend is a ranking, not a probability; evaluate the "
+            "uncalibrated bundle"
+        )
+    # a blended score is a mean rank share: nothing to read as a
+    # probability, whatever the bundles are
+    probabilistic = bundle.probabilistic and not blended
     # the eval run's identity: the pinned train config with the eval's
     # metric parameters merged in — a distinct config hash per (bundle,
     # eval criteria), counted by the trial ledger
@@ -72,6 +136,19 @@ def evaluate_bundle(
                 eval_config_path or eval_config.name,
             )
         ),
+        pick_screen=(
+            eval_config.pick_screen
+            if eval_config.pick_screen is not None
+            else train_config.pick_screen
+        ),
+        # an eval universe measures the models as trained on fewer test
+        # rows: scope "test", counted in the universe-qualified cell
+        **(
+            {"universe": eval_config.universe, "universe_scope": "test"}
+            if eval_config.universe
+            else {}
+        ),
+        blend=tuple(b.train_config.config_hash for b in blended),
     )
 
     store = ResultsStore(results_path)
@@ -89,7 +166,7 @@ def evaluate_bundle(
         "horizon_years": config.horizon_years,
         # same cell accounting as the runner: continuous-target bundles
         # are trials against their binary eval_label cell
-        "label": config.eval_label or config.label,
+        "label": config.cell_label,
         "model": config.model_name,
     }
     run_log = RunLog(store, base_row)
@@ -118,7 +195,8 @@ def evaluate_bundle(
         # (bundle.folds is sorted — chronological under walkforward)
         calib = (
             PrequentialCalibration(
-                config.calibration, config.calibration_min_rows
+                config.calibration, config.calibration_min_rows,
+                label_lag_folds=config.horizon_years,
             )
             if config.calibration
             else None
@@ -126,13 +204,17 @@ def evaluate_bundle(
         needed_columns = list(
             dict.fromkeys(
                 list(bundle.feature_columns)
+                + [c for b in blended for c in b.feature_columns]
                 + [config.label]
                 + ([config.eval_label] if config.eval_label else [])
                 + list(config.pick_outcomes)
                 + [dataset.sample_weight_column(config.horizon_years)]
+                + selection_columns(config)
             )
         )
         dataset.check_pick_outcomes(config.pick_outcomes, bundle.feature_columns)
+        dataset.check_universe(config.universe)
+        check_pick_screen(dataset, config.pick_screen)
         run_log.n_folds = len(bundle.folds)
         for fold in bundle.folds:
             split = dataset.apply_split(
@@ -142,8 +224,9 @@ def evaluate_bundle(
             )
             # continuous-target bundles are measured against their binary
             # eval_label cell, exactly as in the training run
+            _, test_rows = universe_rows(dataset, config, split)
             test_fit = dataset.fit_data(
-                split.test, config.eval_label or config.label,
+                test_rows, config.eval_label or config.label,
                 bundle.feature_columns, config.horizon_years,
             )
             model = bundle.fold_models[fold]
@@ -151,6 +234,19 @@ def evaluate_bundle(
             raw_scores = scores
             if calib is not None:
                 scores = calib.calibrate(fold, raw_scores)
+            if blended:
+                rows = test_rows.loc[test_fit.X.index]
+                dates = pd.to_datetime(rows["snapshot_date"])
+                scores = blend_scores(
+                    [scores]
+                    + [
+                        b.fold_models[fold].predict_scores(
+                            feature_matrix(rows, b.feature_columns)
+                        )
+                        for b in blended
+                    ],
+                    periods=(dates.dt.year * 4 + dates.dt.quarter).to_numpy(),
+                )
             metrics = compute_all(
                 test_fit.y,
                 scores,
@@ -158,11 +254,11 @@ def evaluate_bundle(
                 top_k=config.top_k,
                 score_thresholds=config.score_thresholds,
                 precision_targets=config.precision_targets,
-                probabilistic=bundle.probabilistic,
+                probabilistic=probabilistic,
             )
             outcome = None
             if config.eval_label:  # continuous-target bundle
-                outcome = split.test.loc[
+                outcome = test_rows.loc[
                     test_fit.X.index, config.label
                 ].to_numpy(dtype=float)
                 metrics.update(
@@ -181,26 +277,30 @@ def evaluate_bundle(
                     "effective_train_size": stats["effective_train_size"],
                     "n_test_rows": len(test_fit.X),
                     "metrics": metrics,
+                    **(
+                        {"n_test_rows_all": len(split.test)}
+                        if config.universe
+                        else {}
+                    ),
                 }
             )
             test_years = pd.to_datetime(
-                split.test.loc[test_fit.X.index, "snapshot_date"]
+                test_rows.loc[test_fit.X.index, "snapshot_date"]
             ).dt.year.to_numpy()
             fold_predictions = collect_predictions(
                 fold, test_years, test_fit.y, scores,
                 test_fit.sample_weight, outcome=outcome,
-                **_pick_outcome_columns(dataset, config, split.test, test_fit),
+                **_pick_outcome_columns(dataset, config, test_rows, test_fit),
             )
             prediction_frames.append(fold_predictions)
             # report-only outcomes of this fold's picks; same top-K rows
             # as the fold's precision@K
-            metrics.update(
-                pick_outcome_metrics(
-                    fold_predictions, top_k=config.top_k, per_year=False
-                )
-            )
+            metrics.update(report_only_metrics(fold_predictions, config,
+                                               per_year=False))
             if calib is not None:
-                calib.observe(raw_scores, test_fit.y, test_fit.sample_weight)
+                calib.observe(
+                    fold, raw_scores, test_fit.y, test_fit.sample_weight
+                )
             run_log.fold_done(
                 {
                     "fold": fold,
@@ -222,10 +322,22 @@ def evaluate_bundle(
             store=store,
             fold_results=fold_results,
             prediction_frames=prediction_frames,
-            probabilistic=bundle.probabilistic,
+            probabilistic=probabilistic,
             reports_dir=reports_dir,
             artifacts={
                 "source_bundle": Path(bundle_dir),
+                **(
+                    {
+                        "blend": [
+                            f"{b.train_config.name} "
+                            f"(`{b.train_config.config_hash}`, run "
+                            f"`{b.run_id}`)"
+                            for b in blended
+                        ]
+                    }
+                    if blended
+                    else {}
+                ),
                 **(
                     {"calibration": calib.summary()}
                     if calib is not None

@@ -41,7 +41,8 @@ from pathlib import Path
 import pandas as pd
 
 from harness.config import ExperimentConfig
-from harness.dataset import Dataset
+from harness.dataset import Dataset, feature_matrix
+from harness.filters import apply_filters, describe_filters
 from harness.errors import ConfigError, DatasetValidationError
 from harness.model_store import DeploymentBundle
 from harness.results import ResultsStore, git_sha, new_run_id
@@ -138,13 +139,19 @@ def train_deployment_model(
         # label is observable — all roles, all kinds, delistings included.
         # Column-projected: the refit needs features + label + weight,
         # not the full-width (string-heavy) frame.
+        dataset.check_universe(config.universe)
         refit_frame = dataset.frame(
             list(feature_cols)
             + [
                 config.label,
                 dataset.sample_weight_column(config.horizon_years),
             ]
+            + [f.column for f in config.universe]
         )
+        if config.universe and config.universe_scope == "all":
+            # the deployed model learns from the rows the selected
+            # config learned from: a universe is part of the model
+            refit_frame = dataset.apply_universe(refit_frame, config.universe)
         fit = dataset.fit_data(
             refit_frame, config.label, feature_cols, config.horizon_years,
             target=model_target(config.model_name),
@@ -221,6 +228,31 @@ def load_inference_frame(path: str | Path) -> tuple[pd.DataFrame, str]:
     return frame, name
 
 
+def _inside_universe(bundles, frame: pd.DataFrame) -> tuple[pd.DataFrame, dict]:
+    """The rows of an inference frame inside every bundle's
+    `[[universe]]`, and what was left out. A universe is part of the
+    model: the fit learned from rows inside it (or was measured on
+    them), so the ranking is made over those rows only. A row with a
+    NULL in a filter column is outside. The universe's columns must be
+    in the inference data."""
+    filters = tuple(
+        dict.fromkeys(f for b in bundles for f in b.train_config.universe)
+    )
+    if not filters:
+        return frame, {}
+    missing = sorted({f.column for f in filters} - set(frame.columns))
+    if missing:
+        raise DatasetValidationError(
+            f"inference data lacks the universe columns {missing}; the "
+            f"model's universe is `{describe_filters(filters)}`"
+        )
+    inside = apply_filters(frame, filters)
+    return inside, {
+        "universe": describe_filters(filters),
+        "n_rows_outside_universe": int(len(frame) - len(inside)),
+    }
+
+
 def _score_frame(bundle: DeploymentBundle, frame: pd.DataFrame):
     """Validate that `frame` carries the bundle's feature columns and
     return the model's scores for every row."""
@@ -230,7 +262,9 @@ def _score_frame(bundle: DeploymentBundle, frame: pd.DataFrame):
             f"inference data lacks feature columns the model was "
             f"trained on: {missing}"
         )
-    return bundle.model.predict_scores(frame[list(bundle.feature_columns)])
+    return bundle.model.predict_scores(
+        feature_matrix(frame, bundle.feature_columns)
+    )
 
 
 def predict_with_bundle(
@@ -270,6 +304,7 @@ def predict_with_bundle(
 
     try:
         frame, source_name = load_inference_frame(inference_path)
+        frame, universe_meta = _inside_universe([bundle], frame)
         scores = _score_frame(bundle, frame)
         extra = _carry_columns(frame, extra_columns)
 
@@ -295,6 +330,7 @@ def predict_with_bundle(
             json.dumps(
                 {
                     **({"extra_columns": extra} if extra else {}),
+                    **universe_meta,
                     "run_id": run_id,
                     "scored_utc": datetime.now(timezone.utc).isoformat(
                         timespec="seconds"
@@ -387,6 +423,10 @@ def predict_with_bundles(
     store = ResultsStore(results_path)
     sha = git_sha()
     frame, source_name = load_inference_frame(inference_path)
+    # the combined ranking is made over the rows inside every model's
+    # universe; a model is never asked about a stock it was not fitted
+    # or measured on
+    frame, universe_meta = _inside_universe(bundles, frame)
     extra = _carry_columns(frame, extra_columns)
 
     out = frame[
@@ -484,6 +524,7 @@ def predict_with_bundles(
                 ),
                 "git_sha": sha,
                 "inference_source": str(inference_path),
+                **universe_meta,
                 "n_rows_scored": len(out),
                 "models": per_model,
                 "note": (

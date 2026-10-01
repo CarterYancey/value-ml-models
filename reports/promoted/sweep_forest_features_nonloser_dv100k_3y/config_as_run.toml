@@ -1,0 +1,159 @@
+# Decisions 15, 16 and 18 of docs/notes/2026-09-29-decisions.md
+# (session of 2026-09-30). Cell C ('not a loser'), the candidate's
+# forest configuration, seed 23, five feature sets:
+#
+#   fs0  the ranks group, 112 columns: the reference
+#   fs1  ranks without the technical family, 97: fundamentals as ranks
+#   fs2  fs1 plus the 47 columns upstream ships unranked (Piotroski and
+#        Mohanram scores and signals, consistency shares, the dividend
+#        record, own-history valuation percentiles, filing age, loss
+#        and negative-equity flags), 144: the theory-led set
+#   fs3  ranks without the eight risk, size and liquidity ranks
+#        (vol_12m, vol_36m, beta_12m, max_ret_21d, conservative_score,
+#        log_marketcap, dollar_volume_3m, amihud_12m), 104
+#   fs4  fs3 plus the 47, 151
+#
+# Read on the portfolio screen (top 10 per test quarter, at most 2 per
+# sector), in the order of decision 16: mean excess CAGR of the
+# screen's picks with the median beside it, losers, precision, by
+# entry period before pooled. p@20 and fold-mean PR-AUC from the ledger
+# rank the arms as predictors of the label.
+#
+# What sends an arm on (decision 16): screen mean excess CAGR at least
+# 0.01 above fs0's in the same universe, not more than 0.01 below it
+# in 2005-12 or in 2013-20, losers at 0.20 or less.
+#
+# This file: trained and evaluated inside the universe
+# dollar_volume_3m >= 100000 (the backtest template's investability floor). The reference
+# inside the same universe is the all-rows bundle of the same feature
+# set, evaluated inside it (forest_features_nonloser_allrows_3y, then
+# vml-eval with experiments/eval_screen_dv100k.toml).
+#
+# Predictions, written before the run (2026-09-30):
+#   1. fs0 trained inside the floor against fs0 trained on every row,
+#      both measured inside the floor: screen precision within 0.02,
+#      screen mean excess CAGR within 0.01, p@20 within 0.02. The
+#      ranks forest already picks liquid, calm stocks; the rows the
+#      floor removes are not where it picks. (Rival: microcap rows are
+#      noise the model spends splits on, and the floor frees them:
+#      then PR-AUC inside the floor rises by 0.01 or more.)
+#   2. The floor helps the fundamentals sets more than fs0: fs1 and
+#      fs2 gain 0.02 or more on p@20 from training inside the floor,
+#      because without a liquidity or volatility column they cannot
+#      tell a microcap from a company, and the floor does it for them.
+#   3. Order of the arms on p@20 as on all rows: fs0 first, fs4, fs3,
+#      fs2, fs1.
+#   4. On the screen no arm's mean excess CAGR is more than 0.01 above
+#      fs0's in this universe.
+#
+# Expanded: 1 cell x 5 feature sets x 1 set x 1 seed = 5 runs.
+# Run: vml-sweep experiments/sweeps/forest_features_nonloser_dv100k_3y.toml --save-models
+name = "forest_features_nonloser_dv100k_3y"
+dataset_version = "dataset_v1.4"
+min_dataset_version = "1.4"
+scheme = "walkforward"
+folds = "all"
+seeds = [23]
+top_k = [20, 50]
+precision_targets = [0.75, 0.9]
+rank_metric = "precision_at_20"
+pick_outcomes = [
+  "label_3y_beat_spy",
+  "fwd_3y_excess_cagr",
+  "fwd_3y_cagr",
+  "fwd_3y_max_drawdown_from_entry",
+  "fwd_3y_cagr < 0",
+  "fwd_3y_cagr < -0.1",
+  "fwd_3y_max_drawdown_from_entry >= 0.4",
+  "fwd_3y_cagr >= 0.15",
+  "fwd_3y_cagr >= 0.25",
+  "fwd_3y_excess_cagr >= 0.05",
+]
+
+sets = [
+  {criterion = "entropy", max_depth = 4, max_features = 0.205191, max_samples = 0.663781, min_samples_leaf = 72, n_estimators = 490},  # the candidate's forest (forest_candidate_sets_3y set1)
+]
+
+[pick_screen]
+per = "quarter"
+top_k = 10
+max_per_group = 2
+group_column = "sector"
+
+[[universe]]
+column = "dollar_volume_3m"
+op = ">="
+value = 100000
+
+[[cells]]
+label = "fwd_3y_cagr >= 0 & fwd_3y_max_drawdown_from_entry < 0.3"
+
+# fs0: the reference, 112 rank columns
+[[features]]
+groups = ["ranks"]
+
+# fs1: fundamentals as ranks, 97 columns
+[[features]]
+groups = ["ranks"]
+exclude_families = ["ranks/technical"]
+
+# fs2: fs1 plus the 47 unranked scores, shares, counts and flags, 144
+[[features]]
+groups = ["ranks"]
+exclude_families = ["ranks/technical"]
+columns = [
+  "fundamentals_age_days", "has_filing_183d", "has_filing_365d",
+  "negative_equity", "negative_ebitda", "negative_ev",
+  "revenue_up_frac_4q", "revenue_up_frac_8q", "revenue_up_frac_12q",
+  "revenue_up_frac_20q", "tangibles_up_frac_4q", "tangibles_up_frac_8q",
+  "tangibles_up_frac_12q", "tangibles_up_frac_20q", "ocf_up_frac_4q",
+  "ocf_up_frac_8q", "ocf_up_frac_12q", "ocf_up_frac_20q",
+  "ocf_positive_frac_4q", "ocf_positive_frac_8q",
+  "ocf_positive_frac_12q", "ocf_positive_frac_20q",
+  "fund_history_quarters", "div_years_paid_10y", "div_streak_10y",
+  "div_cuts_10y", "div_history_years_10y", "earnings_yield_5y_pctile",
+  "ocf_yield_5y_pctile", "fcf_yield_5y_pctile", "sales_yield_5y_pctile",
+  "book_to_market_5y_pctile", "tangible_book_to_market_5y_pctile",
+  "ni_change_scaled", "two_year_loss", "liab_gt_assets", "piotroski_f",
+  "piotroski_roa_positive", "piotroski_cfo_positive",
+  "piotroski_roa_up", "piotroski_cfo_gt_ni", "piotroski_leverage_down",
+  "piotroski_liquidity_up", "piotroski_no_issuance",
+  "piotroski_margin_up", "piotroski_turnover_up", "mohanram_g7",
+]
+
+# fs3: ranks without the eight risk, size and liquidity ranks, 104
+[[features]]
+groups = ["ranks"]
+exclude_columns = ["vol_12m_rank", "vol_36m_rank", "beta_12m_rank", "max_ret_21d_rank",
+  "conservative_score_rank", "log_marketcap_rank", "dollar_volume_3m_rank", "amihud_12m_rank"]
+
+# fs4: fs3 plus the 47, 151
+[[features]]
+groups = ["ranks"]
+exclude_columns = ["vol_12m_rank", "vol_36m_rank", "beta_12m_rank", "max_ret_21d_rank",
+  "conservative_score_rank", "log_marketcap_rank", "dollar_volume_3m_rank", "amihud_12m_rank"]
+columns = [
+  "fundamentals_age_days", "has_filing_183d", "has_filing_365d",
+  "negative_equity", "negative_ebitda", "negative_ev",
+  "revenue_up_frac_4q", "revenue_up_frac_8q", "revenue_up_frac_12q",
+  "revenue_up_frac_20q", "tangibles_up_frac_4q", "tangibles_up_frac_8q",
+  "tangibles_up_frac_12q", "tangibles_up_frac_20q", "ocf_up_frac_4q",
+  "ocf_up_frac_8q", "ocf_up_frac_12q", "ocf_up_frac_20q",
+  "ocf_positive_frac_4q", "ocf_positive_frac_8q",
+  "ocf_positive_frac_12q", "ocf_positive_frac_20q",
+  "fund_history_quarters", "div_years_paid_10y", "div_streak_10y",
+  "div_cuts_10y", "div_history_years_10y", "earnings_yield_5y_pctile",
+  "ocf_yield_5y_pctile", "fcf_yield_5y_pctile", "sales_yield_5y_pctile",
+  "book_to_market_5y_pctile", "tangible_book_to_market_5y_pctile",
+  "ni_change_scaled", "two_year_loss", "liab_gt_assets", "piotroski_f",
+  "piotroski_roa_positive", "piotroski_cfo_positive",
+  "piotroski_roa_up", "piotroski_cfo_gt_ni", "piotroski_leverage_down",
+  "piotroski_liquidity_up", "piotroski_no_issuance",
+  "piotroski_margin_up", "piotroski_turnover_up", "mohanram_g7",
+]
+
+[model]
+name = "random_forest"
+bootstrap = true
+class_weight = 1.0
+n_jobs = 8

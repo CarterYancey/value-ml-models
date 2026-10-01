@@ -1,0 +1,14 @@
+{
+  "name": "sweep_baseline_factors_nonloser_dv100k_3y",
+  "promoted_utc": "2026-10-01T06:53:47+00:00",
+  "source_report": "reports/sweeps/baseline_factors_nonloser_dv100k_3y/baseline_factors_nonloser_dv100k_3y_summary.md",
+  "run_id": "",
+  "config_hash": "",
+  "git_sha": "",
+  "dataset_version": "dataset_v1.4",
+  "config_path": "experiments/sweeps/baseline_factors_nonloser_dv100k_3y.toml",
+  "note": "Single-factor bars for cell C inside the 100k floor, on the portfolio screen (precision / losers / mean excess CAGR): conservative score 0.62 / 0.245 / -0.006; lowest 36m volatility 0.74 / 0.167 / -0.025; return on capital 0.52 / 0.347 / -0.052; momentum 0.21 / 0.658 / -0.238; earnings yield 0.25 / 0.573 / -0.200.",
+  "files": [
+    "baseline_factors_nonloser_dv100k_3y_summary.md"
+  ]
+}

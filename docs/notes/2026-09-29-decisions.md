@@ -334,3 +334,563 @@ Recorded as next steps in TODO.md ("Next, from the session of
 4. **A sell discipline** goes on the list, and pairs with
    calibration: buy on high confidence, sell or rebalance when it
    falls.
+
+## Session of 2026-09-30 (second), decisions 14 onwards
+
+Carter opened the session with the thesis restated and the stop rules
+still lifted ("do anything you feel is best to reach this goal", every
+decision logged, code on a feature branch). He added, in the same
+session, that the 0.65 precision and the small number of picks are
+aims, not limits (already recorded above, "Clarified by Carter"). Not
+lifted, as before: the hard invariants, the branch workflow, the rules
+under "Before writing a conclusion". No holdout look, promotion, pull
+request into `Claude` or deployment is made under this log.
+
+Lab branch: `claude/lab-2026-09-30`, off `claude/lab-2026-09-28` with
+`Claude` merged in (the session's checkout was `Claude` itself, which
+is never committed to).
+
+### 14. Build the three tools Carter's notes ask for before running anything
+
+*Decided:* one feature branch, `claude/universe-and-portfolio-screen`
+(off `Claude`, merged into the lab branch), with:
+
+1. **`[[universe]]`**, a declared row filter on manifest feature
+   columns, for the training-time liquidity floor (decision 13.1);
+2. **`[pick_screen]`**, the backtest template's selection rule (top K
+   per test quarter, a cap per sector) applied to the test rows, with
+   the picks' share by sector (TODO "Sector cap in the pick-outcome
+   screen");
+3. **selection by score**: what every row at or above a score
+   threshold went on to do, mean beside median, per year, years
+   without a pick shown (decision 13.2);
+4. boolean flags as model inputs (decision 17).
+
+*Why first:* each of the experiments Carter named needs one of them,
+and the screen decides how every later sweep is read. The top-20-a-year
+tables said cell C's picks matched SPY at a third of the drawdown; the
+portfolio of those picks was one sector (findings, conclusion 6). A
+screen that picks what the backtest buys makes a sweep worth reading
+without a backtest per arm.
+
+*Checked on real data before use:* the candidate's forest (run
+`53ceedd93e6d`) under the screen (top 10 per quarter, at most 2 per
+sector, rows with `dollar_volume_3m >= 100000`) picks 180 distinct
+stocks in 640 picks; its backtest under the same rule bought 178. Mean
+excess CAGR of the screen's picks −0.001 (the backtest: 9.74% a year
+against SPY's 9.58%). A smoke run outside the ledger; the same
+evaluation is repeated through the ledger below.
+
+### 15. What a universe is, and how it is counted
+
+*Decided:*
+
+- A universe qualifies the ledger cell: runs inside one are logged
+  under `label [universe: ...]`. Base rates and baselines differ
+  inside a universe (cell C's base rate is 0.25 below 10,000 a day of
+  dollar volume and 0.55 above 100 million), so its numbers are never
+  set beside an all-rows run's.
+- Reports state two counts: configurations in the universe's cell, and
+  against the label in any universe. A universe is not a clean slate.
+- The sealed holdout stays per label: a look inside a universe would
+  consume the label's cell.
+- `universe_scope = "test"` (train on every row, evaluate inside) is
+  the reference arm: without it a training-time floor cannot be told
+  apart from a test-time one.
+- A bundle trained inside a universe is refused by a backtest that
+  does not screen on the same filters.
+- Floors, fixed before any run: `dollar_volume_3m >= 100000` (the
+  backtest template's investability filter, decision 6) and
+  `dollar_volume_3m >= 1000000` (ten times it; leaves out 45% of test
+  rows against 19–29%). Nominal dollars: the floor is looser in later
+  years (the 25th percentile of test rows is 85,000 in 2005 and
+  517,000 in 2020). A rank floor would be era-neutral; the template
+  uses dollars, so the experiments do.
+
+*Why it is not a split or a feature:* upstream tags still assign every
+row its role; the filter leaves rows out of both sides and reads only
+what was known at the snapshot. `sample_weight_3y` is kept as shipped:
+leaving a stock's illiquid quarters out makes its remaining rows
+slightly more unique than their weights say, which under-weights them
+a little and inflates nothing.
+
+### 16. Sweeps are read on the portfolio screen first
+
+*Decided:* from this session, a sweep's arms are compared on the
+screen with the template's rule, fixed here: **top 10 per test
+quarter, at most 2 per sector**. In this order: mean excess CAGR of
+the screen's picks (an equal-weighted portfolio earns the mean;
+decision 13.2) with the median beside it, the share of losers
+(`fwd_3y_cagr < 0`) and of deep drawdowns, the precision on the run's
+label, each by entry period (2005–12, 2013–20) before pooled. p@20 and
+PR-AUC stay the metrics of record for ranking inside a cell.
+
+*What would send an arm to a backtest:* a mean excess CAGR on the
+screen at least 0.01 a year above the reference arm's in the same
+universe, not more than 0.01 below it in either period, with losers at
+0.20 or less. Fixed before the first sweep. An arm that passes on one
+seed is run on three before it is backtested.
+
+*Caveat:* the screen is still equal weights, no costs, entry at the
+snapshot, held three years; and it cannot read a combination of two
+models, which is what the candidate is.
+
+### 17. Boolean flags are handed to models as 0/1 with NULL kept
+
+*Decided:* route (b) of the TODO item on non-numeric columns, for the
+boolean flags only (`harness.dataset.feature_matrix`).
+
+*Why:* the flags carry what a value investor looks at first (two
+years of losses, negative equity, the nine Piotroski signals) and
+could not be selected at all: a nullable boolean reaches pandas as an
+object column. Storing True as 1.0 and False as 0.0 changes the
+representation of a value, row by row, and reads no other row or
+column; it is not a derived feature (invariant 4). NULL stays NaN
+because a NULL flag means "unknown" (data/features.md), not "failed".
+Strings and dates (`sector`, `industry`, `fund_datekey`) stay out.
+
+### 18. The feature sets, named before the run
+
+*Decided:* five sets in cell C, one forest configuration (the
+candidate's), seed 23:
+
+| | set | columns | the question |
+|---|---|---|---|
+| fs0 | the `ranks` group | 112 | the reference |
+| fs1 | ranks without the technical family | 97 | fundamentals as ranks (run before on all rows: p@20 0.66) |
+| fs2 | fs1 plus the 47 columns upstream ships unranked because they are already comparable across quarters: the Piotroski and Mohanram scores and the nine signals, the `*_up_frac_*` and `ocf_positive_frac_*` consistency shares, the dividend record (`div_*_10y`), the own-history valuation percentiles (`*_5y_pctile`), filing age and the loss, negative-equity and negative-EBITDA flags | 144 | Carter's theory-led set: cash generation, balance sheet, profitability, consistency. None of the 47 has been a model input on v1.4 in these cells. |
+| fs3 | ranks without the eight risk, size and liquidity ranks (`vol_12m`, `vol_36m`, `beta_12m`, `max_ret_21d`, `conservative_score`, `log_marketcap`, `dollar_volume_3m`, `amihud_12m`) | 104 | the dominant columns excluded, price trend kept |
+| fs4 | fs3 plus the 47 | 151 | everything with a story, nothing that measures risk or liquidity directly |
+
+On all rows (bundles saved, then evaluated inside each floor without
+refitting) and trained inside each floor: 15 fits. The five all-rows
+fits are five more configurations in cell C (the screen is in the
+hash).
+
+### 19. Read two-model candidates on the screen: `blend` in `vml-eval`
+
+*Decided:* a third feature branch, `claude/eval-blend` (on top of the
+universe branch): an eval config's `blend = [bundle directories]`
+combines the evaluated bundle's fold scores with other bundles' by
+mean rank within the test quarter, the backtest's `mean_rank` on test
+rows. Each blend is its own configuration in the cell's trial count.
+
+*Why:* the candidate is a blend (cell C's forest and momentum), and
+the screen of decision 16 can only read one model. Every second
+ranking tried so far cost a backtest on the same sixteen years, and
+the best of three was kept. With the blend on the screen, second
+rankings are compared on 640 picks over 64 quarters before any
+backtest is spent, and the backtest count grows only for the ones
+that pass.
+
+*First, check the screen against what the backtests already said.*
+Three blends whose backtests exist (decision 8), inside the 100k
+floor:
+
+| blend with cell C's forest | its backtest against the forest alone | what the screen should show if it is a fair proxy |
+|---|---|---|
+| 12-month momentum | +1.2 to +2.4 points a year, three seeds | mean excess CAGR above the forest alone's by 0.01 or more |
+| return on capital | the same return, drawdown 5 points shallower | within 0.01 of the forest alone |
+| earnings yield | −2.0 points a year | below the forest alone by 0.01 or more |
+
+If the screen orders the three as the backtests did, it is used to
+choose second rankings. If it does not, it is not, and the note says
+so.
+
+*Then, the second rankings to try, named before any is run:*
+
+| | blend | why this one |
+|---|---|---|
+| n1 | forest + momentum + net payout yield | the conservative formula (low volatility, momentum, payout) with the forest as its low-risk leg |
+| n2 | forest + momentum + return on capital | safe, rising and profitable: the two second rankings that each helped one thing |
+| n3 | forest + a learned upside model | a forest on `fwd_3y_cagr >= 0.15` (feature set fs4, inside the 100k floor): does a model of who compounds beat a single factor as the second ranking? |
+| n4 | forest + momentum + the upside model | |
+
+*What would send a blend to a backtest:* screen mean excess CAGR at
+least 0.005 a year above the momentum blend's, losers no more than
+0.02 above it, and not more than 0.01 below it in 2005–12 or in
+2013–20. At most two blends are backtested.
+
+### 20. One calibrated run, for selection by confidence
+
+*Decided:* `forest_nonloser_dd30_isotonic_3y`, the candidate's forest
+with prequential isotonic calibration, five score thresholds and the
+new "Selection by score" tables. One run, one more configuration in
+cell C.
+
+*Why:* Carter wants candidates read by confidence ("mean excess CAGR
+at score > 0.7"), with cash as a valid position, and notes that the
+scores can be read as confidence once calibrated (decision 13.2). The
+uncalibrated forest's fixed thresholds selected the pre-crash years.
+Whether calibration repairs that is an empirical question with a
+prediction written in the config: it should not, because a fold's
+calibration map is learned from earlier years' outcomes and a crash
+is not in them until it has happened.
+
+### 21. The screen's check failed for momentum; read the backtests per buy, and test a sell discipline
+
+*What happened (2026-09-30):* the check of decision 19 did not come
+out as predicted. On the screen inside the 100k floor, mean excess
+CAGR of the picks: forest alone −0.001; with momentum **−0.018**
+(predicted: above the forest by 0.01 or more); with return on capital
+**+0.014** (predicted: within 0.01); with earnings yield −0.030
+(predicted: below by 0.01 or more, matched). By the rule written in
+decision 19 the screen is therefore **not** used on its own to choose
+second rankings.
+
+*What the disagreement is.* The backtests were read on time-weighted
+return, where momentum led the forest alone by 1.3 points a year and
+return on capital did not. The backtests' own buys, read one by one
+over the three years after each trade date from the price panel
+(delisting proceeds riding SPY), say this: mean excess a year per buy
++0.001 for the forest alone, +0.005 with momentum, **+0.013 with
+return on capital**, −0.032 with earnings yield; for the buys of
+2005–12 and of 2013–20 separately, +0.013 / −0.011, +0.025 / −0.016,
+**+0.013 / +0.012**, −0.007 / −0.057. In money (final value on
+192,000 deposited): 633,757, 711,494, 694,945, 493,413; SPY 732,110.
+So the screen and the per-buy reading agree on return on capital
+(best, and the only one positive in both halves) and on earnings
+yield (worst); they differ on the size of momentum's effect (−0.017
+against +0.004 relative to the forest alone), and both put it far
+below what time-weighted return suggested. Part of the screen's gap
+is the label convention: 15% of the momentum blend's screen picks
+were acquired inside the window (7% for the forest alone), and the
+dataset carries an acquired stock's final price flat to the horizon,
+where a portfolio gets the cash back. Detail:
+[blends note](2026-09-30-blends-and-calibration.md).
+
+*Decided:*
+
+1. **Per-buy outcomes go into every backtest report**
+   (`claude/backtest-buy-outcomes`): each buy over the 1 and 3 years
+   after its trade date against the benchmark, by buy year and
+   pooled. Time-weighted return gives the small early portfolio the
+   weight of the large late one; decision 8's criterion was written on
+   it, and momentum's lead sits in 2005–11.
+2. **A candidate is judged on four things together**, fixed here
+   before the next backtests: final value at or above SPY's under the
+   same deposits; time-weighted CAGR at least a point above SPY's;
+   worst drawdown at least 5 points shallower; and a positive mean
+   3-year excess per buy for the buys of 2005–12 and of 2013–20. The
+   candidate of decision 10 meets the second and third, misses the
+   first on two seeds of three and the fourth (−0.016 for 2013–20).
+3. **Five backtests** (14th to 18th on these years), each with its
+   prediction in its config:
+   - the quality blend (forest and return on capital) on the forest's
+     other two seeds: it was never seed-checked;
+   - forest, momentum and return on capital (blend n2; it passed
+     decision 19's bar against the momentum blend on the screen, as
+     did n1, forest with momentum and net payout yield, by a smaller
+     margin: n1 is not backtested);
+   - the quality blend and the momentum blend each with a sell
+     discipline, `[sell] max_rank_pct = 0.2`: a holding is sold once
+     it is outside the top 20% of the month's candidates by combined
+     rank. One value, chosen before any run: bought at the top 0.3%,
+     kept to the top 20%.
+4. The learned upside model is dropped: the forest on
+   `fwd_3y_cagr >= 0.15` has no skill at its own label (p@20 0.29
+   against a base rate of 0.27 inside the floor, fold-mean PR-AUC
+   0.289), and both blends
+   with it are below the forest alone on the screen (−0.031 and
+   −0.037).
+
+*Why a sell discipline now.* Buy and hold keeps for ever what the
+models ranked first once, and the label is about three years. Per buy
+the quality blend is 1.3% a year ahead of SPY over its first three
+years in both halves of the sample, yet the portfolio ends 5% behind
+SPY in money: no portfolio kept up with SPY in 2021 and 2023, years
+in which it held stocks bought up to eighteen years earlier. Selling
+what the models no longer rank highly, and buying what they do, keeps
+the money where the measured edge is. Whether that survives costs and
+turnover is what the two backtests measure.
+
+### 22. A one-year "not a loser" cell
+
+*Decided (2026-09-30):* `forest_nonloser_dd20_1y`: the candidate's
+forest on `fwd_1y_cagr >= 0 & fwd_1y_max_drawdown_from_entry < 0.2`
+(base rate 0.42 on all test rows of 2005–2020, 0.45 inside the 100k
+floor), calibrated, trained on every row and measured inside the
+floor, with 1-year pick outcomes and the screen; five single-factor
+bars in the same cell; and cell C's 3-year forest read on the same
+1-year outcomes as the reference. Decision 12 proposed a shorter
+horizon; two things found today make the case for it:
+
+- a 3-year label's calibrator is four years behind (the calibration
+  run above), a 1-year label's two;
+- a 3-year fold for year Y is trained on snapshots up to Y−3, a
+  1-year fold up to Y−1, and a sell discipline re-decides monthly.
+
+*Folds 2005–2020 only.* The 1-year fold calendar runs to 2022, but
+the 2021–22 snapshots are in the 3-year holdout window and their
+1-year outcomes are part of what that holdout measures. They stay
+unseen.
+
+*What it is compared on:* the same test rows as the 3-year cells
+(256,351 on all rows), 1-year outcomes for both models. A new cell:
+its first configurations.
+
+*What would carry it forward:* written in the config. Fewer losers
+than the 3-year forest among the entries of 2008–09 and 2020 by 0.05
+or more, or a calibrated threshold that selects rows in 12 or more of
+the 16 years at a precision near its score.
+
+### 23. Two blends meet the four criteria on one seed; check them before believing them
+
+*What came out (2026-09-30, backtests 14 to 18;
+[backtests note](2026-09-30-backtests.md)):*
+
+| | final value | time-weighted | money-weighted | worst drawdown | per buy, 3y excess | buys of 2005–12 | of 2013–20 |
+|---|---|---|---|---|---|---|---|
+| SPY, same deposits | 732,110 | 9.58% | 11.62% | −52.9% | | | |
+| forest + return on capital, seeds 23 / 232 / 1776 | 694,945 / 752,267 / 721,826 | 9.65 / 10.18 / 10.04% | 11.18 / 11.85 / 11.50% | −41.2 / −42.4 / −41.3% | +0.013 / +0.019 / +0.012 | +0.013 / +0.023 / +0.018 | +0.012 / +0.014 / +0.005 |
+| the same with the sell discipline (seed 23) | 800,456 | 10.64% | 12.37% | −38.8% | +0.013 | +0.014 | +0.012 |
+| forest + momentum + return on capital (seed 23) | **948,956** | **12.24%** | **13.79%** | −41.2% | **+0.025** | +0.034 | +0.016 |
+| forest + momentum with the sell discipline (seed 23) | 674,817 | 9.87% | 10.93% | −51.7% | +0.004 | +0.024 | −0.017 |
+
+The three-way blend and the quality blend with the sell discipline
+each meet all four criteria of decision 21 on seed 23. The three-way
+blend was predicted to land between its parents and landed above both
+on every measure: a prediction missed upwards, and the best of
+eighteen backtests. It is treated as suspect until checked.
+
+*Decided:* six more backtests (19th to 24th), predictions in each
+config:
+
+1. the three-way blend on the forest's other two seeds;
+2. the quality blend with the sell discipline on the other two seeds;
+3. the three-way blend with **fractional shares**. The template buys
+   whole shares with 100 a pick on total-return adjusted prices, so a
+   stock priced above its budget is skipped (111 of 192 months bought
+   fewer than ten stocks in the three-way run). That is a selection
+   rule nobody chose, applied to a price nobody paid. If the result
+   depends on it, it is not the blend's;
+4. the three-way blend with the sell discipline.
+
+*What carries a blend forward:* all four criteria on all three seeds,
+and for the three-way blend a fractional-share result within a point
+a year of the whole-share one. *What does not change whatever comes
+out:* these are backtests 19 to 24 on the same sixteen buy years; the
+blend that comes through is a candidate for Carter's holdout look and
+for paper trading, not a result.
+
+*Not done:* no further second rankings are tried. Return on capital
+and momentum were both named in decision 8 before any backtest; the
+three-way blend is their union, named in decision 19 before it was
+run. Trying more factors on these years from here would be fitting
+them.
+
+### 24. The candidate is now the three-way blend; backtesting on these years stops
+
+*What the checks of decision 23 showed (2026-09-30, backtests 19 to
+26; [backtests note](2026-09-30-backtests.md)):*
+
+| | seed 23 | seed 232 | seed 1776 | SPY |
+|---|---|---|---|---|
+| **forest + momentum + return on capital, buy and hold** | | | | |
+| final value on 192,000 deposited | 948,956 | 959,660 | 949,366 | 732,110 |
+| time-weighted CAGR | 12.24% | 12.26% | 12.23% | 9.58% |
+| worst drawdown | −41.2% | −41.3% | −42.0% | −52.9% |
+| per buy, 3y excess a year (buys of 2005–12 / 2013–20) | +0.034 / +0.016 | +0.034 / +0.016 | +0.035 / +0.013 | |
+| **the same with the rank sell discipline** | | | | |
+| final value | 1,090,591 | 1,042,252 | 1,028,085 | 732,110 |
+| time-weighted CAGR | 13.14% | 12.70% | 12.66% | 9.58% |
+| worst drawdown | −39.5% | −40.2% | −40.5% | −52.9% |
+| **forest + return on capital with the sell discipline** | | | | |
+| final value | 800,456 | 852,325 | 803,800 | 732,110 |
+| time-weighted CAGR | 10.64% | 11.09% | 10.79% | 9.58% |
+| worst drawdown | −38.8% | −39.7% | −39.4% | −52.9% |
+
+With fractional shares the three-way blend (seed 23) ends at 936,540,
+12.12%, −43.0%: the whole-share rule was not doing the selecting. All
+three rows meet the four criteria of decision 21 on all three seeds.
+
+*Decided:*
+
+1. **The candidate carried forward is cell C's forest, 12-month
+   momentum and return on capital by mean rank**, top 10 a month, at
+   most 2 per sector, equal weights, inside `dollar_volume_3m >=
+   100000`. It replaces the candidate of decision 10 (forest and
+   momentum), which misses two of the four criteria. Bundles:
+   `forest_nonloser_dd30_3y` (run `53ceedd93e6d`; seeds 232 and 1776
+   beside it), `factor_mom_12_2_3y`, `factor_roc_greenblatt_3y`.
+2. **Buy and hold is the base case; the rank sell discipline
+   (`[sell] max_rank_pct = 0.2`) is the variant to paper-trade beside
+   it.** It added 0.4 to 0.9 points a year on the three seeds at four
+   times the costs and about 15 sales a year, and it was predicted to
+   do worse, so its gain is the less certain of the two.
+3. **No further backtest is run on buys of 2005–2020.** Twenty-six
+   configurations have been tried on those years. Each further
+   variant makes the best figure less believable, not more (decision
+   12); what is missing now is evidence from years the choices were
+   not made on.
+
+*What the candidate is, in plain terms:* stocks the forest ranks as
+unlikely to lose over three years, that earn a high return on their
+capital, and whose price has risen over the past year. Low risk,
+quality and trend: three premia with long records, combined by rank.
+The forest keeps the losers down (20% of the blend's buys lost money
+over the three years after the trade; 42% of all test rows inside
+the floor have a negative 3-year CAGR); return
+on capital moves the picks from utilities and real estate (1.4% of
+buys, from 35%) to operating companies; momentum adds the winners.
+
+*What it has not shown:* that it holds outside 2005–2023. The three
+ingredients were named before any of them was backtested (decision
+8), and the blend before it was run (decision 19), but it is the best
+of 26 configurations on sixteen buy years, its forest was chosen on
+the same years, and the three premia are well known to have paid in
+this period. A figure of +2.7 points a year over SPY should be
+expected to shrink.
+
+*Carter's, as before:* one holdout look in cell C's 3y cell with the
+candidate's forest; promotion; the pull requests for the five feature
+branches; deployment. Also his to decide: whether the backtest engine
+may trade 2021–2023 with year-end refits for the candidate (it
+overlaps the holdout era and was not run).
+
+### 25. Carter's questions of 2026-10-01: the universe through to inference, a rank floor, the sector cap
+
+Carter read decisions 14–24 and asked four things. What was done and
+answered:
+
+1. **A universe is used to train, test and deploy, and inference
+   applies it.** `vml-train-deploy` already refit inside it; the gap
+   was `vml-predict`, which ranked every inference row. Fixed on
+   `claude/predict-universe`: the ranking is made over the rows
+   inside the bundle's universe (a combined run, the rows inside
+   every model's), the sidecar names the universe and counts the
+   rows left out, and a missing universe column is an error. The
+   backtest already refuses a bundle trained inside a universe
+   unless its `[[investability]]` or `[[filters]]` carry the same
+   filters, so the investability filter has to match the universe,
+   as Carter expected. *What `universe_scope = "test"` was for:* a
+   floor changes the test population (cell C's base rate is 0.39 on
+   all rows and 0.43 inside 100k), so "trained inside the floor"
+   had to be compared with "trained on everything, measured on the
+   same floored test rows", or the floor's effect on the measurement
+   would be read as an effect on the model. It is the reference arm
+   of one experiment, not a way to deploy.
+2. **A rank floor needs nothing upstream.** `dollar_volume_3m_rank`
+   is a column; `dollar_volume_3m_rank >= 0.2` is one line in a
+   universe or an investability filter, era-neutral by construction.
+   Checked on the candidate (backtest 27, seed 23,
+   `bt_nonloser_mom_roc_top10_cap2_rankfloor`): 965,380 against
+   948,956, 12.15% against 12.24%, drawdown −41.4% against −41.2%,
+   per buy +0.026 against +0.025. The candidate does not depend on
+   the form of its floor. Which floor to deploy with is Carter's:
+   100,000 a day was about the 27th percentile of the test rows in
+   2005 and the 12th in 2020.
+3. **The sector cap is a bandage, and the deeper question is
+   recorded.** Agreed on both counts. What the data says about
+   "what if the REITs had recovered": in the capped forest-alone
+   backtest the REITs bought in 2005 (24 buys) earned +0.055 a year
+   over SPY over three years and +0.075 over seven; those bought in
+   2006 earned −0.119 over three and −0.030 over seven, and 2007's
+   −0.019 and −0.016. The 2005 cohort was right; the 2006 and 2007
+   cohorts never caught up with SPY. Why: the fold models of 2006–07
+   were trained on snapshots up to 2003–04, in which no REIT had
+   fallen 40%; a sector feature would not have helped them, because
+   the lesson was not in their training window. What a sector
+   feature could do is let the model learn that a given column means
+   something different for REITs (book value, cash-flow stability,
+   leverage all do). Two routes, recorded in TODO: (a) upstream
+   within-sector ranks of the risk columns (already requested); (b)
+   `sector` one-hot as a model input here, a per-row recoding like
+   the boolean flags (decision 17), with the current-state caveat of
+   data/features.md (a reclassified company's whole history carries
+   today's sector). Not run in this session.
+4. **Return on capital is the answer that was found**: it moves the
+   portfolio from utilities and real estate (35% of the forest's
+   buys) to operating companies (1.4%) without a cap, because the
+   factor is undefined for most REITs and low for utilities, and it
+   does so by what the picks earn on their capital, not by a quota.
+   The cap stays in the template as a safeguard; with return on
+   capital in the blend it binds rarely.
+
+### 26. Carter lets the engine trade 2021–23 for the candidate; three questions on a report
+
+*Carter (2026-10-01):* "Let the backtest engine trade 2021–23 for the
+candidate." Done as two backtests, predictions in the configs:
+`bt_nonloser_mom_roc_top10_cap2_to2023` and the sell-discipline
+variant, buys and deposits through 2023-12-29, the forest served for
+2021–23 by year-end refits on rows whose 3-year label was observable
+by Jan 1 of the trade year. These years overlap the sealed 3-year
+holdout window; the candidate was fixed in decision 24 before they
+were run, and they are read as context for the holdout look, not as
+selection.
+
+Carter also ran `forest_nonloser_dd30_3y` on the host (same config
+hash: no new configuration) and asked three things about its report:
+
+1. *How can the top 20 a year be 0.79 precise when the 37 rows a
+   year at `score >= 0.8` are 0.42?* Because "37 a year" is 597
+   rows pooled over sixteen years, and 517 of them are 2006, 2007
+   and 2008 entries (41, 120, 356; precision 0.39, 0.15, 0.40),
+   where the fold models scored hottest and were most wrong. No row
+   scores 0.8 after 2009. Top 20 *per year* takes the best of each
+   year; a fixed threshold takes the years the model was most
+   confident, which were the pre-crash years (findings, conclusion
+   5). The era table's `n_at_thr_0.8` column shows it per year.
+2. *Do 17% of the picks and 46% of all rows get 0% over three
+   years?* No: `label_3y_cagr_lt_0p0` is the label expression
+   `fwd_3y_cagr < 0`, the share of rows whose 3-year CAGR is
+   negative (losers), not zero. 17% of the top 50 picks lost money
+   over three years against 46% of all test rows. The low/high
+   snapshot kinds are training rows only; every test row is a
+   median-kind snapshot.
+3. *Does the average stock trail SPY by 10 points a year, and would
+   capitalization-weighting the buys help?* Yes to the first: the
+   mean `fwd_3y_excess_cagr` over all test rows is −0.106 (median
+   −0.073), −0.089 inside the 100k floor, −0.07 inside 1m. Three
+   reasons, all real: the test rows are a universe of mostly small
+   companies, equally weighted; a stock's CAGR is pulled below its
+   average return by its volatility (a stock that halves and doubles
+   has a CAGR of zero) and most of the market's return comes from a
+   few large winners; and a delisted stock is carried at 0% to the
+   horizon. The candidate's buys are not the average stock (61% beat
+   SPY over three years, mean excess +0.025). Whether weighting them
+   by capitalization helps is a question the engine can now answer
+   (`weighting = "marketcap"`, `claude/backtest-marketcap-weighting`):
+   `bt_nonloser_mom_roc_top10_cap2_mcap`, the 28th configuration on
+   2005–20, prediction in the config (within 1.5 points either way,
+   more concentrated).
+
+*What came out (2026-10-01, backtests 28 to 31 on `dataset_v1.4`):*
+
+| | final value | deposits | time-weighted | drawdown | 2021 / 2022 / 2023 against SPY |
+|---|---|---|---|---|---|
+| SPY, deposits through 2023 | 774,140 | 228,000 | 9.58% | −52.9% | |
+| candidate, buys through 2023 | 985,668 | 228,000 | 12.21% | −41.2% | −9.6 / +4.3 / −2.2 |
+| the same with the sell discipline | 1,054,924 | 228,000 | 12.70% | −39.5% | −7.9 / +1.2 / −6.7 |
+| (the candidate without buys after 2020, for reference) | 948,956 | 192,000 | 12.24% | −41.2% | −9.5 / +4.6 / −2.0 |
+
+The forest for 2021, 2022 and 2023 was refit at each year end on
+rows whose 3-year label was observable by then; the years with new
+buys are within 0.3 points of the years without them, so the refits
+and the new buys changed the portfolio's path very little. **What
+the new buys did:** the 86 buys of 2021 trailed SPY by 15 points a
+year over their first year (77% lost money; 2022 was the year after),
+the 81 buys of 2022 by 2.8 points (54% lost money); 2023's have no
+outcome yet. In the selection years the worst one-year cohorts were
+2020 (−13.5 points) and 2006 (−11.0): 2021's is the worst of the
+sample, and of a kind with them. The predictions held for the years
+and the final value and missed for the 2021 cohort (within 0.03 of
++0.03 predicted; −0.15 measured). These are the only numbers so far
+from years the candidate was not chosen on, and they overlap the
+holdout era: context for the holdout look.
+
+**Capitalization weighting is an Apple bet.** The candidate with
+`weighting = "marketcap"` ends at 1,108,044 (13.82% a year, drawdown
+−37.0%) on seed 23, 1,161,451 and 1,090,347 on the other two: 1.6 to
+2.2 points a year above equal weights. But the median month puts 54%
+of its cash into one buy, it makes 5.2 buys a month instead of 9.1,
+and at the end 46% of the portfolio is AAPL (the five largest
+holdings are 60%, against 26% equal-weighted). The prediction missed
+on the return (+1.58, predicted within 1.5) and on the drawdown
+(shallower, not deeper); it held on concentration. The answer to
+Carter's question is that the index's advantage over the average
+stock comes from a few very large winners, and weighting the picks
+by size reproduces that by holding the largest of them: a
+single-stock bet, not a sizing rule. Equal weights stay.
+
+Backtest configurations tried on these years: 31.

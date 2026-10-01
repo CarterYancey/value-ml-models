@@ -41,3 +41,33 @@ why = "parameter search in cell C, LightGBM; 20 runs, one seed, duration not mea
 [[item]]
 config = "experiments/sweeps/xgb_random_search_nonloser_3y.toml"
 why = "parameter search in cell C, XGBoost on CPU; 20 runs, one seed, duration not measured"
+
+# Session of 2026-09-30 (second): decisions 14-18 of
+# docs/notes/2026-09-29-decisions.md. Run by hand with --save-models
+# (the queue does not pass it), in this order; the five all-rows
+# bundles are then evaluated inside each floor with vml-eval
+# (experiments/eval_screen_dv100k.toml, eval_screen_dv1m.toml).
+
+[[item]]
+config = "experiments/sweeps/baseline_factors_nonloser_dv100k_3y.toml"
+why = "single-factor bars for cell C inside the 100k floor; 5 runs, a minute"
+
+[[item]]
+config = "experiments/sweeps/baseline_factors_nonloser_dv1m_3y.toml"
+why = "single-factor bars for cell C inside the 1m floor; 5 runs, a minute"
+
+[[item]]
+config = "experiments/sweeps/forest_features_nonloser_allrows_3y.toml"
+why = "five feature sets in cell C on every row, read on the portfolio screen; 5 runs, 25 minutes"
+
+[[item]]
+config = "experiments/sweeps/forest_features_nonloser_dv100k_3y.toml"
+why = "the same five sets trained inside the 100k floor; 5 runs, 20 minutes"
+
+[[item]]
+config = "experiments/sweeps/forest_features_nonloser_dv1m_3y.toml"
+why = "the same five sets trained inside the 1m floor; 5 runs, 15 minutes"
+
+[[item]]
+config = "experiments/sweeps/baseline_factors_nonloser_1y_dv100k.toml"
+why = "single-factor bars for the 1-year 'not a loser' cell inside the 100k floor (decision 22); 5 runs, two minutes"

@@ -510,3 +510,50 @@ def test_cli_trends_flag(trained, inference_dir_trends, tmp_path, capsys):
     ranked = pd.read_csv(out_csv)
     assert set(TREND_COLUMNS) <= set(ranked.columns)
     capsys.readouterr()
+
+
+def test_predict_scores_only_the_universe(data_root, dataset_dir, inference_dir, tmp_path):
+    """A bundle trained inside a universe ranks only the rows inside
+    it, single or combined, and the sidecar says what was left out."""
+    import pandas as pd
+
+    floor = {"column": "book_to_market", "op": ">=", "value": 1.0}
+    results = tmp_path / "results.csv"
+    floored = train_deployment_model(
+        _config(name="deploy_floored", universe=[floor]),
+        data_root=data_root, results_path=results,
+        models_dir=tmp_path / "models",
+    )
+    plain = train_deployment_model(
+        _config(), data_root=data_root, results_path=results,
+        models_dir=tmp_path / "models",
+    )
+    frame = pd.read_parquet(inference_dir / "dataset.parquet")
+    inside = int((frame["book_to_market"] >= 1.0).sum())
+    assert 0 < inside < len(frame)
+
+    single = predict_with_bundle(
+        floored["bundle_path"], inference_dir, results_path=results,
+        predictions_dir=tmp_path / "predictions",
+    )
+    ranked = pd.read_csv(single["output_path"])
+    assert len(ranked) == inside
+    meta = json.loads(Path(str(single["output_path"]) + ".meta.json").read_text())
+    assert meta["universe"] == "book_to_market >= 1"
+    assert meta["n_rows_outside_universe"] == len(frame) - inside
+
+    combined = predict_with_bundles(
+        [plain["bundle_path"], floored["bundle_path"]], inference_dir,
+        results_path=results, predictions_dir=tmp_path / "predictions",
+    )
+    assert len(pd.read_csv(combined["output_path"])) == inside
+
+    # a universe column missing from the inference data is an error
+    frame.drop(columns=["book_to_market"]).to_parquet(
+        tmp_path / "inference_short.parquet"
+    )
+    with pytest.raises(DatasetValidationError, match="universe columns"):
+        predict_with_bundle(
+            floored["bundle_path"], tmp_path / "inference_short.parquet",
+            results_path=results, predictions_dir=tmp_path / "predictions",
+        )

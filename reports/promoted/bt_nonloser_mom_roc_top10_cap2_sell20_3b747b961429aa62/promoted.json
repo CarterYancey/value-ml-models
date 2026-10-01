@@ -1,0 +1,14 @@
+{
+  "name": "bt_nonloser_mom_roc_top10_cap2_sell20_3b747b961429aa62",
+  "promoted_utc": "2026-10-01T06:54:32+00:00",
+  "source_report": "reports/backtest/bt_nonloser_mom_roc_top10_cap2_sell20_3b747b961429aa62.md",
+  "run_id": "",
+  "config_hash": "",
+  "git_sha": "",
+  "dataset_version": "",
+  "config_path": "",
+  "note": "The candidate with a rank sell discipline (sold once outside the top 20% of the month's candidates by combined rank): 1,090,591, time-weighted 13.14%, drawdown -39.5%, costs 5,007 (4.2x), about 15 sales a year; seeds 232/1776: 12.70%/12.66%. +0.4 to +0.9 points a year over buy and hold on three seeds; predicted to do worse. The variant to paper-trade beside buy and hold. docs/notes/2026-09-30-backtests.md",
+  "files": [
+    "bt_nonloser_mom_roc_top10_cap2_sell20_3b747b961429aa62.md"
+  ]
+}

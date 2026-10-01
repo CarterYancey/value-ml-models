@@ -16,11 +16,17 @@ five-model AllProb screen):
   against the manifest's feature/rank groups, so a screen can never
   reference a label;
 - a **mandatory investability statement**: `[[investability]]` filters or
-  the explicit `investability = "none"` (reported with a warning);
+  the explicit `investability = "none"` (reported with a warning). A
+  bundle trained inside a `[[universe]]` (docs/experiments.md) is
+  refused unless the same filters are among the backtest's
+  `[[investability]]` or `[[filters]]`: a model only scores stocks of
+  the universe it learned from, and its year-end refits stay inside it;
 - per-model floors via `[signal.min_scores]` (bundle name → floor,
   overriding the scalar `min_score`);
 - the strategy and **mandatory `cost_bps`**: `buy_and_hold` (monthly
-  deposit, buy top-K by combined score, score- or equal-weighted, whole
+  deposit, buy top-K by combined score, score-, equal- or
+  market-capitalization-weighted (`weighting = "marketcap"`, from the
+  snapshot's `log_marketcap`), whole
   shares — the budget remainder stays in cash — never sell) or
   `sell_below_criteria` (same buying, plus: any held position failing
   the *sell criteria* at a rebalance is sold entirely, proceeds funding
@@ -28,7 +34,15 @@ five-model AllProb screen):
   and a holding whose snapshot aged out of the cross-section fails).
   The sell criteria default to the buy criteria; an optional `[sell]`
   section (own `min_score`/`min_scores`/`filters`) states a hysteresis
-  band explicitly (buy > 0.7, sell < 0.5). New portfolio-management
+  band explicitly (buy > 0.7, sell < 0.5). `[sell] max_rank_pct = 0.3`
+  adds a criterion relative to the month's cross-section: a holding is
+  sold once it is no longer among the top 30% of the month's buy
+  candidates by combined score (after every buy screen), or is not a
+  candidate at all. A score floor means different things in different
+  years (fold models score hotter before a crash than after one) and a
+  `mean_rank` combination has no score to floor; the rank criterion
+  works for both, with the band between the top K that is bought and
+  the top share that is kept as the hysteresis. New portfolio-management
   ideas plug in as new `Strategy` classes without touching the engine;
 - an optional **group cap**, `[portfolio] max_per_group = 2`: at each
   rebalance the candidates are walked in score order and a stock is
@@ -62,7 +76,24 @@ Monthly point-in-time cross-sections come from `dataset.parquet` itself
 (latest completed-quarter median-kind snapshot per stock, staleness-
 capped) — **not** from historical inference directories, which are
 survivor-only by construction. The benchmark leg (SPY) runs through the
-same engine with identical deposits and accounting. Reports land in
+same engine with identical deposits and accounting.
+
+Every report carries **"What the buys went on to do"**: each buy read
+on its own over the 1 and 3 years after its trade date, from the price
+panel, against the benchmark over the same dates, by buy year and
+pooled (mean and median excess return a year, share beating the
+benchmark, share losing money, share that stopped printing early). A
+stock that stops printing exits at its final print and the proceeds
+ride the benchmark to the horizon. The pooled row is logged
+(`buy_mean_excess_3y`, `buy_beat_3y`, ...). Read it beside the
+headline: time-weighted return gives the small early portfolio the
+weight of the large late one, money-weighted return the reverse, and
+two strategies can swap places between them; one buy, one vote says
+whether the selection was good in the early years and in the late
+ones. It excludes costs and sizing, so it is a reading of the
+selection, not of the portfolio.
+
+Reports land in
 `reports/backtest/<name>_<config-hash>.*` (report, equity/trades/
 rebalances CSVs — trades carry tickers, per-model scores, and realized
 profit on sells — and the equity plot), lead with money- and

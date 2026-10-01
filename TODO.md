@@ -359,6 +359,9 @@ in [PLAN.md](PLAN.md); check items off (and add new ones) as work proceeds.
       a run touches; `dataset.data` stays full-width for the backtest
       cross-section. vml-sweep prints peak RSS per run so regressions
       are visible before the OOM killer finds them.
+- [ ] `vml-experiments list` shows eval configs (`experiments/eval_*.toml`)
+      and `experiments/queue.toml` as broken experiment configs ("lacks
+      required fields"); recognize them as their own kinds.
 - [ ] `vml-experiments` quality-of-life: `--cell` filter (horizon+label),
       and a `similar <config>` subcommand ranking configs by shared
       cell/model/features.
@@ -389,8 +392,16 @@ in [PLAN.md](PLAN.md); check items off (and add new ones) as work proceeds.
 - [x] Post-hoc calibration (isotonic / Platt), prequentially: with
       `calibration = "isotonic"|"platt"` in a config (or sweep), fold
       Y's raw scores are calibrated on the pooled out-of-sample test
-      predictions of folds < Y — already purged/embargoed and strictly
-      earlier, so no local split is constructed (invariant 1 intact).
+      predictions of the earlier folds **whose outcomes were known
+      before year Y** (fold f with f + H < Y for an H-year label), so
+      no local split is constructed (invariant 1 intact).
+      *Corrected 2026-09-30 (`claude/calibration-label-lag`):* until
+      then every fold < Y was used, which handed fold Y's calibrator
+      outcomes from up to H years in its future (docs/notes/
+      process-issues.md). No fit, ranking or uncalibrated metric was
+      affected; no calibrated run had been recorded before that day.
+      Rows on one isotonic step now keep their raw order (they were
+      tied, and a top-K over ties is a top-K in row order).
       Folds below `calibration_min_rows` of history (default 1000) stay
       raw and are flagged in the report; the report draws the calibrated
       and raw reliability curves side by side and states the
@@ -446,6 +457,10 @@ in [PLAN.md](PLAN.md); check items off (and add new ones) as work proceeds.
       Sweeps take the same `[features]` table (or a `[[features]]` array
       as the feature axis), infer cell horizons from labels, and derive
       a default `name` (`{model}_sweep_{features}_{labels}_{hash}`) too.
+- [x] Boolean flags as model inputs (2026-09-30, same branch): the
+      nullable boolean feature columns are handed to models as 0/1
+      floats with NULL kept (`harness.dataset.feature_matrix`), route
+      (b) below for the flags only. Strings and dates stay excluded.
 - [ ] Encode the categorical/non-numeric `features` columns (`sector`,
       `industry`, `famaindustry`, `scalemarketcap`, the `Y`/`N` condition
       flags like `negative_equity`, and the `fund_datekey` /
@@ -662,24 +677,127 @@ in [PLAN.md](PLAN.md); check items off (and add new ones) as work proceeds.
       `n_estimators`) at full budget via a follow-up sweep file — no
       harness change needed, just two sweep configs.
 
+### Next, from the sessions of 2026-09-30 and 2026-10-01 (decisions 14-26)
+
+Start with docs/findings.md and docs/notes/2026-10-01-candidate.md.
+The candidate is cell C's forest, 12-month momentum and return on
+capital by mean rank; 31 backtest configurations were tried on buys of
+2005-2020 and no more are run on those years.
+
+Carter's, in order:
+
+- [ ] **Open and merge the pull request** from
+      `claude/results-2026-10-01` into `Claude`
+      (`gh pr create --base Claude --head claude/results-2026-10-01 --fill`).
+      It carries seven code changes (486 tests pass), the docs, 20
+      promoted results and the sandbox's ledger shard, and passes
+      `scripts/check_tracked_configs.py`. The code, by commit:
+      `[[universe]]` row filters, `[pick_screen]`, selection by score
+      and boolean flags as inputs; `blend` in vml-eval; **the
+      calibration look-ahead fix**; `[sell] max_rank_pct`; per-buy
+      outcomes in every backtest report; the universe applied in
+      `vml-predict`; `weighting = "marketcap"`. The separate feature
+      branches (`claude/universe-and-portfolio-screen`,
+      `claude/eval-blend`, `claude/calibration-label-lag`,
+      `claude/backtest-rank-sell`, `claude/backtest-buy-outcomes`,
+      `claude/predict-universe`, `claude/backtest-marketcap-weighting`)
+      are stacked and all contained in it; delete them after the merge.
+- [ ] **One holdout look** in cell C's 3y cell:
+      `python scripts/run_final_eval.py experiments/forest_nonloser_dd30_3y.toml`.
+      The forest is the only fitted part of the candidate. It says
+      whether "not a loser" is still predicted on 2021+ snapshots
+      (walk-forward: p@20 0.79, base 0.39); it does not test the
+      blend. Read it beside the 2021-23 trading run (decision 26).
+- [ ] **Which liquidity floor to deploy with**: 100,000 a day (the
+      template) or `dollar_volume_3m_rank >= 0.2` (era-neutral). The
+      candidate is the same under either (12.24% and 12.15%).
+- [ ] **Deploy and paper-trade the candidate** beside its
+      sell-discipline variant: docs/notes/2026-10-01-candidate.md,
+      "Run it on today's stocks". Not run yet; needs an
+      `inference_<date>` dataset from upstream.
+
+Code worth building next (each on its own `claude/<topic>` branch):
+
+- [ ] **The floor and the sector cap in `vml-predict`**
+      (`--filter "dollar_volume_3m >= 100000"`, `--max-per-group 2`),
+      so the deployed list is the backtest's selection and not a
+      ranking to be filtered by hand.
+- [ ] **A position cap** in the strategy (`Strategy` interface): stop
+      adding to a holding above a share of the portfolio. The quality
+      blend buys 94 stocks in sixteen years and two holdings are a
+      third of it with the sell discipline; the candidate's largest
+      is 8%.
+- [ ] **`sector` as a model input** (Carter, 2026-10-01: the cap is a
+      bandage; the model might learn that a column means something
+      different for REITs). One-hot of `sector` in
+      `harness.dataset.feature_matrix`, a per-row recoding like the
+      boolean flags, with the current-state caveat stated in every
+      report. One sweep in cell C: ranks against ranks + sector, read
+      on the screen and on sector shares.
+
+Open questions, each with the experiment that would answer it (none
+needs a backtest on 2005-2020):
+
+- [ ] **Why the screen is about 0.02 a year harsher on blends with
+      momentum than the backtests' own buys.** A third is the
+      delisting convention; entry timing (the snapshot against the
+      first trading days of the next quarter) is the untested rest.
+- [ ] **A parameter search on the theory-led feature set** (fs2 of
+      decision 18) before its verdict is final: it was run on a
+      forest configuration tuned on the ranks. Low priority: 20 draws
+      moved PR-AUC by 0.005 on the ranks.
+- [ ] **Does the candidate's edge survive a longer wait between the
+      snapshot and the buy?** The backtest buys one to six months
+      after the snapshot; live trading on a fresh inference set buys
+      sooner. Untested either way.
+
+Upstream requests (new dataset version; nothing is derived here):
+
+- [ ] **An outcome that treats a delisting as a portfolio does**:
+      per horizon the delisting date and a return with the proceeds
+      in the benchmark from the delisting to the horizon. Today an
+      acquired stock is carried flat, which understates it in every
+      `fwd_*` outcome and upside label (15% of the momentum blend's
+      screen picks; docs/notes/2026-09-30-blends-and-calibration.md).
+- [ ] **Within-sector ranks of the risk columns** (volatility,
+      conservative score), for sector-neutral models.
+- [ ] **Market-state features** (PLAN 5.6). Calibrated or not, score
+      thresholds select years, not stocks: a confidence that means
+      the same in 2008 and 2012 cannot come from a stock's own
+      columns (docs/notes/2026-09-30-blends-and-calibration.md,
+      2026-09-30-one-year-cell.md).
+
+Settled in these sessions (details in docs/findings.md):
+
+- [x] Training-time liquidity floor, theory-led feature sets, the
+      1-year horizon, selection by calibrated confidence, a learned
+      upside model, capitalization-weighted buys: none helps. A sell
+      discipline helps the candidate and the quality blend, not
+      forest + momentum. Trading 2021-23 was run with Carter's leave.
+
 ### Next, from the session of 2026-09-29/30 (Carter's notes, decision 13)
 
 The candidate and its evidence: docs/findings.md, "State";
 docs/notes/2026-09-29-decisions.md. Start a new session there.
 
-- [ ] **Carter:** one holdout look in cell C's 3y cell
-      (`fwd_3y_cagr >= 0 & fwd_3y_max_drawdown_from_entry < 0.3`)
-      with `experiments/forest_nonloser_dd30_3y.toml`, when he would
-      act on the candidate; the pull request for
-      `claude/backtest-sector-cap`. (Carter, 2026-09-30: the consumed
-      cells were opened on older dataset versions and simpler labels;
-      their counts should not stop experiments.)
-- [ ] **Sell discipline** for the candidate: one backtest with
+- [x] **Carter:** one holdout look in cell C's 3y cell and the pull
+      request for `claude/backtest-sector-cap`. (The sector cap
+      reached `Claude` with PR #17; the holdout look is carried in
+      the section above, with the same forest.)
+- [x] **Sell discipline** for the candidate (2026-09-30: run as a
+      rank criterion, `[sell] max_rank_pct = 0.2`, on the candidate
+      and on the quality blend, decision 21; results in
+      docs/notes/2026-09-30-backtests.md): one backtest with
       `strategy = "sell_below_criteria"`, criteria fixed before the
       run (the 14th backtest on 2005-2020). It works best with a
       calibrated model: buy on high confidence, sell or rebalance
       when it falls. Carter, 2026-09-30.
-- [ ] **Quick evaluation by confidence, not only by K.** The report's
+- [x] **Quick evaluation by confidence, not only by K.** (2026-09-30,
+      `claude/universe-and-portfolio-screen`: with `score_thresholds`
+      and `pick_outcomes` set, the report's "Selection by score"
+      tables give, per year and pooled, the rows and stocks at or
+      above each threshold, their precision and the mean and median
+      of every outcome; years with no pick are shown.) The report's
       "High-confidence picks" table shows how many names clear a
       score and how precise they are; add the pick outcomes at those
       thresholds (mean excess CAGR, losers, big winners of every
@@ -690,15 +808,29 @@ docs/notes/2026-09-29-decisions.md. Start a new session there.
       a failure. Holding cash when nothing clears the bar is a valid
       strategy; the number of picks a year at a threshold is part of
       the result. Carter, 2026-09-30.
-- [ ] **Calibration** (prequential, Phase 3 item above) before any
+- [x] **Calibration** (2026-09-30: run on the candidate's forest
+      after fixing a look-ahead in the calibrator; an honest
+      calibrator for a 3-year label is four years behind and an
+      absolute confidence bar would have held cash through the best
+      entry years: docs/notes/2026-09-30-blends-and-calibration.md.
+      A 1-year cell is the follow-up, decision 22.) Prequential,
+      Phase 3 item above, before any
       rule that reads a score as confidence. Measured 2026-09-29 on
       the candidate's forest: top scores 0.81-0.85 for 2006-08 entries
       (precision 0.15-0.60) and 0.65-0.69 for 2011-13 (precision near
       1.0), so a fixed threshold picks the pre-crash years; a
       threshold relative to the year's scores, or calibrated
       probabilities, is what the confidence rule needs.
-- [ ] **Feature selection on theory, not only on the manifest
-      groups.** Carter, 2026-09-30: the models lean on a few columns,
+- [x] **Feature selection on theory, not only on the manifest
+      groups.** (2026-09-30: five sets in cell C, on all rows and
+      inside two liquidity floors, read on the portfolio screen. No
+      set without the risk ranks matches the ranks: 0.013-0.034 a
+      year less mean excess, more losers, and the same two sectors
+      picked through operating-cash-flow stability. The floor at
+      training changes nothing for the ranks forest.
+      docs/notes/2026-09-30-features-and-floor.md. One seed, one
+      forest configuration; a parameter search on the theory-led set
+      is the untested rival.) Carter, 2026-09-30: the models lean on a few columns,
       the volatility and liquidity ranks among them; try excluding
       them, and prefer columns with a causal story in value investing
       (cash generation, balance-sheet strength, profitability,
@@ -711,7 +843,11 @@ docs/notes/2026-09-29-decisions.md. Start a new session there.
       beat SPY 0.63 of the time before 2013 and 0.28 after
       (docs/notes/2026-09-29-pick-anatomy.md): the question is open
       in cell C and on pick outcomes and backtests, not on p@20.
-- [ ] **Training-time liquidity floor.** Carter, 2026-09-30: drop
+- [x] **Training-time liquidity floor.** (2026-09-30, same branch:
+      `[[universe]]` in configs and sweeps, `universe_scope = "test"`
+      for the reference arm, a universe-qualified ledger cell, carried
+      into bundles, deployment refits and backtest refits;
+      docs/experiments.md "Universe".) Carter, 2026-09-30: drop
       rows below a dollar-volume threshold from training and test
       (the investability filter, applied to the dataset, not only to
       the backtest): less microcap noise, and the models need not
@@ -720,22 +856,28 @@ docs/notes/2026-09-29-decisions.md. Start a new session there.
       of the report; the label cell stays the same, so the trial
       count needs a "universe" qualifier. Not feature engineering
       (no new column); check data/manual.md before building it.
-- [ ] **Upstream request:** within-sector ranks of volatility and of
-      the conservative score, so the models can be sector-neutral
-      instead of capped (docs/notes/2026-09-29-first-backtests.md).
-- [ ] **Sector cap in the pick-outcome screen** (`eval/picks.py`),
+- [x] **Upstream request:** within-sector ranks of volatility and of
+      the conservative score (carried in the section above).
+- [x] **Sector cap in the pick-outcome screen** (`eval/picks.py`),
       so the screen sees what the backtest sees; and a sector table
-      of the top-K picks in every run report.
+      of the top-K picks in every run report. (2026-09-30, same
+      branch: `[pick_screen]`, top K per test quarter with a cap per
+      sector, and the picks' share by sector beside the test rows'.)
 - [ ] Ranking metric for boosted-family searches: p@K over 2013-20
       of the worst seed, not PR-AUC (the two order LightGBM and
       XGBoost draws in opposite directions).
-- [ ] Whole shares at 100 a pick leave 55-108 of 192 months short of
+- [x] Whole shares at 100 a pick leave 55-108 of 192 months short of
       10 buys in the capped backtests; consider `fractional_shares`
       or a larger monthly deposit in the template, stated as a
-      template change.
-- [ ] Why 134 delisting liquidations with momentum against 52
+      template change. (2026-09-30: the candidate re-run with
+      fractional shares: 12.12% against 12.24% time-weighted,
+      936,540 against 948,956. The template is unchanged.)
+- [x] Why 134 delisting liquidations with momentum against 52
       without: takeover targets? Read the trades CSV of the promoted
-      backtest.
+      backtest. (2026-09-30: yes. Mean total return of the 134 is
+      +79%, median +39%, 21% at a loss; 33 are within 10% of cost,
+      bought a median three months before the delisting.
+      docs/notes/2026-09-30-blends-and-calibration.md)
 
 ## 3.5 — Downturn specialization (PLAN §4 Phase 3.5)
 
@@ -893,6 +1035,15 @@ slice. All within the invariants: no local splits, no derived features.
       alone is never a sell); optional `[sell]` section for a separate
       criteria band (hysteresis), inherited from the buy criteria
       otherwise; sells logged with per-cause reasons.
+- [x] Per-buy outcomes in every backtest report (2026-09-30,
+      `claude/backtest-buy-outcomes`): each buy over the 1 and 3
+      years after its trade date against the benchmark, by buy year
+      and pooled, delisting proceeds riding the benchmark.
+- [x] Rank-based sell criterion (2026-09-30,
+      `claude/backtest-rank-sell`): `[sell] max_rank_pct`, a holding
+      is kept while it is among that top share of the month's buy
+      candidates; for `mean_rank` combinations and for models whose
+      score level moves between years.
 - [ ] Richer strategies behind the `Strategy` interface: periodic full
       rebalance, stop-loss / trailing-stop sells, position caps,
       partial trimming (sell down to weight instead of all-or-nothing).

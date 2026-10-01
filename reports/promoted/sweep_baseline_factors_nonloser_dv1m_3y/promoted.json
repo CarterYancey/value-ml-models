@@ -1,0 +1,14 @@
+{
+  "name": "sweep_baseline_factors_nonloser_dv1m_3y",
+  "promoted_utc": "2026-10-01T06:53:48+00:00",
+  "source_report": "reports/sweeps/baseline_factors_nonloser_dv1m_3y/baseline_factors_nonloser_dv1m_3y_summary.md",
+  "run_id": "",
+  "config_hash": "",
+  "git_sha": "",
+  "dataset_version": "dataset_v1.4",
+  "config_path": "experiments/sweeps/baseline_factors_nonloser_dv1m_3y.toml",
+  "note": "Single-factor bars for cell C inside the 1m floor: same order as inside 100k (conservative score 0.63 precision, 0.241 losers, -0.002 mean excess; lowest volatility 0.73, 0.177, -0.030).",
+  "files": [
+    "baseline_factors_nonloser_dv1m_3y_summary.md"
+  ]
+}

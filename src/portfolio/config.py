@@ -21,62 +21,17 @@ from datetime import date
 from pathlib import Path
 
 from harness.errors import ConfigError
-
-#: Comparison operators a filter may use. Ordering operators require a
-#: numeric value; equality operators also accept strings (e.g. sector).
-FILTER_OPS = (">", ">=", "<", "<=", "==", "!=")
-_ORDERING_OPS = frozenset({">", ">=", "<", "<="})
+# the filter spec lives with the harness: experiments screen rows with
+# it too (`[[universe]]`); re-exported here for backtest configs
+from harness.filters import FILTER_OPS, FilterSpec  # noqa: F401
 
 COMBINE_MODES = ("product", "mean", "min", "mean_rank")
-WEIGHTINGS = ("score", "equal")
+#: how a rebalance's cash is split over the picks: by combined score,
+#: equally, or by market capitalization (`exp(log_marketcap)` of the
+#: snapshot, the cross-section's size column) — the last sizes picks
+#: the way a capitalization-weighted index does
+WEIGHTINGS = ("score", "equal", "marketcap")
 MODEL_UPDATE_POLICIES = ("refit", "frozen")
-
-
-@dataclass(frozen=True)
-class FilterSpec:
-    """One row predicate over a cross-section column. Rows whose column
-    is NULL fail every filter — missingness never passes a screen."""
-
-    column: str
-    op: str
-    value: float | int | str | bool
-
-    @classmethod
-    def from_table(cls, table: dict, source: str, where: str) -> "FilterSpec":
-        if not isinstance(table, dict):
-            raise ConfigError(
-                f"config {source}: each {where} entry must be a table with "
-                "column/op/value"
-            )
-        unknown = sorted(set(table) - {"column", "op", "value"})
-        if unknown:
-            raise ConfigError(
-                f"config {source}: unknown {where} keys {unknown}; expected "
-                "column, op, value"
-            )
-        missing = [k for k in ("column", "op", "value") if k not in table]
-        if missing:
-            raise ConfigError(
-                f"config {source}: {where} entry lacks {missing}"
-            )
-        op = table["op"]
-        if op not in FILTER_OPS:
-            raise ConfigError(
-                f"config {source}: {where} op {op!r} not in {list(FILTER_OPS)}"
-            )
-        value = table["value"]
-        if op in _ORDERING_OPS and isinstance(value, (str, bool)):
-            raise ConfigError(
-                f"config {source}: {where} op {op!r} needs a numeric value, "
-                f"got {value!r}"
-            )
-        return cls(column=str(table["column"]), op=op, value=value)
-
-    def to_table(self) -> dict:
-        return {"column": self.column, "op": self.op, "value": self.value}
-
-    def describe(self) -> str:
-        return f"{self.column} {self.op} {self.value}"
 
 
 @dataclass(frozen=True)
@@ -117,6 +72,12 @@ class BacktestConfig:
     #: None = inherit the buy [[filters]]; [] (an explicit empty
     #: `filters = []`) = no column screens on sells
     sell_filters: tuple[FilterSpec, ...] | None = None
+    #: a held position passes only while it is among this top share of
+    #: the month's buy candidates by combined score (None = no rank
+    #: criterion). Relative to the month's cross-section, so it means
+    #: the same in a year of high scores and a year of low ones, and it
+    #: works for a mean_rank combination, which has no score to floor.
+    sell_max_rank_pct: float | None = None
     #: a snapshot older than this at the trade date drops out of the
     #: cross-section (stale fundamentals are not a tradable signal)
     max_staleness_days: int = 200
@@ -242,6 +203,7 @@ class BacktestConfig:
         sell_raw = raw.get("sell")
         has_sell_criteria = sell_raw is not None
         sell_min_score, sell_min_scores, sell_filters = None, {}, None
+        sell_max_rank_pct = None
         if has_sell_criteria:
             if not isinstance(sell_raw, dict):
                 raise ConfigError(
@@ -249,12 +211,25 @@ class BacktestConfig:
                     "(min_score, min_scores, filters)"
                 )
             unknown = sorted(set(sell_raw) - {"min_score", "min_scores",
-                                              "filters"})
+                                              "filters", "max_rank_pct"})
             if unknown:
                 raise ConfigError(
                     f"backtest config {source}: unknown [sell] keys "
-                    f"{unknown}; expected min_score, min_scores, filters"
+                    f"{unknown}; expected min_score, min_scores, filters, "
+                    "max_rank_pct"
                 )
+            if "max_rank_pct" in sell_raw:
+                pct = sell_raw["max_rank_pct"]
+                if (
+                    isinstance(pct, bool)
+                    or not isinstance(pct, (int, float))
+                    or not 0.0 < float(pct) <= 1.0
+                ):
+                    raise ConfigError(
+                        f"backtest config {source}: [sell] max_rank_pct "
+                        f"must be a share in (0, 1], got {pct!r}"
+                    )
+                sell_max_rank_pct = float(pct)
             if "min_score" in sell_raw:
                 sell_min_score = float(sell_raw["min_score"])
             raw_scores = sell_raw.get("min_scores", {})
@@ -349,6 +324,7 @@ class BacktestConfig:
             sell_min_score=sell_min_score,
             sell_min_scores=sell_min_scores,
             sell_filters=sell_filters,
+            sell_max_rank_pct=sell_max_rank_pct,
             max_staleness_days=int(signal.get("max_staleness_days", 200)),
             filters=filters,
             investability=investability,
@@ -408,6 +384,10 @@ class BacktestConfig:
                     else [f.to_table() for f in self.sell_filters]
                 ),
             }
+            # only when set, so [sell] sections written before the rank
+            # criterion keep their hashes
+            if self.sell_max_rank_pct is not None:
+                added["sell"]["max_rank_pct"] = self.sell_max_rank_pct
         return {
             **added,
             "name": self.name,

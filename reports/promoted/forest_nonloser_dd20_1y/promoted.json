@@ -1,0 +1,22 @@
+{
+  "name": "forest_nonloser_dd20_1y",
+  "promoted_utc": "2026-10-01T06:53:51+00:00",
+  "source_report": "reports/forest_nonloser_dd20_1y.md",
+  "run_id": "8723a42cfc5e",
+  "config_hash": "49fbec9355b8262c",
+  "git_sha": "ba55f7d9adc1654cdb466dee924ac976e3f9a828",
+  "dataset_version": "dataset_v1.4",
+  "config_path": "experiments/forest_nonloser_dd20_1y.toml",
+  "note": "NEGATIVE: a 1-year 'not a loser' forest (p@20 0.67, base 0.46) picks worse for one year ahead than the 3-year forest (screen losers 0.275 vs 0.236, mean 1y excess -0.004 vs +0.008), sees crashes no sooner (p@20 0.15 / 0.05 for 2007 / 2008 entries), and its lagged calibration is unusable (precision at 0.5 from 0.10 to 0.84 by year). Cell closed. docs/notes/2026-09-30-one-year-cell.md",
+  "experiment": "forest_nonloser_dd20_1y",
+  "model": "random_forest",
+  "label": "fwd_1y_cagr >= 0.0 & fwd_1y_max_drawdown_from_entry < 0.2 [universe: dollar_volume_3m >= 100000]",
+  "horizon_years": 1,
+  "scheme": "walkforward",
+  "headline": "p@20=0.666",
+  "baseline": "0.731 factors_nonloser",
+  "lift": "-0.066",
+  "files": [
+    "forest_nonloser_dd20_1y.md"
+  ]
+}

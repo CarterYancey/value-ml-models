@@ -32,31 +32,24 @@ every filter: missingness never passes a screen.
 from __future__ import annotations
 
 import json
-import operator
 import pickle
 from datetime import datetime, timezone
 from pathlib import Path
 
 import pandas as pd
 
-from harness.dataset import SELECTION_SCHEME, Dataset
+from harness.dataset import SELECTION_SCHEME, Dataset, feature_matrix
 from harness.errors import ConfigError, DatasetValidationError
+from harness.filters import (  # noqa: F401  (re-exported for callers)
+    _OPS,
+    FILTERABLE_GROUPS,
+    apply_filters,
+    validate_filter_columns,
+)
 from harness.model_store import ModelBundle, ModelBundleError
 from models.registry import build_model
 from portfolio.config import BacktestConfig, FilterSpec
 
-_OPS = {
-    ">": operator.gt,
-    ">=": operator.ge,
-    "<": operator.lt,
-    "<=": operator.le,
-    "==": operator.eq,
-    "!=": operator.ne,
-}
-
-#: manifest groups a filter may reference — labels and weights are
-#: outcomes and structurally out of reach
-FILTERABLE_GROUPS = ("features", "ranks", "sector_ranks")
 
 
 class ModelSet:
@@ -176,6 +169,27 @@ class ModelSet:
                     f"dataset {dataset.version} lacks feature columns bundle "
                     f"{d} was trained on: {missing}"
                 )
+            # a model trained inside a universe is never asked about a
+            # stock outside it: every filter of the bundle's universe
+            # must be among the backtest's own screens
+            if b.train_config.universe_scope == "all":
+                screens = {
+                    f.canonical()
+                    for f in (*config.investability, *config.filters)
+                }
+                outside = [
+                    f.canonical()
+                    for f in b.train_config.universe
+                    if f.canonical() not in screens
+                ]
+                if outside:
+                    raise ConfigError(
+                        f"bundle {d} was trained inside the universe "
+                        f"{outside}, which the backtest does not screen "
+                        "on; add the same filters to [[investability]] "
+                        "(or [[filters]]) so the model only scores stocks "
+                        "of the universe it learned from"
+                    )
             if any_floor and not b.probabilistic:
                 raise ConfigError(
                     f"a min_score floor is set but bundle {d} is not "
@@ -223,7 +237,7 @@ class ModelSet:
                     f"{missing}"
                 )
             out[f"score_{name}"] = model.predict_scores(
-                frame[list(b.feature_columns)]
+                feature_matrix(frame, b.feature_columns)
             )
         return out
 
@@ -350,7 +364,12 @@ def _refit_as_of_year(
     data = dataset.frame(
         list(bundle.feature_columns)
         + [config.label, dataset.sample_weight_column(config.horizon_years)]
+        + [f.column for f in config.universe]
     )
+    if config.universe and config.universe_scope == "all":
+        # a universe is part of the model: the refit learns from the
+        # rows the fold models learned from
+        data = dataset.apply_universe(data, config.universe)
     snapshot = pd.to_datetime(data["snapshot_date"])
     observable_by = (
         snapshot
@@ -389,36 +408,6 @@ def _column_names(bundles: list[ModelBundle]) -> list[str]:
         f"{name}_{b.run_id}" if names.count(name) > 1 else name
         for name, b in zip(names, bundles)
     ]
-
-
-def validate_filter_columns(
-    filters: tuple[FilterSpec, ...], dataset: Dataset, where: str
-) -> None:
-    """Every filter column must be declared by a filterable manifest
-    group — labels and weights are structurally unreachable, and a typo
-    is an error rather than an empty screen."""
-    allowed = {c for g in FILTERABLE_GROUPS for c in dataset.columns(g)}
-    for f in filters:
-        if f.column not in allowed:
-            raise ConfigError(
-                f"{where} filter references {f.column!r}, which is not in "
-                f"the manifest's {list(FILTERABLE_GROUPS)} groups (labels "
-                "and weights can never be screened on)"
-            )
-
-
-def apply_filters(
-    frame: pd.DataFrame, filters: tuple[FilterSpec, ...]
-) -> pd.DataFrame:
-    """Rows passing every filter. NULL fails: a stock with no value for a
-    screened column is screened out, never waved through."""
-    if not filters:
-        return frame
-    mask = pd.Series(True, index=frame.index)
-    for f in filters:
-        col = frame[f.column]
-        mask &= col.notna() & _OPS[f.op](col, f.value)
-    return frame[mask]
 
 
 def apply_min_score(
@@ -473,11 +462,27 @@ def sell_filter_specs(config: BacktestConfig) -> tuple[FilterSpec, ...]:
     )
 
 
+def candidate_rank_pct(candidates: pd.DataFrame) -> pd.Series:
+    """Each buy candidate's position in the month's ranking as a share
+    of the candidates, best first: the top one of 200 is at 0.005, the
+    last at 1.0. `candidates` is sorted by combined score, best first
+    (the feed's order), with an `asset` column."""
+    n = len(candidates)
+    if not n:
+        return pd.Series(dtype=float)
+    return pd.Series(
+        (pd.RangeIndex(1, n + 1) / n).to_numpy(dtype=float),
+        index=candidates["asset"].to_numpy(),
+    )
+
+
 def review_held(
     scored: pd.DataFrame,
     held_assets: list,
     floors: dict[str, float],
     filters: tuple[FilterSpec, ...],
+    rank_pct: pd.Series | None = None,
+    max_rank_pct: float | None = None,
 ) -> pd.DataFrame:
     """Evaluate the held book against the sell criteria on the *scored,
     unfiltered* cross-section — a stock that merely dropped out of the
@@ -485,7 +490,13 @@ def review_held(
     alone. Returns one row per held asset: `passes_sell` and, when it
     fails, a `sell_reason`. A held asset absent from the cross-section
     (its snapshot aged past the staleness cap — the fundamentals can no
-    longer be verified) fails: missingness never passes a screen."""
+    longer be verified) fails: missingness never passes a screen.
+
+    With `max_rank_pct`, a held asset must also be among that top share
+    of the month's buy candidates (`rank_pct`, from
+    `candidate_rank_pct`). An asset that is not a candidate at all (it
+    fails the buy screens, or has no quote) fails: it is not something
+    the strategy would buy today at any rank."""
     rows = []
     by_asset = (
         scored.set_index("permaticker") if not scored.empty else pd.DataFrame()
@@ -507,6 +518,11 @@ def review_held(
                     if pd.isna(value) or not _OPS[spec.op](value, spec.value):
                         reason = f"filter:{spec.column}"
                         break
+            if not reason and max_rank_pct is not None:
+                if rank_pct is None or asset not in rank_pct.index:
+                    reason = "rank:not_a_candidate"
+                elif float(rank_pct.loc[asset]) > max_rank_pct:
+                    reason = "rank:below_top_share"
         rows.append(
             {"asset": asset, "passes_sell": not reason, "sell_reason": reason}
         )

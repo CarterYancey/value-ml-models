@@ -180,6 +180,120 @@ def group_tables(
     return overall, pd.DataFrame(rows)
 
 
+#: Horizons, in years, the buy-outcome table reads each buy on.
+BUY_OUTCOME_HORIZONS = (1, 3)
+
+
+def buy_outcomes(
+    trades: pd.DataFrame,
+    panel,
+    valuation_end,
+    horizons: tuple[int, ...] = BUY_OUTCOME_HORIZONS,
+    early_exit_days: int = 30,
+) -> pd.DataFrame:
+    """What each buy went on to do, from the price panel: one row per
+    buy with, per horizon H, its annualized return over the H years
+    after the trade date and that return's excess over the benchmark's.
+
+    A portfolio figure weights a year by what the portfolio then held:
+    time-weighted return gives the first years, when a deposit-driven
+    portfolio is small and young, the weight of the last ones, and
+    money-weighted return does the opposite. Neither says whether the
+    *selection* was good year by year. This does: every buy counts
+    once, read over a fixed horizon from its own trade date.
+
+    A stock that stops printing before the horizon (a delisting, most
+    often an acquisition) exits at its final print and the proceeds
+    ride the benchmark to the horizon: a portfolio gets the cash back
+    and reinvests it, it does not hold it at zero. (The dataset's label
+    convention carries the final price flat to the horizon, which is
+    why an acquired stock looks worse on `fwd_*_excess_cagr` than it
+    was for a portfolio.) Costs are not included. A buy whose horizon
+    ends after `valuation_end` has no outcome at that horizon (NaN)."""
+    columns = ["asset", "date", "year", "gross"]
+    for h in horizons:
+        columns += [f"return_{h}y", f"excess_{h}y", f"early_exit_{h}y"]
+    if trades.empty:
+        return pd.DataFrame(columns=columns)
+    buys = trades[trades["side"] == "buy"]
+    bench = panel.benchmark
+    end = pd.Timestamp(valuation_end)
+
+    def asof(series: pd.Series, when: pd.Timestamp):
+        idx = series.index.searchsorted(when, side="right") - 1
+        if idx < 0:
+            return None
+        return float(series.iloc[idx]), series.index[idx]
+
+    rows = []
+    for asset, when, price, gross in zip(
+        buys["asset"], pd.to_datetime(buys["date"]), buys["price"],
+        buys["gross"],
+    ):
+        row: dict = {
+            "asset": asset, "date": when, "year": int(when.year),
+            "gross": float(gross),
+        }
+        series = panel.series(int(asset))
+        start = asof(bench, when)
+        for h in horizons:
+            target = when + pd.DateOffset(years=h)
+            row[f"return_{h}y"] = row[f"excess_{h}y"] = float("nan")
+            row[f"early_exit_{h}y"] = float("nan")
+            if series is None or start is None or target > end:
+                continue
+            exit_quote = asof(series, target)
+            if exit_quote is None or not price > 0:
+                continue
+            exit_price, exit_date = exit_quote
+            at_exit, at_target = asof(bench, exit_date), asof(bench, target)
+            if at_exit is None or at_target is None:
+                continue
+            # the stock to its exit, then the benchmark to the horizon
+            total = (exit_price / float(price)) * (at_target[0] / at_exit[0])
+            bench_total = at_target[0] / start[0]
+            row[f"return_{h}y"] = total ** (1.0 / h) - 1.0
+            row[f"excess_{h}y"] = total ** (1.0 / h) - bench_total ** (1.0 / h)
+            row[f"early_exit_{h}y"] = float(
+                (target - exit_date).days > early_exit_days
+            )
+        rows.append(row)
+    return pd.DataFrame(rows, columns=columns)
+
+
+def buy_outcome_table(
+    outcomes: pd.DataFrame,
+    horizons: tuple[int, ...] = BUY_OUTCOME_HORIZONS,
+) -> pd.DataFrame:
+    """`buy_outcomes` by buy year, with a pooled row: per horizon the
+    number of buys with an outcome, their mean and median excess return
+    a year over the benchmark, the share that beat it, the share that
+    lost money and the share that exited early (stopped printing)."""
+    if outcomes.empty:
+        return pd.DataFrame()
+
+    def row(label, frame: pd.DataFrame) -> dict:
+        r: dict = {"year": label, "buys": int(len(frame))}
+        for h in horizons:
+            seen = frame[frame[f"excess_{h}y"].notna()]
+            r[f"n_{h}y"] = int(len(seen))
+            if seen.empty:
+                for key in ("mean_excess", "median_excess", "beat", "lost",
+                            "early_exit"):
+                    r[f"{key}_{h}y"] = float("nan")
+                continue
+            r[f"mean_excess_{h}y"] = float(seen[f"excess_{h}y"].mean())
+            r[f"median_excess_{h}y"] = float(seen[f"excess_{h}y"].median())
+            r[f"beat_{h}y"] = float((seen[f"excess_{h}y"] > 0).mean())
+            r[f"lost_{h}y"] = float((seen[f"return_{h}y"] < 0).mean())
+            r[f"early_exit_{h}y"] = float(seen[f"early_exit_{h}y"].mean())
+        return r
+
+    rows = [row(int(y), g) for y, g in outcomes.groupby("year", sort=True)]
+    rows.append(row("all buys", outcomes))
+    return pd.DataFrame(rows)
+
+
 def headline_table(
     strategy: SimulationResult, benchmark: SimulationResult
 ) -> pd.DataFrame:
@@ -263,6 +377,7 @@ def write_backtest_report(
     valuation_end,
     configurations_tried: int,
     artifacts: dict,
+    buy_outcome_frame: pd.DataFrame | None = None,
 ) -> Path:
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -321,6 +436,36 @@ def write_backtest_report(
 
     reb = strategy_result.rebalance_log
     n_months = len(reb)
+    buy_lines = []
+    if buy_outcome_frame is not None and not buy_outcome_frame.empty:
+        view = buy_outcome_table(buy_outcome_frame)
+        for col in view.columns:
+            if col.startswith(("mean_", "median_", "beat_", "lost_",
+                               "early_exit_")):
+                view[col] = view[col].map(_pct)
+        horizons = ", ".join(f"{h}" for h in BUY_OUTCOME_HORIZONS)
+        buy_lines = [
+            "## What the buys went on to do",
+            "",
+            f"Every buy read on its own, over the {horizons} years after "
+            "its trade date, from the price panel: `mean_excess` and "
+            "`median_excess` are the buys' annualized return minus the "
+            f"benchmark's over the same dates, `beat` the share above it, "
+            "`lost` the share with a negative return, `early_exit` the "
+            "share that stopped printing before the horizon (they exit "
+            "at the final print and the proceeds ride the benchmark to "
+            "the horizon, as a portfolio reinvests what an acquisition "
+            "pays out). `n` counts the buys whose horizon ends inside "
+            "the valuation window. One buy, one vote, no costs: this "
+            "reads the selection, where the headline reads the "
+            "portfolio (time-weighted return gives the small early "
+            "portfolio the weight of the large late one; money-weighted "
+            "return the reverse).",
+            "",
+            _table(view),
+            "",
+        ]
+
     coverage_lines = []
     if n_months:
         zero = int((reb["n_bought"] == 0).sum())
@@ -407,6 +552,13 @@ def write_backtest_report(
             f"{'' if config.sell_filters is not None else ' (inherited from buy)'}: "
             f"{filter_desc}"
         )
+        if config.sell_max_rank_pct is not None:
+            sell_lines.append(
+                "- sell rank: a held position is sold once it is no "
+                f"longer among the top {config.sell_max_rank_pct:.0%} of "
+                "the month's buy candidates by combined score (after "
+                "every buy screen), or is not a candidate at all"
+            )
 
     inv_lines = (
         [f"- `{f.describe()}`" for f in config.investability]
@@ -527,6 +679,7 @@ def write_backtest_report(
         f"{config.benchmark_cost_bps} bps)",
         "",
         *group_lines,
+        *buy_lines,
         "## Coverage & diagnostics",
         "",
         *coverage_lines,
