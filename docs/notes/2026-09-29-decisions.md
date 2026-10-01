@@ -1383,3 +1383,72 @@ an acquired stock is carried flat.
   measured against same-size peers, size-neutral ranks, market-state
   features, and information about upside that prices and statements
   do not carry (insider and institutional transactions).
+
+### 35. Carter's reading of 2021–26 (a bubble the strategy sits out), tested on the last one
+
+*Carter (2026-10-01, on the session's summary):* the lead of 2005–2020
+is a good sign; the likeliest reason for 2021–26 is a temporary
+change in market behaviour. Returns in that period were dominated by
+stocks like Tesla and NVIDIA, which do not pass a value investor's
+test; if this is a bubble, a value strategy is expected to trail
+through it and to dominate again during and after the correction.
+
+*What the record already says for and against:*
+
+- For: SPY outran equal-weighted stocks of every size in 2021–26,
+  its own thirty largest included, and the forest ranks NVDA, TSLA
+  and META in the middle of its list (decision 32, items 3 and 7).
+  That is the pattern the reading describes.
+- Not explained by it: against stocks of their own size, a
+  comparison that leaves the giants' index weight out, the
+  candidate's picks stopped leading with the buys of 2019, and its
+  protection in falls was smaller after 2020 (+3.2 points in 2022,
+  +11.4 in 2008). A bubble in a handful of giants explains trailing
+  SPY; it does not by itself explain no longer beating calm stocks'
+  own neighbours.
+- Cannot be told from the 2021–26 data: whether the lead returns
+  after a correction. There has been none inside the panel.
+
+*What can be tested:* the dataset's snapshots start at the end of
+1997 and nothing in this repository has ever been run, selected or
+read before 2005 (the 3-year fold calendar starts there). 1999–2004
+holds the last bubble led by a few large, fast-growing, expensive
+companies, its top (March 2000) and the three years after. The
+forest cannot be used there: no fold model exists before 2005. Its
+largest input can: the lowest 12-month volatility rank
+(`vol_12m_rank`, 19% of the forest's importance; `vol_36m_rank` is
+empty before 2000). So, as a **stand-in for the candidate**: lowest
+12-month volatility, 12-month momentum and return on capital by mean
+rank, the candidate's rule otherwise (rank floor, top 10 a month, at
+most 2 per sector), read per pick against SPY and against same-size
+candidates exactly as decision 30's diagnostic read the candidate.
+Columns and the price panel only: nothing is fitted, no label is
+read, no split tag is touched, no portfolio is simulated, nothing is
+logged to the ledger.
+
+*Is the stand-in the candidate?* Checked in the same run: it is run
+over 2005–2026 too and set beside the candidate's own figures there
+(same-size lead +0.046 / +0.059 / −0.016 for 2005–12 / 2013–20 /
+2021–23). If it does not track them, what it shows for 1999–2004
+says little about the candidate.
+
+*Predictions, written before the run. If Carter's reading holds here
+as it did for value strategies in general then:*
+
+1. Buys of 1999 (momentum and the volatility rank exist from early
+   1999), over their first year, which ends inside the bubble or at
+   its top: behind SPY, and not ahead of their same-size peers.
+2. Buys of 2000 to 2002, over three years: ahead of SPY by more than
+   the candidate's 2005–2020 average (+0.025 a year), ahead of their
+   same-size peers by 0.05 a year or more, and with a share of losers
+   under half their peers'.
+3. The stand-in tracks the candidate in 2005–2026: same-size lead
+   within 0.03 of the candidate's in each of the three periods.
+
+*What each outcome would mean:* 1 and 2 holding says this kind of
+selection, in this dataset, did sit out the last bubble and was paid
+after it, on years no choice here was made on: the reading is
+consistent with the only precedent the data holds, though one
+precedent and a stand-in. 2 failing (no lead after March 2000) would
+count against it. Either way it cannot say that 2021–26 is a bubble,
+or when a correction comes.
