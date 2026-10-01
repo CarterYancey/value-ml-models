@@ -1348,9 +1348,10 @@ an acquired stock is carried flat.
    time-weighted against 10.9%) with three quarters of its worst
    drawdown; 37% ahead of SPY in money at the end of 2020 and between
    10% behind and 1% ahead in August 2026. What it has not shown: a
-   lead over SPY, or over stocks of its picks' own size, on any buy
-   after 2018. It is a low-risk equity portfolio, not a
-   market-beating one, on this evidence.
+   lead over SPY on the buys of any year after 2018, or a lead of
+   more than about a point over stocks of its picks' own size on any
+   of them. It is a low-risk equity portfolio, not a market-beating
+   one, on this evidence.
 3. **A selection is read against same-size peers from here on.**
    Decision 16's rule is amended: an arm goes to a backtest when its
    screen's lead over same-size peers (`peer_column =
