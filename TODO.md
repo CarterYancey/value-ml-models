@@ -359,6 +359,9 @@ in [PLAN.md](PLAN.md); check items off (and add new ones) as work proceeds.
       a run touches; `dataset.data` stays full-width for the backtest
       cross-section. vml-sweep prints peak RSS per run so regressions
       are visible before the OOM killer finds them.
+- [ ] `vml-experiments list` shows eval configs (`experiments/eval_*.toml`)
+      and `experiments/queue.toml` as broken experiment configs ("lacks
+      required fields"); recognize them as their own kinds.
 - [ ] `vml-experiments` quality-of-life: `--cell` filter (horizon+label),
       and a `similar <config>` subcommand ranking configs by shared
       cell/model/features.
