@@ -14,6 +14,13 @@ read** stub; a correction is a new entry that names the old one.
 
 <!-- entries -->
 
+### 2026-10-01 · vml-analogues: the historical stocks today's picks resemble (decision 37)
+git `971f50e`
+- **Did:** Built vml-analogues (claude/analogues, 510 tests): for each pick, the labeled historical rows most similar to it as the models see it (forest: share of trees in which the row shares the pick's leaf; factor legs: closeness on the rank column; the mean orders the list), one row per stock, with outcomes and the features on the pick's decision paths. Run on the three deployment bundles for the 2026-08-03 cross-section (the dry run of the paper-trading path).
+- **Got:** 462,851 pool rows of 12,679 stocks; ten picks, fifteen analogues each, eight seconds. Mean similarity 0.92 to 0.96. Over three years 0% to 47% of a pick's analogues lost money (the pool: 46%) and their median CAGR runs from 4% to 20% (the pool: 1%). JNJ's nearest: PEP 2019, IEX 2016, RTN 2008, ACN 2020; AAPL's: INTU 2012, MTD 2020, V 2023.
+- **Concluded:** An explanation tool, not an estimate: the deployment forest was fitted on the pool rows, so the analogues' outcomes are in-sample and the report says so. It answers 'what kind of stock is this pick, in the model's eyes, and which past cases is it closest to'.
+- **Next:** Use it beside each month's vml-predict list (docs/paper-trading.md).
+
 ### 2026-10-01 · forest_piotroski_3y
 18 runs · `dataset_v1.4` · 2 cells · git `6c31d1c` · [summary](../reports/sweeps/forest_piotroski_3y/forest_piotroski_3y_summary.md)
 - **Did:** Carter's side experiment (decision 36): the nine Piotroski signals against the composite F-score. Forests (depth 4, every feature offered at every split, otherwise the candidate's; three seeds) on three feature sets with nothing else in them: the composite alone (fs0), the nine 0/1 signals (fs1), both (fs2); cell C and label_3y_beat_spy, all rows. Read on the whole ranking (fold-mean PR-AUC against the base rate), not on p@20 or the screen: nine yes/no inputs give a few hundred distinct scores and the picks come out of large ties. 18 hashes, 288 fold rows, git 46e3b76 and 6c31d1c (a commit of notes between).

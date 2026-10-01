@@ -185,7 +185,12 @@ in [PLAN.md](PLAN.md); check items off (and add new ones) as work proceeds.
       from the inference data into the output CSV (single and
       multi-bundle; missing columns are an error, and the sidecar
       records `extra_columns`).
-- [ ] Historical analogues ("stocks that looked like this before"): pick
+- [x] Historical analogues (built 2026-10-01 as `vml-analogues` on
+      `claude/analogues`, decision 37: the picks or named tickers, the
+      blend read as one, forests by shared leaves and rank factors by
+      closeness on their column; docs/deployment.md. Not built: boosted
+      trees weighted by leaf value, a per-model report.)
+      ("stocks that looked like this before"): pick
       one stock from an inference dataset, score it with several
       deployment bundles (e.g. the best 1y/3y/5y configs), and for each
       model show the labeled historical rows that **land in the same
@@ -755,6 +760,9 @@ Done under decision 36 on 2026-10-01:
 - [x] The nine Piotroski signals against the composite F-score
       (`forest_piotroski_3y`): docs/logbook.md.
 - [x] "Data before 1998": closed by Carter (Sharadar starts in 1998).
+- [x] `vml-analogues`: the historical stocks today's picks resemble,
+      and what they went on to do (decision 37; docs/deployment.md,
+      docs/paper-trading.md step 5).
 
 ### Next, from the second session of 2026-10-01 (decisions 27-35)
 
@@ -775,7 +783,8 @@ Carter's, in order:
 - [ ] **Open and merge the pull request** from
       `claude/results-2026-10-01b` into `Claude`
       (`gh pr create --base Claude --head claude/results-2026-10-01b --fill`).
-      Five code changes (506 tests pass), the docs, the promoted
+      Six code changes (510 tests pass; the sixth is
+      `claude/analogues`, `vml-analogues`), the docs, the promoted
       results and the ledger shard; passes
       `scripts/check_tracked_configs.py`. The code, by branch (all
       contained in it; delete them after the merge):

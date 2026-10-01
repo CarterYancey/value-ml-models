@@ -1591,3 +1591,42 @@ the rest of point 4 sorted into TODO.md and a research plan
 ([research plan](2026-10-01-research-plan.md)), with what each
 direction needs, what the record already says about it, and which
 ones need a session of their own.
+
+### 37. Historical analogues, brought forward and built
+
+*Carter (2026-10-01):* take the deployment models, run them on today's
+stocks, get the picks, and see historic stocks that were similar in
+features to those picks (in the same leaf, or similar by some other
+measure). It was the "Historical analogues" item of TODO.md.
+
+*Decided and built* (`claude/analogues`, on top of the session's five
+code branches; `vml-analogues`, docs/deployment.md):
+
+- **Similar means similar as the models see it**, per model, averaged
+  over the blend. The forest: the share of its trees in which a
+  historical row lands in the pick's leaf (the model's own thresholds
+  and NULL routing; no distance to choose, no imputation, no scaling).
+  The two factor legs: closeness on the column (one minus the
+  difference of the two ranks). So an analogue of a pick is a stock
+  the forest treated the same way *and* that had the same momentum
+  and return on capital: what the blend would have ranked alike.
+- **The pool** is the training dataset's median-kind rows with a known
+  3-year outcome (462,851 rows of 12,679 stocks on `dataset_v1.4`),
+  every era, delisted stocks included; one row per stock, the pick's
+  own history left out by default.
+- **Shown per pick**: the features the forest split on along its
+  paths with the pick's values, the analogues by era, and each
+  analogue with its similarity per leg and its 1- and 3-year
+  outcomes; a summary of every pick's analogues beside the whole pool.
+- **What it is not**: an estimate. The deployment forest was fitted on
+  these rows, so the analogues' outcomes are in-sample; the report
+  says so in its first paragraph. Nothing it produces is a model
+  input (invariant 4).
+
+*Not built, from the TODO sketch:* weighting boosted trees by leaf
+value (boosted models get the plain share of trees); a per-model
+report (the blend is read as one). *Checked:* run on the three
+deployment bundles for the August 2026 cross-section, eight seconds;
+the ten picks' fifteen analogues each resemble the pool's safest
+corner (0% to 47% lost money over three years against 46% of the
+pool), as the in-sample caveat predicts they must.

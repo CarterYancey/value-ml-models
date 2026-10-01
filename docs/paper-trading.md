@@ -98,6 +98,19 @@ by then.
    rows) is beyond 0.20. In the backtest this sold about 15 holdings
    a year.
 
+5. **What the picks resemble** (optional, for reading the list):
+
+   ```sh
+   uv run vml-analogues <the same three bundles> data/datasets/inference_<date> \
+       --filter "dollar_volume_3m_rank >= 0.2" --pick 10 --max-per-group 2
+   ```
+
+   For each pick it lists the fifteen historical stocks the models
+   treated most alike (the same forest leaves, the same momentum and
+   return on capital), when that was, and what they went on to do
+   over one and three years. It explains a pick; it does not estimate
+   it: the forest was fitted on those rows (docs/deployment.md).
+
 The backtest buys on the first trading day of the month with 35 bps
 a side. Use fractional shares, or an amount per pick well above the
 share prices: with whole shares at 100 a pick the backtest filled
