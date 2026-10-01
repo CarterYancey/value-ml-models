@@ -84,8 +84,8 @@ candidate and its variant, not a selection.
 4. **In 2021–26 SPY outran equal-weighted stocks of every size**, its
    own thirty largest members included (−3.3 points a year): the
    index was carried by a few very large, volatile companies, which a
-   model of calm ranks in the middle (NVDA 1,300th to 1,600th of 3,100
-   to 3,700 on the forest in the Januaries of 2023–25). No equal-weighted selection from
+   model of calm ranks in the middle (NVDA about 1,500th of 3,400 on
+   the forest in three Januaries). No equal-weighted selection from
    this universe kept up. Condition (2) of the thesis, the era.
 5. **Among large companies the features rank risk and one quality
    factor, and nothing else.** Inside the largest fifth, forests on
@@ -100,22 +100,18 @@ candidate and its variant, not a selection.
    it finds them through cash-flow stability
    ([features](notes/2026-09-30-features-and-floor.md)). Return on
    capital as a second ranking is what removes them.
-7. **Selection is by rank within the period, not by confidence**; a
-   shorter horizon does not help; theory-led features, a
-   training-time floor, label thresholds, forest parameters and the
-   seed move little.
+7. **Selection is by rank within the period, not by confidence** (an
+   honest calibrator is years behind the regime); a shorter horizon,
+   theory-led features, a training-time floor, label thresholds,
+   forest parameters and the seed move little.
    [blends](notes/2026-09-30-blends-and-calibration.md),
-   [1y](notes/2026-09-30-one-year-cell.md),
    [searches](notes/2026-09-29-searches-nonloser.md)
 8. **A rank sell discipline added 0.7 points a year over 21 years**
-   and nothing in 2021–26 (−46 against −48 points of yearly excess);
-   it is why that variant ends level with SPY.
-9. **Instruments** ([process issues](notes/process-issues.md)): the
-   dataset's delisting convention understates acquired stocks (the
-   backtest's per-buy reading does not); backtest reports before
-   2026-10-01 print years that run December to December; whole
-   shares at 100 a pick fill 64 to 87 of 120 orders a year after
-   2020, which does not change the result.
+   and nothing in 2021–26; it is why that variant ends level with SPY.
+9. **Instruments** ([process issues](notes/process-issues.md)):
+   backtest reports before 2026-10-01 print years that run December
+   to December; the delisting convention understates acquired stocks
+   on the screen (not in the backtest's per-buy reading).
 
 Earlier work: [backtests to 2023](notes/2026-09-30-backtests.md),
 [pick anatomy](notes/2026-09-29-pick-anatomy.md),
@@ -123,33 +119,25 @@ Earlier work: [backtests to 2023](notes/2026-09-30-backtests.md),
 [compounder cells](notes/2026-09-28-drawdown-compounder-cells.md),
 [v1.0/v1.1](notes/2026-08-earlier-work.md).
 
-## What this says about the thesis
+## The thesis, and the working assumption
 
 A high precision on a modest target is achievable and held out of
-sample. It bought fewer losers and shallower falls: over 21.6 years
-the index's return with three quarters of its worst drawdown. It did
-not buy the index's return in 2021–26: picks chosen for not losing
-earn about what calm stocks of their size earn, and the index earned
-more than every size of stock. Beating SPY needs the upside, which
-these columns do not rank, or an era in which the largest companies
-do not lead, as in 2005–2020.
+sample. It bought fewer losers and shallower falls; it did not buy the
+index's return in 2021–26, when the index earned more than every size
+of stock.
 
-**Carter's reading (2026-10-01), the leading hypothesis for 2021–26:**
-a temporary change in market behaviour, perhaps a bubble, led by
-stocks that fail a value investor's test; the strategy trails through
-it and leads again during and after the correction. *For it:* item 4,
-and the one precedent in the data. On 1999–2004, years nothing here
-was ever chosen on, a stand-in for the candidate (lowest volatility,
-momentum, return on capital) trailed in 1999 (15 points behind
-same-size stocks over a year) and led for the buys of 2000–02 by 9
-points a year over three years, against SPY and against same-size
-stocks alike. That covers the aftermath; the years the bubble grew
-(1995–98) are before the data, so "trails through a bubble" is
-untested. *Not explained by it:* the candidate's same-size lead
-had already gone for the buys of 2019–20. *Different this time:* 1999
-was a run-up in small stocks with the largest level with SPY; now the
-excess is in a few giants inside the index. *Untestable on disk:*
-whether and when the buys of 2021–23 recover. Decision 35;
+**Carter's working assumption (decision 36):** 2021–26 is a bubble
+led by stocks that fail a value investor's test; a value strategy
+trails through it and leads again during and after the correction,
+and it is waited out. *For it:* item 4, and the one precedent in the
+data: on 1999–2004, years nothing here was chosen on, a stand-in for
+the candidate trailed in 1999 and led for the buys of 2000–02 by 9
+points a year, against SPY and same-size stocks alike. *What the
+record cannot show:* the years that bubble grew are before the data
+(Sharadar starts in 1998); the candidate's same-size lead had already
+gone for the buys of 2019–20; 1999 was a run-up in small stocks, now
+the excess is in a few giants inside the index; and whether the buys
+of 2021–23 recover. Decision 35;
 [out of sample](notes/2026-10-01-out-of-sample.md), "The last bubble".
 
 ## Open questions
