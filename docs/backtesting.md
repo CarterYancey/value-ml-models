@@ -24,7 +24,9 @@ five-model AllProb screen):
 - per-model floors via `[signal.min_scores]` (bundle name → floor,
   overriding the scalar `min_score`);
 - the strategy and **mandatory `cost_bps`**: `buy_and_hold` (monthly
-  deposit, buy top-K by combined score, score- or equal-weighted, whole
+  deposit, buy top-K by combined score, score-, equal- or
+  market-capitalization-weighted (`weighting = "marketcap"`, from the
+  snapshot's `log_marketcap`), whole
   shares — the budget remainder stays in cash — never sell) or
   `sell_below_criteria` (same buying, plus: any held position failing
   the *sell criteria* at a rebalance is sold entirely, proceeds funding

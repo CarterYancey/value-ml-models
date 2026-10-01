@@ -16,6 +16,7 @@ import traceback
 from datetime import date
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
 
 from harness.dataset import Dataset
@@ -128,7 +129,19 @@ class CandidateFeed:
                 "of the cross-section (key_meta, features, ranks, "
                 "sector_ranks)"
             )
-        keep = ["asset", "ticker", "group", "combined_score", "price"] + cols
+        if config.weighting == "marketcap":
+            if "log_marketcap" not in priced.columns:
+                raise ConfigError(
+                    "weighting = 'marketcap' needs `log_marketcap` in the "
+                    "cross-section (a manifest feature column)"
+                )
+            priced["weight_basis"] = np.exp(
+                priced["log_marketcap"].to_numpy(dtype=float)
+            )
+        keep = [
+            "asset", "ticker", "group", "combined_score", "price",
+            "weight_basis",
+        ] + cols
         priced = priced[[c for c in keep if c in priced.columns]]
         priced = priced.sort_values(
             ["combined_score", "asset"], ascending=[False, True],
