@@ -14,6 +14,20 @@ read** stub; a correction is a new entry that names the old one.
 
 <!-- entries -->
 
+### 2026-11-23 · forest_cagr_ge0b_3y (decision 50)
+git `cfa451c` · [note](notes/2026-11-23-judging-picks.md)
+- **Did:** The candidate forest's configuration on label_3y_cagr_ge_0 (3y CAGR >= 0, no drawdown leg), screened alone and in the candidate's blends, paired against cell C's forest. forest_cagr_ge0_3y failed validation (sed overwrote the model name); the corrected copy ran.
+- **Got:** Alone +0.043/+0.027 against +0.030/+0.027 (+0.0064, 1 se, 8/16); mean-rank blend +0.036/+0.055 against +0.022/+0.053 (+0.0075, 1.7 se, 10/16); worst-rank blend below. Losers and drawdown the same. Predictions held; the rival (losers rise) was rejected.
+- **Concluded:** Dropping the drawdown leg barely changes the picks; the forest learns calm from 'came back' too. Open, at the edge of the rule.
+- **Next:** Seeds 232/1776, then a backtest in the mean-rank blend, if Carter agrees.
+
+### 2026-11-23 · worst rank: seeds and backtests (decisions 50-51)
+git `cfa451c` · [note](notes/2026-11-23-judging-picks.md)
+- **Did:** Carter's correction (decision 50): judge picks, not the market; carry forward gains beyond noise. Worst rank re-read paired by year, seeds 232/1776 on the screen, then six backtests (mean vs worst rank x seeds 23/232/1776) at one git SHA.
+- **Got:** Screen: worst rank ahead by +0.007 to +0.011 a year (11-12/16 years). Money: TWR 11.32/11.38/11.49% against mean rank 11.90/12.12/12.23%, drawdown -44 to -45% against -40.4%; buys' 3y vs_peers +6.0 to +6.4 against +5.2 to +5.4. The candidate config itself moved from 12.15% to 11.90% between git f96037d and cfa451c (untraced).
+- **Concluded:** Better 3-year selection, less money, on every seed: mean rank stays; worst rank stays a tool. A screen gain carries an arm to a backtest, never into the candidate.
+- **Next:** Trace the TWR change across code versions.
+
 ### 2026-11-23 · huber_cagr_largehalf2_3y, screen_largehalf (decision 48)
 git `8b06614` · [note](notes/2026-11-23-downside-gates-calibration.md)
 - **Did:** The seed-23 regressor and the cell-C forest read inside the larger half of the investable stocks (models unchanged).

@@ -2057,3 +2057,28 @@ columns, the peer-relative label) and Carter's (model-family rules).
 3. `forest_cagr_ge0_3y`: the candidate forest's parameters, seed 23,
    on `label_3y_cagr_ge_0`; evaluated on the same screen, alone and in
    the candidate's blend.
+
+### 51. Worst rank stays a tool; the "came back" label is open
+
+*What came out (2026-11-23; [note](2026-11-23-judging-picks.md)):*
+
+- **Worst rank against mean rank.** The worst rank's buys led same-size
+  stocks by 0.6–1.0 points a year more on all three seeds, but its
+  portfolio earned 0.58–0.74 points a year less (TWR), with a drawdown
+  4–5 points deeper. That gap is larger than the seed spread. The
+  backtest is the yardstick of record, so the mean rank stays. Decision
+  50's carry-forward worked as meant: the arm went to money, and money
+  decided.
+  - *Lesson for the rule:* a screen gain of about one point a year does
+    not imply a money gain. The screen carries an arm forward to a
+    backtest, never into the candidate.
+- **The same config's TWR moved across code versions.** It went from
+  12.15% (git `f96037d`) to 11.90% (`cfa451c`), with 1,747 against
+  1,742 buys. This is not traced. Backtests are compared only at one
+  git SHA. Added to TODO.
+- **`label_3y_cagr_ge_0`.** It is within noise of cell C alone; in the
+  candidate's blend it leads by +0.0075 a year (1.7 se, 10 of 16
+  years); in the worst-rank blend it is below. Open: seeds 232 and 1776
+  of the forest, then a backtest in the mean-rank blend, if Carter
+  agrees that the label fits the thesis better. It carries no
+  drawdown leg, which is what he called acceptable.

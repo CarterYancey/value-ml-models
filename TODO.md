@@ -682,6 +682,27 @@ in [PLAN.md](PLAN.md); check items off (and add new ones) as work proceeds.
       `n_estimators`) at full budget via a follow-up sweep file — no
       harness change needed, just two sweep configs.
 
+### Next, after the third round of 2026-11-23 (decisions 50-51)
+
+How results are judged (decision 50): picks against same-size peers,
+crash years included; arms carried forward on paired per-year gains
+beyond noise (about 2 se, ahead in 10+ of 16 years), then seeds, then a
+backtest. A bar set beforehand is a prediction, not a gate.
+
+- [ ] Trace why `bt_nonloser_mom_roc_top10_cap2_rankfloor` (config
+      `6005c9c0a2869bc9`) gives TWR 11.90% / 1,742 buys at git `cfa451c`
+      and 12.15% / 1,747 at `f96037d`. Until then, compare backtests only
+      at one git SHA.
+- [ ] `label_3y_cagr_ge_0` (open, decision 51), if Carter agrees it fits
+      the thesis: forest seeds 232 and 1776, paired in the mean-rank blend;
+      if the gain holds, a backtest beside the candidate at the same SHA.
+- [ ] Why worst rank selects better and earns less: smaller stocks,
+      holding past 3 years, or the 2008 fall (decision 51's hypotheses).
+      Low priority.
+- [ ] Re-read earlier arms closed by a fixed bar under decision 50's rule
+      (paired, with noise). Candidates: decision 41's top-5 and score
+      weights, and `year_balance` against plain ranks on the screen.
+
 ### Next, after the second round of 2026-11-23 (decisions 43-49)
 
 Carter's three directions (decision 43) were followed to the end of

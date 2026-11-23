@@ -1,0 +1,105 @@
+# Judging picks, not the market: crash years, worst rank in money, a "came back" label (2026-11-23, third round)
+
+Carter's correction after decision 49 is recorded in decision 50 of the
+[decision log](2026-09-29-decisions.md). In short: judge how the picks
+did, crash years included, and carry forward gains measured against
+noise rather than gains that clear a bar set beforehand. This note reads
+three runs under that correction. `dataset_v1.4`, walk-forward test
+years 2005–2020, the 100k floor, and the screen and same-size peers of
+[the first round](2026-11-23-crash-growth-worst-rank.md).
+Paired figures come from per-year differences: the mean, its standard
+error (se), and the years ahead out of 16. The 3-year windows of
+adjacent years overlap, so the se is a lower bound.
+
+## 1. The crash years, judged by the picks
+
+These come from the screens already on disk (top 10 a quarter, at most
+2 per sector), read against same-size peers.
+
+| entries | cell-C forest: picks' 3y max drawdown | peers' | picks lost money | peers lost | lead (3y excess CAGR) |
+|---|---|---|---|---|---|
+| 2007 | 0.46 | 0.57 | 0.40 | 0.60 | +0.068 |
+| 2008 | 0.33 | 0.49 | 0.15 | 0.33 | +0.043 |
+
+The forest's picks were the resilient ones in the crash years. Cell C's
+precision of 0.17–0.21 for those entries comes from the label's
+drawdown leg, which a market-wide fall of more than 30% fails.
+`year_calib_corr` stays in reports but is no longer a gate (decision
+50).
+
+## 2. worst_rank against mean_rank, three seeds
+
+Screen (`vml-eval`, the candidate's three legs, paired worst minus
+mean):
+
+| forest seed | lead diff a year | se | worst ahead | losers diff |
+|---|---|---|---|---|
+| 23 | +0.0114 | 0.0055 | 11/16 | −0.009 |
+| 232 | +0.0065 | 0.0058 | 12/16 | −0.002 |
+| 1776 | +0.0105 | 0.0063 | 12/16 | −0.008 |
+
+Money: the candidate's backtest (rank floor 0.2, top 10 a month, at
+most 2 per sector, 35 bps, buys 2005–2020 valued to 2023). Every row
+ran at git `cfa451c`.
+
+| forest seed | mean rank TWR | worst rank TWR | diff | drawdown mean / worst | buys' 3y vs_peers mean / worst | buys lost mean / worst |
+|---|---|---|---|---|---|---|
+| 23 | 11.90% | 11.32% | −0.58 | −40.3% / −45.0% | +5.31 / +6.35 | 20.7% / 21.7% |
+| 232 | 12.12% | 11.38% | −0.74 | −40.4% / −44.0% | +5.37 / +6.01 | 20.6% / 21.6% |
+| 1776 | 12.23% | 11.49% | −0.74 | −40.5% / −44.9% | +5.20 / +6.23 | 21.6% / 21.6% |
+
+SPY: 9.58%, −52.9%.
+
+The worst rank's buys beat same-size stocks by 0.6 to 1.0 points a
+year more. On seed 23 it was ahead in 13 of 16 buy years, and the sign
+held on all three seeds. Yet the portfolio earned 0.6 to 0.7 points a
+year less, with a drawdown 4 to 5 points deeper. That gap is larger
+than the spread across seeds of the mean rank's TWR (0.33). Every
+prediction in the configs held on direction: TWR within −1.0 to +0.3
+and buys higher. The first config's prediction did not hold: TWR within
+−0.5 to +1.5 of 12.15%.
+
+**Measurement:** a better 3-year selection against peers, and less
+money, on every seed. **Hypotheses, not tested:**
+
+- The worst rank buys slightly smaller stocks (peers' excess −3.2
+  against −2.9).
+- Buy and hold keeps positions to 2023, past the screen's 3-year
+  window.
+- The deeper fall in 2008 compounds.
+
+Nothing here separates these hypotheses.
+
+**Not traced: the candidate on current code.** The same config
+(`6005c9c0a2869bc9`) gives TWR 11.90% and 1,742 buys at git `cfa451c`,
+against 12.15% and 1,747 buys at git `f96037d`. The old report is kept.
+The rerun is in `reports/backtest_rerun_d50/`. Every comparison above
+uses the new code on both sides.
+
+## 3. The "came back" label: `label_3y_cagr_ge_0` (`forest_cagr_ge0b_3y`)
+
+This is the candidate forest's configuration on the new label: seed 23,
+112 ranks. `forest_cagr_ge0_3y` failed on validation first, because a
+sed overwrote its model name. The corrected copy ran.
+
+| screen (paired against cell C's forest, same mode) | lead 05–12 / 13–20 | losers | lead diff (se, ahead) | losers diff |
+|---|---|---|---|---|
+| alone | +0.043 / +0.027 (C: +0.030 / +0.027) | 0.212 / 0.116 (C: 0.197 / 0.116) | +0.0064 (0.0065, 8/16) | +0.008 |
+| candidate blend, mean rank | +0.036 / +0.055 (C: +0.022 / +0.053) | 0.244 / 0.159 | +0.0075 (0.0044, 10/16) | −0.013 |
+| candidate blend, worst rank | +0.042 / +0.049 (C: +0.043 / +0.056) | 0.269 / 0.175 | −0.0039 (0.0046, 4/16) | +0.017 |
+
+The picks' mean 3-year drawdown was 0.207 / 0.130 in each half, against
+cell C's 0.208 / 0.134.
+
+Predictions:
+
+- Prediction 1 (lead +0.02 to +0.05) held.
+- Prediction 2 (losers within 0.03) held.
+- Prediction 3 (drawdown 0 to +0.05 higher) held, at 0.
+- The rival was rejected: losers did not rise.
+
+**Reading:** dropping the drawdown leg barely changes the picks. The
+forest learns "calm" from "the price came back" as well. The gain in
+the mean-rank blend is about 1.7 se, ahead in 10 of 16 years. That is
+on the edge of decision 50's rule, so it is open, and seeds come
+before a backtest.
