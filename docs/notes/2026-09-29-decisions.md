@@ -1856,3 +1856,21 @@ rows over 0.6) and least in 2012 (561).
   market-state features, and the request is written.
 - **Also on record:** `claude/blend-gate` (517 tests), `[[gate]]` in
   `vml-eval`, for direction 2.
+
+### 45. Downside models read; three gates on the huber regressor
+
+*What came out (2026-11-23):* `forest_downside_cells_3y` against
+`baseline_factors_downside_cells`, inside the 100k floor: the forest
+matches `vol_12m_rank` alone over one year (PR-AUC 0.536 vs 0.538 for
+"fell 30%", 0.369 vs 0.359 for 50%) and beats it over three (0.710 vs
+0.678; 0.589 vs 0.549). The count of rows over 0.5 falls into 2008 and
+recovers after, the forest of cell C's wrong-way lag mirrored.
+Huber on CAGR, seeds 232 / 1776: +0.073 / +0.032 and +0.082 / +0.054
+over peers, losers 0.39–0.42; on excess CAGR +0.024 / +0.019 and
++0.027 / +0.006: the targets' difference is not the seed.
+
+*Decided:* three `[[gate]]` evaluations of the huber CAGR bundle,
+seed 23 (`233299a55d4c`): kept to the cell-C forest's top half, the
+3y "fell 30%" forest's bottom half, the 1y "fell 30%" forest's bottom
+half. Decision 43's rule; seeds 232 and 1776 only for a gate that
+passes on seed 23. Three configurations.
