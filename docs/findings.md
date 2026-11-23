@@ -51,7 +51,7 @@ floor). Simulated, 35 bps a side, buys and deposits 2005 to
 
 **It is not shown to beat SPY**: 37% ahead in money at the end of 2020,
 10% behind in August 2026; its buys of 2021–23 trailed SPY by 11 to
-17 points a year over three years. 37 backtest configurations on
+17 points a year over three years. 38 backtest configurations on
 2005–2020; the four to 2026 are the fixed candidate and a variant.
 
 | cell (3y, `dataset_v1.4`) | trials | best | status |
@@ -101,12 +101,9 @@ floor). Simulated, 35 bps a side, buys and deposits 2005 to
    no edge (−0.01 / +0.01); gates by the forest or downside models
    keep its lead and remove few losers; blends with the forest are
    below both. Closed as a candidate.
-10. **The forest's confidence counts only at the very top**: its top
-    10 a year beat ranks 11–50 (precision +0.06, losers 0.14 / 0.08
-    against 0.23 / 0.15), flat below rank 20; but a monthly top 5
-    trailed the top 10 (+1.8 / +2.7 against +2.7 / +3.3 points a year
-    over same-size peers, drawdown 9 points deeper) and score weights
-    changed nothing. Confidence sizing is closed for the forest.
+10. **The forest's confidence counts only at the very top** (top 10 a
+    year purer than ranks 11–50), and neither a monthly top 5 nor score
+    weights helped in a backtest. Confidence sizing is closed.
 11. **Downside is mostly past volatility**: `vol_12m_rank` alone predicts
     a 30% or 50% fall within a year as well as a forest (PR-AUC 0.54 /
     0.36); over three years the forest adds 0.03–0.04. A short leg is
@@ -119,11 +116,7 @@ floor). Simulated, 35 bps a side, buys and deposits 2005 to
     problem. "Buy every stock over X" would buy most at a top. The
     market's level must come from upstream market-state columns.
 
-Earlier work: [backtests to 2023](notes/2026-09-30-backtests.md),
-[pick anatomy](notes/2026-09-29-pick-anatomy.md),
-[label rungs](notes/2026-09-29-label-rungs-dd-entry.md),
-[compounder cells](notes/2026-09-28-drawdown-compounder-cells.md),
-[v1.0/v1.1](notes/2026-08-earlier-work.md).
+Earlier notes: [notes/](notes/), linked from the decision log.
 
 ## The thesis, and the working assumption
 
@@ -150,28 +143,19 @@ Decision 35; [out of sample](notes/2026-10-01-out-of-sample.md).
 
 ## Plan
 
-Carter's direction (2026-10-01, decision 36) stands: the bubble
-reading is the working assumption, the candidate is paper traded as
-it is, and the search widens. After 2026-11-23 the research plan's
-items 1, 2, 3 and the first step of 6 are done (no arm carried
-forward). What is left needs Carter or upstream:
+Decision 36 stands (bubble reading, paper trading, a wider search).
+After 2026-11-23 the research plan's items 1–3, the first steps of 6,
+and Carter's directions of decision 43 are done; nothing carried
+forward. What is left needs Carter or upstream:
 
 1. Paper trading: [paper-trading.md](paper-trading.md).
-2. **Upstream (written in the calibration plan):** market-state
-   columns per date (cross-sectional medians of valuation and
-   volatility, breadth, SPY's trailing return and drawdown, spreads),
-   which the threshold rule needs; and the peer-relative label ("beat same-size stocks over
-   3 years"), the one target whose base rate does not move with the
-   market; it reopens calibration and sizing (item 6). Then
-   market-state features (item 8).
-3. **Carter's rules** for other model families (item 7): fold-internal
-   imputation with an is-missing indicator; learned transforms inside
-   the fold only; PyTorch or not. Then a logistic regression and an
-   MLP on the ranks.
-4. New arms are judged on walk-forward 2005–2020 against same-size
-   peers, both halves, the rule written before the run; 2021–26 is
-   context. 37 backtest configurations have been tried on 2005–2020;
-   model trial counts per cell: `vml-experiments list`.
+2. **Upstream** ([calibration plan](notes/2026-11-23-calibration-plan.md),
+   "Upstream request"): market-state columns per date, which a
+   threshold rule needs, and the peer-relative label.
+3. **Carter's rules** for other model families (research plan item 7),
+   then a logistic regression and an MLP on the ranks.
+4. New arms: walk-forward 2005–2020, same-size peers, both halves, the
+   rule before the run; 38 backtest configurations tried on these years.
 
 ## Sealed holdout record
 
