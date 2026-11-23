@@ -355,6 +355,42 @@ def calibration_table(y_true, probs, sample_weight=None, n_bins: int = 10):
     return rows
 
 
+def mean_score(scores, sample_weight=None) -> float:
+    """Weighted mean score of a set of rows: beside `base_rate`, the
+    calibration of a probabilistic model "in the large" for that set (a
+    calibrated model's mean score over a test year is that year's base
+    rate)."""
+    s = np.asarray(scores, dtype=float)
+    w = np.ones_like(s) if sample_weight is None else np.asarray(sample_weight, dtype=float)
+    ok = np.isfinite(s) & (w > 0)
+    if not ok.any():
+        return math.nan
+    return float(np.average(s[ok], weights=w[ok]))
+
+
+def year_calibration(year_rows) -> dict[str, float]:
+    """How a probabilistic model's score level follows the base rate
+    across test years, from (mean_score, base_rate) pairs, one per year:
+    `year_calib_corr`, their correlation (a model whose confidence rises
+    in the years its label is common is near +1; the ranks-only forests
+    of cell C were near -0.6), and `year_calib_mae`, the mean absolute
+    gap (calibration in the large, year by year). NaN with fewer than
+    three years."""
+    pairs = np.asarray(
+        [(m, b) for m, b in year_rows if np.isfinite(m) and np.isfinite(b)],
+        dtype=float,
+    )
+    if len(pairs) < 3:
+        return {"year_calib_corr": math.nan, "year_calib_mae": math.nan}
+    m, b = pairs[:, 0], pairs[:, 1]
+    corr = (
+        float(np.corrcoef(m, b)[0, 1])
+        if m.std() > 0 and b.std() > 0
+        else math.nan
+    )
+    return {"year_calib_corr": corr, "year_calib_mae": float(np.abs(m - b).mean())}
+
+
 def compute_all(y_true, scores, *, sample_weight=None, top_k=(20, 50),
                 score_thresholds=(), precision_targets=(),
                 probabilistic: bool = False) -> dict[str, float]:
@@ -367,6 +403,9 @@ def compute_all(y_true, scores, *, sample_weight=None, top_k=(20, 50),
         "brier": brier(y_true, scores, sample_weight) if probabilistic else math.nan,
         "base_rate_brier": (
             base_rate_brier(y_true, sample_weight) if probabilistic else math.nan
+        ),
+        "mean_score": (
+            mean_score(scores, sample_weight) if probabilistic else math.nan
         ),
     }
     for k in top_k:
