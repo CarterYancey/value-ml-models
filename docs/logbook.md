@@ -14,6 +14,10 @@ read** stub; a correction is a new entry that names the old one.
 
 <!-- entries -->
 
+### 2026-11-22 · baseline_factors_crash_dd50
+14 runs · `dataset_v1.4` · 2 cells · git `9df7b1a` · [summary](../reports/sweeps/baseline_factors_crash_dd50/baseline_factors_crash_dd50_summary.md)
+- **not yet read**: the sweep ended, its numbers are unread.
+
 ### 2026-10-01 · vml-analogues: the historical stocks today's picks resemble (decision 37)
 git `971f50e`
 - **Did:** Built vml-analogues (claude/analogues, 510 tests): for each pick, the labeled historical rows most similar to it as the models see it (forest: share of trees in which the row shares the pick's leaf; factor legs: closeness on the rank column; the mean orders the list), one row per stock, with outcomes and the features on the pick's decision paths. Run on the three deployment bundles for the 2026-08-03 cross-section (the dry run of the paper-trading path).
