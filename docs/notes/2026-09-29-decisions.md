@@ -1735,3 +1735,23 @@ halves, a concentrated portfolio (top 5 a month) and score-weighting
 get one backtest each; if not, confidence sizing is closed for the
 forest and the calibration session starts from the peer-relative
 target (upstream).
+
+### 41. The forest's top 10 is purer than its ranks 11–50: two backtests
+
+*What came out (2026-11-23, `topk_buckets2_dv100k`, one evaluation):*
+over the years of 2005–12 / 2013–20, the forest's top 10 a year were
+right 0.738 / 0.862 of the time against 0.678 / 0.797 for its ranks
+11–50, and lost money 0.138 / 0.075 against 0.231 / 0.147. Decision
+40's bar (0.05 on both, both halves) is met; its prediction (under
+0.05) is contradicted. The top 5 were not purer than the top 10
+(0.700 / 0.825). With 80 picks a half the difference is about one
+standard error.
+
+*Decided, as decision 40 said before the run:* one backtest each of a
+concentrated portfolio (`bt_nonloser_dd30_top5_cap2`) and of score
+weighting (`bt_nonloser_dd30_top10_cap2_score`), on the forest alone,
+2005–2020 valued to 2023, against `bt_nonloser_dd30_top10_cap2`
+rerun unchanged for its same-size table. Rule (in each config): the
+buys' 3-year lead over same-size candidates ≥ the bar's + 0.01 for
+the buys of both halves, worst drawdown no more than 5 points deeper.
+Two backtest configurations on these years, added to the 35.
