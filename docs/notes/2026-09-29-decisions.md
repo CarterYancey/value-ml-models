@@ -1705,3 +1705,33 @@ same-size peers is at least **0.040 / 0.063** for entries of 2005–12 /
 candidate, +0.022 / +0.053, in each half) **and** its losers are no
 more than 0.03 above the forest's (**≤ 0.227 / ≤ 0.146**). Two
 configurations on these years, stated with every figure.
+
+### 40. The forest and the huber model do not combine; does precision rise inside the forest's top 50?
+
+*What came out (2026-11-23):* the cell-C forest blended with the
+huber regressor on 3y CAGR (two configurations, these years): worst
+rank +0.028 / +0.017 over same-size peers, losers 0.266 / 0.244;
+mean rank +0.029 / +0.023, losers 0.247 / 0.231. Below both legs on
+the lead and above the forest on losers: both fail decision 39's
+rule, and every prediction (and the rival) is contradicted.
+Reading, a hypothesis: the legs' edges sit at different sizes (the
+forest's picks' peers lose 26–33% of the time, huber's 45–47%, the
+blends' 33–36%), and the stocks both rank well are mid-size ones
+where neither has an edge. Rival: a defect in blending a regressor
+bundle; against it, the same path reproduced decision 34's blends and
+the huber bundle reproduced its sweep run exactly. Nothing is built
+on the blend, so the separating run (the size breakdown of the picks
+by leg) is not spent. **Decided:** the huber regressor is not carried
+forward as a leg; blends of a calm model with a skew model are
+closed.
+
+*Next (research plan item 6, its first step):* whether the forest's
+outcome rises with rank *inside* its top 50 of a year. One evaluation
+of the forest bundle (seed 23) inside the 100k floor with top_k 5,
+10, 20, 50, 100, 200; bucket precision from the differences. What it
+decides, before the run: if the top 10 a year beats ranks 11–50 on
+precision by 0.05 or more and on losers by 0.05 or more in both
+halves, a concentrated portfolio (top 5 a month) and score-weighting
+get one backtest each; if not, confidence sizing is closed for the
+forest and the calibration session starts from the peer-relative
+target (upstream).
