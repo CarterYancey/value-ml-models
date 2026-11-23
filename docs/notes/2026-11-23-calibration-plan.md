@@ -168,3 +168,37 @@ A configuration is a calibration candidate if, in walk-forward
 than 0.03 below the ranks-only forest's fold mean; and at a threshold
 fixed before the run, precision over the threshold in every half at
 least the threshold minus 0.05. A candidate goes to step 5's backtest.
+
+## Result of step 3 (2026-11-23, decision 46)
+
+No arm reached `year_calib_corr` ≥ +0.3 (best +0.07, ranks with
+`year_balance`); the 15 level columns made it worse (−0.33 / −0.25),
+and every arm's mean score is highest for the 2007–08 entries. The
+threshold rule cannot be built on these inputs: tables and readings in
+[downside, gates, calibration](2026-11-23-downside-gates-calibration.md)
+§3. `year_balance` raised PR-AUC by 0.02–0.03 but not the top picks.
+
+## Upstream request (for Carter to forward)
+
+1. **Market-state columns**, one value per snapshot date, attached to
+   every row of that date, built point-in-time upstream next to the
+   split machinery:
+   - cross-sectional medians (over the investable universe) of
+     earnings yield, book to market, `vol_12m`, and of 12-month
+     momentum;
+   - breadth: the share of stocks above their 200-day average and
+     the share at a 52-week high;
+   - SPY's trailing 12-month return, volatility and drawdown from its
+     high;
+   - if a point-in-time source exists: the 10y–3m term spread and a
+     corporate credit spread.
+   These are aggregates across rows of a date, which is why they cannot
+   be derived here (invariant 4).
+2. **The peer-relative label**: "beat the stocks of the same
+   `log_marketcap_rank` band (and quarter) over H years", the target
+   whose base rate is about one half in every year.
+
+With (1), step 3 is rerun with these columns in place of the per-stock
+levels, under the same rule. With (2), a within-year probability can be
+calibrated across eras (a constant-count rule), and combined with (1)
+it is the decomposition the threshold rule needs.
