@@ -1775,3 +1775,215 @@ these years now, confidence sizing and concentration are closed for
 the forest. Research plan item 6 continues only through a target
 whose base rate does not move with the market (the peer-relative
 label, upstream). The candidate is unchanged.
+
+### 43. Carter's three directions after decision 42 (2026-11-23)
+
+*Carter (2026-11-23):*
+1. Do not give up on predicting downside: other drawdown thresholds
+   and horizons (e.g. ≥ 30% within 3 years); even predicting future
+   volatility may be useful beside other models or in portfolio rules.
+2. Pursue the huber regression on 3y CAGR, although it contradicts
+   the thesis (a few big winners instead of modest returns at high
+   precision): try filtering out its losers with another model. If
+   making more money needs a different approach, it changes, while
+   staying principled.
+3. Calibration is the top priority. Top K is arbitrary; the wanted
+   rule is "buy every stock scoring over X%", which with a calibrated
+   model buys fewer stocks in risky years. Its own branch for
+   research, planning and implementation.
+
+*Decided (order and reasoning):*
+
+- **Calibration, on `claude/calibration`**, first in thought, run
+  around the others: a research-and-plan note
+  (`docs/notes/2026-11-23-calibration-plan.md`), then the code it
+  calls for, then its experiments. The starting observation, to be
+  checked in that note: every model so far reads within-quarter ranks
+  only, whose distribution is nearly the same every quarter, so no
+  calibrator on top of such a model can make it score fewer stocks
+  highly in a risky year; a model that is to be calibrated across eras
+  needs inputs that carry the level of the market (the raw columns of
+  the `features` group).
+- **Downside models** (`forest_downside_cells_3y`, one sweep, models
+  saved): "max drawdown from entry ≥ 30% / ≥ 50%" within 1 and 3
+  years, trained on every row and read inside the 100k floor (the
+  huber model's setting, so either can screen the other), with
+  single-factor bars (`vol_12m`, `vol_36m`, `beta_12m`). A downside
+  model is judged as a *filter*, not on its own precision: whether
+  dropping its worst-scored stocks lowers the losers of another
+  model's picks without cutting their lead (direction 2).
+- **The huber regression**: three seeds of both targets (CAGR, excess
+  CAGR), models saved, which also tests whether their difference is
+  chance (decision 39's open question). Then a **gate** in `vml-eval`
+  (new code, `claude/blend-gate`): rank by the evaluated bundle, keep
+  only rows another bundle scores in its top (or bottom) share of the
+  quarter. Rule for a gated huber arm, before any run: lead over
+  same-size peers ≥ +0.040 / +0.037 (the forest's + 0.01) in both
+  halves with losers ≤ 0.25 / 0.20, on every seed; carried forward to
+  a backtest beside the candidate's.
+
+### 44. Calibration: what is wrong, and the first experiment (`claude/calibration`)
+
+*Found while planning (2026-11-23,
+[calibration plan](2026-11-23-calibration-plan.md)):* decision 43's
+starting claim was wrong. The cell-C forest's confidence is not flat
+across years; its top-50 confidence is **negatively** correlated with
+the year's base rate (−0.58) and positively with the base rate of
+entries five years earlier (+0.63), the newest fully labeled rows in
+its training window, while the 3-year base rate itself tends to
+reverse after three to four years (autocorrelation −0.24 / −0.27).
+Hypothesis: the score level is the training window's prior, years
+late. A threshold rule on it buys most in 2007–08 (4,191 and 4,804
+rows over 0.6) and least in 2012 (561).
+
+*Decided:*
+
+- **Code** on `claude/calibration` (515 tests): `mean_score` beside
+  `base_rate` in every probabilistic fold and era table, and
+  `year_calib_corr` / `year_calib_mae` in the pooled metrics; a
+  `year_balance` training option (each fold's training years
+  reweighted to one positive share, each keeping its total weight,
+  the mandatory weights inside it; walk-forward, backtest refit and
+  deployment alike).
+- **First experiment** (`calib_levels_nonloser_{plain,yb}_3y`, four
+  runs): the candidate forest in cell C, read inside the 100k floor,
+  on {ranks, ranks + 15 raw level columns} × {plain, `year_balance`}.
+  Rule, before the run: `year_calib_corr` ≥ +0.3, p@20 within 0.03 of
+  the ranks-only forest, precision over 0.6 at least 0.55 in each half.
+  A passing arm goes to isotonic-lag calibration and then a threshold
+  backtest ("every stock over X", `min_score` with a large `top_k`).
+  If none passes, the market's level has to come from upstream
+  market-state features, and the request is written.
+- **Also on record:** `claude/blend-gate` (517 tests), `[[gate]]` in
+  `vml-eval`, for direction 2.
+
+### 45. Downside models read; three gates on the huber regressor
+
+*What came out (2026-11-23):* `forest_downside_cells_3y` against
+`baseline_factors_downside_cells`, inside the 100k floor: the forest
+matches `vol_12m_rank` alone over one year (PR-AUC 0.536 vs 0.538 for
+"fell 30%", 0.369 vs 0.359 for 50%) and beats it over three (0.710 vs
+0.678; 0.589 vs 0.549). The count of rows over 0.5 falls into 2008 and
+recovers after, the forest of cell C's wrong-way lag mirrored.
+Huber on CAGR, seeds 232 / 1776: +0.073 / +0.032 and +0.082 / +0.054
+over peers, losers 0.39–0.42; on excess CAGR +0.024 / +0.019 and
++0.027 / +0.006: the targets' difference is not the seed.
+
+*Decided:* three `[[gate]]` evaluations of the huber CAGR bundle,
+seed 23 (`233299a55d4c`): kept to the cell-C forest's top half, the
+3y "fell 30%" forest's bottom half, the 1y "fell 30%" forest's bottom
+half. Decision 43's rule; seeds 232 and 1776 only for a gate that
+passes on seed 23. Three configurations.
+
+### 46. Calibration across years is not reachable with the inputs on disk; the upstream request
+
+*What came out (2026-11-23,
+[note](2026-11-23-downside-gates-calibration.md) §3):* none of the four
+calibration arms reaches `year_calib_corr` ≥ +0.3 (best +0.07);
+adding the 15 level columns makes it worse (−0.33 / −0.25), and every
+arm's mean score is highest for 2007–08 entries. `year_balance` adds
+0.02–0.03 PR-AUC but not at the top (screen 2013–20 +0.013 against
++0.024). Four configurations in cell C.
+
+*Decided:*
+
+- The threshold rule ("every stock over X") is **not usable** on any
+  model built from these inputs, calibrated or not: it would buy most
+  at a market top. Not backtested (the plan's step 5 waits).
+- `year_balance` and the `year_calib_*` measures stay in the harness
+  (`claude/calibration`): the measures are how any future model is
+  judged for the rule.
+- **Upstream request** (Carter to forward): market-state columns,
+  one value per snapshot date, so that a model can learn the level:
+  the cross-sectional medians of valuation (earnings yield, book to
+  market) and volatility; breadth (share of stocks above their 200-day
+  average); SPY's trailing 12-month return and volatility; the term
+  spread and a credit spread if a point-in-time source exists. And
+  the peer-relative label. Written in the calibration plan's
+  "Upstream request" section.
+- Calibration research continues with the peer-relative target (the
+  within-year score can be calibrated: its base rate is constant), so
+  "every stock over X" becomes "every stock likely to beat its
+  same-size peers", a constant-count rule. That is not Carter's
+  fewer-in-bad-years rule; the market level stays the upstream part.
+
+### 47. The gates fail the loser rule; the regressor is judged on money
+
+*What came out (2026-11-23, three gated evaluations of the huber CAGR
+regressor, seed 23):* kept to the forest's top half +0.067 / +0.047,
+losers 0.353 / 0.347; to the 3y "fell 30%" bottom half +0.070 /
++0.047, 0.353 / 0.350; to the 1y "fell 30%" bottom half +0.066 /
++0.057, 0.347 / 0.325 (ungated +0.072 / +0.054, 0.394 / 0.372).
+Decision 43's rule (losers ≤ 0.25 / 0.20) fails for all three; no
+further seeds. Predictions: lead held (just above the range for
+2005–12), losers 0.25–0.33 contradicted (0.33–0.35).
+
+*Decided:* Carter (decision 43) puts money ahead of the thesis's form,
+and `vml-backtest` is the yardstick of record; a screen's loser share
+is a proxy. So:
+
+1. **One backtest of the ungated regressor**
+   (`bt_huber_cagr_top10_cap2`): seed 23, top 10 a month by predicted
+   CAGR (`mean_rank` over one bundle), at most 2 per sector, 100k floor,
+   35 bps, 2005–2020 valued to 2023, beside the forest's
+   (`bt_nonloser_dd30_top10_cap2`, TWR 10.01%, worst drawdown −46.6%)
+   and SPY (9.58%, −52.9%). Carried forward (three seeds, then the
+   run to 2026 as context) if its time-weighted return beats the
+   forest's by 1 point and SPY's, its buys lead same-size candidates in
+   both halves, and its worst drawdown is no deeper than SPY's + 10
+   points (−62.9%). Prediction: TWR 11–13%, drawdown −55% to −65%,
+   buys' 3y lead over peers +4 to +7 points, 35–40% of buys lose.
+2. **One tighter gate** (`gate_dd1y30_bottom25`): the regressor ranked
+   only among the calmest quarter by the 1y "fell 30%" model; decision
+   43's rule. Prediction: losers 0.27–0.32, lead +0.03 to +0.05: fails.
+   38 backtest configurations on 2005–2020 with (1).
+
+### 48. The regressor selects well in a band that trails; is it as good among larger companies?
+
+*What came out (2026-11-23):* `gate_dd1y30_bottom25`: +0.057 /
++0.036 over peers, losers 0.247 / 0.269: fails decision 43's rule
+(2013–20 on both). `bt_huber_cagr_top10_cap2` (hash
+`6a152781b2756b63`): TWR 9.39% (forest 10.01%, SPY 9.58%), worst
+drawdown −60.6%, buys' 3-year lead over same-size candidates +6.8 /
++6.5 points (forest +2.7 / +3.3), buys' excess over SPY −2.3 / −5.9,
+41% / 31% of buys lost money. Fails decision 47's rule. Predictions:
+TWR 11–13% contradicted; drawdown, lead over peers held; losers 35–40%
+half held. 38 backtest configurations on 2005–2020.
+
+*Reading:* the regressor's selection within a size band is the
+strongest measured here (more than twice the forest's lead over
+same-size stocks, in both halves), but it selects from small stocks,
+whose band trails SPY by 9–12 points a year: excellent selection in a
+losing band.
+
+*Decided:* measure the same seed-23 models inside the larger half of
+the investable stocks (`log_marketcap_rank >= 0.5` on top of the 100k
+floor, scope `test`: models unchanged, trained on every row), and the
+cell-C forest's bundle in the same universe as the bar. Two
+configurations (`huber_cagr_largehalf_3y`, `eval_screen_largehalf`).
+Rule, before the run: the regressor's lead over same-size peers at
+least the forest's + 0.01 in both halves, losers no more than the
+forest's + 0.05. If it passes: a backtest inside the larger half
+beside the forest's, three seeds. Prediction: lead +0.02 to +0.04,
+under the forest's + 0.01 in 2013–20 (inside large caps "beat SPY" was
+not learned, decision 34); fails. Rival: the regressor's within-band
+skill holds among larger stocks and it passes.
+
+### 49. The huber regressor is closed as a candidate
+
+*What came out (2026-11-23):* inside the larger half the regressor's
+picks lead same-size peers by −0.010 / +0.013 and lose as often as
+they do (0.36 / 0.33); the forest leads by +0.027 / +0.028 there.
+Decision 48's prediction held.
+
+*Decided:* the huber regressor on 3y CAGR is closed as a candidate and
+as a leg: its selection skill exists only among small stocks, whose
+band trails SPY by 9–12 points a year, and in money it ends behind the
+forest and SPY with a 61% drawdown (decision 48). What stays open: a
+model of within-band selection among small stocks is real (+6.5 to
++6.8 points a year over same-size candidates in the backtest), and
+would be worth something only with a way to hold that band without
+its beta to the small-stock market (a hedge or a short leg: not in the
+engine). Directions 1–3 of decision 43 are at the end of what the
+data on disk can answer: the next steps are upstream (market-state
+columns, the peer-relative label) and Carter's (model-family rules).

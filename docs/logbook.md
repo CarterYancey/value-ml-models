@@ -14,6 +14,62 @@ read** stub; a correction is a new entry that names the old one.
 
 <!-- entries -->
 
+### 2026-11-23 · huber_cagr_largehalf2_3y, screen_largehalf (decision 48)
+git `8b06614` · [note](notes/2026-11-23-downside-gates-calibration.md)
+- **Did:** The seed-23 regressor and the cell-C forest read inside the larger half of the investable stocks (models unchanged).
+- **Got:** Regressor -0.010/+0.013 over peers, losers 0.36/0.33 (peers 0.36/0.37); forest +0.027/+0.028, losers 0.19/0.12. Prediction held; rival rejected.
+- **Concluded:** The regressor's skill is a small-stock phenomenon; closed as a candidate (decision 49). The forest's lead is the same among larger companies.
+- **Next:** Upstream requests; Carter's model-family rules.
+
+### 2026-11-23 · gate_dd1y30_bottom25, bt_huber_cagr_top10_cap2 (decision 47)
+git `8b06614` · [note](notes/2026-11-23-downside-gates-calibration.md)
+- **Did:** The regressor gated to the calmest quarter by the 1y 'fell 30%' model; and the ungated regressor backtested, top 10 a month, 2005-2020 valued to 2023.
+- **Got:** Gate: +0.057/+0.036, losers 0.247/0.269: fails. Backtest: TWR 9.39% (forest 10.01%, SPY 9.58%), drawdown -60.6%, buys' 3y lead over same-size candidates +6.8/+6.5 pts (forest +2.7/+3.3), excess over SPY -2.3/-5.9. Fails; TWR prediction contradicted, lead and drawdown held.
+- **Concluded:** Excellent selection inside a band (small stocks) that trails SPY by 9-12 points a year.
+- **Next:** The same models among larger companies (decision 48).
+
+### 2026-11-23 · gate_{forest_top50,dd3y30_bottom50,dd1y30_bottom50} (huber regressor, gated)
+git `c2396a8` · [note](notes/2026-11-23-downside-gates-calibration.md)
+- **Did:** Evaluated the huber CAGR regressor (seed 23) with its rows gated by the cell-C forest's top half, the 3y 'fell 30%' forest's bottom half, and the 1y one's bottom half (decision 45).
+- **Got:** Leads +0.066 to +0.070 / +0.047 to +0.057 over peers (ungated +0.072/+0.054); losers 0.347-0.353 / 0.325-0.350 (ungated 0.394/0.372). Rule losers <= 0.25/0.20: all fail; prediction on losers (0.25-0.33) contradicted.
+- **Concluded:** Half-gates keep the lead and remove few losers: the regressor's picks stay among fragile stocks. Judged on money next (decision 47).
+- **Next:** bt_huber_cagr_top10_cap2 and a quarter gate.
+
+### 2026-11-23 · calib_levels_nonloser_yb_3y
+2 runs · `dataset_v1.4` · `fwd_3y_cagr >= 0.0 & fwd_3y_max_drawdown_from_entry < 0.3` · git `d384e4b` · [summary](../reports/sweeps/calib_levels_nonloser_yb_3y/calib_levels_nonloser_yb_3y_summary.md) · [note](notes/2026-11-23-downside-gates-calibration.md)
+- **Did:** Calibration step 3 (yb): the candidate forest in cell C on the 112 ranks, and on ranks + 15 raw level columns, inside the 100k floor; read on year_calib_corr and the threshold tables.
+- **Got:** ranks: corr +0.07, PR-AUC 0.572 (+0.023 over plain); levels: corr -0.25, PR-AUC 0.551. Screen of yb ranks +0.032/+0.013 over peers (plain +0.036/+0.024). Ranks prediction held; levels prediction (+0.1 to +0.4) and rival contradicted.
+- **Concluded:** No arm reaches +0.3: the threshold rule cannot be built on these inputs; level columns make it worse (calm before a crash). Decision 46.
+- **Next:** Upstream: market-state columns and the peer-relative label.
+
+### 2026-11-23 · calib_levels_nonloser_plain_3y
+2 runs · `dataset_v1.4` · `fwd_3y_cagr >= 0.0 & fwd_3y_max_drawdown_from_entry < 0.3` · git `d384e4b` · [summary](../reports/sweeps/calib_levels_nonloser_plain_3y/calib_levels_nonloser_plain_3y_summary.md) · [note](notes/2026-11-23-downside-gates-calibration.md)
+- **Did:** Calibration step 3 (plain): the candidate forest in cell C on the 112 ranks, and on ranks + 15 raw level columns, inside the 100k floor; read on year_calib_corr and the threshold tables.
+- **Got:** ranks: corr -0.06, PR-AUC 0.549; levels: corr -0.33, PR-AUC 0.522. Mean score highest for 2007-08 entries; rows over 0.5 right 17-21% in 2007-08 and 79-89% in 2009-12. Prediction for ranks (about -0.6) contradicted; for levels held.
+- **Concluded:** No arm reaches +0.3: the threshold rule cannot be built on these inputs; level columns make it worse (calm before a crash). Decision 46.
+- **Next:** Upstream: market-state columns and the peer-relative label.
+
+### 2026-11-23 · lgbm_huber_seeds_3y
+4 runs · `dataset_v1.4` · 2 cells · git `a645480` · [summary](../reports/sweeps/lgbm_huber_seeds_3y/lgbm_huber_seeds_3y_summary.md) · [note](notes/2026-11-23-downside-gates-calibration.md)
+- **Did:** Huber regressors on 3y CAGR and 3y excess CAGR, seeds 232 and 1776, models saved.
+- **Got:** CAGR: +0.073/+0.032 (s232), +0.082/+0.054 (s1776) over same-size peers, losers 0.38-0.42 (s23: +0.072/+0.054). Excess: +0.023/+0.019, +0.027/+0.006. Prediction 1 failed on s232's 2013-20 half; prediction 2 held.
+- **Concluded:** The CAGR regressor's lead holds across seeds (smaller in 2013-20 on one); the excess target's weakness is not the seed. Why the targets differ remains open.
+- **Next:** Gates (decision 45).
+
+### 2026-11-23 · forest_downside_cells_3y
+4 runs · `dataset_v1.4` · 4 cells · git `a645480` · [summary](../reports/sweeps/forest_downside_cells_3y/forest_downside_cells_3y_summary.md) · [note](notes/2026-11-23-downside-gates-calibration.md)
+- **Did:** The candidate forest configuration on the four downside cells, models saved, inside the 100k floor.
+- **Got:** PR-AUC 0.536 / 0.369 (1y; vol_12m 0.538 / 0.359), 0.710 / 0.589 (3y; 0.678 / 0.549). p@20 0.70 / 0.64 / 0.88 / 0.81. Rows over 0.5 fall into 2008 (1y 30%: 4455, 3969, 3594, 2500 for 2005-08) and recover after. Predictions: 1 held, 2 half, 3 half.
+- **Concluded:** Over three years the forest adds 0.03-0.04 PR-AUC to volatility; over one year nothing. Its confidence lags the market the wrong way, like cell C's.
+- **Next:** Gate the huber regressor with the 3y and 1y 30% models (decision 45).
+
+### 2026-11-23 · baseline_factors_downside_cells
+12 runs · `dataset_v1.4` · 4 cells · git `a645480` · [summary](../reports/sweeps/baseline_factors_downside_cells/baseline_factors_downside_cells_summary.md) · [note](notes/2026-11-23-downside-gates-calibration.md)
+- **Did:** vol_12m, vol_36m, beta_12m ranks on max drawdown from entry >= 30% / >= 50% within 1y and 3y, every row scored, inside the 100k floor (decision 43).
+- **Got:** vol_12m best everywhere: PR-AUC 0.538 / 0.359 (1y, base 0.352 / 0.182), 0.678 / 0.549 (3y, base 0.542 / 0.378); its top 20 a year fell 30% within a year 83% of the time. Prediction held except the 3y 50% cell (+0.17 over base, predicted up to +0.15).
+- **Concluded:** Past volatility predicts future drawdown strongly; it is the bar for any downside model.
+- **Next:** forest_downside_cells_3y.
+
 ### 2026-11-23 · bt_nonloser_dd30_top5_cap2, bt_nonloser_dd30_top10_cap2_score (decision 41)
 git `a3ad89a` · [note](notes/2026-11-23-crash-growth-worst-rank.md)
 - **Did:** Backtested the forest alone, 2005-2020 valued to 2023: top 5 a month, and top 10 weighted by score, against its top 10 equal-weighted (rerun unchanged for vs_peers).
