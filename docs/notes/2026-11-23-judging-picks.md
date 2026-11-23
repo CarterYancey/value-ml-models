@@ -103,3 +103,50 @@ forest learns "calm" from "the price came back" as well. The gain in
 the mean-rank blend is about 1.7 se, ahead in 10 of 16 years. That is
 on the edge of decision 50's rule, so it is open, and seeds come
 before a backtest.
+
+## 4. The "came back" label on three seeds and in money (decisions 52–53)
+
+Screen, paired against cell C's forest of the same seed (the 100k
+floor, top 10 a quarter):
+
+| seed | alone: lead diff (se, ahead) | losers diff | mean-rank blend: lead diff (se, ahead) | losers diff |
+|---|---|---|---|---|
+| 23 | +0.0064 (0.0065, 8/16) | +0.008 | +0.0075 (0.0044, 10/16) | −0.013 |
+| 232 | +0.0002 (0.0048, 9/16) | +0.023 | +0.0030 (0.0033, 11/16) | −0.005 |
+| 1776 | +0.0041 (0.0060, 8/16) | +0.005 | +0.0058 (0.0048, 11/16) | −0.017 |
+
+In the blend the gain has the same sign on every seed, about +0.005 a
+year, but on no seed does it reach 2 se.
+
+Backtests: the candidate's config with the forest leg swapped. All
+rows ran on identical `src/`: candidate at git `cfa451c`, new label at
+`a2ffb07`, docs-only commits between.
+
+| seed | candidate TWR / MWR / final / drawdown | came back TWR / MWR / final / drawdown |
+|---|---|---|
+| 23 | 11.90% / 13.72% / 940,542 / −40.3% | 12.49% / 13.68% / 935,847 / −43.6% |
+| 232 | 12.12% / 13.84% / 953,815 / −40.4% | 12.25% / 13.63% / 930,706 / −43.3% |
+| 1776 | 12.23% / 13.76% / 944,611 / −40.5% | 12.76% / 13.88% / 958,928 / −43.0% |
+
+The TWR is higher on all three seeds (+0.59 / +0.13 / +0.53, mean
++0.42). The money is not: money-weighted return −0.04 / −0.21 / +0.12,
+and final value −4.7k / −23.1k / +14.3k. The drawdown is about 3
+points deeper on every seed (2008: −24.6% against −22.1% on seed 23).
+On seed 23 the TWR gain sits in 2005–07 (+5.4, +2.1, +6.7 points a
+year), when the account held a few tens of thousands. TWR weights
+those years like any other; money hardly does. Across 2008–2023 the
+two alternate year by year.
+
+Decision 52's rule:
+- TWR above on 2 or more seeds: passed (3 of 3).
+- Mean gap larger than the seed spread: passed, barely (0.42 against
+  0.33).
+- Drawdown no more than 2 points deeper: failed (about 3).
+- Screen at about 2 se: failed on every seed.
+
+Predictions:
+- Screen +0.003 to +0.010: held.
+- TWR within ±0.4: contradicted on two seeds.
+- Does not pass: held.
+- The rival (compounds to more than +0.4) held on TWR and failed on
+  money.

@@ -2110,3 +2110,24 @@ cfa451c HEAD -- src` is empty).
 
 *Rival:* the 2005–06 gain on the screen is real and compounds to more
 than +0.4.
+
+### 53. The "came back" label does not replace cell C in the candidate
+
+*What came out (2026-11-23; [note](2026-11-23-judging-picks.md) §4):*
+- **Screen.** In the mean-rank blend, about +0.005 a year on three
+  seeds, the same sign on each, under 2 se on each.
+- **Backtest.** TWR +0.13 to +0.59 (mean +0.42) on all three seeds,
+  earned in the 2005–07 years, when the account was small. Money-
+  weighted return −0.04 on average, and final value mixed (two seeds
+  lower). Drawdown about 3 points deeper on every seed.
+
+*Decided:* the candidate keeps cell C's forest. The rule failed on
+drawdown and on the screen's noise. In money the two labels are the
+same strategy. The label is recorded as an equivalent that fits Carter's
+statement of the thesis better: no penalty for a market-wide fall. It
+is to be preferred if a later change of the candidate retrains the
+forest anyway, rather than being swapped in alone now.
+
+*For the rule:* TWR alone can reward a gain made while the account is
+small. From now on, a money comparison reports TWR, MWR and final value
+together, and a gain shows in MWR as well before it counts.
