@@ -149,3 +149,40 @@ Rule (decision 38): ≥ 0.032 / ≥ 0.063 with losers ≤ mean rank's
 forward. Predictions: 1 (lead +0.01–0.04 / +0.03–0.06) held for
 2013–20 and is just over for 2005–12; 2 (losers between the forest's
 and the mean rank's) held; 3 (does not pass) held.
+
+## 4. The forest blended with the huber regressor (decision 39)
+
+The huber bundle refit unchanged (`233299a55d4c`, config
+`7c1507e3f386652f`; its screen reproduced the sweep run's +0.072 /
++0.054 exactly). Two configurations.
+
+| | lead 05–12 | lead 13–20 | losers | peers' losers | precision | ≥15% CAGR |
+|---|---|---|---|---|---|---|
+| forest × huber, worst rank | +0.028 | +0.017 | 0.266 / 0.244 | 0.355 / 0.327 | 0.622 / 0.694 | 0.306 / 0.203 |
+| forest × huber, mean rank | +0.029 | +0.023 | 0.247 / 0.231 | 0.353 / 0.332 | 0.638 / 0.700 | 0.291 / 0.234 |
+| forest alone | +0.030 | +0.027 | 0.197 / 0.116 | 0.327 / 0.263 | 0.706 / 0.825 | 0.366 / 0.319 |
+| huber alone | +0.072 | +0.054 | 0.394 / 0.372 | 0.474 / 0.451 | 0.441 / 0.381 | 0.350 / 0.275 |
+
+Rule: ≥ 0.040 / ≥ 0.063, losers ≤ 0.227 / ≤ 0.146. Both fail; every
+prediction and the rival are contradicted (the blends are below both
+legs). Worst rank's lead was negative for 2018, 2019 and 2020 entries
+(−0.027, −0.068, −0.018). Reading and rival: decision 40.
+
+## 5. Does the outcome rise with rank inside the forest's top 200? (decision 40)
+
+`topk_buckets2_dv100k`: the forest bundle `53ceedd93e6d` inside the
+100k floor, top K a year for K = 5 … 200; buckets from differences
+(precision of ranks 11–50 = (50·p@50 − 10·p@10) / 40). One evaluation
+(an earlier copy failed on parse and is logged).
+
+| half | top 5 | top 10 | 11–20 | 21–50 | 51–100 | 101–200 | base | losers top 10 | losers 11–50 | losers 51–200 |
+|---|---|---|---|---|---|---|---|---|---|---|
+| 2005–12 | 0.700 | 0.738 | 0.700 | 0.671 | 0.655 | 0.660 | 0.445 | 0.138 | 0.231 | 0.252 |
+| 2013–20 | 0.825 | 0.862 | 0.838 | 0.783 | 0.810 | 0.780 | 0.411 | 0.075 | 0.147 | 0.153 |
+
+Means of yearly values. The top 10 is purer than ranks 11–50 by
+0.06 on precision and 0.07–0.09 on losers in both halves; below rank
+20 the precision is flat to rank 200. The top 5 is not purer than the
+top 10. Prediction (under 0.05 in a half) contradicted; rival (top 10
+≥ 0.85 and steadily rising) half right: rising at the very top only.
+Caution: 80 picks a half, about one standard error.

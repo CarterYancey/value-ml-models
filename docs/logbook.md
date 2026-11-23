@@ -14,6 +14,20 @@ read** stub; a correction is a new entry that names the old one.
 
 <!-- entries -->
 
+### 2026-11-23 · topk_buckets2_dv100k (rank buckets inside the forest's top 200)
+git `0f08aa1` · [note](notes/2026-11-23-crash-growth-worst-rank.md)
+- **Did:** Evaluated the cell-C forest inside the 100k floor at top K 5-200 a year; bucket precision and losers from the differences (decision 40).
+- **Got:** Top 10 vs ranks 11-50: precision 0.738/0.862 vs 0.678/0.797, losers 0.138/0.075 vs 0.231/0.147; flat below rank 20; top 5 no purer than top 10. Prediction contradicted; decision 40's bar met.
+- **Concluded:** The forest's confidence means something at its very top only (about one standard error with 80 picks a half).
+- **Next:** Two backtests (decision 41): top 5 a month, and score weighting.
+
+### 2026-11-23 · blend_huber_{worst,mean}_peers_dv100k (forest x huber regressor)
+git `f58a0b8` · [note](notes/2026-11-23-crash-growth-worst-rank.md)
+- **Did:** Refit the huber CAGR regressor unchanged with its bundle saved (reproduced exactly); blended it with the cell-C forest by worst rank and by mean rank on the decision-33 screen.
+- **Got:** Worst +0.028/+0.017 over peers, losers 0.266/0.244; mean +0.029/+0.023, losers 0.247/0.231: below both legs (forest +0.030/+0.027, huber +0.072/+0.054). Rule 0.040/0.063: both fail; predictions and rival contradicted.
+- **Concluded:** A calm model and a skew model do not combine: the shared top is mid-size stocks where neither has an edge (hypothesis; peers' losers sit between the legs'). Closed (decision 40).
+- **Next:** Rank buckets inside the forest's top 200 (decision 40).
+
 ### 2026-11-23 · blend_mom_roc_worst_peers_dv100k (worst rank of the candidate's legs)
 git `b9c0878` · [note](notes/2026-11-23-crash-growth-worst-rank.md)
 - **Did:** Built combine/blend_combine = worst_rank (claude/worst-rank, 514 tests); evaluated the candidate's three legs by worst rank on the decision-33 screen, seed 23.
