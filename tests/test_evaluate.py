@@ -363,3 +363,91 @@ def test_blended_evaluation_is_its_own_configuration(
             EvalConfig.from_dict({"name": "self", "blend": [str(wf_bundle_dir)]}),
             **kwargs,
         )
+
+
+def test_gate_mask_and_apply():
+    import numpy as np
+
+    from harness.evaluate import apply_gates, gate_mask
+
+    g = [0.1, 0.9, 0.5, 0.3, float("nan"), 0.7]
+    periods = [1, 1, 1, 1, 2, 2]
+    top = gate_mask(g, periods, "top", 0.5)
+    assert top.tolist() == [False, True, True, False, False, True]
+    bottom = gate_mask(g, periods, "bottom", 0.5)
+    # a period with one scored row: that row is its top and its bottom half
+    assert bottom.tolist() == [True, False, False, True, False, True]
+    s = apply_gates([5.0, 1.0, 3.0, 4.0, 2.0, 0.0], [top])
+    kept = s[top]
+    assert kept.tolist() == [1.0, 3.0, 0.0]
+    # every gated row ranks below every kept row, in its own order
+    assert s[~top].max() < kept.min()
+    assert np.argsort(s[~top]).tolist() == np.argsort([5.0, 4.0, 2.0]).tolist()
+    assert apply_gates([1.0, 2.0], []).tolist() == [1.0, 2.0]
+
+
+def test_gate_parsing():
+    from harness.config import EvalConfig
+    from harness.errors import ConfigError
+
+    cfg = EvalConfig.from_dict(
+        {"name": "g", "gate": [{"bundle": "x", "keep": "bottom", "share": 0.7}]}
+    )
+    assert cfg.gate[0].keep == "bottom" and cfg.gate[0].share == 0.7
+    for bad in (
+        {"bundle": "x", "keep": "middle"},
+        {"bundle": "x", "share": 1.5},
+        {"keep": "top"},
+        {"bundle": "x", "extra": 1},
+    ):
+        with pytest.raises(ConfigError):
+            EvalConfig.from_dict({"name": "g", "gate": [bad]})
+
+
+def test_gated_evaluation_end_to_end(data_root, wf_bundle_dir, tmp_path):
+    from harness.config import EvalConfig, ExperimentConfig
+    from harness.evaluate import evaluate_bundle
+    from harness.results import ResultsStore
+    from harness.runner import run_experiment
+
+    factor = run_experiment(
+        ExperimentConfig.from_dict(
+            {
+                "name": "factor_gate",
+                "dataset_version": "dataset_v0.0-test",
+                "scheme": "walkforward",
+                "label": "label_3y_beat_spy",
+                "feature_groups": ["ranks"],
+                "top_k": [5],
+                "model": {"name": "rank_factor",
+                          "rank_column": "book_to_market_rank"},
+            }
+        ),
+        data_root=data_root,
+        results_path=tmp_path / "results.csv",
+        reports_dir=tmp_path / "reports",
+        models_dir=tmp_path / "models",
+    )
+    kwargs = dict(
+        data_root=data_root,
+        results_path=tmp_path / "results.csv",
+        reports_dir=tmp_path / "reports",
+    )
+    plain = evaluate_bundle(
+        wf_bundle_dir, EvalConfig.from_dict({"name": "plain", "top_k": [5]}),
+        **kwargs,
+    )
+    gated = evaluate_bundle(
+        wf_bundle_dir,
+        EvalConfig.from_dict(
+            {"name": "gated", "top_k": [5],
+             "gate": [{"bundle": str(factor["model_bundle"]),
+                       "keep": "top", "share": 0.5}]}
+        ),
+        **kwargs,
+    )
+    rows = ResultsStore(tmp_path / "results.csv").load()
+    h = lambda s: set(rows[rows["run_id"] == s["run_id"]]["config_hash"])
+    assert h(plain).isdisjoint(h(gated))
+    report = gated["report_path"].read_text()
+    assert "**gate**" in report and "factor_gate" in report

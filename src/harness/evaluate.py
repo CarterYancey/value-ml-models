@@ -79,6 +79,35 @@ def blend_scores(score_arrays, periods, mode: str = "mean_rank") -> np.ndarray:
     return (worst + _WORST_RANK_TIEBREAK * mean).to_numpy(dtype=float)
 
 
+def gate_mask(gate_scores, periods, keep: str, share: float) -> np.ndarray:
+    """Which rows a gate keeps: within each period, the rows in the
+    gating model's top (`keep = "top"`) or bottom (`"bottom"`) `share`
+    of its scores, by rank share. A row the gate has no score for (NaN)
+    is not kept."""
+    s = pd.Series(np.asarray(gate_scores, dtype=float))
+    pct = s.groupby(np.asarray(periods), sort=False).rank(
+        method="max", pct=True, ascending=(keep == "top")
+    )
+    return ((pct > 1 - share) & s.notna()).to_numpy()
+
+
+def apply_gates(scores, masks) -> np.ndarray:
+    """`scores` with every row some gate refuses moved below every kept
+    row, keeping their order among themselves. Finite, so PR-AUC and the
+    threshold tables still compute; gated rows are never top-K picks
+    while enough rows pass."""
+    s = np.asarray(scores, dtype=float).copy()
+    if not masks or not len(s):
+        return s
+    keep = np.logical_and.reduce(masks)
+    finite = s[np.isfinite(s)]
+    if keep.all() or not len(finite):
+        return s
+    lo, hi = finite.min(), finite.max()
+    s[~keep] = s[~keep] - (hi - lo) - 1.0
+    return s
+
+
 def _load_blend(paths, bundle: ModelBundle) -> list[ModelBundle]:
     """The bundles an evaluation blends with `bundle`, checked to be
     measured on the same thing: same dataset version and scheme, and a
@@ -127,6 +156,13 @@ def evaluate_bundle(
             "with one; a bundle's own universe is pinned"
         )
     blended = _load_blend(eval_config.blend, bundle)
+    gates = list(
+        zip(
+            eval_config.gate,
+            _load_blend([g.bundle for g in eval_config.gate], bundle),
+        )
+    )
+    gate_kept: list[float] = []
     if blended and train_config.calibration:
         raise ConfigError(
             "a blend is a ranking, not a probability; evaluate the "
@@ -134,7 +170,7 @@ def evaluate_bundle(
         )
     # a blended score is a mean rank share: nothing to read as a
     # probability, whatever the bundles are
-    probabilistic = bundle.probabilistic and not blended
+    probabilistic = bundle.probabilistic and not blended and not gates
     # the eval run's identity: the pinned train config with the eval's
     # metric parameters merged in — a distinct config hash per (bundle,
     # eval criteria), counted by the trial ledger
@@ -167,6 +203,9 @@ def evaluate_bundle(
         ),
         blend=tuple(b.train_config.config_hash for b in blended),
         blend_combine=eval_config.blend_combine if blended else "mean_rank",
+        gate=tuple(
+            (b.train_config.config_hash, g.keep, g.share) for g, b in gates
+        ),
     )
 
     store = ResultsStore(results_path)
@@ -223,6 +262,7 @@ def evaluate_bundle(
             dict.fromkeys(
                 list(bundle.feature_columns)
                 + [c for b in blended for c in b.feature_columns]
+                + [c for _, b in gates for c in b.feature_columns]
                 + [config.label]
                 + ([config.eval_label] if config.eval_label else [])
                 + list(config.pick_outcomes)
@@ -266,6 +306,21 @@ def evaluate_bundle(
                     periods=(dates.dt.year * 4 + dates.dt.quarter).to_numpy(),
                     mode=eval_config.blend_combine,
                 )
+            if gates:
+                rows = test_rows.loc[test_fit.X.index]
+                dates = pd.to_datetime(rows["snapshot_date"])
+                periods = (dates.dt.year * 4 + dates.dt.quarter).to_numpy()
+                masks = [
+                    gate_mask(
+                        b.fold_models[fold].predict_scores(
+                            feature_matrix(rows, b.feature_columns)
+                        ),
+                        periods, g.keep, g.share,
+                    )
+                    for g, b in gates
+                ]
+                scores = apply_gates(scores, masks)
+                gate_kept.append(float(np.logical_and.reduce(masks).mean()))
             metrics = compute_all(
                 test_fit.y,
                 scores,
@@ -356,6 +411,21 @@ def evaluate_bundle(
                         ]
                     }
                     if blended
+                    else {}
+                ),
+                **(
+                    {
+                        "gate": [
+                            f"{b.train_config.name} (`{b.train_config.config_hash}`, "
+                            f"run `{b.run_id}`): keep its {g.keep} "
+                            f"{g.share:.0%} of each test quarter"
+                            for g, b in gates
+                        ],
+                        "gate_kept": (
+                            float(np.mean(gate_kept)) if gate_kept else float("nan")
+                        ),
+                    }
+                    if gates
                     else {}
                 ),
                 **(

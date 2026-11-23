@@ -451,6 +451,10 @@ class ExperimentConfig:
     #: "worst_rank"); set by an evaluation only, and hashed only when
     #: it is not the default, so earlier blends keep their hashes
     blend_combine: str = "mean_rank"
+    #: gates an evaluation applied (harness.evaluate, `gate`): each a
+    #: (config hash of the gating bundle, "top"/"bottom", share). Set by
+    #: an evaluation only; hashed when present.
+    gate: tuple[tuple[str, str, float], ...] = ()
 
     @classmethod
     def from_file(cls, path: str | Path) -> "ExperimentConfig":
@@ -709,6 +713,10 @@ class ExperimentConfig:
             payload["blend"] = list(self.blend)
             if self.blend_combine != "mean_rank":
                 payload["blend_combine"] = self.blend_combine
+        if self.gate:
+            payload["gate"] = [
+                {"bundle": h, "keep": k, "share": s} for h, k, s in self.gate
+            ]
         return payload
 
     def canonical_json(self) -> str:
@@ -764,6 +772,45 @@ def _parse_blend(raw, source: str) -> tuple[str, ...]:
     return paths
 
 
+@dataclass(frozen=True)
+class GateSpec:
+    """One `[[gate]]` of an eval config."""
+
+    bundle: str
+    keep: str  # "top" or "bottom"
+    share: float
+
+
+def _parse_gates(raw, source: str) -> tuple[GateSpec, ...]:
+    if isinstance(raw, dict) or not isinstance(raw, (list, tuple)):
+        raise ConfigError(
+            f"eval config {source}: gate must be an array of tables "
+            "([[gate]] bundle, keep, share)"
+        )
+    gates = []
+    for table in raw:
+        unknown = sorted(set(table) - {"bundle", "keep", "share"})
+        if unknown or "bundle" not in table:
+            raise ConfigError(
+                f"eval config {source}: a [[gate]] takes bundle, keep and "
+                f"share (unknown: {unknown})"
+            )
+        keep = table.get("keep", "top")
+        if keep not in ("top", "bottom"):
+            raise ConfigError(
+                f"eval config {source}: gate keep must be 'top' or "
+                f"'bottom', got {keep!r}"
+            )
+        share = float(table.get("share", 0.5))
+        if not 0 < share < 1:
+            raise ConfigError(
+                f"eval config {source}: gate share must be in (0, 1), "
+                f"got {share}"
+            )
+        gates.append(GateSpec(str(table["bundle"]), keep, share))
+    return tuple(gates)
+
+
 def _parse_blend_combine(raw: dict, source: str) -> str:
     mode = raw.get("blend_combine", "mean_rank")
     if mode not in ("mean_rank", "worst_rank"):
@@ -782,7 +829,7 @@ _EVAL_ALLOWED = frozenset(
     {
         "name", "top_k", "score_thresholds", "precision_targets",
         "pick_outcomes", "pick_screen", "universe", "blend",
-        "blend_combine",
+        "blend_combine", "gate",
     }
 )
 
@@ -824,6 +871,11 @@ class EvalConfig:
     #: how the blend combines rank shares: "mean_rank" (the default) or
     #: "worst_rank" (the lowest share: in every model's top N)
     blend_combine: str = "mean_rank"
+    #: `[[gate]]` tables: keep only test rows another bundle scores in
+    #: its top (or bottom) `share` of the test quarter; the rest drop to
+    #: the bottom of the ranking. A screen of one model by another
+    #: ("the regressor's picks, without the forest's worst half").
+    gate: tuple["GateSpec", ...] = ()
 
     @classmethod
     def from_file(cls, path: str | Path) -> "EvalConfig":
@@ -877,4 +929,5 @@ class EvalConfig:
             universe=parse_universe(raw.get("universe"), source),
             blend=_parse_blend(raw.get("blend", ()), source),
             blend_combine=_parse_blend_combine(raw, source),
+            gate=_parse_gates(raw.get("gate", ()), source),
         )
