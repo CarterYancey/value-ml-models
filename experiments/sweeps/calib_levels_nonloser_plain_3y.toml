@@ -1,0 +1,79 @@
+# Decision 44 (2026-11-23), calibration step 3 of
+# docs/notes/2026-11-23-calibration-plan.md (claude/calibration):
+# can the cell-C forest's score level follow the coming year's base
+# rate if it is given inputs that carry the market's level, and
+# without year_balance (the plain fit; its sibling sweep has it)?
+# Two feature sets: the 112 ranks (the candidate forest), and the
+# ranks plus 15 raw level columns whose cross-section moves with the
+# market (volatility, beta, valuation yields, momentum, distance from
+# highs; not size, dollar volume or Amihud, which drift with the
+# years and would date a row instead).
+# Trained on every row, measured inside the 100k floor (scope test),
+# as the candidate's forest. One seed.
+#
+# Rule (the plan's, before the run): year_calib_corr >= +0.3; p@20
+# no more than 0.03 below the ranks-only forest's fold mean; at
+# threshold 0.6, precision over it in each half at least 0.55.
+#
+# Predictions (2026-11-23):
+#   ranks: year_calib_corr about -0.6 (the record's top-50 confidence
+#     gave -0.58); fails.
+#   levels: year_calib_corr between -0.4 and +0.2: the level columns
+#     help, but the plain fit's prior still drags; fails.
+#   Rival: levels alone reach +0.3.
+name = "calib_levels_nonloser_plain_3y"
+dataset_version = "dataset_v1.4"
+min_dataset_version = "1.4"
+scheme = "walkforward"
+folds = "all"
+seeds = [23]
+
+top_k = [10, 20, 50]
+score_thresholds = [0.4, 0.5, 0.6, 0.7]
+precision_targets = [0.75, 0.9]
+rank_metric = "precision_at_20"
+universe_scope = "test"
+pick_outcomes = [
+  "fwd_3y_excess_cagr",
+  "fwd_3y_cagr",
+  "fwd_3y_max_drawdown_from_entry",
+  "fwd_3y_cagr < 0",
+  "fwd_3y_cagr >= 0.15",
+]
+sets = [
+  {criterion = "entropy", max_depth = 4, max_features = 0.205191, max_samples = 0.663781, min_samples_leaf = 72, n_estimators = 490},
+]
+
+[pick_screen]
+per = "quarter"
+top_k = 10
+max_per_group = 2
+group_column = "sector"
+peer_column = "log_marketcap_rank"
+peer_bins = 20
+
+[[universe]]
+column = "dollar_volume_3m"
+op = ">="
+value = 100000
+
+[[cells]]
+label = "fwd_3y_cagr >= 0 & fwd_3y_max_drawdown_from_entry < 0.3"
+
+[[features]]
+groups = ["ranks"]
+
+[[features]]
+groups = ["ranks"]
+columns = [
+  "vol_12m", "vol_36m", "beta_12m", "max_ret_21d",
+  "earnings_yield", "ocf_yield", "fcf_yield", "sales_yield",
+  "book_to_market", "dividend_yield",
+  "mom_12_2", "ret_6m", "dist_52w_high", "dist_5y_high", "price_vs_5y_avg",
+]
+
+[model]
+name = "random_forest"
+bootstrap = true
+class_weight = 1.0
+n_jobs = 8

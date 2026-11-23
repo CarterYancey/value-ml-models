@@ -1821,3 +1821,38 @@ label, upstream). The candidate is unchanged.
   same-size peers ≥ +0.040 / +0.037 (the forest's + 0.01) in both
   halves with losers ≤ 0.25 / 0.20, on every seed; carried forward to
   a backtest beside the candidate's.
+
+### 44. Calibration: what is wrong, and the first experiment (`claude/calibration`)
+
+*Found while planning (2026-11-23,
+[calibration plan](2026-11-23-calibration-plan.md)):* decision 43's
+starting claim was wrong. The cell-C forest's confidence is not flat
+across years; its top-50 confidence is **negatively** correlated with
+the year's base rate (−0.58) and positively with the base rate of
+entries five years earlier (+0.63), the newest fully labeled rows in
+its training window, while the 3-year base rate itself tends to
+reverse after three to four years (autocorrelation −0.24 / −0.27).
+Hypothesis: the score level is the training window's prior, years
+late. A threshold rule on it buys most in 2007–08 (4,191 and 4,804
+rows over 0.6) and least in 2012 (561).
+
+*Decided:*
+
+- **Code** on `claude/calibration` (515 tests): `mean_score` beside
+  `base_rate` in every probabilistic fold and era table, and
+  `year_calib_corr` / `year_calib_mae` in the pooled metrics; a
+  `year_balance` training option (each fold's training years
+  reweighted to one positive share, each keeping its total weight,
+  the mandatory weights inside it; walk-forward, backtest refit and
+  deployment alike).
+- **First experiment** (`calib_levels_nonloser_{plain,yb}_3y`, four
+  runs): the candidate forest in cell C, read inside the 100k floor,
+  on {ranks, ranks + 15 raw level columns} × {plain, `year_balance`}.
+  Rule, before the run: `year_calib_corr` ≥ +0.3, p@20 within 0.03 of
+  the ranks-only forest, precision over 0.6 at least 0.55 in each half.
+  A passing arm goes to isotonic-lag calibration and then a threshold
+  backtest ("every stock over X", `min_score` with a large `top_k`).
+  If none passes, the market's level has to come from upstream
+  market-state features, and the request is written.
+- **Also on record:** `claude/blend-gate` (517 tests), `[[gate]]` in
+  `vml-eval`, for direction 2.
