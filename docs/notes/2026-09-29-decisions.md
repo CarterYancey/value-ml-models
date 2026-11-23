@@ -1906,3 +1906,34 @@ arm's mean score is highest for 2007–08 entries. `year_balance` adds
   "every stock over X" becomes "every stock likely to beat its
   same-size peers", a constant-count rule. That is not Carter's
   fewer-in-bad-years rule; the market level stays the upstream part.
+
+### 47. The gates fail the loser rule; the regressor is judged on money
+
+*What came out (2026-11-23, three gated evaluations of the huber CAGR
+regressor, seed 23):* kept to the forest's top half +0.067 / +0.047,
+losers 0.353 / 0.347; to the 3y "fell 30%" bottom half +0.070 /
++0.047, 0.353 / 0.350; to the 1y "fell 30%" bottom half +0.066 /
++0.057, 0.347 / 0.325 (ungated +0.072 / +0.054, 0.394 / 0.372).
+Decision 43's rule (losers ≤ 0.25 / 0.20) fails for all three; no
+further seeds. Predictions: lead held (just above the range for
+2005–12), losers 0.25–0.33 contradicted (0.33–0.35).
+
+*Decided:* Carter (decision 43) puts money ahead of the thesis's form,
+and `vml-backtest` is the yardstick of record; a screen's loser share
+is a proxy. So:
+
+1. **One backtest of the ungated regressor**
+   (`bt_huber_cagr_top10_cap2`): seed 23, top 10 a month by predicted
+   CAGR (`mean_rank` over one bundle), at most 2 per sector, 100k floor,
+   35 bps, 2005–2020 valued to 2023, beside the forest's
+   (`bt_nonloser_dd30_top10_cap2`, TWR 10.01%, worst drawdown −46.6%)
+   and SPY (9.58%, −52.9%). Carried forward (three seeds, then the
+   run to 2026 as context) if its time-weighted return beats the
+   forest's by 1 point and SPY's, its buys lead same-size candidates in
+   both halves, and its worst drawdown is no deeper than SPY's + 10
+   points (−62.9%). Prediction: TWR 11–13%, drawdown −55% to −65%,
+   buys' 3y lead over peers +4 to +7 points, 35–40% of buys lose.
+2. **One tighter gate** (`gate_dd1y30_bottom25`): the regressor ranked
+   only among the calmest quarter by the 1y "fell 30%" model; decision
+   43's rule. Prediction: losers 0.27–0.32, lead +0.03 to +0.05: fails.
+   38 backtest configurations on 2005–2020 with (1).

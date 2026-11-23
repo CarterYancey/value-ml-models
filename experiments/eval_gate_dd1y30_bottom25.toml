@@ -1,0 +1,17 @@
+# Decision 47 (2026-11-23; the 0.5 gate of decision 45, tightened), Carter's direction 2: the huber regressor
+# on 3y CAGR (evaluated bundle) with its picks screened by the 1y 'fell 30% from entry' forest (least likely quarter):
+# only rows that model puts in its bottom quarter of the test quarter are
+# ranked. Read on the regressor's own screen (100k floor, same-size
+# peers), as decision 39.
+# Rule (decision 43, before the run): lead over same-size peers >=
+# +0.040 / +0.037 for entries of 2005-12 / 2013-20, losers (3y CAGR
+# < 0) <= 0.25 / 0.20, on every seed. Seed 23 first; seeds 232 and
+# 1776 only if it passes. The fourth gate tried on seed 23.
+# Predictions (2026-11-23): losers 0.27-0.32, lead +0.03 to +0.05: fails.
+name = "gate_dd1y30_bottom25"
+top_k = [20, 50]
+
+[[gate]]
+bundle = "experiments/models/forest_downside_cells_3y__label_1y_max_drawdown_from_entry_ge_0p3_1e9a9e7df889"
+keep = "bottom"
+share = 0.25
