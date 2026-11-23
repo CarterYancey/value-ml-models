@@ -82,6 +82,7 @@ def _metric_row(
         "base_rate_brier": (
             metrics.base_rate_brier(y, w) if probabilistic else math.nan
         ),
+        "mean_score": metrics.mean_score(s, w) if probabilistic else math.nan,
     }
     for k in top_k:
         row[f"precision_at_{k}"] = metrics.precision_at_k(y, s, k)
@@ -139,7 +140,24 @@ def _pooled_metric_row(
         "base_rate_brier": (
             metrics.base_rate_brier(y, w) if probabilistic else math.nan
         ),
+        "mean_score": metrics.mean_score(s, w) if probabilistic else math.nan,
     }
+    if probabilistic:
+        row.update(
+            metrics.year_calibration(
+                (
+                    metrics.mean_score(
+                        g["score"].to_numpy(dtype=float),
+                        g["sample_weight"].to_numpy(dtype=float),
+                    ),
+                    metrics.base_rate(
+                        g["y_true"].to_numpy(dtype=float),
+                        g["sample_weight"].to_numpy(dtype=float),
+                    ),
+                )
+                for g in groups
+            )
+        )
     for k in top_k:
         hits = picks = 0.0
         conf_sum = 0.0

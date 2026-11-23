@@ -253,6 +253,23 @@ median is shown beside it. Read the years before the pooled row, and a
 threshold as a probability only on a calibrated run
 (`calibration = "isotonic"`).
 
+### Calibration across years (`mean_score`, `year_balance`)
+
+Every probabilistic run reports `mean_score` (the weighted mean score
+of a fold's test rows) beside `base_rate` in the era table, and in its
+pooled metrics `year_calib_corr` (the correlation across test years of
+the two) and `year_calib_mae` (their mean absolute gap). A threshold
+rule ("every stock over X") buys fewer stocks in a bad year only if
+`year_calib_corr` is well above zero; the ranks-only forests of cell C
+are near −0.6 (docs/notes/2026-11-23-calibration-plan.md).
+
+`year_balance = true` (a config field, hashed when set) reweights each
+fold's training rows so that every snapshot year carries the pooled
+positive share, each year keeping its total weight and the mandatory
+sample weights staying inside it: the model cannot take particular
+past years' market level as its prior. Binary labels only; applied in
+walk-forward fits, backtest refits and deployment refits alike.
+
 ## Universe: the rows a model is trained and evaluated on
 
 ```toml

@@ -92,6 +92,43 @@ class SplitFrames:
     test: pd.DataFrame
 
 
+def year_balanced_weights(weights, y, years) -> np.ndarray:
+    """The fit's weights rescaled so that each snapshot year's weighted
+    positive share equals the pooled share, each year keeping its total
+    weight: positives of year g are multiplied by r / r_g and negatives
+    by (1 - r) / (1 - r_g), where r_g is the year's weighted positive
+    share and r the pooled one. A year with no positives or no negatives
+    is left as it is (there is nothing to rescale).
+
+    Why: a 3-year label's base rate is mostly the market's (0.16 to 0.59
+    by entry year in cell C). Fitted on the raw mixture, a model's score
+    level follows the share of good and bad years in its training window,
+    which is years behind the test year (docs/notes/2026-11-23-
+    calibration-plan.md). Balanced, every training year says the same
+    about the prior, and what is left to learn is which stocks of a year
+    do better than the others. A sample-weight scheme like class weights:
+    the mandatory uniqueness weights stay inside it, and it changes no
+    row's label or features."""
+    w = np.asarray(weights, dtype=float)
+    pos = np.asarray(y, dtype=bool)
+    years = np.asarray(years)
+    total = w.sum()
+    if total <= 0:
+        return w.copy()
+    r = w[pos].sum() / total
+    out = w.copy()
+    for g in np.unique(years):
+        m = years == g
+        wg = w[m].sum()
+        pg = w[m & pos].sum()
+        if wg <= 0 or pg <= 0 or pg >= wg:
+            continue
+        rg = pg / wg
+        out[m & pos] *= r / rg
+        out[m & ~pos] *= (1 - r) / (1 - rg)
+    return out
+
+
 @dataclass(frozen=True)
 class FitData:
     """Arrays ready for a weighted fit on one labeled cell."""
@@ -873,8 +910,13 @@ class Dataset:
         feature_cols: Sequence[str],
         horizon_years: int,
         target: str = "binary",
+        year_balance: bool = False,
     ) -> FitData:
         """Assemble (X, y, w) for a weighted fit.
+
+        `year_balance` rescales the mandatory weights so that every
+        snapshot year carries the pooled positive share
+        (`year_balanced_weights`); `effective_size` is unchanged by it.
 
         Rows whose label is NULL (horizon unobservable) carry no target and
         are excluded from the fit — note this is *not* a delisting filter;
@@ -899,11 +941,21 @@ class Dataset:
             )
         labeled = frame[frame[label].notna()]
         w = self._weights_for(labeled, horizon_years)
+        y = _target_array(label, labeled[label], target)
+        effective = float(w.sum())
+        if year_balance:
+            if target != "binary":
+                raise DatasetValidationError(
+                    "year_balance needs a binary label: a continuous "
+                    "target has no positive share to equalize"
+                )
+            years = pd.to_datetime(labeled["snapshot_date"]).dt.year.to_numpy()
+            w = year_balanced_weights(w, y, years)
         return FitData(
             X=feature_matrix(labeled, feature_cols),
-            y=_target_array(label, labeled[label], target),
+            y=y,
             sample_weight=w,
-            effective_size=float(w.sum()),
+            effective_size=effective,
         )
 
     def observable_fit_rows(
