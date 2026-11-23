@@ -17,6 +17,7 @@ Two rules hold everywhere and are enforced here:
 from __future__ import annotations
 
 import operator
+import re
 from dataclasses import dataclass
 
 import pandas as pd
@@ -36,6 +37,12 @@ _OPS = {
     "==": operator.eq,
     "!=": operator.ne,
 }
+
+#: `column op value` as one string (a command-line filter); the longer
+#: operators first so that `>=` is not read as `>` and a stray `=`
+_FILTER_TEXT = re.compile(
+    r"^\s*([A-Za-z_][A-Za-z0-9_]*)\s*(>=|<=|==|!=|>|<)\s*(.+?)\s*$"
+)
 
 #: manifest groups a filter may reference — labels and weights are
 #: outcomes and structurally out of reach
@@ -81,6 +88,32 @@ class FilterSpec:
                 f"got {value!r}"
             )
         return cls(column=str(table["column"]), op=op, value=value)
+
+    @classmethod
+    def parse(cls, text: str, where: str = "filter") -> "FilterSpec":
+        """A filter written as one string, `column op value`
+        (`dollar_volume_3m_rank >= 0.2`, `sector != "Utilities"`): the
+        command-line spelling of a `[[universe]]` entry. A value that
+        reads as a number is one, `true`/`false` are booleans, anything
+        else is a string (quotes optional)."""
+        match = _FILTER_TEXT.match(text)
+        if not match:
+            raise ConfigError(
+                f"{where} {text!r} is not `column op value` with op in "
+                f"{list(FILTER_OPS)}"
+            )
+        column, op, raw = match.groups()
+        value: float | int | str | bool
+        if raw.lower() in ("true", "false"):
+            value = raw.lower() == "true"
+        else:
+            try:
+                value = float(raw)
+            except ValueError:
+                value = raw.strip("\"'")
+        return cls.from_table(
+            {"column": column, "op": op, "value": value}, text, where
+        )
 
     def to_table(self) -> dict:
         return {"column": self.column, "op": self.op, "value": self.value}

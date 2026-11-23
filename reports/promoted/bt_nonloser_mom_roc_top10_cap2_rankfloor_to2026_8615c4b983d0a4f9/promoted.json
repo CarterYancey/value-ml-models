@@ -1,0 +1,14 @@
+{
+  "name": "bt_nonloser_mom_roc_top10_cap2_rankfloor_to2026_8615c4b983d0a4f9",
+  "promoted_utc": "2026-10-01T09:17:24+00:00",
+  "source_report": "reports/backtest/bt_nonloser_mom_roc_top10_cap2_rankfloor_to2026_8615c4b983d0a4f9.md",
+  "run_id": "",
+  "config_hash": "",
+  "git_sha": "",
+  "dataset_version": "",
+  "config_path": "",
+  "note": "The candidate traded to the end of the price panel, 2026-08-21 (rank floor, buy and hold): 1,193,902 on 260,000 against SPY's 1,326,084 (10% behind; 37% ahead at the end of 2020); 11.3% time-weighted against 10.9%, drawdown -41% against -53%; calendar years 2021-26 against SPY -8.6 / +3.2 / -2.9 / -12.5 / -14.4 / -12.7; the buys' lead over same-size peers +4.7 points a year pooled, -0.9 / -0.4 / -5.0 for 2021 / 2022 / 2023. Not a selection: the fixed candidate. docs/notes/2026-10-01-out-of-sample.md",
+  "files": [
+    "bt_nonloser_mom_roc_top10_cap2_rankfloor_to2026_8615c4b983d0a4f9.md"
+  ]
+}

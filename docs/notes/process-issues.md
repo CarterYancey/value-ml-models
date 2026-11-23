@@ -123,3 +123,48 @@ Found on 2026-09-30, from the first calibrated run on a 3-year label
   precision@K was "essentially untouched". Rows on a step now keep
   their raw order. **A prediction written in the config ("p@20 as in
   the uncalibrated run") is what caught both.**
+
+Found on 2026-10-01:
+
+- **The backtest reports' yearly table was a month off.** The
+  portfolio is valued on the first trading day of each month, a row
+  of the equity curve carries the return since the previous valuation,
+  and `yearly_table` grouped rows by the year of their own date: the
+  January row, December's return, went into the new year. Every
+  "year" in every backtest report ran from the first trading day of
+  one December to the first of the next. SPY's "2022" read −8.2% (the
+  calendar year: −19.0%), its "2019" +13.8% (+32.3%), its "2018" +7.5%
+  (−5.1%). It showed when a run to 2026 printed 14.5% for a "2023"
+  that the run to 2023 had printed as 19.0%. Blast radius, checked:
+  both legs of a report share the window, so every excess over SPY is
+  a true difference over a mislabelled twelve months, and no ordering
+  of portfolios changes; the headline figures (final value, time- and
+  money-weighted return, drawdown) and the per-buy tables do not use
+  the table. What was wrong is every sentence that names a year
+  ("ahead in 2008 by 9.5 points", "−9.6 / +4.3 / −2.2 in 2021–23"):
+  the candidate's years are restated on calendar years in
+  [the out-of-sample note](2026-10-01-out-of-sample.md) (2008: +11.4;
+  2021–23: −8.6 / +3.2 / −2.9), and the yearly tables of the earlier
+  backtest notes are left as written, with this entry as their
+  correction. Fixed on `claude/backtest-calendar-years`. **A table
+  whose label is a calendar unit needs one test against a date that
+  straddles it.**
+- **Every backtest stopped its valuation at 2023-12-29 while the
+  price panel and the dataset's snapshots ran to 2026-08-21.** The
+  date was the template's (decision 6) and was copied into 32 configs
+  over four sessions. Findings said, correctly, that the candidate
+  "has not been shown to hold outside 2005–2023"; thirty-two months
+  that could show it were on disk. Traded to the end of the panel the
+  candidate ends 10% behind SPY. **Before writing "only time can
+  say", check the last date in the data.**
+- **"Beats the average stock" was read as selection skill.** Pick
+  outcomes, the screen and the per-buy tables all set picks beside
+  all test rows or beside SPY. Size decides both comparisons: the
+  smaller half of the investable stocks trailed SPY by 12 to 33
+  points a year in every period, so any ranking that prefers large,
+  calm companies beats the average row. Against stocks of their own
+  size the candidate's lead was half what the all-rows comparison
+  showed in 2005–2020 and nothing for the buys of 2021–23.
+  `claude/backtest-universe-outcomes` adds the same-size reference to
+  every backtest report. **A reference population has to share the
+  picks' size before a difference is called selection.**

@@ -368,7 +368,7 @@ def _check_predictions(predictions: pd.DataFrame) -> None:
 def collect_predictions(
     fold: int, years: np.ndarray, y_true, scores, sample_weight,
     outcome=None, stocks=None, pick_outcomes=None, quarters=None,
-    groups=None,
+    groups=None, peers=None,
 ) -> pd.DataFrame:
     """One fold's test predictions in the standard frame layout.
 
@@ -381,7 +381,9 @@ def collect_predictions(
     `permaticker`) are the report-only outcomes of the picks
     (eval.picks); `quarters` (the rows' calendar quarter, "2014Q3") and
     `groups` (the rows' group, e.g. sector) are what its portfolio
-    screen reads."""
+    screen reads; `peers` (the rows' peer band, e.g. of the
+    market-capitalization rank; -1 for a NULL) is what its same-size
+    reference matches on."""
     frame = pd.DataFrame(
         {
             "fold": fold,
@@ -402,4 +404,6 @@ def collect_predictions(
         frame["quarter"] = np.asarray(quarters, dtype=object)
     if groups is not None:
         frame["group"] = np.asarray(groups, dtype=object)
+    if peers is not None:
+        frame["peer"] = np.asarray(peers, dtype=int)
     return frame

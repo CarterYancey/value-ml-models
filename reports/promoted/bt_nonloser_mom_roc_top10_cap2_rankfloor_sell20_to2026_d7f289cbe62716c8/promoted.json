@@ -1,0 +1,14 @@
+{
+  "name": "bt_nonloser_mom_roc_top10_cap2_rankfloor_sell20_to2026_d7f289cbe62716c8",
+  "promoted_utc": "2026-10-01T09:17:25+00:00",
+  "source_report": "reports/backtest/bt_nonloser_mom_roc_top10_cap2_rankfloor_sell20_to2026_d7f289cbe62716c8.md",
+  "run_id": "",
+  "config_hash": "",
+  "git_sha": "",
+  "dataset_version": "",
+  "config_path": "",
+  "note": "The candidate's rank sell discipline traded to 2026-08-21: 1,344,630 on 260,000 against SPY's 1,326,084; 12.0% time-weighted against 10.9%, drawdown -40%; calendar years 2021-26 against SPY -8.2 / +0.6 / -7.9 / -9.1 / -12.4 / -9.3; costs 9.3 times buy and hold's. docs/notes/2026-10-01-out-of-sample.md",
+  "files": [
+    "bt_nonloser_mom_roc_top10_cap2_rankfloor_sell20_to2026_d7f289cbe62716c8.md"
+  ]
+}

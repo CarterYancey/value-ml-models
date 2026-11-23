@@ -93,11 +93,39 @@ whether the selection was good in the early years and in the late
 ones. It excludes costs and sizing, so it is a reading of the
 selection, not of the portfolio.
 
+Under it, **"Against the stocks they were chosen from"** gives the
+same reading for every candidate of every rebalance (each stock that
+passed the screens and had a quote), by buy year and pooled, and sets
+the buys beside two references:
+
+- *all candidates*, equal-weighted (`candidates_excess`,
+  `vs_candidates`);
+- *same-size peers*: for each buy, the candidates of its own rebalance
+  in its own 5% band of `log_marketcap_rank` (`peers_excess`,
+  `vs_peers`; absent when the dataset has no such column).
+
+Read `vs_peers` for the selection. Against a capitalization-weighted
+benchmark the average small stock trails by a wide margin in every
+period (on `dataset_v1.4`, the smaller half of the investable stocks
+by 12 to 33 points a year over three years, 2005 to 2026), so a
+ranking that merely prefers large companies beats "all candidates"
+without choosing well among them. And when `candidates_excess` and
+`peers_excess` are themselves far below zero, the benchmark outran
+equal-weighted stocks of every kind: that is a statement about the
+benchmark and the period, which no equal-weighted selection from the
+universe could have escaped. The pooled rows are logged as
+`ref_vs_peers_3y`, `ref_vs_candidates_3y`, `ref_peers_excess_3y`, ...
+
 Reports land in
 `reports/backtest/<name>_<config-hash>.*` (report, equity/trades/
 rebalances CSVs — trades carry tickers, per-model scores, and realized
 profit on sells — and the equity plot), lead with money- and
-time-weighted results, the per-year era slice with crash years tagged,
+time-weighted results, the per-year era slice with crash years tagged
+(a year runs from the first trading day of January to the first of the
+next January: the portfolio is valued monthly, and a month's return is
+counted in the year the month starts in; reports written before
+2026-10-01 counted it in the year it ended in, so their "2022" is
+December 2021 to December 2022),
 and the defensive-hypothesis check; runs are logged to
 `experiments/results.csv` under scheme `backtest`.
 

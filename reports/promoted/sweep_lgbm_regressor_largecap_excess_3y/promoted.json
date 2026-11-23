@@ -1,0 +1,14 @@
+{
+  "name": "sweep_lgbm_regressor_largecap_excess_3y",
+  "promoted_utc": "2026-10-01T09:17:06+00:00",
+  "source_report": "reports/sweeps/lgbm_regressor_largecap_excess_3y/lgbm_regressor_largecap_excess_3y_summary.md",
+  "run_id": "",
+  "config_hash": "",
+  "git_sha": "",
+  "dataset_version": "dataset_v1.4",
+  "config_path": "experiments/sweeps/lgbm_regressor_largecap_excess_3y.toml",
+  "note": "LightGBM regression on fwd_3y_excess_cagr inside large caps, measured on beat_spy, lead over same-size peers for entries of 2005-12 / 2013-20: huber +0.016 to +0.024 / -0.024 to -0.036; quantile 0.25 +0.028 to +0.031 / +0.016 to +0.020; PR-AUC within 0.03 of the base rate. The magnitude of the excess return is no more learnable than its sign. docs/notes/2026-10-01-large-caps.md",
+  "files": [
+    "lgbm_regressor_largecap_excess_3y_summary.md"
+  ]
+}

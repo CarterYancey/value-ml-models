@@ -1,0 +1,14 @@
+{
+  "name": "sweep_forest_largecap_cells_3y",
+  "promoted_utc": "2026-10-01T09:17:04+00:00",
+  "source_report": "reports/sweeps/forest_largecap_cells_3y/forest_largecap_cells_3y_summary.md",
+  "run_id": "",
+  "config_hash": "",
+  "git_sha": "",
+  "dataset_version": "dataset_v1.4",
+  "config_path": "experiments/sweeps/forest_largecap_cells_3y.toml",
+  "note": "Inside large caps (log_marketcap_rank >= 0.8), forests trained there, lead over same-size peers for entries of 2005-12 / 2013-20: 'not a loser' +0.022 / +0.021 (three seeds +0.020 to +0.025), 'beat SPY' +0.033 to +0.039 / -0.001 to +0.013, 'beat SPY without a 30% fall' +0.003 to +0.006 / +0.027 to +0.034. No arm passes decision 32's rule: none is 0.01 above return on capital alone (+0.039 / +0.030). docs/notes/2026-10-01-large-caps.md",
+  "files": [
+    "forest_largecap_cells_3y_summary.md"
+  ]
+}

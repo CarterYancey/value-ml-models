@@ -1,0 +1,74 @@
+# Decision 30 of docs/notes/2026-09-29-decisions.md (2026-10-01): a
+# check of the template, not a new strategy. The candidate to
+# 2026-08-21 ended 10% behind SPY (backtest 32). Its trade log shows
+# the whole-share rule binding hard after 2020: 64 to 87 buys a year
+# out of 120 orders (4 to 8 of 10 in the months of 2026), where
+# 2005-2012 filled 106 to 120. The template buys whole shares with
+# about 100 a pick, on total-return adjusted prices: early in the
+# sample every adjusted price is low and the rule skips almost
+# nothing; late in it a stock above the per-pick budget is never
+# bought, and those are disproportionately large, successful
+# companies. Decision 23 ran this check on buys of 2005-2020 (12.12%
+# against 12.24%) and it did not matter there. It has to be asked
+# again on 2021-26: "a selection rule nobody chose, applied to a
+# price nobody paid".
+#
+# Same portfolio as bt_nonloser_mom_roc_top10_cap2_rankfloor_to2026
+# with `fractional_shares = true`: every order is filled.
+#
+# Check before reading: none is exact (the paths differ from 2005).
+#
+# Predictions (2026-10-01), written before the run:
+# 1. 2005-2020 as in decision 23: time-weighted CAGR to the end of
+#    2020 within 0.5 points of the whole-share run's.
+# 2. 2024, 2025 and 2026 to August: still behind SPY in each (by 6
+#    points or more), each year within 5 points of the whole-share
+#    run's -12.5 / -14.4 / -12.7. The shortfall is the selection's,
+#    not the template's.
+# 3. Final value within 10% of the whole-share run's 1,193,902 and
+#    below SPY's 1,326,084.
+# Rival: the skipped orders were the winners (high-priced large
+# companies), in which case the fractional run is 5 or more points a
+# year better in 2024-26 and ends above the whole-share run by more
+# than 10%. Then the template, not the blend, lost part of those
+# years, and the deployed form must not carry the rule.
+name = "bt_nonloser_mom_roc_top10_cap2_rankfloor_frac_to2026"
+dataset_version = "dataset_v1.4"
+prices_version = "prices_v1.0"
+
+bundles = [
+    "experiments/models/forest_nonloser_dd30_3y_53ceedd93e6d",
+    "experiments/models/factor_mom_12_2_3y_97c0f095cf48",
+    "experiments/models/factor_roc_greenblatt_3y_da640394cbba",
+]
+
+[signal]
+combine = "mean_rank"
+max_staleness_days = 200
+model_update = "refit"
+label_lag_days = 45
+
+[[investability]]
+column = "dollar_volume_3m_rank"
+op = ">="
+value = 0.2
+
+[portfolio]
+strategy = "buy_and_hold"
+top_k = 10
+weighting = "equal"
+monthly_cash = 1000.0
+max_per_group = 2
+group_column = "sector"
+
+[execution]
+cost_bps = 35.0
+benchmark_cost_bps = 0.0
+max_quote_age_days = 3
+delist_after_days = 30
+fractional_shares = true
+
+[window]
+start = 2005-01-01
+end = 2026-08-21
+valuation_end = 2026-08-21

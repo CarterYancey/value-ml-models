@@ -521,3 +521,103 @@ def test_threshold_outcomes_count_years_in_cash():
     assert threshold_outcome_metrics(frame.drop(
         columns=[c for c in frame.columns if c.startswith("out")]
     ), [0.8]) == {}
+
+
+# --- the screen's same-size peers --------------------------------------------
+
+
+def test_peer_bands_cut_a_rank_into_equal_bands():
+    from eval.picks import peer_bands
+
+    bands = peer_bands(np.array([0.0, 0.049, 0.05, 0.5, 0.999, 1.0, np.nan]), 20)
+    assert bands.tolist() == [0, 0, 1, 10, 19, 19, -1]
+    assert peer_bands(np.array([0.3, 0.7]), 2).tolist() == [0, 1]
+
+
+def test_screen_reads_the_picks_against_their_peers():
+    """With a peer column the screen says what the test rows of the
+    pick's own quarter and band did: a pick that is merely in the
+    better band leads all rows and not its peers."""
+    from eval.picks import PEER_COLUMN
+
+    quarters = ["2016Q1"] * 6
+    frame = collect_predictions(
+        2016, np.full(6, 2016),
+        [1, 1, 1, 0, 0, 0],
+        [0.9, 0.8, 0.2, 0.7, 0.6, 0.1],
+        np.ones(6),
+        stocks=[1, 2, 3, 4, 5, 6],
+        pick_outcomes={
+            # band 1 (rows 0-2) earns 0.10 on average, band 0 minus 0.20
+            outcome_column("ret", False): [0.12, 0.08, 0.10, -0.10, -0.30, np.nan],
+        },
+        quarters=quarters,
+        peers=[1, 1, 1, 0, 0, 0],
+    )
+    assert frame[PEER_COLUMN].tolist() == [1, 1, 1, 0, 0, 0]
+    screen = PickScreen(top_k=2, peer_column="log_marketcap_rank", peer_bins=2)
+    m = screen_metrics(frame, screen)
+    # the two picks are rows 0 and 1, both in band 1
+    assert m["screen_mean_ret"] == pytest.approx(0.10)
+    assert m["screen_peer_mean_ret"] == pytest.approx(0.10)
+    assert m["screen_peer_precision"] == pytest.approx(1.0)
+    assert m["screen_precision"] == pytest.approx(1.0)
+    # against all rows the same picks look 0.12 better than they are
+    assert np.nanmean(frame[outcome_column("ret", False)]) == pytest.approx(-0.02)
+    table = screen_table(frame, screen)
+    pooled = table.iloc[-1]
+    assert pooled["ret peers"] == pytest.approx(0.10)
+    assert pooled["precision peers"] == pytest.approx(1.0)
+    assert list(table.columns).index("ret peers") == (
+        list(table.columns).index("ret mean") + 1
+    )
+    # a pick without the outcome does not count its peers either
+    three = PickScreen(top_k=6, peer_column="log_marketcap_rank", peer_bins=2)
+    m3 = screen_metrics(frame, three)
+    assert m3["screen_mean_ret"] == pytest.approx(-0.02)
+    assert m3["screen_peer_mean_ret"] == pytest.approx(
+        (3 * 0.10 + 2 * -0.20) / 5
+    )
+    # without a peer column nothing is added and nothing changes
+    plain = screen_metrics(frame, PickScreen(top_k=2))
+    assert "screen_peer_mean_ret" not in plain
+    assert plain["screen_mean_ret"] == m["screen_mean_ret"]
+
+
+def test_peer_settings_are_validated_and_keep_old_hashes():
+    with pytest.raises(ConfigError, match="peer_bins is set without"):
+        _config(pick_screen={"peer_bins": 10})
+    with pytest.raises(ConfigError, match="2 or more"):
+        _config(pick_screen={"peer_column": "book_to_market_rank",
+                             "peer_bins": 1})
+    plain = _config(pick_screen={"top_k": 2})
+    peered = _config(pick_screen={"top_k": 2,
+                                  "peer_column": "book_to_market_rank"})
+    assert plain.pick_screen.to_table() == {"per": "quarter", "top_k": 2}
+    assert peered.config_hash != plain.config_hash
+    assert peered.pick_screen.to_table()["peer_bins"] == 20
+    assert "bands of `book_to_market_rank`" in peered.pick_screen.describe()
+
+
+def test_peer_screen_in_a_run_and_an_evaluation(universe_root, tmp_path):
+    """The peer column is read from the test rows (it need not be a
+    model input), must be a rank column, and an eval config may add it
+    to a saved bundle."""
+    config = _config(
+        pick_outcomes=["fwd_3y_cagr"],
+        pick_screen={"top_k": 2, "peer_column": "book_to_market_rank",
+                     "peer_bins": 2},
+    )
+    summary = _run(config, universe_root, tmp_path,
+                   models_dir=tmp_path / "models")
+    pooled = summary["pooled_metrics"]
+    assert "screen_peer_mean_fwd_3y_cagr" in pooled
+    assert "screen_peer_precision" in pooled
+    report = summary["report_path"].read_text()
+    assert "fwd_3y_cagr peers" in report
+    assert "Read a selection against its peers" in report
+    with pytest.raises(ConfigError, match="not a rank column"):
+        _run(
+            _config(pick_screen={"top_k": 2, "peer_column": "book_to_market"}),
+            universe_root, tmp_path,
+        )

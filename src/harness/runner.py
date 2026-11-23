@@ -29,6 +29,7 @@ from eval.metrics import compute_all, regression_diagnostics
 from eval.picks import (
     has_pick_outcomes,
     has_screen_columns,
+    peer_bands,
     pick_outcome_metrics,
     pick_outcome_table,
     screen_group_table,
@@ -41,7 +42,7 @@ from eval.plots import render_calibration_plot, render_pr_curve, render_roc_curv
 from explain.rules import render_tree_diagram, rules_text
 from harness.calibration import PrequentialCalibration
 from harness.config import ExperimentConfig
-from harness.dataset import Dataset, SplitAccess
+from harness.dataset import Dataset, SplitAccess, model_input_columns
 from harness.errors import ConfigError, DatasetValidationError
 from harness.filters import FILTERABLE_GROUPS
 from harness.model_store import ModelBundle
@@ -113,6 +114,9 @@ def run_experiment(
         dataset = Dataset(Path(data_root) / config.dataset_version)
         config.check_dataset_version(dataset.version)
         feature_cols = config.resolve_feature_columns(dataset)
+        # what the estimators see: a categorical feature is several
+        # indicator columns (harness.dataset.feature_matrix)
+        input_cols = model_input_columns(feature_cols)
         dataset.check_universe(config.universe)
         check_pick_screen(dataset, config.pick_screen)
         folds = (
@@ -253,7 +257,7 @@ def run_experiment(
                 raw_score_arrays.append(np.asarray(raw_scores, dtype=float))
             estimator = getattr(model, "estimator_", None)
             if isinstance(estimator, DecisionTreeClassifier):
-                fold_rules.append((fold, rules_text(estimator, feature_cols)))
+                fold_rules.append((fold, rules_text(estimator, input_cols)))
                 last_tree = (fold, estimator)
             imp_fn = getattr(model, "feature_importances", None)
             if imp_fn is not None:
@@ -281,13 +285,13 @@ def run_experiment(
         if last_tree is not None:
             diagram_fold, estimator = last_tree
             artifacts["tree_diagram"] = render_tree_diagram(
-                estimator, feature_cols, reports_dir / f"{config.name}_tree.png"
+                estimator, input_cols, reports_dir / f"{config.name}_tree.png"
             )
             artifacts["tree_diagram_fold"] = diagram_fold
         if fold_importances:
             artifacts["importances"] = _write_importances_file(
                 reports_dir / f"{config.name}_importances.csv",
-                feature_cols,
+                input_cols,
                 fold_importances,
             )
         if calib is not None:
@@ -368,6 +372,8 @@ def selection_columns(config) -> list[str]:
     screen = config.pick_screen
     if screen is not None and screen.max_per_group is not None:
         cols.append(screen.group_column)
+    if screen is not None and screen.peer_column is not None:
+        cols.append(screen.peer_column)
     return cols
 
 
@@ -375,7 +381,20 @@ def check_pick_screen(dataset: Dataset, screen) -> None:
     """Refuse a portfolio screen whose group column is not a feature
     column of the manifest: the cap groups on what was known at the
     snapshot, never on an outcome."""
-    if screen is None or screen.max_per_group is None:
+    if screen is None:
+        return
+    if screen.peer_column is not None:
+        # a rank (0..1) known at the snapshot: the bands are cut on it
+        ranks = {
+            c for g in ("ranks", "sector_ranks") for c in dataset.columns(g)
+        }
+        if screen.peer_column not in ranks:
+            raise ConfigError(
+                f"[pick_screen] peer_column {screen.peer_column!r} is not "
+                "a rank column of the manifest (`ranks`, `sector_ranks`): "
+                "the peer bands are equal-width cuts of a 0..1 rank"
+            )
+    if screen.max_per_group is None:
         return
     allowed = {c for g in FILTERABLE_GROUPS for c in dataset.columns(g)}
     if screen.group_column not in allowed:
@@ -436,6 +455,11 @@ def _pick_outcome_columns(dataset: Dataset, config, test, test_fit) -> dict:
         ).to_numpy()
         if screen.max_per_group is not None:
             out["groups"] = rows[screen.group_column].to_numpy(dtype=object)
+        if screen.peer_column is not None:
+            out["peers"] = peer_bands(
+                rows[screen.peer_column].to_numpy(dtype=float),
+                screen.peer_bins,
+            )
     return out
 
 

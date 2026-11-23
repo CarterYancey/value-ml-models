@@ -1,0 +1,56 @@
+# Decision 25 of docs/notes/2026-09-29-decisions.md (2026-10-01,
+# Carter): the liquidity floor as a within-quarter rank instead of a
+# dollar amount. 100,000 a day of dollar volume was about the 27th
+# percentile of the test rows in 2005 and the 12th in 2020; a rank
+# floor leaves out the same share of the cross-section in every year.
+# The candidate (forest + momentum + return on capital, seed 23) with
+# `dollar_volume_3m_rank >= 0.2` in place of the dollar floor;
+# nothing else changes. The rank is relative to the snapshot's own
+# quarter (the cross-section the backtest ranks on); at inference it
+# is pooled over the inference cross-section. The 27th backtest
+# configuration on these years: a sensitivity check of the candidate
+# to the form of its floor, not a new strategy.
+#
+# Prediction (2026-10-01): time-weighted CAGR within 1.0 point of
+# 12.24%, final value within 10% of 948,956, drawdown within 3 points
+# of -41.2%: the candidate's picks are liquid, large companies that
+# either floor keeps.
+name = "bt_nonloser_mom_roc_top10_cap2_rankfloor"
+dataset_version = "dataset_v1.4"
+prices_version = "prices_v1.0"
+
+bundles = [
+    "experiments/models/forest_nonloser_dd30_3y_53ceedd93e6d",
+    "experiments/models/factor_mom_12_2_3y_97c0f095cf48",
+    "experiments/models/factor_roc_greenblatt_3y_da640394cbba",
+]
+
+[signal]
+combine = "mean_rank"
+max_staleness_days = 200
+model_update = "refit"
+label_lag_days = 45
+
+[[investability]]
+column = "dollar_volume_3m_rank"
+op = ">="
+value = 0.2
+
+[portfolio]
+strategy = "buy_and_hold"
+top_k = 10
+weighting = "equal"
+monthly_cash = 1000.0
+max_per_group = 2
+group_column = "sector"
+
+[execution]
+cost_bps = 35.0
+benchmark_cost_bps = 0.0
+max_quote_age_days = 3
+delist_after_days = 30
+
+[window]
+start = 2005-01-01
+end = 2020-12-31
+valuation_end = 2023-12-29

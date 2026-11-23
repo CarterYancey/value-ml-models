@@ -364,6 +364,14 @@ def test_backtest_end_to_end_with_refits(
     assert row["status"] == "completed"
     assert row["experiment"] == "bt_e2e"
     assert row["fold"] == "2016-2021"
+    # the buys are set beside the stocks they were chosen from, in the
+    # report and in the ledger (the fixture has no size column, so the
+    # same-size peer columns are absent)
+    assert "### Against the stocks they were chosen from" in report
+    assert "vs_candidates" in report and "vs_peers" not in report
+    metrics = json.loads(row["metrics_json"])
+    assert "ref_vs_candidates_1y" in metrics
+    assert "ref_candidates_excess_1y" in metrics
 
 
 def test_frozen_policy_and_window_start(
@@ -554,3 +562,122 @@ def test_buy_outcomes_read_each_buy_against_the_benchmark():
     assert pooled["beat_3y"] == 1.0 and pooled["lost_3y"] == 0.0
     assert pooled["early_exit_3y"] == 0.5
     assert buy_outcome_table(out.iloc[:0]).empty
+
+
+def _reference_panel():
+    """A benchmark growing 10% a year, six stocks with known growth
+    rates, and one that is acquired after six months."""
+    days = pd.bdate_range("2010-01-04", "2014-12-31")
+    n = np.arange(len(days), dtype=float)
+    bench = pd.Series(100.0 * 1.10 ** (n / 261.0), index=days)
+    rates = {1: 0.20, 2: 0.00, 3: 0.30, 4: 0.10, 5: -0.10, 6: 0.15}
+    series = {
+        a: pd.Series(10.0 * (1.0 + r) ** (n / 261.0), index=days)
+        for a, r in rates.items()
+    }
+    series[7] = pd.Series(np.linspace(10.0, 13.0, 130), index=days[:130])
+
+    class Panel:
+        benchmark = bench
+
+        def series(self, asset):
+            return series.get(asset)
+
+    return Panel(), days, rates
+
+
+def test_position_outcomes_match_the_delisting_convention():
+    """The vectorized reading equals the hand calculation: a stock that
+    stops printing exits at its final print and the proceeds ride the
+    benchmark; an unknown stock, a non-positive price and a horizon
+    past the valuation date have no outcome."""
+    from portfolio.report import position_outcomes
+
+    panel, days, _ = _reference_panel()
+    frame = pd.DataFrame(
+        {
+            "asset": [1, 7, 1, 99, 2],
+            "date": [days[0], days[0], days[-100], days[0], days[0]],
+            "price": [10.0, 10.0, 12.0, 10.0, 0.0],
+        },
+        index=[10, 11, 12, 13, 14],
+    )
+    out = position_outcomes(frame, panel, days[-1])
+    assert list(out.index) == [10, 11, 12, 13, 14]
+    assert out.loc[10, "excess_3y"] == pytest.approx(0.10, abs=0.01)
+    assert out.loc[10, "early_exit_3y"] == 0.0
+    assert out.loc[11, "early_exit_1y"] == 1.0
+    assert out.loc[11, "return_1y"] == pytest.approx(
+        1.30 * 1.10 ** 0.5 - 1, abs=0.02
+    )
+    for idx in (12, 13, 14):
+        assert out.loc[idx].isna().all()
+
+
+def test_reference_table_sets_the_buys_beside_their_candidates():
+    """Buys are read against every candidate and against the candidates
+    of their own rebalance in their own size band: a buy that is the
+    best of the large stocks leads its peers by less than it leads the
+    whole list when the small stocks did worse."""
+    from portfolio.report import (
+        buy_outcomes,
+        candidate_outcomes,
+        reference_table,
+    )
+
+    panel, days, rates = _reference_panel()
+    # stocks 1-3 are large (size 0.96-0.98), 4-6 small (0.11-0.13)
+    sizes = {1: 0.96, 2: 0.97, 3: 0.98, 4: 0.11, 5: 0.12, 6: 0.13}
+    candidates = pd.DataFrame(
+        {
+            "asset": list(sizes),
+            "price": 10.0,
+            "date": days[0],
+            "size": [sizes[a] for a in sizes],
+        }
+    )
+    cand = candidate_outcomes(candidates, panel, days[-1])
+    assert set(cand["size_bin"]) == {19, 2}
+    trades = pd.DataFrame(
+        {
+            "asset": [3, 4],
+            "date": [days[0], days[0]],
+            "side": ["buy", "buy"],
+            "price": [10.0, 10.0],
+            "gross": [100.0, 100.0],
+        }
+    )
+    buys = buy_outcomes(trades, panel, days[-1])
+    table = reference_table(buys, cand, 3)
+    assert table["year"].tolist() == [2010, "all buys"]
+    row = table.iloc[-1]
+    bench = 0.10
+    all_mean = np.mean([rates[a] for a in sizes]) - bench
+    assert row["buys"] == 2
+    assert row["buys_excess"] == pytest.approx((0.30 + 0.10) / 2 - bench, abs=0.01)
+    assert row["candidates_excess"] == pytest.approx(all_mean, abs=0.01)
+    assert row["vs_candidates"] == pytest.approx(
+        (0.30 + 0.10) / 2 - np.mean(list(rates.values())), abs=0.01
+    )
+    # peers: stock 3 against the large three, stock 4 against the small
+    large = np.mean([0.20, 0.00, 0.30])
+    small = np.mean([0.10, -0.10, 0.15])
+    assert row["peers_excess"] == pytest.approx(
+        (large + small) / 2 - bench, abs=0.01
+    )
+    assert row["vs_peers"] == pytest.approx(
+        ((0.30 - large) + (0.10 - small)) / 2, abs=0.01
+    )
+    assert row["buys_lost"] == 0.0
+    assert row["candidates_lost"] == pytest.approx(1 / 6)
+    assert row["peers_lost"] == pytest.approx((0.0 + 1 / 3) / 2)
+    # without a size column the peer columns are absent, the rest stays
+    plain = candidate_outcomes(
+        candidates.drop(columns=["size"]), panel, days[-1]
+    )
+    slim = reference_table(buys, plain, 3)
+    assert "vs_peers" not in slim.columns
+    assert slim.iloc[-1]["vs_candidates"] == pytest.approx(
+        row["vs_candidates"]
+    )
+    assert reference_table(buys.iloc[:0], cand, 3).empty

@@ -5,6 +5,34 @@ how it was measured, how to reproduce it and how to run it on today's
 stocks. Decisions: [decision log](2026-09-29-decisions.md), 24 and 26.
 Evidence: [backtests](2026-09-30-backtests.md).
 
+## Read this first (added 2026-10-01, second session)
+
+**The runbook is now [docs/paper-trading.md](../paper-trading.md)**
+(what is traded, the three models, the monthly procedure, the
+assumption it is traded under). This note is the record of how the
+candidate stood at the end of the first session of 2026-10-01.
+
+Traded to the end of the price panel, 2026-08-21, the candidate ends
+**10% behind SPY** in money (1,193,902 against 1,326,084 on 260,000
+deposited) and its sell-discipline variant 1.4% ahead; both trailed
+SPY by 9 to 14 points a year in 2024, 2025 and 2026. The figures
+below stop at 2023-12-29 and are left as they were written. What
+happened after, and why:
+[the candidate outside 2005–2023](2026-10-01-out-of-sample.md). In
+short: SPY outran equal-weighted stocks of every size in 2021–26;
+against stocks of their own size the candidate's picks led by 4.6 and
+5.9 points a year in 2005–12 and 2013–20 and trailed by 1.6 for the
+buys of 2021–23; the forest kept avoiding losers.
+
+The yearly figures below ("ahead in 2008 (+9.5) and 2022 (+4.6)")
+come from report tables whose years ran December to December
+([process issues](process-issues.md)); on calendar years, with the
+rank floor: 2008 +11.4, 2021 −8.6, 2022 +3.2, 2023 −2.9.
+
+Carter's holdout look in cell C (2026-10-01): the forest's top 20 a
+year were right 0.65 of the time against a base rate of 0.38 (top 50:
+0.73), and trailed SPY by 9 points a year (decision 29).
+
 ## What it is
 
 Three rankings of the investable stocks, averaged by rank:
@@ -94,12 +122,20 @@ uv run vml-predict <forest bundle> <momentum bundle> <return-on-capital bundle> 
 ```
 
 `vml-predict` with several bundles writes one CSV ordered by the mean
-of the three ranks, which is the blend. Two things the backtest does
-that `vml-predict` does not, to be applied by hand until they are
-built: **keep only rows with `dollar_volume_3m >= 100000` before
-ranking** (filter the inference parquet first; the mean rank is taken
-over whatever rows are scored), and **walk down the list taking at
-most 2 per sector**. A deployment fit has no test set: the CSV is a
-ranking, never a performance figure. This path was not run in these
-sessions; the first run should be checked against the latest
+of the three ranks, which is the blend. Since 2026-10-01
+(`claude/predict-selection`) it applies the backtest's selection
+itself, with the floor Carter chose:
+
+```sh
+uv run vml-predict <forest bundle> <momentum bundle> <return-on-capital bundle> \
+    data/datasets/inference_<date> \
+    --filter "dollar_volume_3m_rank >= 0.2" --pick 10 --max-per-group 2
+```
+
+`--filter` leaves rows out before any rank is taken (the mean rank is
+the backtest's, over its investable rows), `--pick 10
+--max-per-group 2` marks the ten the backtest would buy. A deployment
+fit has no test set: the CSV is a ranking, never a performance
+figure. This path has not been run on a real inference set (none is
+in the sandbox); the first run should be checked against the latest
 backtest month's picks.

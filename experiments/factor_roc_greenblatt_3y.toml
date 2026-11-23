@@ -11,6 +11,7 @@
 # candidate on its own; its report is read for what its picks went on
 # to do.
 name = "factor_roc_greenblatt_3y"
+note = "A LEG OF THE CANDIDATE: return on capital as a rank factor (roc_greenblatt_rank, no fit; a stock without one ranks last, which keeps REITs out). Inside large caps it leads same-size peers by +0.039 / +0.030 a year alone (2005-12 / 2013-20). docs/paper-trading.md"
 dataset_version = "dataset_v1.4"
 min_dataset_version = "1.4"
 scheme = "walkforward"
