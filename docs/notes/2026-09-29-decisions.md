@@ -1775,3 +1775,49 @@ these years now, confidence sizing and concentration are closed for
 the forest. Research plan item 6 continues only through a target
 whose base rate does not move with the market (the peer-relative
 label, upstream). The candidate is unchanged.
+
+### 43. Carter's three directions after decision 42 (2026-11-23)
+
+*Carter (2026-11-23):*
+1. Do not give up on predicting downside: other drawdown thresholds
+   and horizons (e.g. ≥ 30% within 3 years); even predicting future
+   volatility may be useful beside other models or in portfolio rules.
+2. Pursue the huber regression on 3y CAGR, although it contradicts
+   the thesis (a few big winners instead of modest returns at high
+   precision): try filtering out its losers with another model. If
+   making more money needs a different approach, it changes, while
+   staying principled.
+3. Calibration is the top priority. Top K is arbitrary; the wanted
+   rule is "buy every stock scoring over X%", which with a calibrated
+   model buys fewer stocks in risky years. Its own branch for
+   research, planning and implementation.
+
+*Decided (order and reasoning):*
+
+- **Calibration, on `claude/calibration`**, first in thought, run
+  around the others: a research-and-plan note
+  (`docs/notes/2026-11-23-calibration-plan.md`), then the code it
+  calls for, then its experiments. The starting observation, to be
+  checked in that note: every model so far reads within-quarter ranks
+  only, whose distribution is nearly the same every quarter, so no
+  calibrator on top of such a model can make it score fewer stocks
+  highly in a risky year; a model that is to be calibrated across eras
+  needs inputs that carry the level of the market (the raw columns of
+  the `features` group).
+- **Downside models** (`forest_downside_cells_3y`, one sweep, models
+  saved): "max drawdown from entry ≥ 30% / ≥ 50%" within 1 and 3
+  years, trained on every row and read inside the 100k floor (the
+  huber model's setting, so either can screen the other), with
+  single-factor bars (`vol_12m`, `vol_36m`, `beta_12m`). A downside
+  model is judged as a *filter*, not on its own precision: whether
+  dropping its worst-scored stocks lowers the losers of another
+  model's picks without cutting their lead (direction 2).
+- **The huber regression**: three seeds of both targets (CAGR, excess
+  CAGR), models saved, which also tests whether their difference is
+  chance (decision 39's open question). Then a **gate** in `vml-eval`
+  (new code, `claude/blend-gate`): rank by the evaluated bundle, keep
+  only rows another bundle scores in its top (or bottom) share of the
+  quarter. Rule for a gated huber arm, before any run: lead over
+  same-size peers ≥ +0.040 / +0.037 (the forest's + 0.01) in both
+  halves with losers ≤ 0.25 / 0.20, on every seed; carried forward to
+  a backtest beside the candidate's.
