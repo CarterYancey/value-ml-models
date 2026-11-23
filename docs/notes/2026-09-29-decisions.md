@@ -1755,3 +1755,23 @@ rerun unchanged for its same-size table. Rule (in each config): the
 buys' 3-year lead over same-size candidates ≥ the bar's + 0.01 for
 the buys of both halves, worst drawdown no more than 5 points deeper.
 Two backtest configurations on these years, added to the 35.
+
+### 42. Neither concentration nor score weighting carries forward; confidence sizing is closed for the forest
+
+*What came out (2026-11-23, three backtests, 2005–2020 valued to
+2023, 35 bps a side):* the buys' 3-year lead over same-size
+candidates for the buys of 2005–12 / 2013–20: the forest's top 10
+(the bar, rerun unchanged for its `vs_peers` table, hash
+`f84cc5238ba25a0c`) +2.68 / +3.27 points, time-weighted 10.01%, worst
+drawdown −46.6%; top 5 +1.79 / +2.68, 8.38%, −55.9%; top 10 weighted
+by score +2.67 / +3.29, 9.98%, −47.2%. Decision 41's rule (bar + 1
+point in both halves, drawdown within 5 points) fails for both.
+Predictions: top 5 within a point of the bar (held), drawdown 0–5
+points deeper (contradicted: 9.3), score weighting level (held).
+
+*Decided:* the forest's purer top 10 of a year (decision 41) does not
+make a purer top 5 of a month; with 37 backtest configurations on
+these years now, confidence sizing and concentration are closed for
+the forest. Research plan item 6 continues only through a target
+whose base rate does not move with the market (the peer-relative
+label, upstream). The candidate is unchanged.

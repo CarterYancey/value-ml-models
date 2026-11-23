@@ -186,3 +186,19 @@ Means of yearly values. The top 10 is purer than ranks 11–50 by
 top 10. Prediction (under 0.05 in a half) contradicted; rival (top 10
 ≥ 0.85 and steadily rising) half right: rising at the very top only.
 Caution: 80 picks a half, about one standard error.
+
+## 6. Two backtests from the buckets (decisions 41–42)
+
+The forest alone, top N a month, at most 2 per sector, 100k floor,
+35 bps, 2005–2020 valued to 2023; 37 backtest configurations on
+these years with these two. Buys' 3-year lead over same-size
+candidates (`vs_peers`, mean over the buy years of a half):
+
+| | lead 05–12 | lead 13–20 | buys lost | peers lost | TWR | worst drawdown |
+|---|---|---|---|---|---|---|
+| top 10, equal (bar, `f84cc523`) | +2.68 | +3.27 | 24.6% / 10.8% | 34.6% / 25.6% | 10.01% | −46.6% |
+| top 5, equal (`dfe4445f`) | +1.79 | +2.68 | 26.3% / 10.6% | 35.5% / 25.9% | 8.38% | −55.9% |
+| top 10, score (`835bf888`) | +2.67 | +3.29 | 24.7% / 10.6% | 34.6% / 25.6% | 9.98% | −47.2% |
+
+SPY with the same deposits: TWR 9.58%, worst drawdown −52.9%. Both
+fail the rule; decision 42.

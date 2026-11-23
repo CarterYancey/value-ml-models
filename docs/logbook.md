@@ -14,6 +14,13 @@ read** stub; a correction is a new entry that names the old one.
 
 <!-- entries -->
 
+### 2026-11-23 · bt_nonloser_dd30_top5_cap2, bt_nonloser_dd30_top10_cap2_score (decision 41)
+git `a3ad89a` · [note](notes/2026-11-23-crash-growth-worst-rank.md)
+- **Did:** Backtested the forest alone, 2005-2020 valued to 2023: top 5 a month, and top 10 weighted by score, against its top 10 equal-weighted (rerun unchanged for vs_peers).
+- **Got:** 3y lead over same-size candidates 05-12/13-20: bar +2.68/+3.27 pts (TWR 10.01%, DD -46.6%); top 5 +1.79/+2.68 (8.38%, -55.9%); score +2.67/+3.29 (9.98%, -47.2%). Both fail; drawdown prediction for top 5 contradicted (9.3 pts deeper).
+- **Concluded:** A purer yearly top 10 does not make a purer monthly top 5; confidence sizing and concentration closed for the forest (decision 42). 37 backtest configurations on these years.
+- **Next:** Calibration continues only through a peer-relative target (upstream).
+
 ### 2026-11-23 · topk_buckets2_dv100k (rank buckets inside the forest's top 200)
 git `0f08aa1` · [note](notes/2026-11-23-crash-growth-worst-rank.md)
 - **Did:** Evaluated the cell-C forest inside the 100k floor at top K 5-200 a year; bucket precision and losers from the differences (decision 40).
