@@ -382,6 +382,7 @@ def _refit_as_of_year(
         config.label,
         list(bundle.feature_columns),
         config.horizon_years,
+        year_balance=config.year_balance,
     )
     if not len(fit.X):
         raise ConfigError(

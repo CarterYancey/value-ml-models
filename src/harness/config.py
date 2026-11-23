@@ -426,6 +426,11 @@ class ExperimentConfig:
     #: minimum pooled history rows before a fold gets calibrated;
     #: earlier folds report raw scores and are flagged in the report
     calibration_min_rows: int = DEFAULT_CALIBRATION_MIN_ROWS
+    #: reweight each fold's training rows so that every snapshot year
+    #: carries the pooled positive share (harness.dataset.
+    #: year_balanced_weights): the fit cannot take the market level of
+    #: past years as its prior. Binary labels only; hashed when set.
+    year_balance: bool = False
     #: report-only outcomes of the top-K picks (eval.picks): stored
     #: binary labels, label expressions (hit rate) or continuous outcome
     #: columns (mean and median), all from the manifest's `labels`
@@ -501,6 +506,7 @@ class ExperimentConfig:
             calibration_min_rows=int(
                 raw.get("calibration_min_rows", DEFAULT_CALIBRATION_MIN_ROWS)
             ),
+            year_balance=_parse_year_balance(raw, source),
             pick_outcomes=parse_pick_outcomes(
                 raw.get("pick_outcomes", ()), horizon, source
             ),
@@ -643,6 +649,8 @@ class ExperimentConfig:
         if self.calibration:
             raw["calibration"] = self.calibration
             raw["calibration_min_rows"] = self.calibration_min_rows
+        if self.year_balance:
+            raw["year_balance"] = True
         if self.pick_outcomes:
             raw["pick_outcomes"] = list(self.pick_outcomes)
         if self.universe:
@@ -697,6 +705,8 @@ class ExperimentConfig:
         if self.calibration:
             payload["calibration"] = self.calibration
             payload["calibration_min_rows"] = self.calibration_min_rows
+        if self.year_balance:
+            payload["year_balance"] = True
         if self.pick_outcomes:
             payload["pick_outcomes"] = list(self.pick_outcomes)
         if self.universe:
@@ -750,6 +760,15 @@ def _resolve_horizon(raw: dict, label: str, source: str) -> int:
             "token, so horizon_years must be set explicitly"
         )
     return inferred
+
+
+def _parse_year_balance(raw: dict, source: str) -> bool:
+    value = raw.get("year_balance", False)
+    if not isinstance(value, bool):
+        raise ConfigError(
+            f"config {source}: year_balance must be true or false, got {value!r}"
+        )
+    return value
 
 
 def _parse_blend(raw, source: str) -> tuple[str, ...]:

@@ -26,7 +26,7 @@ from harness.filters import describe_filters
 #: logged but not listed here (roc_auc, recall_at_k, thr_for_prec_*,
 #: and the mae/r2 fit diagnostics of regression runs) stays in the
 #: results store — logged, never headlined.
-_ERA_LEAD = ("n_test", "base_rate")
+_ERA_LEAD = ("n_test", "base_rate", "mean_score")
 _ERA_PREFIXES = (
     "precision_at_", "fwd_at_", "conf_at_", "n_at_prec_", "recall_at_prec_",
     "precision_at_thr_", "recall_at_thr_", "n_at_thr_",

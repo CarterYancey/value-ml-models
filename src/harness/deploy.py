@@ -164,6 +164,7 @@ def train_deployment_model(
         fit = dataset.fit_data(
             refit_frame, config.label, feature_cols, config.horizon_years,
             target=model_target(config.model_name),
+            year_balance=config.year_balance,
         )
         if not len(fit.X):
             raise DatasetValidationError(

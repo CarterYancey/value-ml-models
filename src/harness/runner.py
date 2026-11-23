@@ -174,7 +174,7 @@ def run_experiment(
             train_rows, test_rows = universe_rows(dataset, config, split)
             fit = dataset.fit_data(
                 train_rows, config.label, feature_cols, config.horizon_years,
-                target=target,
+                target=target, year_balance=config.year_balance,
             )
             model = build_model(config.model_name, config.model_params, config.seed)
             model.fit(fit.X, fit.y, sample_weight=fit.sample_weight)
