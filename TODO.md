@@ -682,7 +682,31 @@ in [PLAN.md](PLAN.md); check items off (and add new ones) as work proceeds.
       `n_estimators`) at full budget via a follow-up sweep file — no
       harness change needed, just two sweep configs.
 
-### Next, after 2026-11-23 (decisions 38-42)
+### Next, after the second round of 2026-11-23 (decisions 43-49)
+
+Carter's three directions (decision 43) were followed to the end of
+what the data on disk can answer; nothing was carried forward and the
+candidate is unchanged. Results:
+docs/notes/2026-11-23-downside-gates-calibration.md and
+docs/notes/2026-11-23-calibration-plan.md.
+
+- [ ] **Carter: forward the upstream request** in the calibration plan
+      ("Upstream request"): market-state columns per snapshot date, and
+      the peer-relative label. Then rerun calibration step 3 with the
+      market-state columns under decision 44's rule.
+- [ ] **Carter: merge `claude/results-2026-11-23`** (now also
+      `year_balance`, `mean_score` / `year_calib_*`, `[[gate]]`).
+- [ ] Open, if a hedge or short leg is ever built: the huber
+      regressor's within-band selection among small stocks (+6.5 to
+      +6.8 points a year over same-size candidates, decision 49).
+- [ ] `[[gate]]` in `vml-backtest` (only `vml-eval` has it), if a gated
+      selection ever passes a screen.
+- [ ] Why this run's plain-ranks forest (`calib_levels_nonloser_plain_3y`
+      fs0) screens +0.036 / +0.024 and the candidate forest bundle
+      +0.030 / +0.027 with the same parameters: expand both configs and
+      compare hashes and fields before using either as a bar again.
+
+### Earlier: after the first round of 2026-11-23 (decisions 38-42)
 
 The session of 2026-11-23 ran the queue (over-priced stocks,
 continuous growth models), built `worst_rank`, blended the forest
