@@ -1630,3 +1630,148 @@ deployment bundles for the August 2026 cross-section, eight seconds;
 the ten picks' fifteen analogues each resemble the pool's safest
 corner (0% to 47% lost money over three years against 46% of the
 pool), as the in-sample caveat predicts they must.
+
+### 38. Session of 2026-11-23: run the three queued sweeps, build `worst_rank` beside them
+
+*Carter (2026-11-23):* "do anything you feel is best" toward a few
+high-precision, low-risk selections with upside; log the decisions;
+code on a feature branch, experiments off it.
+
+*Decided:*
+
+- **The lab** is `claude/lab-2026-11-23`, off `Claude` (PR #19
+  merged), with `claude/lab-2026-10-01` merged in so the queue sees
+  its result records. Nothing new is chosen on 2021–26 (decision 36).
+- **First, the queue as written on 2026-10-01**, unchanged and with
+  the predictions in its configs: `baseline_factors_crash_dd50`,
+  `forest_crash_dd50`, `lgbm_regressor_growth_allrows_3y`, run one
+  after another as a background chain (one heavy job at a time).
+  Each is read against its own config's rule and predictions.
+- **Meanwhile, in a separate worktree**, research-plan item 3:
+  `combine = "worst_rank"` in the backtest and in `vml-eval`'s
+  `blend`, on `claude/worst-rank` off `Claude`, with tests. Its first
+  use is the screen of the candidate's three legs by worst rank
+  against mean rank, against same-size peers, 2005–2020; the rule
+  for it (decision 34.3: a lead over peers 0.01 a year above the
+  mean-rank blend's in both halves, losers no more than 0.03 higher)
+  is fixed here, before the screen.
+- **What would change the order:** a quantile arm of the growth
+  sweep that passes its rule goes to three seeds before anything
+  else; a crash model whose high-confidence count rises *before*
+  2008 is read for a cash rule (research plan, item 2) before
+  blends.
+
+### 39. What the three sweeps and the worst-rank screen settle, and the blend of a loser-avoider with an upside model
+
+*What came out (2026-11-23; [note](2026-11-23-crash-growth-worst-rank.md)):*
+
+- **Over-priced stocks** (`forest_crash_dd50`): the one-year forest
+  (PR-AUC 0.251, base 0.137) is below `vol_12m_rank` alone (0.266);
+  the three-year forest is above every factor (0.490 against 0.451).
+  The one-year top 20 lost on average in 12 of 16 years but 19% of
+  them rose 30% or more and their mean was +58% for 2008 entries and
+  +100% for 2020's. The count of calls at score ≥ 0.5 falls from 408
+  (2005) to 1–7 (2018–20) and does not rise before 2008 or after.
+  **Decided:** no short leg, and no cash rule from the count of
+  high-confidence calls: the count follows how much crash the fold's
+  training window holds, not the coming year. Research plan item 2
+  closed; "market state" waits for upstream features (item 8).
+- **Worst rank of the candidate's three legs**: lead over same-size
+  peers +0.043 / +0.056 (mean rank +0.022 / +0.053), losers 0.259 /
+  0.150 (0.275 / 0.153). Decision 38's bar was 0.032 / 0.063: **not
+  carried forward**. `worst_rank` stays as a tool.
+- **Continuous growth models**: no arm passes decision 34.3. The low
+  quantiles land at or below the forest (q0.25 on CAGR +0.030 /
+  +0.026, losers 0.250 / 0.178). **Huber on 3y CAGR leads its peers by
+  +0.072 / +0.054, in 15 of 16 years**, with losers 0.394 / 0.372
+  (peers 0.474 / 0.451) and a median CAGR below the forest's picks'
+  in 13 of 16 years: it buys skew (small, fragile stocks whose winners
+  carry the mean), the mirror image of the forest, which buys calm.
+
+*Decided next:* the two together. The forest says which stocks are
+unlikely to lose; the huber regressor says which have the largest
+expected return. Their **worst rank** (every leg's top N) is the
+thesis's "low risk with upside" as a selection, and the reason
+`worst_rank` was built; the mean rank beside it. Two evaluations of
+the forest bundle (`forest_nonloser_dd30_3y_53ceedd93e6d`, seed 23)
+blended with the huber bundle, refit unchanged with
+`--save-models` (config hash 7c1507e3f386652f, not a new trial),
+same floor, screen and peers as decision 33.
+
+*Rule, before the run:* a blend carries forward (three seeds of both
+legs, then a backtest beside the candidate's) if its lead over
+same-size peers is at least **0.040 / 0.063** for entries of 2005–12 /
+2013–20 (0.01 above the better of the forest, +0.030 / +0.027, and the
+candidate, +0.022 / +0.053, in each half) **and** its losers are no
+more than 0.03 above the forest's (**≤ 0.227 / ≤ 0.146**). Two
+configurations on these years, stated with every figure.
+
+### 40. The forest and the huber model do not combine; does precision rise inside the forest's top 50?
+
+*What came out (2026-11-23):* the cell-C forest blended with the
+huber regressor on 3y CAGR (two configurations, these years): worst
+rank +0.028 / +0.017 over same-size peers, losers 0.266 / 0.244;
+mean rank +0.029 / +0.023, losers 0.247 / 0.231. Below both legs on
+the lead and above the forest on losers: both fail decision 39's
+rule, and every prediction (and the rival) is contradicted.
+Reading, a hypothesis: the legs' edges sit at different sizes (the
+forest's picks' peers lose 26–33% of the time, huber's 45–47%, the
+blends' 33–36%), and the stocks both rank well are mid-size ones
+where neither has an edge. Rival: a defect in blending a regressor
+bundle; against it, the same path reproduced decision 34's blends and
+the huber bundle reproduced its sweep run exactly. Nothing is built
+on the blend, so the separating run (the size breakdown of the picks
+by leg) is not spent. **Decided:** the huber regressor is not carried
+forward as a leg; blends of a calm model with a skew model are
+closed.
+
+*Next (research plan item 6, its first step):* whether the forest's
+outcome rises with rank *inside* its top 50 of a year. One evaluation
+of the forest bundle (seed 23) inside the 100k floor with top_k 5,
+10, 20, 50, 100, 200; bucket precision from the differences. What it
+decides, before the run: if the top 10 a year beats ranks 11–50 on
+precision by 0.05 or more and on losers by 0.05 or more in both
+halves, a concentrated portfolio (top 5 a month) and score-weighting
+get one backtest each; if not, confidence sizing is closed for the
+forest and the calibration session starts from the peer-relative
+target (upstream).
+
+### 41. The forest's top 10 is purer than its ranks 11–50: two backtests
+
+*What came out (2026-11-23, `topk_buckets2_dv100k`, one evaluation):*
+over the years of 2005–12 / 2013–20, the forest's top 10 a year were
+right 0.738 / 0.862 of the time against 0.678 / 0.797 for its ranks
+11–50, and lost money 0.138 / 0.075 against 0.231 / 0.147. Decision
+40's bar (0.05 on both, both halves) is met; its prediction (under
+0.05) is contradicted. The top 5 were not purer than the top 10
+(0.700 / 0.825). With 80 picks a half the difference is about one
+standard error.
+
+*Decided, as decision 40 said before the run:* one backtest each of a
+concentrated portfolio (`bt_nonloser_dd30_top5_cap2`) and of score
+weighting (`bt_nonloser_dd30_top10_cap2_score`), on the forest alone,
+2005–2020 valued to 2023, against `bt_nonloser_dd30_top10_cap2`
+rerun unchanged for its same-size table. Rule (in each config): the
+buys' 3-year lead over same-size candidates ≥ the bar's + 0.01 for
+the buys of both halves, worst drawdown no more than 5 points deeper.
+Two backtest configurations on these years, added to the 35.
+
+### 42. Neither concentration nor score weighting carries forward; confidence sizing is closed for the forest
+
+*What came out (2026-11-23, three backtests, 2005–2020 valued to
+2023, 35 bps a side):* the buys' 3-year lead over same-size
+candidates for the buys of 2005–12 / 2013–20: the forest's top 10
+(the bar, rerun unchanged for its `vs_peers` table, hash
+`f84cc5238ba25a0c`) +2.68 / +3.27 points, time-weighted 10.01%, worst
+drawdown −46.6%; top 5 +1.79 / +2.68, 8.38%, −55.9%; top 10 weighted
+by score +2.67 / +3.29, 9.98%, −47.2%. Decision 41's rule (bar + 1
+point in both halves, drawdown within 5 points) fails for both.
+Predictions: top 5 within a point of the bar (held), drawdown 0–5
+points deeper (contradicted: 9.3), score weighting level (held).
+
+*Decided:* the forest's purer top 10 of a year (decision 41) does not
+make a purer top 5 of a month; with 37 backtest configurations on
+these years now, confidence sizing and concentration are closed for
+the forest. Research plan item 6 continues only through a target
+whose base rate does not move with the market (the peer-relative
+label, upstream). The candidate is unchanged.

@@ -14,6 +14,55 @@ read** stub; a correction is a new entry that names the old one.
 
 <!-- entries -->
 
+### 2026-11-23 · bt_nonloser_dd30_top5_cap2, bt_nonloser_dd30_top10_cap2_score (decision 41)
+git `a3ad89a` · [note](notes/2026-11-23-crash-growth-worst-rank.md)
+- **Did:** Backtested the forest alone, 2005-2020 valued to 2023: top 5 a month, and top 10 weighted by score, against its top 10 equal-weighted (rerun unchanged for vs_peers).
+- **Got:** 3y lead over same-size candidates 05-12/13-20: bar +2.68/+3.27 pts (TWR 10.01%, DD -46.6%); top 5 +1.79/+2.68 (8.38%, -55.9%); score +2.67/+3.29 (9.98%, -47.2%). Both fail; drawdown prediction for top 5 contradicted (9.3 pts deeper).
+- **Concluded:** A purer yearly top 10 does not make a purer monthly top 5; confidence sizing and concentration closed for the forest (decision 42). 37 backtest configurations on these years.
+- **Next:** Calibration continues only through a peer-relative target (upstream).
+
+### 2026-11-23 · topk_buckets2_dv100k (rank buckets inside the forest's top 200)
+git `0f08aa1` · [note](notes/2026-11-23-crash-growth-worst-rank.md)
+- **Did:** Evaluated the cell-C forest inside the 100k floor at top K 5-200 a year; bucket precision and losers from the differences (decision 40).
+- **Got:** Top 10 vs ranks 11-50: precision 0.738/0.862 vs 0.678/0.797, losers 0.138/0.075 vs 0.231/0.147; flat below rank 20; top 5 no purer than top 10. Prediction contradicted; decision 40's bar met.
+- **Concluded:** The forest's confidence means something at its very top only (about one standard error with 80 picks a half).
+- **Next:** Two backtests (decision 41): top 5 a month, and score weighting.
+
+### 2026-11-23 · blend_huber_{worst,mean}_peers_dv100k (forest x huber regressor)
+git `f58a0b8` · [note](notes/2026-11-23-crash-growth-worst-rank.md)
+- **Did:** Refit the huber CAGR regressor unchanged with its bundle saved (reproduced exactly); blended it with the cell-C forest by worst rank and by mean rank on the decision-33 screen.
+- **Got:** Worst +0.028/+0.017 over peers, losers 0.266/0.244; mean +0.029/+0.023, losers 0.247/0.231: below both legs (forest +0.030/+0.027, huber +0.072/+0.054). Rule 0.040/0.063: both fail; predictions and rival contradicted.
+- **Concluded:** A calm model and a skew model do not combine: the shared top is mid-size stocks where neither has an edge (hypothesis; peers' losers sit between the legs'). Closed (decision 40).
+- **Next:** Rank buckets inside the forest's top 200 (decision 40).
+
+### 2026-11-23 · blend_mom_roc_worst_peers_dv100k (worst rank of the candidate's legs)
+git `b9c0878` · [note](notes/2026-11-23-crash-growth-worst-rank.md)
+- **Did:** Built combine/blend_combine = worst_rank (claude/worst-rank, 514 tests); evaluated the candidate's three legs by worst rank on the decision-33 screen, seed 23.
+- **Got:** Lead over same-size peers +0.043/+0.056 (mean rank +0.022/+0.053), losers 0.259/0.150 (0.275/0.153). Bar 0.032/0.063: misses the second half by 0.007. Predictions held (the first just over its range).
+- **Concluded:** Not carried forward (decision 38's rule); better than mean rank in both halves by little, the tool stays.
+- **Next:** Use worst_rank for the forest x huber blend (decision 39).
+
+### 2026-11-23 · lgbm_regressor_growth_allrows_3y
+8 runs · `dataset_v1.4` · 2 cells · git `b9c0878` · [summary](../reports/sweeps/lgbm_regressor_growth_allrows_3y/lgbm_regressor_growth_allrows_3y_summary.md) · [note](notes/2026-11-23-crash-growth-worst-rank.md)
+- **Did:** LightGBM regressors on 3y CAGR and 3y excess CAGR, huber and quantiles 0.5/0.25/0.1, all rows, read inside the 100k floor against same-size peers.
+- **Got:** No arm passes (losers). Low quantiles at or below the forest (CAGR q0.25 +0.030/+0.026, losers 0.25/0.18). Huber on CAGR leads peers by +0.072/+0.054 (15 of 16 years) with losers 0.39/0.37 and a median below the forest's in 13 years. Predictions: 1 half held, 2 contradicted on the 2013-20 lead, 3 held.
+- **Concluded:** Huber on CAGR buys skew (small fragile stocks whose winners carry the mean): the mirror of the forest, which buys calm. Not leakage by the checks in the note.
+- **Next:** Decision 39: the forest and the huber model blended by worst rank and mean rank.
+
+### 2026-11-23 · forest_crash_dd50
+6 runs · `dataset_v1.4` · 2 cells · git `b9c0878` · [summary](../reports/sweeps/forest_crash_dd50/forest_crash_dd50_summary.md) · [note](notes/2026-11-23-crash-growth-worst-rank.md)
+- **Did:** The candidate's forest configuration on 'fell 50% from entry' (1y, 3y), three seeds, inside the liquid half; read on precision at the top, what the calls did, and the count of calls at score >= 0.5 by year.
+- **Got:** 1y PR-AUC 0.250-0.252 (below vol_12m's 0.266), p@20 0.51; 3y 0.490 (above every factor). 1y top 20 lost on average in 12 of 16 years but 19% rose 30%, mean +58% for 2008 and +100% for 2020 entries. Rows >= 0.5: 408 for 2005 falling to 1-7 for 2018-20, no rise before 2008. Predictions 1 partly, 2 held; 3 and its rival contradicted.
+- **Concluded:** No short leg and no cash rule from the call count (decision 39): the count follows the training window's crash share, not the coming year. Research plan item 2 closed.
+- **Next:** Market state waits for upstream features.
+
+### 2026-11-23 · baseline_factors_crash_dd50
+14 runs · `dataset_v1.4` · 2 cells · git `b9c0878` · [summary](../reports/sweeps/baseline_factors_crash_dd50/baseline_factors_crash_dd50_summary.md) · [note](notes/2026-11-23-crash-growth-worst-rank.md)
+- **Did:** Seven single factors on 'fell 50% from entry' within 1y and 3y, inside dollar_volume_3m_rank >= 0.5: the bars for forest_crash_dd50.
+- **Got:** 1y (base 0.137): vol_12m_rank best, PR-AUC 0.266, p@20 0.57. 3y (base 0.310): vol_12m_rank PR-AUC 0.451, vol_36m_rank p@20 0.76. Momentum and the quality scores are near the base rate.
+- **Concluded:** Volatility alone is the bar; one rank already finds most of what falls.
+- **Next:** Read forest_crash_dd50 against it.
+
 ### 2026-10-01 · vml-analogues: the historical stocks today's picks resemble (decision 37)
 git `971f50e`
 - **Did:** Built vml-analogues (claude/analogues, 510 tests): for each pick, the labeled historical rows most similar to it as the models see it (forest: share of trees in which the row shares the pick's leaf; factor legs: closeness on the rank column; the mean orders the list), one row per stock, with outcomes and the features on the pick's decision paths. Run on the three deployment bundles for the 2026-08-03 cross-section (the dry run of the paper-trading path).
