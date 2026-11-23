@@ -545,9 +545,15 @@ def combine_scores(
         return scores.mean(axis=1)
     if mode == "min":
         return scores.min(axis=1)
-    if mode == "mean_rank":
+    if mode in ("mean_rank", "worst_rank"):
         ranks = pd.DataFrame(
             {c: scores[c].rank(ascending=False, method="min") for c in scores}
         )
-        return -ranks.mean(axis=1)
+        if mode == "mean_rank":
+            return -ranks.mean(axis=1)
+        # the rank in the model that likes the row least ("in every
+        # model's top N" for every N); ties broken by the mean rank,
+        # scaled below one rank step so it never reorders the worst
+        tiebreak = ranks.mean(axis=1) / (len(ranks) + 1)
+        return -(ranks.max(axis=1) + tiebreak)
     raise ConfigError(f"unknown combine mode {mode!r}")

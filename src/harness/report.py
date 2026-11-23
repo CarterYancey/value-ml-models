@@ -316,12 +316,18 @@ def write_report(
             "only the metric parameters differ from the training run"
         )
     if artifacts and "blend" in artifacts:
+        mode = artifacts.get("blend_combine", "mean_rank")
+        how = (
+            "the mean"
+            if mode == "mean_rank"
+            else "the lowest (the worst rank; ties broken by the mean)"
+        )
         lines.append(
-            "- **blend**: the score is the mean, over this bundle and "
+            f"- **blend**: the score is {how}, over this bundle and "
             + "; ".join(artifacts["blend"])
             + ", of each model's rank within the test quarter as a share "
             "of the quarter's rows (the backtest's `combine = "
-            '"mean_rank"` on test rows; a row a model has no score for '
+            f'"{mode}"` on test rows; a row a model has no score for '
             "is ranked on the others). A ranking, not a probability: no "
             "Brier, no calibration, and score thresholds are rank shares."
         )
