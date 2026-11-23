@@ -14,17 +14,33 @@ read** stub; a correction is a new entry that names the old one.
 
 <!-- entries -->
 
+### 2026-11-23 · blend_mom_roc_worst_peers_dv100k (worst rank of the candidate's legs)
+git `b9c0878` · [note](notes/2026-11-23-crash-growth-worst-rank.md)
+- **Did:** Built combine/blend_combine = worst_rank (claude/worst-rank, 514 tests); evaluated the candidate's three legs by worst rank on the decision-33 screen, seed 23.
+- **Got:** Lead over same-size peers +0.043/+0.056 (mean rank +0.022/+0.053), losers 0.259/0.150 (0.275/0.153). Bar 0.032/0.063: misses the second half by 0.007. Predictions held (the first just over its range).
+- **Concluded:** Not carried forward (decision 38's rule); better than mean rank in both halves by little, the tool stays.
+- **Next:** Use worst_rank for the forest x huber blend (decision 39).
+
 ### 2026-11-23 · lgbm_regressor_growth_allrows_3y
-8 runs · `dataset_v1.4` · 2 cells · git `3a85671` · [summary](../reports/sweeps/lgbm_regressor_growth_allrows_3y/lgbm_regressor_growth_allrows_3y_summary.md)
-- **not yet read**: the sweep ended, its numbers are unread.
+8 runs · `dataset_v1.4` · 2 cells · git `b9c0878` · [summary](../reports/sweeps/lgbm_regressor_growth_allrows_3y/lgbm_regressor_growth_allrows_3y_summary.md) · [note](notes/2026-11-23-crash-growth-worst-rank.md)
+- **Did:** LightGBM regressors on 3y CAGR and 3y excess CAGR, huber and quantiles 0.5/0.25/0.1, all rows, read inside the 100k floor against same-size peers.
+- **Got:** No arm passes (losers). Low quantiles at or below the forest (CAGR q0.25 +0.030/+0.026, losers 0.25/0.18). Huber on CAGR leads peers by +0.072/+0.054 (15 of 16 years) with losers 0.39/0.37 and a median below the forest's in 13 years. Predictions: 1 half held, 2 contradicted on the 2013-20 lead, 3 held.
+- **Concluded:** Huber on CAGR buys skew (small fragile stocks whose winners carry the mean): the mirror of the forest, which buys calm. Not leakage by the checks in the note.
+- **Next:** Decision 39: the forest and the huber model blended by worst rank and mean rank.
 
-### 2026-11-22 · forest_crash_dd50
-6 runs · `dataset_v1.4` · 2 cells · git `2c15b2b` · [summary](../reports/sweeps/forest_crash_dd50/forest_crash_dd50_summary.md)
-- **not yet read**: the sweep ended, its numbers are unread.
+### 2026-11-23 · forest_crash_dd50
+6 runs · `dataset_v1.4` · 2 cells · git `b9c0878` · [summary](../reports/sweeps/forest_crash_dd50/forest_crash_dd50_summary.md) · [note](notes/2026-11-23-crash-growth-worst-rank.md)
+- **Did:** The candidate's forest configuration on 'fell 50% from entry' (1y, 3y), three seeds, inside the liquid half; read on precision at the top, what the calls did, and the count of calls at score >= 0.5 by year.
+- **Got:** 1y PR-AUC 0.250-0.252 (below vol_12m's 0.266), p@20 0.51; 3y 0.490 (above every factor). 1y top 20 lost on average in 12 of 16 years but 19% rose 30%, mean +58% for 2008 and +100% for 2020 entries. Rows >= 0.5: 408 for 2005 falling to 1-7 for 2018-20, no rise before 2008. Predictions 1 partly, 2 held; 3 and its rival contradicted.
+- **Concluded:** No short leg and no cash rule from the call count (decision 39): the count follows the training window's crash share, not the coming year. Research plan item 2 closed.
+- **Next:** Market state waits for upstream features.
 
-### 2026-11-22 · baseline_factors_crash_dd50
-14 runs · `dataset_v1.4` · 2 cells · git `9df7b1a` · [summary](../reports/sweeps/baseline_factors_crash_dd50/baseline_factors_crash_dd50_summary.md)
-- **not yet read**: the sweep ended, its numbers are unread.
+### 2026-11-23 · baseline_factors_crash_dd50
+14 runs · `dataset_v1.4` · 2 cells · git `b9c0878` · [summary](../reports/sweeps/baseline_factors_crash_dd50/baseline_factors_crash_dd50_summary.md) · [note](notes/2026-11-23-crash-growth-worst-rank.md)
+- **Did:** Seven single factors on 'fell 50% from entry' within 1y and 3y, inside dollar_volume_3m_rank >= 0.5: the bars for forest_crash_dd50.
+- **Got:** 1y (base 0.137): vol_12m_rank best, PR-AUC 0.266, p@20 0.57. 3y (base 0.310): vol_12m_rank PR-AUC 0.451, vol_36m_rank p@20 0.76. Momentum and the quality scores are near the base rate.
+- **Concluded:** Volatility alone is the bar; one rank already finds most of what falls.
+- **Next:** Read forest_crash_dd50 against it.
 
 ### 2026-10-01 · vml-analogues: the historical stocks today's picks resemble (decision 37)
 git `971f50e`
