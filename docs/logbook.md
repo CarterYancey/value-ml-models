@@ -14,6 +14,27 @@ read** stub; a correction is a new entry that names the old one.
 
 <!-- entries -->
 
+### 2026-11-23 · lgbm_huber_seeds_3y
+4 runs · `dataset_v1.4` · 2 cells · git `a645480` · [summary](../reports/sweeps/lgbm_huber_seeds_3y/lgbm_huber_seeds_3y_summary.md) · [note](notes/2026-11-23-downside-gates-calibration.md)
+- **Did:** Huber regressors on 3y CAGR and 3y excess CAGR, seeds 232 and 1776, models saved.
+- **Got:** CAGR: +0.073/+0.032 (s232), +0.082/+0.054 (s1776) over same-size peers, losers 0.38-0.42 (s23: +0.072/+0.054). Excess: +0.023/+0.019, +0.027/+0.006. Prediction 1 failed on s232's 2013-20 half; prediction 2 held.
+- **Concluded:** The CAGR regressor's lead holds across seeds (smaller in 2013-20 on one); the excess target's weakness is not the seed. Why the targets differ remains open.
+- **Next:** Gates (decision 45).
+
+### 2026-11-23 · forest_downside_cells_3y
+4 runs · `dataset_v1.4` · 4 cells · git `a645480` · [summary](../reports/sweeps/forest_downside_cells_3y/forest_downside_cells_3y_summary.md) · [note](notes/2026-11-23-downside-gates-calibration.md)
+- **Did:** The candidate forest configuration on the four downside cells, models saved, inside the 100k floor.
+- **Got:** PR-AUC 0.536 / 0.369 (1y; vol_12m 0.538 / 0.359), 0.710 / 0.589 (3y; 0.678 / 0.549). p@20 0.70 / 0.64 / 0.88 / 0.81. Rows over 0.5 fall into 2008 (1y 30%: 4455, 3969, 3594, 2500 for 2005-08) and recover after. Predictions: 1 held, 2 half, 3 half.
+- **Concluded:** Over three years the forest adds 0.03-0.04 PR-AUC to volatility; over one year nothing. Its confidence lags the market the wrong way, like cell C's.
+- **Next:** Gate the huber regressor with the 3y and 1y 30% models (decision 45).
+
+### 2026-11-23 · baseline_factors_downside_cells
+12 runs · `dataset_v1.4` · 4 cells · git `a645480` · [summary](../reports/sweeps/baseline_factors_downside_cells/baseline_factors_downside_cells_summary.md) · [note](notes/2026-11-23-downside-gates-calibration.md)
+- **Did:** vol_12m, vol_36m, beta_12m ranks on max drawdown from entry >= 30% / >= 50% within 1y and 3y, every row scored, inside the 100k floor (decision 43).
+- **Got:** vol_12m best everywhere: PR-AUC 0.538 / 0.359 (1y, base 0.352 / 0.182), 0.678 / 0.549 (3y, base 0.542 / 0.378); its top 20 a year fell 30% within a year 83% of the time. Prediction held except the 3y 50% cell (+0.17 over base, predicted up to +0.15).
+- **Concluded:** Past volatility predicts future drawdown strongly; it is the bar for any downside model.
+- **Next:** forest_downside_cells_3y.
+
 ### 2026-11-23 · bt_nonloser_dd30_top5_cap2, bt_nonloser_dd30_top10_cap2_score (decision 41)
 git `a3ad89a` · [note](notes/2026-11-23-crash-growth-worst-rank.md)
 - **Did:** Backtested the forest alone, 2005-2020 valued to 2023: top 5 a month, and top 10 weighted by score, against its top 10 equal-weighted (rerun unchanged for vs_peers).
