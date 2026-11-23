@@ -1630,3 +1630,33 @@ deployment bundles for the August 2026 cross-section, eight seconds;
 the ten picks' fifteen analogues each resemble the pool's safest
 corner (0% to 47% lost money over three years against 46% of the
 pool), as the in-sample caveat predicts they must.
+
+### 38. Session of 2026-11-23: run the three queued sweeps, build `worst_rank` beside them
+
+*Carter (2026-11-23):* "do anything you feel is best" toward a few
+high-precision, low-risk selections with upside; log the decisions;
+code on a feature branch, experiments off it.
+
+*Decided:*
+
+- **The lab** is `claude/lab-2026-11-23`, off `Claude` (PR #19
+  merged), with `claude/lab-2026-10-01` merged in so the queue sees
+  its result records. Nothing new is chosen on 2021–26 (decision 36).
+- **First, the queue as written on 2026-10-01**, unchanged and with
+  the predictions in its configs: `baseline_factors_crash_dd50`,
+  `forest_crash_dd50`, `lgbm_regressor_growth_allrows_3y`, run one
+  after another as a background chain (one heavy job at a time).
+  Each is read against its own config's rule and predictions.
+- **Meanwhile, in a separate worktree**, research-plan item 3:
+  `combine = "worst_rank"` in the backtest and in `vml-eval`'s
+  `blend`, on `claude/worst-rank` off `Claude`, with tests. Its first
+  use is the screen of the candidate's three legs by worst rank
+  against mean rank, against same-size peers, 2005–2020; the rule
+  for it (decision 34.3: a lead over peers 0.01 a year above the
+  mean-rank blend's in both halves, losers no more than 0.03 higher)
+  is fixed here, before the screen.
+- **What would change the order:** a quantile arm of the growth
+  sweep that passes its rule goes to three seeds before anything
+  else; a crash model whose high-confidence count rises *before*
+  2008 is read for a cash rule (research plan, item 2) before
+  blends.
