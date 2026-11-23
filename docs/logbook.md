@@ -14,6 +14,10 @@ read** stub; a correction is a new entry that names the old one.
 
 <!-- entries -->
 
+### 2026-11-23 · lgbm_regressor_growth_allrows_3y
+8 runs · `dataset_v1.4` · 2 cells · git `3a85671` · [summary](../reports/sweeps/lgbm_regressor_growth_allrows_3y/lgbm_regressor_growth_allrows_3y_summary.md)
+- **not yet read**: the sweep ended, its numbers are unread.
+
 ### 2026-11-22 · forest_crash_dd50
 6 runs · `dataset_v1.4` · 2 cells · git `2c15b2b` · [summary](../reports/sweeps/forest_crash_dd50/forest_crash_dd50_summary.md)
 - **not yet read**: the sweep ended, its numbers are unread.
