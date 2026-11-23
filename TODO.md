@@ -693,7 +693,7 @@ backtest. A bar set beforehand is a prediction, not a gate.
       `6005c9c0a2869bc9`) gives TWR 11.90% / 1,742 buys at git `cfa451c`
       and 12.15% / 1,747 at `f96037d`. Until then, compare backtests only
       at one git SHA.
-- [ ] `label_3y_cagr_ge_0` (open, decision 51), if Carter agrees it fits
+- [x] (decision 53: an equivalent, not a replacement) `label_3y_cagr_ge_0` (open, decision 51), if Carter agrees it fits
       the thesis: forest seeds 232 and 1776, paired in the mean-rank blend;
       if the gain holds, a backtest beside the candidate at the same SHA.
 - [ ] Why worst rank selects better and earns less: smaller stocks,

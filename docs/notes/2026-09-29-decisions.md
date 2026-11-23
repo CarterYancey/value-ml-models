@@ -2082,3 +2082,52 @@ columns, the peer-relative label) and Carter's (model-family rules).
   of the forest, then a backtest in the mean-rank blend, if Carter
   agrees that the label fits the thesis better. It carries no
   drawdown leg, which is what he called acceptable.
+
+### 52. The "came back" label goes to seeds and money (Carter: yes)
+
+*Decided (2026-11-23):* `label_3y_cagr_ge_0` forests on seeds 232 and
+1776 (`forest_cagr_ge0b_3y_s232`, `_s1776`). Each is screened alone
+and in the candidate's mean-rank blend, paired against cell C's forest
+of the same seed. Then three backtests,
+`bt_cagr_ge0_mom_roc_top10_cap2_rankfloor{,_s232,_s1776}`: the
+candidate's config with the forest bundle swapped, nothing else. Each
+is read against the candidate on the same seed. Those candidate runs
+were made at git `cfa451c`; `src/` has not changed since (`git diff
+cfa451c HEAD -- src` is empty).
+
+*Rule (decision 50):*
+- **Screen.** Paired per year across the three seeds, the blend lead
+  ahead on average, at about 2 se, in 10 or more of 16 years.
+- **Money.** TWR above the candidate's on at least 2 of 3 seeds, with a
+  mean gap larger than the candidate's seed spread (0.33), and a
+  drawdown no more than 2 points deeper. Passing both replaces cell C's
+  forest in the candidate; that change would be Carter's to confirm.
+
+*Prediction:*
+- Screen: the lead +0.003 to +0.010 a year on the new seeds.
+- Money: TWR within ±0.4 of the candidate's on each seed, because the
+  picks barely differ (decision 51). It does not pass on money.
+
+*Rival:* the 2005–06 gain on the screen is real and compounds to more
+than +0.4.
+
+### 53. The "came back" label does not replace cell C in the candidate
+
+*What came out (2026-11-23; [note](2026-11-23-judging-picks.md) §4):*
+- **Screen.** In the mean-rank blend, about +0.005 a year on three
+  seeds, the same sign on each, under 2 se on each.
+- **Backtest.** TWR +0.13 to +0.59 (mean +0.42) on all three seeds,
+  earned in the 2005–07 years, when the account was small. Money-
+  weighted return −0.04 on average, and final value mixed (two seeds
+  lower). Drawdown about 3 points deeper on every seed.
+
+*Decided:* the candidate keeps cell C's forest. The rule failed on
+drawdown and on the screen's noise. In money the two labels are the
+same strategy. The label is recorded as an equivalent that fits Carter's
+statement of the thesis better: no penalty for a market-wide fall. It
+is to be preferred if a later change of the candidate retrains the
+forest anyway, rather than being swapped in alone now.
+
+*For the rule:* TWR alone can reward a gain made while the account is
+small. From now on, a money comparison reports TWR, MWR and final value
+together, and a gain shows in MWR as well before it counts.

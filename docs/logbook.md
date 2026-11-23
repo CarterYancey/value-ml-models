@@ -14,6 +14,13 @@ read** stub; a correction is a new entry that names the old one.
 
 <!-- entries -->
 
+### 2026-11-23 · came-back label: seeds and backtests (decisions 52-53)
+git `a2ffb07` · [note](notes/2026-11-23-judging-picks.md)
+- **Did:** forest_cagr_ge0b_3y on seeds 232/1776, screened alone and in the mean-rank blend paired against cell C per seed; three backtests of the candidate with the forest leg swapped, against the candidate on the same seeds (identical src).
+- **Got:** Blend lead +0.0075/+0.0030/+0.0058 a year (10-11/16 years, under 2 se each). TWR +0.59/+0.13/+0.53 over the candidate (from 2005-07, a small account); MWR -0.04/-0.21/+0.12; final value -4.7k/-23.1k/+14.3k; drawdown about 3 points deeper on every seed.
+- **Concluded:** Not a replacement: in money the same strategy, with a deeper drawdown. Recorded as an equivalent label that fits the thesis better. Money comparisons now report TWR, MWR and final value together.
+- **Next:** Remaining TODO: trace the 12.15 to 11.90 TWR change; re-read closed arms under decision 50.
+
 ### 2026-11-23 · forest_cagr_ge0b_3y (decision 50)
 git `cfa451c` · [note](notes/2026-11-23-judging-picks.md)
 - **Did:** The candidate forest's configuration on label_3y_cagr_ge_0 (3y CAGR >= 0, no drawdown leg), screened alone and in the candidate's blends, paired against cell C's forest. forest_cagr_ge0_3y failed validation (sed overwrote the model name); the corrected copy ran.

@@ -115,7 +115,9 @@ floor). Simulated, 35 bps a side, buys and deposits 2005 to
     0.57 / 0.49 and lost money 0.40 / 0.15 against 0.60 / 0.33. Cell C's
     low precision in those years is its drawdown leg failing on the
     market's fall. The "came back" label (`label_3y_cagr_ge_0`) picks
-    almost the same stocks; it is open ([note](notes/2026-11-23-judging-picks.md)).
+    almost the same stocks: on three seeds, the same money as the candidate
+    (MWR −0.04), TWR +0.4 earned in 2005–07, drawdown 3 points deeper.
+    It is an equivalent, not a replacement (decision 53, [note](notes/2026-11-23-judging-picks.md)).
 13. **A screen gain is not a money gain.** Worst rank's buys led peers by
     0.6–1.0 points a year more on three seeds, and its portfolio earned
     0.6–0.7 less (TWR), with a drawdown 4–5 points deeper (decision 51).
