@@ -1660,3 +1660,48 @@ code on a feature branch, experiments off it.
   else; a crash model whose high-confidence count rises *before*
   2008 is read for a cash rule (research plan, item 2) before
   blends.
+
+### 39. What the three sweeps and the worst-rank screen settle, and the blend of a loser-avoider with an upside model
+
+*What came out (2026-11-23; [note](2026-11-23-crash-growth-worst-rank.md)):*
+
+- **Over-priced stocks** (`forest_crash_dd50`): the one-year forest
+  (PR-AUC 0.251, base 0.137) is below `vol_12m_rank` alone (0.266);
+  the three-year forest is above every factor (0.490 against 0.451).
+  The one-year top 20 lost on average in 12 of 16 years but 19% of
+  them rose 30% or more and their mean was +58% for 2008 entries and
+  +100% for 2020's. The count of calls at score ≥ 0.5 falls from 408
+  (2005) to 1–7 (2018–20) and does not rise before 2008 or after.
+  **Decided:** no short leg, and no cash rule from the count of
+  high-confidence calls: the count follows how much crash the fold's
+  training window holds, not the coming year. Research plan item 2
+  closed; "market state" waits for upstream features (item 8).
+- **Worst rank of the candidate's three legs**: lead over same-size
+  peers +0.043 / +0.056 (mean rank +0.022 / +0.053), losers 0.259 /
+  0.150 (0.275 / 0.153). Decision 38's bar was 0.032 / 0.063: **not
+  carried forward**. `worst_rank` stays as a tool.
+- **Continuous growth models**: no arm passes decision 34.3. The low
+  quantiles land at or below the forest (q0.25 on CAGR +0.030 /
+  +0.026, losers 0.250 / 0.178). **Huber on 3y CAGR leads its peers by
+  +0.072 / +0.054, in 15 of 16 years**, with losers 0.394 / 0.372
+  (peers 0.474 / 0.451) and a median CAGR below the forest's picks'
+  in 13 of 16 years: it buys skew (small, fragile stocks whose winners
+  carry the mean), the mirror image of the forest, which buys calm.
+
+*Decided next:* the two together. The forest says which stocks are
+unlikely to lose; the huber regressor says which have the largest
+expected return. Their **worst rank** (every leg's top N) is the
+thesis's "low risk with upside" as a selection, and the reason
+`worst_rank` was built; the mean rank beside it. Two evaluations of
+the forest bundle (`forest_nonloser_dd30_3y_53ceedd93e6d`, seed 23)
+blended with the huber bundle, refit unchanged with
+`--save-models` (config hash 7c1507e3f386652f, not a new trial),
+same floor, screen and peers as decision 33.
+
+*Rule, before the run:* a blend carries forward (three seeds of both
+legs, then a backtest beside the candidate's) if its lead over
+same-size peers is at least **0.040 / 0.063** for entries of 2005–12 /
+2013–20 (0.01 above the better of the forest, +0.030 / +0.027, and the
+candidate, +0.022 / +0.053, in each half) **and** its losers are no
+more than 0.03 above the forest's (**≤ 0.227 / ≤ 0.146**). Two
+configurations on these years, stated with every figure.
