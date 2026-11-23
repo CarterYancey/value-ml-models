@@ -14,6 +14,27 @@ read** stub; a correction is a new entry that names the old one.
 
 <!-- entries -->
 
+### 2026-11-23 · huber_cagr_largehalf2_3y, screen_largehalf (decision 48)
+git `8b06614` · [note](notes/2026-11-23-downside-gates-calibration.md)
+- **Did:** The seed-23 regressor and the cell-C forest read inside the larger half of the investable stocks (models unchanged).
+- **Got:** Regressor -0.010/+0.013 over peers, losers 0.36/0.33 (peers 0.36/0.37); forest +0.027/+0.028, losers 0.19/0.12. Prediction held; rival rejected.
+- **Concluded:** The regressor's skill is a small-stock phenomenon; closed as a candidate (decision 49). The forest's lead is the same among larger companies.
+- **Next:** Upstream requests; Carter's model-family rules.
+
+### 2026-11-23 · gate_dd1y30_bottom25, bt_huber_cagr_top10_cap2 (decision 47)
+git `8b06614` · [note](notes/2026-11-23-downside-gates-calibration.md)
+- **Did:** The regressor gated to the calmest quarter by the 1y 'fell 30%' model; and the ungated regressor backtested, top 10 a month, 2005-2020 valued to 2023.
+- **Got:** Gate: +0.057/+0.036, losers 0.247/0.269: fails. Backtest: TWR 9.39% (forest 10.01%, SPY 9.58%), drawdown -60.6%, buys' 3y lead over same-size candidates +6.8/+6.5 pts (forest +2.7/+3.3), excess over SPY -2.3/-5.9. Fails; TWR prediction contradicted, lead and drawdown held.
+- **Concluded:** Excellent selection inside a band (small stocks) that trails SPY by 9-12 points a year.
+- **Next:** The same models among larger companies (decision 48).
+
+### 2026-11-23 · gate_{forest_top50,dd3y30_bottom50,dd1y30_bottom50} (huber regressor, gated)
+git `c2396a8` · [note](notes/2026-11-23-downside-gates-calibration.md)
+- **Did:** Evaluated the huber CAGR regressor (seed 23) with its rows gated by the cell-C forest's top half, the 3y 'fell 30%' forest's bottom half, and the 1y one's bottom half (decision 45).
+- **Got:** Leads +0.066 to +0.070 / +0.047 to +0.057 over peers (ungated +0.072/+0.054); losers 0.347-0.353 / 0.325-0.350 (ungated 0.394/0.372). Rule losers <= 0.25/0.20: all fail; prediction on losers (0.25-0.33) contradicted.
+- **Concluded:** Half-gates keep the lead and remove few losers: the regressor's picks stay among fragile stocks. Judged on money next (decision 47).
+- **Next:** bt_huber_cagr_top10_cap2 and a quarter gate.
+
 ### 2026-11-23 · calib_levels_nonloser_yb_3y
 2 runs · `dataset_v1.4` · `fwd_3y_cagr >= 0.0 & fwd_3y_max_drawdown_from_entry < 0.3` · git `d384e4b` · [summary](../reports/sweeps/calib_levels_nonloser_yb_3y/calib_levels_nonloser_yb_3y_summary.md) · [note](notes/2026-11-23-downside-gates-calibration.md)
 - **Did:** Calibration step 3 (yb): the candidate forest in cell C on the 112 ranks, and on ranks + 15 raw level columns, inside the 100k floor; read on year_calib_corr and the threshold tables.

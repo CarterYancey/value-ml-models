@@ -1968,3 +1968,22 @@ beside the forest's, three seeds. Prediction: lead +0.02 to +0.04,
 under the forest's + 0.01 in 2013–20 (inside large caps "beat SPY" was
 not learned, decision 34); fails. Rival: the regressor's within-band
 skill holds among larger stocks and it passes.
+
+### 49. The huber regressor is closed as a candidate
+
+*What came out (2026-11-23):* inside the larger half the regressor's
+picks lead same-size peers by −0.010 / +0.013 and lose as often as
+they do (0.36 / 0.33); the forest leads by +0.027 / +0.028 there.
+Decision 48's prediction held.
+
+*Decided:* the huber regressor on 3y CAGR is closed as a candidate and
+as a leg: its selection skill exists only among small stocks, whose
+band trails SPY by 9–12 points a year, and in money it ends behind the
+forest and SPY with a 61% drawdown (decision 48). What stays open: a
+model of within-band selection among small stocks is real (+6.5 to
++6.8 points a year over same-size candidates in the backtest), and
+would be worth something only with a way to hold that band without
+its beta to the small-stock market (a hedge or a short leg: not in the
+engine). Directions 1–3 of decision 43 are at the end of what the
+data on disk can answer: the next steps are upstream (market-state
+columns, the peer-relative label) and Carter's (model-family rules).

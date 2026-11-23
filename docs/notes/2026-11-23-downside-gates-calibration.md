@@ -120,3 +120,52 @@ forest's score says how good the coming three years will be, so "every
 stock over X" buys most at the top of a market. The level has to come
 from market-state information upstream, and even then it is learned
 from few cycles: decision 46.
+
+## 4. Gates on the huber regressor (decisions 45, 47)
+
+`vml-eval [[gate]]` (`claude/blend-gate`): the huber CAGR bundle
+(seed 23, `233299a55d4c`) ranks; only rows the gating model puts in the
+named share of the test quarter are kept. Same screen and peers.
+
+| gate | lead 05–12 | lead 13–20 | losers | peers' losers | ≥15% CAGR |
+|---|---|---|---|---|---|
+| none | +0.072 | +0.054 | 0.394 / 0.372 | 0.474 / 0.451 | 0.350 / 0.275 |
+| cell-C forest, top half | +0.067 | +0.047 | 0.353 / 0.347 | 0.437 / 0.431 | 0.319 / 0.262 |
+| 3y "fell 30%", bottom half | +0.070 | +0.047 | 0.353 / 0.350 | 0.436 / 0.431 | 0.331 / 0.256 |
+| 1y "fell 30%", bottom half | +0.066 | +0.057 | 0.347 / 0.325 | 0.428 / 0.430 | 0.337 / 0.269 |
+
+Rule (decision 43): losers ≤ 0.25 / 0.20 — all fail. A half-gate
+moves the picks to stocks whose peers lose 43% of the time instead of
+45–47%; the regressor's choice stays among fragile stocks.
+
+The quarter gate (decision 47, `gate_dd1y30_bottom25`): +0.057 /
++0.036, losers 0.247 / 0.269 (peers 0.385 / 0.393): fails (2013–20).
+
+## 5. The regressor judged on money, and among larger companies (decisions 47–48)
+
+`bt_huber_cagr_top10_cap2` (`6a152781b2756b63`): the regressor's top 10
+a month, at most 2 per sector, 100k floor, 35 bps, 2005–2020 valued to
+2023; 38 backtest configurations on these years.
+
+| | TWR | worst drawdown | buys' 3y lead over same-size candidates | buys' 3y excess over SPY | buys lost | peers lost |
+|---|---|---|---|---|---|---|
+| huber regressor | 9.39% | −60.6% | +6.8 / +6.5 pts | −2.3 / −5.9 | 41% / 31% | 49% / 44% |
+| forest (`f84cc523`) | 10.01% | −46.6% | +2.7 / +3.3 | | 25% / 11% | 35% / 26% |
+| SPY | 9.58% | −52.9% | | | | |
+
+Its selection within a size band is the best measured here, and the
+band it selects from trails SPY so far that the portfolio ends behind.
+
+Inside the larger half (`log_marketcap_rank >= 0.5`, the same seed-23
+models, scope `test`; one configuration each):
+
+| | lead 05–12 | lead 13–20 | losers | peers' losers |
+|---|---|---|---|---|
+| huber regressor (`huber_cagr_largehalf2_3y`) | −0.010 | +0.013 | 0.359 / 0.331 | 0.363 / 0.372 |
+| cell-C forest (`screen_largehalf`) | +0.027 | +0.028 | 0.188 / 0.119 | 0.317 / 0.267 |
+
+Prediction held (below the forest's + 0.01, not even +0.02); rival
+rejected. **The regressor's skill is a small-stock phenomenon**; the
+forest's is the same in the larger half as in the whole floor.
+(`huber_cagr_largehalf_3y.toml` failed on validation, its model name
+overwritten by a sed; the corrected copy ran.)
