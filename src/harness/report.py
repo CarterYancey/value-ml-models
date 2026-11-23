@@ -315,6 +315,16 @@ def write_report(
             f"`{artifacts['source_bundle']}`: models loaded, not refit — "
             "only the metric parameters differ from the training run"
         )
+    if artifacts and "gate" in artifacts:
+        lines.append(
+            "- **gate**: only test rows that pass "
+            + "; ".join(artifacts["gate"])
+            + f" are ranked (on average {artifacts['gate_kept']:.0%} of a "
+            "fold's test rows pass every gate); the rest are moved below "
+            "every kept row, in their own order. A screen of one model by "
+            "another: no Brier, no calibration, and PR-AUC is over the "
+            "gated ranking."
+        )
     if artifacts and "blend" in artifacts:
         mode = artifacts.get("blend_combine", "mean_rank")
         how = (

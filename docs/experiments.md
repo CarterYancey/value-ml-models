@@ -246,6 +246,26 @@ ranks it high, the backtest's `combine = "worst_rank"`. The mode is
 part of the evaluation's hash; the default, `"mean_rank"`, leaves the
 hashes of earlier blends unchanged.
 
+### One model screened by another (`[[gate]]`)
+
+An eval config can keep only the test rows another walk-forward
+bundle scores in its top (or bottom) share of the test quarter, and
+rank those by the evaluated bundle:
+
+```toml
+name = "huber_without_forest_bottom"
+[[gate]]
+bundle = "experiments/models/forest_nonloser_dd30_3y_53ceedd93e6d"
+keep = "top"      # or "bottom" (e.g. a downside model's least likely)
+share = 0.5
+```
+
+Gated rows are moved below every kept row (in their own order), so
+top-K, the screen and the threshold tables pick from the kept rows; the
+report states the average share kept. Same checks as `blend` (dataset
+version, scheme, folds); the gates (bundle hash, keep, share) are part
+of the evaluation's hash. A ranking: no Brier, no calibration.
+
 ### Selection by score
 
 With `score_thresholds` and `pick_outcomes` both set, the report gains
