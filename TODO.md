@@ -682,7 +682,36 @@ in [PLAN.md](PLAN.md); check items off (and add new ones) as work proceeds.
       `n_estimators`) at full budget via a follow-up sweep file — no
       harness change needed, just two sweep configs.
 
-### Next, from Carter's direction of 2026-10-01 (decision 36)
+### Next, after 2026-11-23 (decisions 38-42)
+
+The session of 2026-11-23 ran the queue (over-priced stocks,
+continuous growth models), built `worst_rank`, blended the forest
+with the huber regressor, and measured the forest's confidence inside
+its top 200, with two backtests from it. Nothing was carried forward;
+the candidate is unchanged. Results:
+docs/notes/2026-11-23-crash-growth-worst-rank.md. What is left is
+Carter's or upstream's:
+
+- [ ] **Carter: merge `claude/results-2026-11-23`** (the `worst_rank`
+      code with tests, decisions 38-42, the note, logbook, findings,
+      the ledger shard).
+- [ ] **Upstream: the peer-relative label** ("beat stocks of the same
+      size band over 3 years"), the one target whose base rate does
+      not move with the market. It reopens calibration and confidence
+      sizing (closed for the forest by decision 42) and is the most
+      promising new cell: the screen already shows the forest's edge
+      is a same-size edge.
+- [ ] **Carter: the three rules for other model families** (below,
+      unchanged), then a logistic regression and an MLP on the ranks.
+- [ ] Optional, cheap: seeds 232 and 1776 of the huber regressors on
+      CAGR and on excess CAGR, to test whether their large difference
+      is chance (decision 39's open question). Not a candidate: they
+      fail on losers whatever the answer.
+- [ ] Upstream, after the label: market-state features (research plan
+      item 8). The count of a crash model's confident calls is not one
+      (decision 39).
+
+### Earlier: from Carter's direction of 2026-10-01 (decision 36)
 
 The working assumption is that 2021-26 is a bubble a value strategy
 trails through; the candidate goes to paper trading as it is; the
@@ -714,19 +743,22 @@ Carter's:
 
 Ready to run ("work the queue"; `vml-queue status`):
 
-- [ ] `baseline_factors_crash_dd50`, `forest_crash_dd50`: the
+- [x] `baseline_factors_crash_dd50`, `forest_crash_dd50` (run
+      2026-11-23; closed, decision 39): the
       over-priced-stock model, "fell 50% from entry" within one and
       three years inside the liquid half. Read on precision at the
       top by year, on what the calls went on to do, and on whether
       the count of high-confidence calls rises before 2008 and 2020
       or after (the market-state question).
-- [ ] `lgbm_regressor_growth_allrows_3y`: continuous models, LightGBM
+- [x] `lgbm_regressor_growth_allrows_3y` (run 2026-11-23; no arm
+      carried forward, decisions 39-40): continuous models, LightGBM
       on 3y CAGR and excess CAGR, huber and three quantiles, read
       against same-size peers.
 
 Small code, then a sweep (each on its own `claude/<topic>` branch):
 
-- [ ] **`combine = "worst_rank"`** in `vml-backtest` and in
+- [x] **`combine = "worst_rank"`** (built 2026-11-23,
+      `claude/worst-rank`; the screen fell short, decision 39) in `vml-backtest` and in
       `vml-eval`'s `blend`: rank by the worse of the models' ranks,
       which is "in every model's top N" for any N. Then the
       candidate's three legs by worst rank against by mean rank, on
@@ -734,13 +766,16 @@ Small code, then a sweep (each on its own `claude/<topic>` branch):
 - [ ] **`vml-predict --holdings <file>`**: mark which held stocks the
       rank sell rule would sell this month, so portfolio B's sells do
       not have to be read off the CSV by hand.
-- [ ] **A cash rule as a `Strategy`**, if `forest_crash_dd50` shows
+- [x] ~~**A cash rule as a `Strategy`**~~ (not built: the count did
+      not lead, decision 39), if `forest_crash_dd50` shows
       the count of high-confidence calls leading the market.
 - [ ] A position cap (carried from below; low priority).
 
 Sessions of their own (research plan, items 6 and 7):
 
-- [ ] **Calibration and confidence-weighted sizing.** Start by
+- [x] **Calibration and confidence-weighted sizing** (first step
+      done 2026-11-23: top 10 purer, top 5 and score weights do not
+      help; closed for the forest, decision 42). Start by
       measuring whether outcome rises with rank inside the forest's
       top 50 of a month at all; then the design of a target whose
       base rate does not move with the market (the peer-relative
@@ -748,7 +783,7 @@ Sessions of their own (research plan, items 6 and 7):
 - [ ] **Other model families**: a regularised logistic regression on
       the ranks, an MLP, a fold-internal clustering as an input; on
       the continuous and peer-relative targets first.
-- [ ] **A short leg**, only if `forest_crash_dd50` reaches a
+- [x] ~~**A short leg**~~ (closed, decision 39), only if `forest_crash_dd50` reaches a
       precision that justifies it: borrow costs, recalls and
       unbounded loss are not in the engine.
 
