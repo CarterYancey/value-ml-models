@@ -1937,3 +1937,34 @@ is a proxy. So:
    only among the calmest quarter by the 1y "fell 30%" model; decision
    43's rule. Prediction: losers 0.27–0.32, lead +0.03 to +0.05: fails.
    38 backtest configurations on 2005–2020 with (1).
+
+### 48. The regressor selects well in a band that trails; is it as good among larger companies?
+
+*What came out (2026-11-23):* `gate_dd1y30_bottom25`: +0.057 /
++0.036 over peers, losers 0.247 / 0.269: fails decision 43's rule
+(2013–20 on both). `bt_huber_cagr_top10_cap2` (hash
+`6a152781b2756b63`): TWR 9.39% (forest 10.01%, SPY 9.58%), worst
+drawdown −60.6%, buys' 3-year lead over same-size candidates +6.8 /
++6.5 points (forest +2.7 / +3.3), buys' excess over SPY −2.3 / −5.9,
+41% / 31% of buys lost money. Fails decision 47's rule. Predictions:
+TWR 11–13% contradicted; drawdown, lead over peers held; losers 35–40%
+half held. 38 backtest configurations on 2005–2020.
+
+*Reading:* the regressor's selection within a size band is the
+strongest measured here (more than twice the forest's lead over
+same-size stocks, in both halves), but it selects from small stocks,
+whose band trails SPY by 9–12 points a year: excellent selection in a
+losing band.
+
+*Decided:* measure the same seed-23 models inside the larger half of
+the investable stocks (`log_marketcap_rank >= 0.5` on top of the 100k
+floor, scope `test`: models unchanged, trained on every row), and the
+cell-C forest's bundle in the same universe as the bar. Two
+configurations (`huber_cagr_largehalf_3y`, `eval_screen_largehalf`).
+Rule, before the run: the regressor's lead over same-size peers at
+least the forest's + 0.01 in both halves, losers no more than the
+forest's + 0.05. If it passes: a backtest inside the larger half
+beside the forest's, three seeds. Prediction: lead +0.02 to +0.04,
+under the forest's + 0.01 in 2013–20 (inside large caps "beat SPY" was
+not learned, decision 34); fails. Rival: the regressor's within-band
+skill holds among larger stocks and it passes.
