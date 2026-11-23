@@ -14,6 +14,20 @@ read** stub; a correction is a new entry that names the old one.
 
 <!-- entries -->
 
+### 2026-11-23 · calib_levels_nonloser_yb_3y
+2 runs · `dataset_v1.4` · `fwd_3y_cagr >= 0.0 & fwd_3y_max_drawdown_from_entry < 0.3` · git `d384e4b` · [summary](../reports/sweeps/calib_levels_nonloser_yb_3y/calib_levels_nonloser_yb_3y_summary.md) · [note](notes/2026-11-23-downside-gates-calibration.md)
+- **Did:** Calibration step 3 (yb): the candidate forest in cell C on the 112 ranks, and on ranks + 15 raw level columns, inside the 100k floor; read on year_calib_corr and the threshold tables.
+- **Got:** ranks: corr +0.07, PR-AUC 0.572 (+0.023 over plain); levels: corr -0.25, PR-AUC 0.551. Screen of yb ranks +0.032/+0.013 over peers (plain +0.036/+0.024). Ranks prediction held; levels prediction (+0.1 to +0.4) and rival contradicted.
+- **Concluded:** No arm reaches +0.3: the threshold rule cannot be built on these inputs; level columns make it worse (calm before a crash). Decision 46.
+- **Next:** Upstream: market-state columns and the peer-relative label.
+
+### 2026-11-23 · calib_levels_nonloser_plain_3y
+2 runs · `dataset_v1.4` · `fwd_3y_cagr >= 0.0 & fwd_3y_max_drawdown_from_entry < 0.3` · git `d384e4b` · [summary](../reports/sweeps/calib_levels_nonloser_plain_3y/calib_levels_nonloser_plain_3y_summary.md) · [note](notes/2026-11-23-downside-gates-calibration.md)
+- **Did:** Calibration step 3 (plain): the candidate forest in cell C on the 112 ranks, and on ranks + 15 raw level columns, inside the 100k floor; read on year_calib_corr and the threshold tables.
+- **Got:** ranks: corr -0.06, PR-AUC 0.549; levels: corr -0.33, PR-AUC 0.522. Mean score highest for 2007-08 entries; rows over 0.5 right 17-21% in 2007-08 and 79-89% in 2009-12. Prediction for ranks (about -0.6) contradicted; for levels held.
+- **Concluded:** No arm reaches +0.3: the threshold rule cannot be built on these inputs; level columns make it worse (calm before a crash). Decision 46.
+- **Next:** Upstream: market-state columns and the peer-relative label.
+
 ### 2026-11-23 · lgbm_huber_seeds_3y
 4 runs · `dataset_v1.4` · 2 cells · git `a645480` · [summary](../reports/sweeps/lgbm_huber_seeds_3y/lgbm_huber_seeds_3y_summary.md) · [note](notes/2026-11-23-downside-gates-calibration.md)
 - **Did:** Huber regressors on 3y CAGR and 3y excess CAGR, seeds 232 and 1776, models saved.

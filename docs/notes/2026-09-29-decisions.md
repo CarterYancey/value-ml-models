@@ -1874,3 +1874,35 @@ seed 23 (`233299a55d4c`): kept to the cell-C forest's top half, the
 3y "fell 30%" forest's bottom half, the 1y "fell 30%" forest's bottom
 half. Decision 43's rule; seeds 232 and 1776 only for a gate that
 passes on seed 23. Three configurations.
+
+### 46. Calibration across years is not reachable with the inputs on disk; the upstream request
+
+*What came out (2026-11-23,
+[note](2026-11-23-downside-gates-calibration.md) §3):* none of the four
+calibration arms reaches `year_calib_corr` ≥ +0.3 (best +0.07);
+adding the 15 level columns makes it worse (−0.33 / −0.25), and every
+arm's mean score is highest for 2007–08 entries. `year_balance` adds
+0.02–0.03 PR-AUC but not at the top (screen 2013–20 +0.013 against
++0.024). Four configurations in cell C.
+
+*Decided:*
+
+- The threshold rule ("every stock over X") is **not usable** on any
+  model built from these inputs, calibrated or not: it would buy most
+  at a market top. Not backtested (the plan's step 5 waits).
+- `year_balance` and the `year_calib_*` measures stay in the harness
+  (`claude/calibration`): the measures are how any future model is
+  judged for the rule.
+- **Upstream request** (Carter to forward): market-state columns,
+  one value per snapshot date, so that a model can learn the level:
+  the cross-sectional medians of valuation (earnings yield, book to
+  market) and volatility; breadth (share of stocks above their 200-day
+  average); SPY's trailing 12-month return and volatility; the term
+  spread and a credit spread if a point-in-time source exists. And
+  the peer-relative label. Written in the calibration plan's
+  "Upstream request" section.
+- Calibration research continues with the peer-relative target (the
+  within-year score can be calibrated: its base rate is constant), so
+  "every stock over X" becomes "every stock likely to beat its
+  same-size peers", a constant-count rule. That is not Carter's
+  fewer-in-bad-years rule; the market level stays the upstream part.
