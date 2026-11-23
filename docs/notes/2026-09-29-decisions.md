@@ -1987,3 +1987,98 @@ its beta to the small-stock market (a hedge or a short leg: not in the
 engine). Directions 1–3 of decision 43 are at the end of what the
 data on disk can answer: the next steps are upstream (market-state
 columns, the peer-relative label) and Carter's (model-family rules).
+
+### 50. Carter's correction of how results are judged; three runs that follow from it
+
+*Carter (2026-11-23), after decision 49:*
+
+1. **We do not care what the market does; we care how our picks do.**
+   Crashes are unexpected and the model is not asked to foresee them.
+   A model that buys fewer stocks in 2009–12 is fine if the few did
+   well; a model overconfident in a crash year is expected, but its
+   confident picks should be the *resilient* ones. Buying at a
+   reasonable price and having the market undervalue it for a while is
+   acceptable (it can be expected to come back within 2–5 years);
+   buying at an irrationally high price that fear then brings down to a
+   rational one is what is to be avoided.
+2. **Do not dismiss an arm for missing an arbitrary bar.** An arm
+   better than its predecessor by more than noise is carried forward
+   and built on; chasing noise is overfitting, so the noise has to be
+   measured.
+
+*What this changes:*
+
+- `year_calib_corr` (decision 44's bar of +0.3) measured whether the
+  score level tracks the market's year. By (1) that is not the
+  question; it stays a reported number, not a gate. (It is one number
+  per run, a correlation across the 16 years: the best arm was +0.07.
+  The 0.34–0.52 values in the per-year table are mean scores.) The
+  question for a score threshold is whether, within each year, the
+  picks over it beat the stocks around them, crash years included.
+- **The crash years, read Carter's way** (screens on disk, top 10 a
+  quarter, 100k floor; picks against same-size peers):
+
+  | entries | forest picks' 3y max drawdown | peers' | picks lost money | peers lost |
+  |---|---|---|---|---|
+  | 2007 | 0.46 | 0.57 | 0.40 | 0.60 |
+  | 2008 | 0.33 | 0.49 | 0.15 | 0.33 |
+
+  The forest's 2007–08 picks were the resilient ones; cell C's label
+  scored most of them failures because the market fell more than 30%
+  (precision 0.17–0.21 that year). *Measurement:* the 30% drawdown leg
+  of the label counts a market-wide fall against the stock. *Hypothesis:*
+  that leg is the "temporarily undervalued" case Carter calls
+  acceptable, and the label's base rate swings (0.16–0.66) because of
+  it. **`label_3y_cagr_ge_0` (3y CAGR ≥ 0, no path condition: the price
+  came back) has never been run on `dataset_v1.4`.**
+- **Carry-forward rule, from now on:** a paired per-year comparison of
+  the arm with its predecessor on the same screen (lead over same-size
+  peers; losers). Carry forward if the mean yearly difference is
+  positive at about two standard errors or more and the arm is ahead
+  in at least 10 of 16 years, with no half worse by more than its own
+  noise. Caveat: the 3-year windows of adjacent years overlap, so the
+  16 years are worth fewer independent draws; the standard error is a
+  floor, and seeds are the second check. Fixed bars set before a run
+  remain as predictions, no longer as gates.
+- **`worst_rank` re-read under it** (decision 39; paired, worst minus
+  mean rank, the candidate's legs, seed 23): lead +0.011 a year (se
+  0.0055, bootstrap 90% interval +0.003 to +0.020), ahead in 11 of 16
+  years; losers −0.009 (se 0.010, 8 of 16). The bar was missed by
+  0.007 in 2013–20 only. **Carried forward.**
+
+*Decided, three runs (predictions in their configs):*
+
+1. `worst_rank` on seeds 232 and 1776 (`vml-eval`, both modes): the
+   seed check of the paired gain.
+2. `bt_nonloser_mom_roc_worst_top10_cap2_rankfloor`: the candidate's
+   backtest (rank floor 0.2) with `combine = "worst_rank"`, nothing
+   else changed; read on TWR, drawdown and `vs_peers` beside the
+   candidate's 12.15% / −41.4%.
+3. `forest_cagr_ge0_3y`: the candidate forest's parameters, seed 23,
+   on `label_3y_cagr_ge_0`; evaluated on the same screen, alone and in
+   the candidate's blend.
+
+### 51. Worst rank stays a tool; the "came back" label is open
+
+*What came out (2026-11-23; [note](2026-11-23-judging-picks.md)):*
+
+- **Worst rank against mean rank.** The worst rank's buys led same-size
+  stocks by 0.6–1.0 points a year more on all three seeds, but its
+  portfolio earned 0.58–0.74 points a year less (TWR), with a drawdown
+  4–5 points deeper. That gap is larger than the seed spread. The
+  backtest is the yardstick of record, so the mean rank stays. Decision
+  50's carry-forward worked as meant: the arm went to money, and money
+  decided.
+  - *Lesson for the rule:* a screen gain of about one point a year does
+    not imply a money gain. The screen carries an arm forward to a
+    backtest, never into the candidate.
+- **The same config's TWR moved across code versions.** It went from
+  12.15% (git `f96037d`) to 11.90% (`cfa451c`), with 1,747 against
+  1,742 buys. This is not traced. Backtests are compared only at one
+  git SHA. Added to TODO.
+- **`label_3y_cagr_ge_0`.** It is within noise of cell C alone; in the
+  candidate's blend it leads by +0.0075 a year (1.7 se, 10 of 16
+  years); in the worst-rank blend it is below. Open: seeds 232 and 1776
+  of the forest, then a backtest in the mean-rank blend, if Carter
+  agrees that the label fits the thesis better. It carries no
+  drawdown leg, which is what he called acceptable.

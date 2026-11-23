@@ -20,7 +20,8 @@ record. Never compared across dataset versions or universes.
    (decisions 38–42), then Carter's three directions:
    [downside, gates, calibration](notes/2026-11-23-downside-gates-calibration.md)
    and the [calibration plan](notes/2026-11-23-calibration-plan.md)
-   (decisions 43–49 of the [decision log](notes/2026-09-29-decisions.md)). Before
+   (decisions 43–49), then [judging picks](notes/2026-11-23-judging-picks.md)
+   (decisions 50–51 of the [decision log](notes/2026-09-29-decisions.md)). Before
    it: [out of sample](notes/2026-10-01-out-of-sample.md),
    [large caps](notes/2026-10-01-large-caps.md), decisions 27–37.
 2. What to do next: TODO.md, "Next, after 2026-11-23", and
@@ -108,13 +109,18 @@ floor). Simulated, 35 bps a side, buys and deposits 2005 to
     a 30% or 50% fall within a year as well as a forest (PR-AUC 0.54 /
     0.36); over three years the forest adds 0.03–0.04. A short leg is
     not justified (the top calls' winners).
-12. **No model here can be calibrated across years** (decisions 44–46):
-    every forest's score level is highest at market tops (2007–08) and
-    its top confidence is negatively correlated with the year's base
-    rate (−0.5 to −0.7); per-stock level columns make it worse (calm
-    before a crash); `year_balance` removes the stale prior but not the
-    problem. "Buy every stock over X" would buy most at a top. The
-    market's level must come from upstream market-state columns.
+12. **Judge the picks, not the market** (decision 50, Carter). Every
+    forest's score level is highest at market tops, and that is not the
+    question: in 2007–08 its picks fell 0.46 / 0.33 against peers'
+    0.57 / 0.49 and lost money 0.40 / 0.15 against 0.60 / 0.33. Cell C's
+    low precision in those years is its drawdown leg failing on the
+    market's fall. The "came back" label (`label_3y_cagr_ge_0`) picks
+    almost the same stocks; it is open ([note](notes/2026-11-23-judging-picks.md)).
+13. **A screen gain is not a money gain.** Worst rank's buys led peers by
+    0.6–1.0 points a year more on three seeds, and its portfolio earned
+    0.6–0.7 less (TWR), with a drawdown 4–5 points deeper (decision 51).
+    The same candidate config gives 11.90% on current code against
+    12.15% recorded (untraced): compare backtests at one git SHA.
 
 Earlier notes: [notes/](notes/), linked from the decision log.
 
