@@ -11,7 +11,10 @@ declares the whole strategy (see
 five-model AllProb screen):
 
 - the model bundles and how their scores combine (`product` = AllProb,
-  `mean`, `min`, `mean_rank`) plus an optional per-model `min_score`;
+  `mean`, `min`, `mean_rank`, `worst_rank`) plus an optional per-model
+  `min_score`; `worst_rank` ranks a stock by its rank in the model that
+  likes it least (ties by the mean rank): the stocks in every model's
+  top N, for every N at once;
 - declared column filters (e.g. `revenue_trend_20q > 0`) — validated
   against the manifest's feature/rank groups, so a screen can never
   reference a label;

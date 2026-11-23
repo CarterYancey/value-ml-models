@@ -447,6 +447,10 @@ class ExperimentConfig:
     #: by an evaluation only, never read from a file: it is what makes a
     #: blended evaluation its own configuration in the trial ledger.
     blend: tuple[str, ...] = ()
+    #: how a blend combines the models' rank shares ("mean_rank" or
+    #: "worst_rank"); set by an evaluation only, and hashed only when
+    #: it is not the default, so earlier blends keep their hashes
+    blend_combine: str = "mean_rank"
 
     @classmethod
     def from_file(cls, path: str | Path) -> "ExperimentConfig":
@@ -703,6 +707,8 @@ class ExperimentConfig:
             payload["pick_screen"] = self.pick_screen.to_table()
         if self.blend:
             payload["blend"] = list(self.blend)
+            if self.blend_combine != "mean_rank":
+                payload["blend_combine"] = self.blend_combine
         return payload
 
     def canonical_json(self) -> str:
@@ -758,10 +764,25 @@ def _parse_blend(raw, source: str) -> tuple[str, ...]:
     return paths
 
 
+def _parse_blend_combine(raw: dict, source: str) -> str:
+    mode = raw.get("blend_combine", "mean_rank")
+    if mode not in ("mean_rank", "worst_rank"):
+        raise ConfigError(
+            f"eval config {source}: blend_combine {mode!r} not in "
+            "['mean_rank', 'worst_rank']"
+        )
+    if "blend_combine" in raw and not raw.get("blend"):
+        raise ConfigError(
+            f"eval config {source}: blend_combine is set without a blend"
+        )
+    return mode
+
+
 _EVAL_ALLOWED = frozenset(
     {
         "name", "top_k", "score_thresholds", "precision_targets",
         "pick_outcomes", "pick_screen", "universe", "blend",
+        "blend_combine",
     }
 )
 
@@ -800,6 +821,9 @@ class EvalConfig:
     #: rows, so a two-model candidate can be read on the screen before
     #: it is backtested
     blend: tuple[str, ...] = ()
+    #: how the blend combines rank shares: "mean_rank" (the default) or
+    #: "worst_rank" (the lowest share: in every model's top N)
+    blend_combine: str = "mean_rank"
 
     @classmethod
     def from_file(cls, path: str | Path) -> "EvalConfig":
@@ -852,4 +876,5 @@ class EvalConfig:
             ),
             universe=parse_universe(raw.get("universe"), source),
             blend=_parse_blend(raw.get("blend", ()), source),
+            blend_combine=_parse_blend_combine(raw, source),
         )

@@ -240,6 +240,12 @@ calibration. The blended bundles' config hashes are part of the
 evaluation's own hash, so every blend tried is a configuration in the
 cell's trial count.
 
+`blend_combine = "worst_rank"` takes the lowest share instead of the
+mean (ties broken by the mean): a row scores high only if every model
+ranks it high, the backtest's `combine = "worst_rank"`. The mode is
+part of the evaluation's hash; the default, `"mean_rank"`, leaves the
+hashes of earlier blends unchanged.
+
 ### Selection by score
 
 With `score_thresholds` and `pick_outcomes` both set, the report gains

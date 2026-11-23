@@ -45,21 +45,38 @@ from harness.runner import (
 )
 
 
-def blend_scores(score_arrays, periods) -> np.ndarray:
+BLEND_MODES = ("mean_rank", "worst_rank")
+
+#: weight of the mean share in a worst-rank blend: a tie-break only.
+#: Two different worst shares in a period differ by at least 1 / rows,
+#: far more than this times a mean share (at most 1).
+_WORST_RANK_TIEBREAK = 1e-6
+
+
+def blend_scores(score_arrays, periods, mode: str = "mean_rank") -> np.ndarray:
     """Several models' scores on the same rows as one ranking: within
     each period, every model's scores are ranked as a share of the
-    period's rows (the best at 1.0) and the shares averaged. This is
-    the backtest's `combine = "mean_rank"` on test rows: a row one model
-    has no score for (NaN) is ranked on the others alone, and ties share
-    the better rank. Shares, not rank numbers, so that periods of
-    different sizes give scores on one scale."""
+    period's rows (the best at 1.0), then combined. `mean_rank` averages
+    the shares; `worst_rank` takes the lowest share (the row's rank in
+    the model that likes it least: "in every model's top N" for every N
+    at once), ties broken by the mean share. These are the backtest's
+    `combine` modes of the same names on test rows: a row one model has
+    no score for (NaN) is ranked on the others alone, and ties share the
+    better rank. Shares, not rank numbers, so that periods of different
+    sizes give scores on one scale."""
+    if mode not in BLEND_MODES:
+        raise ConfigError(f"unknown blend mode {mode!r}; one of {list(BLEND_MODES)}")
     frame = pd.DataFrame(
         {i: np.asarray(s, dtype=float) for i, s in enumerate(score_arrays)}
     )
     shares = frame.groupby(np.asarray(periods), sort=False).rank(
         method="max", pct=True
     )
-    return shares.mean(axis=1, skipna=True).to_numpy(dtype=float)
+    mean = shares.mean(axis=1, skipna=True)
+    if mode == "mean_rank":
+        return mean.to_numpy(dtype=float)
+    worst = shares.min(axis=1, skipna=True)
+    return (worst + _WORST_RANK_TIEBREAK * mean).to_numpy(dtype=float)
 
 
 def _load_blend(paths, bundle: ModelBundle) -> list[ModelBundle]:
@@ -149,6 +166,7 @@ def evaluate_bundle(
             else {}
         ),
         blend=tuple(b.train_config.config_hash for b in blended),
+        blend_combine=eval_config.blend_combine if blended else "mean_rank",
     )
 
     store = ResultsStore(results_path)
@@ -246,6 +264,7 @@ def evaluate_bundle(
                         for b in blended
                     ],
                     periods=(dates.dt.year * 4 + dates.dt.quarter).to_numpy(),
+                    mode=eval_config.blend_combine,
                 )
             metrics = compute_all(
                 test_fit.y,
@@ -328,6 +347,7 @@ def evaluate_bundle(
                 "source_bundle": Path(bundle_dir),
                 **(
                     {
+                        "blend_combine": eval_config.blend_combine,
                         "blend": [
                             f"{b.train_config.name} "
                             f"(`{b.train_config.config_hash}`, run "

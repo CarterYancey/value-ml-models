@@ -254,6 +254,38 @@ def test_blend_scores_is_mean_rank_within_period():
     assert tied.tolist() == pytest.approx([1.0, 1.0, 1 / 3])
 
 
+def test_blend_scores_worst_rank():
+    from harness.evaluate import blend_scores
+
+    a = [0.1, 0.9, 0.8, 0.5]
+    b = [0.9, 0.1, 0.8, 0.5]
+    out = blend_scores([a, b], [1, 1, 1, 1], mode="worst_rank")
+    # shares a: .25,1,.75,.5  b: 1,.25,.75,.5 -> worst .25,.25,.75,.5
+    assert out[2] > out[3] > out[0]
+    assert out[0] == pytest.approx(0.25, abs=1e-5)
+    assert out[2] == pytest.approx(0.75, abs=1e-5)
+    # mean rank orders the same rows differently
+    mean = blend_scores([a, b], [1, 1, 1, 1])
+    assert mean[0] > mean[3]
+    with pytest.raises(Exception, match="unknown blend mode"):
+        blend_scores([a], [1, 1, 1, 1], mode="max")
+
+
+def test_blend_combine_parsing():
+    from harness.config import EvalConfig
+    from harness.errors import ConfigError
+
+    cfg = EvalConfig.from_dict(
+        {"name": "w", "blend": ["x"], "blend_combine": "worst_rank"}
+    )
+    assert cfg.blend_combine == "worst_rank"
+    assert EvalConfig.from_dict({"name": "m", "blend": ["x"]}).blend_combine == "mean_rank"
+    with pytest.raises(ConfigError, match="without a blend"):
+        EvalConfig.from_dict({"name": "n", "blend_combine": "worst_rank"})
+    with pytest.raises(ConfigError, match="not in"):
+        EvalConfig.from_dict({"name": "n", "blend": ["x"], "blend_combine": "min"})
+
+
 def test_blended_evaluation_is_its_own_configuration(
     data_root, wf_bundle_dir, tmp_path
 ):
@@ -311,6 +343,20 @@ def test_blended_evaluation_is_its_own_configuration(
         "brier" not in fr["metrics"] or fr["metrics"]["brier"] != fr["metrics"]["brier"]
         for fr in blended["fold_results"]
     )
+    worst = evaluate_bundle(
+        wf_bundle_dir,
+        EvalConfig.from_dict(
+            {"name": "blend", "top_k": [5],
+             "blend": [str(factor["model_bundle"])],
+             "blend_combine": "worst_rank"}
+        ),
+        **kwargs,
+    )
+    rows = ResultsStore(tmp_path / "results.csv").load()
+    worst_hashes = set(rows[rows["run_id"] == worst["run_id"]]["config_hash"])
+    # the combination is part of the configuration's identity
+    assert worst_hashes.isdisjoint(hashes["blend"])
+    assert 'combine = "worst_rank"' in worst["report_path"].read_text()
     with pytest.raises(ConfigError, match="is the evaluated bundle"):
         evaluate_bundle(
             wf_bundle_dir,
