@@ -166,8 +166,11 @@ def _inline(text: str) -> str:
     return text
 
 
-def paragraphs(markdown: str) -> list[tuple[int, str]]:
-    """Return ``(first_line_number, prose)`` for each paragraph or list item.
+def paragraphs(markdown: str) -> list[tuple[int, str, bool]]:
+    """Return ``(first_line_number, prose, completes_a_colon)`` for each
+    paragraph or list item. The flag is true for a list item that follows a
+    paragraph ending in a colon: such items complete that sentence ("It
+    refuses nine things:" followed by the nine), so they need no verb.
 
     Code fences, tables, headings, horizontal rules, link definitions and
     HTML comments are dropped. Inline code becomes the word "Code" so a
@@ -176,19 +179,28 @@ def paragraphs(markdown: str) -> list[tuple[int, str]]:
     so a label such as "Kept short on purpose:" is checked on its own."""
     text = _COMMENT.sub(lambda m: "\n" * m.group(0).count("\n"), markdown)
     lines = text.splitlines()
-    out: list[tuple[int, str]] = []
+    out: list[tuple[int, str, bool]] = []
     buf: list[str] = []
     start = 0
     in_fence = False
     front = 0
+    is_item = False
+    after_colon = False     # the last flushed paragraph ended with a colon
+    in_enum = False         # inside a list that follows such a paragraph
 
     def flush() -> None:
-        nonlocal buf
+        nonlocal buf, after_colon, in_enum, is_item
         if buf:
             joined = _inline(" ".join(s.strip() for s in buf).strip())
             if joined:
-                out.append((start, joined))
+                if is_item:
+                    in_enum = in_enum or after_colon
+                else:
+                    in_enum = False
+                out.append((start, joined, is_item and in_enum))
+                after_colon = joined.endswith(":")
         buf = []
+        is_item = False
 
     for i, raw in enumerate(lines, start=1):
         if i == 1 and raw.strip() == "---":
@@ -205,15 +217,23 @@ def paragraphs(markdown: str) -> list[tuple[int, str]]:
         if in_fence:
             continue
         line = raw
-        if not line.strip() or _HEADING.match(line) or _TABLE.match(line) \
+        if _HEADING.match(line) or _TABLE.match(line) \
                 or _RULE.match(line) or _LINKDEF.match(line):
+            flush()
+            in_enum = False
+            after_colon = False
+            continue
+        if not line.strip():
             flush()
             continue
         line = _QUOTE.sub("", line)
         m = _LIST.match(line)
         if m:
             flush()
+            is_item = True
             line = line[m.end():]
+        elif not buf and not line[:1].isspace():
+            in_enum = False      # a plain paragraph ends the list
         if not buf:
             start = i
         buf.append(line)
@@ -393,7 +413,7 @@ def check_text(text: str, *, denylist: list[DenyEntry] | None = None,
             line, severity or SEVERITY[check], path,
         ))
 
-    for line, para in paragraphs(text):
+    for line, para, completes in paragraphs(text):
         for sent in sentences(para):
             s = sent.text
             words = _words(s)
@@ -423,7 +443,7 @@ def check_text(text: str, *, denylist: list[DenyEntry] | None = None,
             if _DASH.search(s):
                 add("dash", "a dash joins clauses; write two sentences or use a comma", s, line)
             if sent.tokens:
-                level = _fragment_level(sent)
+                level = None if completes else _fragment_level(sent)
                 if level:
                     add("fragment", "no finite verb: write a full sentence with a subject and a verb", s, line, level)
                 stack = _noun_stack(sent)
