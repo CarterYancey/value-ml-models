@@ -1,0 +1,14 @@
+{
+  "name": "bt_nonloser_mom_roc_top10_cap2_rankfloor_largehalf_v141_0d86c0074c6ba825",
+  "promoted_utc": "2026-11-24T09:36:22+00:00",
+  "source_report": "reports/backtest/bt_nonloser_mom_roc_top10_cap2_rankfloor_largehalf_v141_0d86c0074c6ba825.md",
+  "run_id": "",
+  "config_hash": "",
+  "git_sha": "",
+  "dataset_version": "",
+  "config_path": "",
+  "note": "The candidate inside the larger half (log_marketcap_rank >= 0.5), 2005-2020 on dataset_v1.4.1 (decision 57): TWR 12.51% against the candidate's 11.76%, MWR 14.10%, final 984,128, drawdown -39.3%. Paired by year +0.72 points (se 0.61, ahead 11 of 16); same lead over peers; 0.9 points fewer losers. Carried forward to seeds.",
+  "files": [
+    "bt_nonloser_mom_roc_top10_cap2_rankfloor_largehalf_v141_0d86c0074c6ba825.md"
+  ]
+}

@@ -1,0 +1,22 @@
+{
+  "name": "forest_nonloser_dd30_3y_s1776_v141",
+  "promoted_utc": "2026-11-24T09:52:36+00:00",
+  "source_report": "reports/forest_nonloser_dd30_3y_s1776_v141.md",
+  "run_id": "8f3eb8f1d305",
+  "config_hash": "9152848ec411f217",
+  "git_sha": "eeb268f42ee06caddb332e0eec5322664aa1ccea",
+  "dataset_version": "dataset_v1.4.1",
+  "config_path": "experiments/forest_nonloser_dd30_3y_s1776_v141.toml",
+  "note": "The candidate forest on seed 1776, dataset_v1.4.1 (decision 57): a seed of the record, used for the larger-half seed check.",
+  "experiment": "forest_nonloser_dd30_3y_s1776_v141",
+  "model": "random_forest",
+  "label": "fwd_3y_cagr >= 0.0 & fwd_3y_max_drawdown_from_entry < 0.3",
+  "horizon_years": 3,
+  "scheme": "walkforward",
+  "headline": "p@10=0.775",
+  "baseline": "0.475 rank_factor",
+  "lift": "+0.300",
+  "files": [
+    "forest_nonloser_dd30_3y_s1776_v141.md"
+  ]
+}

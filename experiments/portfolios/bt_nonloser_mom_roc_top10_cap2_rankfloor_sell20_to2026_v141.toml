@@ -1,0 +1,54 @@
+# Decision 55 of docs/notes/2026-09-29-decisions.md (2026-11-24). Carter asked
+# for dataset_v1.4.1 (upstream decision 0021: the v1.4 code rebuilt on the
+# 2026-11-21 Sharadar snapshot, with a provenance block). A patch is a
+# different dataset for comparison, so the candidate is re-established on
+# it: the same three legs refit on v1.4.1 (forest_nonloser_dd30_3y_v141,
+# factor_mom_12_2_3y_v141, factor_roc_greenblatt_3y_v141), the same rule.
+#
+# This run: the rank sell discipline to 2026-08-21 (decision 24's
+# variant B), the fixed variant on the new version. Replaces the October
+# table's row. No prediction against that table: the build changed.
+
+name = "bt_nonloser_mom_roc_top10_cap2_rankfloor_sell20_to2026_v141"
+dataset_version = "dataset_v1.4.1"
+prices_version = "prices_v1.0"
+
+bundles = [
+    "experiments/models/forest_nonloser_dd30_3y_v141_f259c702a6a6",
+    "experiments/models/factor_mom_12_2_3y_v141_121349f6e682",
+    "experiments/models/factor_roc_greenblatt_3y_v141_4457ca01bcfb",
+]
+
+[signal]
+combine = "mean_rank"
+max_staleness_days = 200
+model_update = "refit"
+label_lag_days = 45
+
+[[investability]]
+column = "dollar_volume_3m_rank"
+op = ">="
+value = 0.2
+
+[portfolio]
+strategy = "sell_below_criteria"
+top_k = 10
+weighting = "equal"
+monthly_cash = 1000.0
+max_per_group = 2
+group_column = "sector"
+
+[sell]
+max_rank_pct = 0.2
+filters = []
+
+[execution]
+cost_bps = 35.0
+benchmark_cost_bps = 0.0
+max_quote_age_days = 3
+delist_after_days = 30
+
+[window]
+start = 2005-01-01
+end = 2026-08-21
+valuation_end = 2026-08-21

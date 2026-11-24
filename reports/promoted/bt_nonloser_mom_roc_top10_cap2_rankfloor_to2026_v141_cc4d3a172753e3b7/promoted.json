@@ -1,0 +1,14 @@
+{
+  "name": "bt_nonloser_mom_roc_top10_cap2_rankfloor_to2026_v141_cc4d3a172753e3b7",
+  "promoted_utc": "2026-11-24T09:36:19+00:00",
+  "source_report": "reports/backtest/bt_nonloser_mom_roc_top10_cap2_rankfloor_to2026_v141_cc4d3a172753e3b7.md",
+  "run_id": "",
+  "config_hash": "",
+  "git_sha": "",
+  "dataset_version": "",
+  "config_path": "",
+  "note": "THE CANDIDATE to 2026-08-21 on dataset_v1.4.1, buy and hold (decision 55, the fixed rule): final 1,159,740 on 260,000 against SPY's 1,326,084; TWR 10.99% against 10.93%; MWR 12.20% against 13.20%; drawdown -41.0% against -52.9%. Yearly excess 2021-26: -8.9, +2.3, -3.9, -11.4, -14.5, -13.2. The 2021 buys: 72% losers, -14.6 a year against SPY.",
+  "files": [
+    "bt_nonloser_mom_roc_top10_cap2_rankfloor_to2026_v141_cc4d3a172753e3b7.md"
+  ]
+}

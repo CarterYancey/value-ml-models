@@ -1,0 +1,24 @@
+{
+  "name": "forest_nonloser_dd30_3y_v141",
+  "promoted_utc": "2026-11-24T09:36:14+00:00",
+  "source_report": "reports/forest_nonloser_dd30_3y_v141.md",
+  "run_id": "f259c702a6a6",
+  "config_hash": "0aeea637e84c41d9",
+  "git_sha": "28919a44b679514925e2149dcf65456b84560f6d",
+  "dataset_version": "dataset_v1.4.1",
+  "config_path": "experiments/forest_nonloser_dd30_3y_v141.toml",
+  "note": "THE CANDIDATE'S FOREST on dataset_v1.4.1 (decision 55): cell C, 112 ranks, seed 23. Fold-mean PR-AUC 0.585, p@20 0.75, p@50 0.74 against a base rate of 0.39. The record of the forest from 2026-11-24 on; the v1.4 forest's numbers are a retired build.",
+  "experiment": "forest_nonloser_dd30_3y_v141",
+  "model": "random_forest",
+  "label": "fwd_3y_cagr >= 0.0 & fwd_3y_max_drawdown_from_entry < 0.3",
+  "horizon_years": 3,
+  "scheme": "walkforward",
+  "headline": "p@10=0.738",
+  "baseline": "0.475 rank_factor",
+  "lift": "+0.263",
+  "files": [
+    "forest_nonloser_dd30_3y_v141.md",
+    "forest_nonloser_dd30_3y_v141__blend_mom_roc_peers_dv100k_v141.md",
+    "forest_nonloser_dd30_3y_v141__screen_dv100k_v141.md"
+  ]
+}

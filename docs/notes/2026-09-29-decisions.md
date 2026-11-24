@@ -2180,3 +2180,197 @@ every backtest of this session ran on the rebuild on both sides.
 - *Upstream request (Carter):* a content hash of `dataset.parquet` in
   the manifest, or a new version number for a rebuild, so that this is
   caught by the ledger instead of by a backtest.
+
+### 55. Session of 2026-11-24: dataset_v1.4.1, the candidate re-established on it, and the size band in money
+
+*Carter (2026-11-24):* the standing research prompt ("do anything you
+feel is best to reach this goal, log every decision"), and "be sure to
+use dataset_v1.4.1".
+
+*Facts checked:*
+- `dataset_v1.4.1` exists upstream (ADR 0021, 2026-11-24). It has the
+  same columns as `dataset_v1.4`, the same row count (1,537,293) and
+  the same effective sizes. It was built from the same interim files
+  as the rebuilt v1.4 of 2026-11-23, and its manifest carries a
+  provenance block: the raw Sharadar snapshot (2026-11-21), the code
+  commit, and a sha256 of every output file. Upstream calls the two
+  equivalent up to floating-point noise in the sample weights.
+- The ledger keys on the version string, so under CLAUDE.md no v1.4
+  number is compared with a v1.4.1 number. Every comparison this
+  session needs a v1.4.1 run on both sides.
+- The previous session's code (`worst_rank`, `year_balance`,
+  `[[gate]]`) is on `claude/results-2026-11-23`, pull request 20,
+  not yet merged. This session's lab branch, `claude/lab-2026-11-24`,
+  starts from that branch so that the code is available. The lab
+  branch of 2026-11-23 is merged in for its result records.
+
+*Decided, in order:*
+
+1. **Provenance in the record** (code, `claude/dataset-provenance`).
+   Every result record, ledger row and backtest report records the
+   dataset's `provenance.files["dataset.parquet"].sha256`, as upstream
+   manual §1 now asks. Datasets without a provenance block record an
+   empty value. `data/versions.md` gets a row for 1.4.1 and the synced
+   data docs are refreshed.
+2. **The candidate re-established on v1.4.1.** Copies of the three
+   leg configs with `dataset_version = "dataset_v1.4.1"` and the
+   suffix `_v141`: the forest, momentum and return on capital. Then
+   the candidate's backtests on the new bundles, nothing else changed:
+   2005–2020 with the rank floor, buy and hold to 2026-08-21, and the
+   sell discipline to 2026-08-21. These runs replace findings.md's
+   candidate table. The 2021–26 window is read for the fixed candidate
+   only, as decision 28 allows. *Prediction:* each number within the
+   noise of the rebuilt v1.4: the 2005–2020 run's TWR within 0.1 of
+   11.90%. No prediction for the to-2026 numbers against the October
+   table, which came from the old build.
+3. **The size band in money.** The record says the candidate's lead is
+   a same-size lead (findings, conclusion 3) and that the smaller half
+   of investable stocks trails SPY by 12 to 33 points a year over
+   three years (conclusion 2). The huber regressor failed in money
+   because it selected inside a band that trails SPY (decision 48).
+   The reverse question has not been asked in money: does the
+   candidate, restricted to a size band that keeps up with SPY, beat
+   SPY? Two backtests, the candidate's config plus one investability
+   filter: `log_marketcap_rank >= 0.5` (the larger half) and
+   `log_marketcap_rank >= 0.8` (large caps), 2005–2020. A run that
+   beats the candidate's TWR by more than the seed spread (0.33) with
+   a drawdown no deeper is traded to 2026 as context, then goes to
+   seeds 232 and 1776. *Prediction:* the larger half ends within 1
+   point of the candidate's TWR (the forest's same-size lead there is
+   +0.027 / +0.028 against +0.030 / +0.027 over all investable rows,
+   but the band's own return is higher), with a shallower drawdown.
+   Large caps end 1 to 3 points below the candidate: the forest only
+   separates the worst quintile there (decision 34). *Rival:* the
+   band effect dominates and the larger half beats the candidate by
+   more than 1 point. Backtest configurations on 2005–2020 after
+   this: 38 + 1 (the v1.4.1 rerun) + 2.
+4. **The November list.** `inference_2026-11-20` is on the host.
+   Deployment bundles are refit on v1.4.1 (the runbook says to refit
+   when a new dataset version arrives) and `vml-predict` is run with
+   the runbook's flags. This is a run of the runbook in the sandbox,
+   as on 2026-10-01, not a deployment decision. Carter decides what is
+   bought.
+
+*Not done, and why:* calibration (Carter's first priority) waits on
+the market-state columns upstream (decision 46); other model families
+wait on Carter's three rules (research plan item 7); the decision-50
+re-reads of closed arms need their bundles retrained on v1.4.1 and
+come after items 1–4 if time remains.
+
+### 56. Decision 41's arms re-read under decision 50's rule: closed stays closed
+
+*Why (2026-11-24):* TODO item from the third round of 2026-11-23:
+re-read the arms closed by a fixed bar with a paired per-year
+comparison. Decision 41 traded the forest alone with a monthly top 5
+and with score weights, against the forest's own top 10
+(`bt_nonloser_dd30_top10_cap2`). The three backtests ran on
+2026-11-23 between 06:26 and 06:30 UTC at git `0f08aa1` and
+`a3ad89a`, all on the rebuilt v1.4, so they share a dataset build.
+No new run: the reports on disk were read.
+
+*What came out:* arm minus predecessor, paired by year.
+
+| arm | yearly portfolio return 2005–2020 | buys' 3-year lead over same-size peers, by cohort | buys' loser share minus peers', by cohort |
+|---|---|---|---|
+| top 5 a month | −1.55 points a year (se 0.84), ahead in 5 of 16 years, both halves negative | −1.0 points (se 1.0), ahead 5 of 16 | +0.4 points (se 1.5), 8 of 16 |
+| score weights | −0.03 points (se 0.05), 5 of 16 | 0.00 (se 0.03), 3 of 16 | −0.02 (se 0.09), 5 of 16 |
+
+*Decided:* decision 42 stands. The monthly top 5 is worse than the
+top 10 by more than its noise (about 1.8 standard errors, with both
+halves negative), and score weights change nothing measurable. Neither
+is carried forward. The third re-read on the list, `year_balance`
+against plain ranks on the screen, needs both forests retrained on
+v1.4.1 and is left on the TODO list.
+
+### 57. The size-band runs read; the larger half goes to seeds and to 2026
+
+*What came out (2026-11-24, [note](2026-11-24-v141-and-size-band.md)
+§4–5; all on `dataset_v1.4.1`, 2005–2020 valued end of 2023):*
+
+| | candidate | larger half (`log_marketcap_rank >= 0.5`) | large caps (`>= 0.8`) |
+|---|---|---|---|
+| TWR | 11.76% | 12.51% | 12.06% |
+| MWR | 13.65% | 14.10% | 13.87% |
+| final value on 192,000 | 932,471 | 984,128 | 957,370 |
+| worst drawdown | −41.0% | −39.3% | −40.2% |
+| buys | 1,741 | 1,756 | 1,759 |
+| buys' 3-year lead over same-size peers, 2005–12 / 2013–20 | −0.002 / +0.020 | +0.003 / +0.019 | +0.019 / +0.031 |
+| buys that lost money, 2005–12 / 2013–20 | 0.36 / 0.23 | 0.35 / 0.22 | 0.32 / 0.19 |
+| the band's own excess over SPY (peers), 2005–12 / 2013–20 | +0.041 / −0.011 | +0.041 / −0.009 | +0.031 / −0.007 |
+
+Paired by year against the candidate: the larger half earns +0.72
+points a year of portfolio return (se 0.61, ahead in 11 of 16 years,
+both halves positive) with the same lead over peers (+0.15 points, se
+0.63) and 0.9 points fewer losers (se 0.8). Large caps earn the same
+(0.00 points a year, se 0.97, ahead 9 of 16) with a larger lead over
+peers (+1.5 points, se 0.7, ahead 12 of 16) and 3.9 points fewer
+losers (se 1.6).
+
+*Predictions:* the larger half within 1 point of the candidate's TWR
+held (+0.75) and the shallower drawdown held; the rival ("beats the
+candidate by more than 1 point") did not. Large caps 1 to 3 points
+below the candidate: **missed**. Inside large caps the candidate's
+picks select better against their peers and lose less often than
+anywhere else, and the money comes out the same because the band
+earns less.
+
+*Reading:* the candidate's peers already earn what the larger half's
+peers earn (+0.041 / −0.011 against +0.041 / −0.009), so the candidate
+was mostly buying from the larger half before the filter. The filter
+changes about one buy in twelve and removes a few losers. This is a
+measurement; whether the gain is more than noise is what the seeds
+decide.
+
+*Decided:* decision 55's rule is met by the larger half (TWR +0.75 >
+0.33, drawdown shallower), so it is carried forward: traded to
+2026-08-21 as context (the fixed rule, not a selection: it is read for
+this one variant, as decision 28 allows), and the forest refit on
+seeds 232 and 1776 on v1.4.1, each backtested as the candidate and as
+the larger half on 2005–2020, paired per seed. Large caps miss the
+rule by 0.03 on TWR, and the paired yearly reading says the money
+gain is zero; the fewer losers are recorded and it is not carried
+forward. *Rule for the seeds (decision 52's form):* TWR above the
+candidate's on at least 2 of 3 seeds with a mean gap above 0.33, MWR
+and final value above on the same seeds, drawdown no deeper. Passing
+would change the candidate's investability filter, which is Carter's
+to confirm. *Prediction:* the gap holds on the seeds (+0.4 to +1.0);
+to 2026 the larger half trails SPY by less than the candidate does
+(the giants that carried the index are in this band). Backtest
+configurations on 2005–2020 after this: 41 + 4 = 45.
+
+### 58. The larger-half filter passes its seed check; the change to the candidate is proposed to Carter
+
+*What came out (2026-11-24, [note](2026-11-24-v141-and-size-band.md)
+§5; `dataset_v1.4.1`, 2005–2020 valued end 2023, the candidate against
+the larger half on the same seed):*
+
+| seed | candidate TWR / MWR / final / drawdown | larger half TWR / MWR / final / drawdown | gap in TWR | paired yearly return |
+|---|---|---|---|---|
+| 23 | 11.76 / 13.65 / 932,471 / −41.0 | 12.51 / 14.10 / 984,128 / −39.3 | +0.75 | +0.72, se 0.61, ahead 11 of 16 |
+| 232 | 11.86 / 13.72 / 940,636 / −40.5 | 12.56 / 14.20 / 995,841 / −38.6 | +0.70 | +0.76, se 0.46, ahead 10 of 16 |
+| 1776 | 12.18 / 13.88 / 959,232 / −41.1 | 12.50 / 14.19 / 994,518 / −39.6 | +0.32 | +0.34, se 0.52, ahead 12 of 16 |
+
+The candidate's own seed spread on v1.4.1 is 0.42 points of TWR. The
+larger half is above it on every seed in TWR, MWR and final value,
+with a drawdown 1.5 to 1.9 points shallower, and the mean gap is
++0.59. The buys' lead over same-size peers is the same on every seed
+(within 0.1 point) and the loser share is 0.2 to 0.7 points lower.
+Decision 57's prediction (+0.4 to +1.0) held on two seeds and fell
+short on the third.
+
+*Decided:* decision 57's rule is met (TWR above on 3 of 3 seeds, mean
+gap above 0.33, MWR and final value above on the same seeds, drawdown
+no deeper). The gain is small, about 0.6 points a year, and it is the
+band, not the selection: the picks lead their peers by the same
+amount, and the filter removes about one buy in twelve from the
+smaller half, where the band trails SPY. **The proposed change to the
+candidate is one more investability filter, `log_marketcap_rank >=
+0.5`. The candidate itself is unchanged until Carter confirms** (the
+candidate is Carter's: decisions 24 and 25). If confirmed, the
+paper-trading rule gains the filter (`--filter` twice in
+`vml-predict`) and the sell-discipline variant is backtested with it.
+What this does not change: the candidate's record against SPY in
+2021–26 (the larger half ends 6% behind SPY where the candidate ends
+13% behind, decision 57). Backtest configurations on 2005–2020: 45
+completed (38 on v1.4, 7 on v1.4.1), and 4 failed runs of 2026-11-24
+that count under the ledger's rule.
