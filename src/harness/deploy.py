@@ -45,7 +45,7 @@ from pathlib import Path
 import pandas as pd
 
 from harness.config import ExperimentConfig
-from harness.dataset import Dataset, feature_matrix
+from harness.dataset import Dataset, feature_matrix, manifest_data_sha256
 from harness.filters import (
     FILTERABLE_GROUPS,
     FilterSpec,
@@ -143,6 +143,7 @@ def train_deployment_model(
                 "TODO item."
             )
         dataset = Dataset(Path(data_root) / config.dataset_version)
+        base_row["dataset_sha256"] = dataset.data_sha256
         feature_cols = config.resolve_feature_columns(dataset)
         # All currently-eligible data: fit_data keeps every row whose
         # label is observable — all roles, all kinds, delistings included.
@@ -236,6 +237,16 @@ def load_inference_frame(path: str | Path) -> tuple[pd.DataFrame, str]:
             f"inference data {parquet} lacks the entity key 'permaticker'"
         )
     return frame, name
+
+
+def _inference_manifest_sha256(path: str | Path) -> str:
+    """The inference directory's `dataset.parquet` fingerprint from its
+    manifest (upstream decision 0021), or "" for a bare parquet file, a
+    directory without a manifest, or a manifest without provenance."""
+    manifest = Path(path) / "manifest.json"
+    if not manifest.is_file():
+        return ""
+    return manifest_data_sha256(json.loads(manifest.read_text()))
 
 
 def _inference_manifest_columns(path: str | Path) -> dict | None:
@@ -492,6 +503,8 @@ def predict_with_bundle(
                     "model": config.model_name,
                     "probabilistic": bundle.probabilistic,
                     "inference_source": str(inference_path),
+                "inference_sha256": _inference_manifest_sha256(inference_path),
+                    "inference_sha256": _inference_manifest_sha256(inference_path),
                     "n_rows_scored": len(out),
                     "note": (
                         "Deployment scores: ranked by a model refit on all "
@@ -690,6 +703,7 @@ def predict_with_bundles(
                 ),
                 "git_sha": sha,
                 "inference_source": str(inference_path),
+                "inference_sha256": _inference_manifest_sha256(inference_path),
                 **universe_meta,
                 **filter_meta,
                 **selection_meta,

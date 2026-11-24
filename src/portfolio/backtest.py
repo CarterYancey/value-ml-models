@@ -259,6 +259,7 @@ def run_backtest(
 
     try:
         dataset = Dataset(Path(data_root) / config.dataset_version)
+        base_row["dataset_sha256"] = dataset.data_sha256
         panel = PricePanel(Path(data_root) / config.prices_version)
         model_set = ModelSet(list(config.bundles))
         model_set.validate_against(config, dataset)

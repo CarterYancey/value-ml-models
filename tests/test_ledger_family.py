@@ -72,3 +72,53 @@ def test_default_path_follows_the_environment(monkeypatch):
     assert str(default_results_path()) == "experiments/results.csv"
     monkeypatch.setenv("VML_RESULTS", "experiments/ledger/me.csv")
     assert str(default_results_path()) == "experiments/ledger/me.csv"
+
+
+def test_fields_carry_the_dataset_fingerprint():
+    from harness.results import FIELDS
+
+    assert FIELDS.index("dataset_sha256") == FIELDS.index("dataset_version") + 1
+
+
+def test_append_rewrites_a_file_written_under_an_older_header(tmp_path):
+    import csv
+
+    from harness.results import FIELDS
+
+    path = tmp_path / "results.csv"
+    older = [f for f in FIELDS if f != "dataset_sha256"]
+    with open(path, "w", newline="") as fh:
+        writer = csv.DictWriter(fh, fieldnames=older)
+        writer.writeheader()
+        writer.writerow({**{f: "" for f in older}, **_row("old"),
+                         "metrics_json": '{"a": 1, "b": "x,y"}'})
+    store = ResultsStore(path)
+    store.append({**_row("new"), "dataset_sha256": "ff" * 32})
+    df = store.load()
+    assert list(df.columns) == FIELDS
+    assert len(df) == 2
+    by_id = df.set_index("run_id")
+    assert by_id.loc["old", "dataset_sha256"] == ""
+    assert by_id.loc["old", "metrics_json"] == '{"a": 1, "b": "x,y"}'
+    assert by_id.loc["new", "dataset_sha256"] == "ff" * 32
+    with open(path, newline="") as fh:
+        assert next(csv.reader(fh)) == FIELDS
+
+
+def test_load_fills_the_new_column_for_older_shards(tmp_path, monkeypatch):
+    import csv
+
+    from harness.results import FIELDS
+
+    older = [f for f in FIELDS if f != "dataset_sha256"]
+    shard = tmp_path / "ledger" / "old-shard.csv"
+    shard.parent.mkdir()
+    with open(shard, "w", newline="") as fh:
+        writer = csv.DictWriter(fh, fieldnames=older)
+        writer.writeheader()
+        writer.writerow({**{f: "" for f in older}, **_row("shardrow")})
+    local = ResultsStore(tmp_path / "results.csv")
+    local.append(_row("localrow"))
+    df = local.load()
+    assert len(df) == 2
+    assert set(df["dataset_sha256"]) == {""}

@@ -195,6 +195,16 @@ _REFUSED_CLASSIFICATION = {
 }
 
 
+def manifest_data_sha256(manifest: dict) -> str:
+    """`manifest["provenance"]["files"]["dataset.parquet"]["sha256"]`, or
+    "" when the manifest has no provenance block (builds before upstream
+    decision 0021). Works for dataset and inference manifests alike."""
+    prov = manifest.get("provenance") or {}
+    files = prov.get("files") or {}
+    entry = files.get("dataset.parquet") or {}
+    return str(entry.get("sha256") or "")
+
+
 def indicator_name(column: str, value: str) -> str:
     """The model-input column for one value of a categorical feature."""
     return f"{column}={value}"
@@ -436,6 +446,15 @@ class Dataset:
     @property
     def version(self) -> str:
         return self.manifest["dataset_version"]
+
+    @property
+    def data_sha256(self) -> str:
+        """The sha256 of `dataset.parquet` from the manifest's provenance
+        block (upstream decision 0021), or "" for a manifest written
+        before that decision. Every result records it beside the version
+        string, because two builds can share a version label (decision
+        54 of the decision log)."""
+        return manifest_data_sha256(self.manifest)
 
     @property
     def horizons_years(self) -> list[int]:

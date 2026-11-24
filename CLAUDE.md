@@ -80,8 +80,12 @@ invariants below are this repo's equivalents.
    consumed cell needs `--reopen "reason"` and is then counted: every
    report and the catalog say "holdout look k of N in this cell". Run it
    when you would act on the model, never to choose between candidates.
-3. **Every run is reproducible:** dataset version + config + git SHA + seed
-   are logged for every experiment, including abandoned ones.
+3. **Every run is reproducible:** dataset version + dataset fingerprint
+   (`dataset_sha256`, the manifest's sha256 of `dataset.parquet`; "" for
+   builds before upstream decision 0021) + config + git SHA + seed are
+   logged for every experiment, including abandoned ones. Two builds can
+   share a version label (decision 54): a comparison between runs checks
+   the fingerprint, not only the version string.
 4. **No feature engineering.** New features are upstream changes. This repo
    may select/subset columns, never derive new ones (prevents ad-hoc
    lookahead creeping in far from the point-in-time machinery).
