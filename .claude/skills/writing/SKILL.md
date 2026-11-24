@@ -6,9 +6,9 @@ description: Use before writing or editing anything a person will read in this r
 # Writing for Carter
 
 Carter reads this repository's records after weeks away. On 2026-11-24
-Carter called findings.md and the logbook "almost unreadable", and the
-same day called a closing message unreadable in the same way after a
-first set of written rules was in place. The failures were not jargon.
+Carter called findings.md and the logbook "almost unreadable". The same
+day, after a first set of written rules was in place, Carter called a
+closing message unreadable in the same way. The failures were not jargon.
 They were sentences without a verb, shorthand coined on the spot,
 aphorisms, and clauses hidden in parentheses. This skill is the
 procedure that stops them. It applies to prose only. Code, configs,
@@ -17,9 +17,9 @@ tool calls and your own reasoning are not its business.
 ## The procedure, every time
 
 1. Write the draft.
-2. Run the check on it. For a file: `uv run vml-writing <file>`. For a
-   reply or a logbook field, pipe the draft to `uv run vml-writing
-   --text`. The command exits 1 while an error remains.
+2. Run the check on it. A file goes through `uv run vml-writing <file>`.
+   A reply or a logbook field goes through `uv run vml-writing --text`
+   on stdin. The command exits 1 while an error remains.
 3. Fix every error. Read the warnings and fix the ones you can.
 4. Save the file, or send the reply, only after the check passes.
 
@@ -79,8 +79,8 @@ voice and say who did it.
 - Numbers go in a table. A sequence of three or more steps or
   conditions goes in a list.
 - A bold lead-in to a paragraph or a list item is a sentence with a
-  verb, such as "**The seeds confirm the gap.**", and never a label
-  such as "**Readings.**".
+  verb. "**The seeds confirm the gap.**" is one. "**Readings.**" is a
+  label and is not.
 
 ## Replies to Carter
 
