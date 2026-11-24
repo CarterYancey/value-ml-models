@@ -16,6 +16,15 @@ change. The format follows Matt Pocock's `domain-modeling` skill.
 - **Dataset version** — one build of the upstream dataset, such as
   `dataset_v1.4`. Numbers from two versions are never compared.
   _Avoid_: "the data" when the version matters.
+- **Patch version** — `X.Y.Z`: the same dataset code rebuilt on a newer
+  raw snapshot, same column layout, different values (upstream
+  decision 0021). A patch is a different dataset for comparison.
+  `dataset_v1.4.1` is the dataset of record since 2026-11-24.
+- **Dataset fingerprint** — `dataset_sha256`, the sha256 of
+  `dataset.parquet` from the manifest's provenance block, logged with
+  every run. Two builds can share a version label; they cannot share a
+  fingerprint. "" for builds before decision 0021. _Avoid_: hash
+  (alone), checksum.
 - **Row** — one record at the grain `(permaticker, snapshot_date,
   snapshot_kind)`. _Avoid_: observation, sample, example.
 - **Snapshot kind** — one of `low`, `median`, `high`: the three
@@ -52,6 +61,10 @@ change. The format follows Matt Pocock's `domain-modeling` skill.
   investability filter.
 - **Large caps** — the universe `log_marketcap_rank >= 0.8`: the
   largest fifth of companies by market capitalisation.
+- **The larger half** — the universe `log_marketcap_rank >= 0.5`, on
+  top of a liquidity floor. As a backtest filter it is the proposed
+  change to the candidate (decision 58). _Avoid_: large stocks, big
+  caps, when this exact band is meant.
 - **Same-size peers** — the rows in the same 5% band of
   `log_marketcap_rank` in the same month as a pick. Every selection
   is read against them, because company size explains most of a lead

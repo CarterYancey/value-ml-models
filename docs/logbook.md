@@ -14,6 +14,55 @@ read** stub; a correction is a new entry that names the old one.
 
 <!-- entries -->
 
+### 2026-11-24 · the larger-half filter on seeds 232 and 1776 (decisions 57, 58)
+git `eeb268f` · [note](notes/2026-11-24-v141-and-size-band.md)
+- **Did:** Refit the candidate forest on seeds 232 and 1776 on dataset_v1.4.1 and backtested the candidate and the larger-half variant (log_marketcap_rank >= 0.5 added) on each, 2005-2020 valued end 2023, paired per seed. A first attempt failed: the seed configs' copy had overwritten the [model] name with the experiment name, and the four backtests then ran with an empty bundle path; 6 failed rows plus 1 from a manual rerun are in the ledger and count as trials.
+- **Got:** Gap, larger half minus candidate, TWR: +0.75 / +0.70 / +0.32 on seeds 23 / 232 / 1776 (mean +0.59; the candidate's seed spread 0.42); MWR +0.45 / +0.48 / +0.31; final value +51.7k / +55.2k / +35.3k; drawdown 1.7 / 1.9 / 1.5 points shallower. Paired yearly return +0.72 (se 0.61), +0.76 (se 0.46), +0.34 (se 0.52); ahead in 11, 10, 12 of 16 years. Lead over same-size peers unchanged within 0.1 point on every seed.
+- **Concluded:** Decision 57's rule is met on every seed. The gain is the band, not the selection: about 0.6 points a year from leaving out the smaller half. The change to the candidate's investability filter is proposed to Carter (decision 58); the candidate is unchanged until confirmed.
+- **Next:** Carter: confirm or decline the filter. If confirmed: the sell discipline with the filter, and the runbook's vml-predict gains a second --filter.
+
+### 2026-11-24 · the candidate inside the larger half and inside large caps (decisions 55, 57)
+git `eeb268f` · [note](notes/2026-11-24-v141-and-size-band.md)
+- **Did:** Two backtests of the candidate's config with one more investability filter, log_marketcap_rank >= 0.5 and >= 0.8, 2005-2020 valued end 2023, on v1.4.1; paired per year against the candidate's v1.4.1 run. Rule written first: carried forward if TWR beats the candidate's by more than 0.33 with a drawdown no deeper.
+- **Got:** Larger half: TWR 12.51% (candidate 11.76%), MWR 14.10% (13.65%), final 984,128 (932,471), drawdown -39.3% (-41.0%); paired yearly return +0.72 points (se 0.61, ahead 11 of 16), lead over peers +0.15 (se 0.63), losers -0.9 points (se 0.8). Large caps: TWR 12.06%, drawdown -40.2%, paired yearly return 0.00 (se 0.97); lead over same-size peers +1.5 points (se 0.7, 12 of 16), losers -3.9 points (se 1.6). The candidate's peers earn what the larger half's peers earn (+0.041 / -0.011 against +0.041 / -0.009).
+- **Concluded:** The larger half meets the rule and is carried forward to seeds and to 2026 (decision 57). The large-cap prediction (1 to 3 points below the candidate) missed: there the blend selects best against its peers and loses least, and earns the same money because the band earns less. The candidate was already buying mostly from the larger half.
+- **Next:** Chain 4: the larger half to 2026; forests on seeds 232 and 1776 on v1.4.1; the candidate and the larger half backtested on each seed.
+
+### 2026-11-24 · the candidate to 2026 on dataset_v1.4.1 (decision 55)
+git `eeb268f` · [note](notes/2026-11-24-v141-and-size-band.md)
+- **Did:** Buy and hold and the rank sell discipline to 2026-08-21 on the v1.4.1 bundles (bt_nonloser_mom_roc_top10_cap2_rankfloor_to2026_v141, _sell20_to2026_v141), the fixed rule read for the two fixed variants. Equity path through 2020-12-31 checked equal to the 2005-2020 run's to the cent.
+- **Got:** Buy and hold: final 1,159,740 on 260,000, TWR 10.99%, MWR 12.20%, drawdown -41.0%; SPY 1,326,084 / 10.93% / 13.20% / -52.9%. Sell discipline: 1,294,414 / 11.48% / 13.02% / -41.3%, costs 15,166. Yearly excess over SPY 2021-26, buy and hold: -8.9, +2.3, -3.9, -11.4, -14.5, -13.2. Buys of 2021 trailed SPY by 14.6 points a year with 72% losers; 2022 +0.2 with 45%; 2023 -4.3 with 26%; against same-size peers -6.4, +3.5, +6.0.
+- **Concluded:** The October table (old v1.4 build) is retired and replaced by these numbers. Same picture: ahead of SPY in money through 2020, behind by August 2026, the whole shortfall in 2021 and 2024-26. The 2021 buys are the worst cohort in the record, 72% losers, and the only one behind its same-size peers.
+- **Next:** The size-band runs of decision 55 item 3.
+
+### 2026-11-24 · November 2026 list: the runbook on dataset_v1.4.1 and inference_2026-11-20
+git `eeb268f`
+- **Did:** Refit the three deployment bundles on dataset_v1.4.1 (vml-train-deploy: 1,395,705 labeled rows, effective size 48,281; the runbook says to refit when a new version arrives) and ran vml-predict with the runbook's flags on inference_2026-11-20 (as_of 2026-11-20, 3,716 rows, 15 with a stale price). A run of the runbook in the sandbox, as on 2026-10-01, not a deployment decision.
+- **Got:** 2,973 rows passed the floor. The ten picks by mean rank, at most two per sector: RPRX, KO, EBAY, CHD, SAIC, V, HAS, NDSN, WAB, PSX. Forest scores of the picks 0.60 to 0.69. Full ranking and sidecar: predictions/inference_2026-11-20__multi__forest_nonloser_dd30_3y_v141__factor_mom_12_2_3y_v141__factor_roc_greenblatt_3y_v141.csv(.meta.json). The inference manifest predates upstream decision 0021, so inference_sha256 is empty.
+- **Concluded:** The list is Carter's to act on (docs/paper-trading.md). Nothing here is an evaluation.
+- **Next:** Each month: a new inference dataset from upstream, the same command with the v141 deployment bundles.
+
+### 2026-11-24 · the candidate on dataset_v1.4.1: screens and the 2005-2020 backtest (decision 55)
+git `eeb268f`
+- **Did:** Screened the v1.4.1 forest alone and in the candidate's mean-rank blend inside the 100k floor against same-size peers (eval_screen_dv100k_v141, eval_blend_mom_roc_peers_dv100k_v141), then ran the candidate's 2005-2020 backtest with the rank floor on the three v1.4.1 bundles (bt_nonloser_mom_roc_top10_cap2_rankfloor_v141, config f2236a06a7cf9526, git eeb268f). Four more backtests in the same chain failed before loading: my chain script named their config files wrongly. No ledger rows; rerun as chain 3.
+- **Got:** Blend screen: lead over same-size peers +0.030 / +0.053 a year (2005-12 / 2013-20), ahead in 13 of 16 years; losers 0.26 / 0.16 against peers' 0.33 / 0.28; precision 0.60 / 0.77 against peers' 0.52 / 0.58. Backtest: TWR 11.76%, MWR 13.65%, final value 932,471 on 192,000, worst drawdown -41.0%, 1,741 buys; SPY 9.58% / 11.62% / 732,110 / -52.9%. Ahead of SPY in 11 of 16 buy years and in 2008 (+11.7) and 2022 (+2.5). The report header carries the dataset sha256 (be2b664c...).
+- **Concluded:** The prediction (TWR within 0.1 of the rebuilt v1.4's 11.90%) missed by 0.04: 11.76 is 0.14 below. Same strategy, same picture: the candidate leads SPY on 2005-2020 and leads same-size peers in both halves. These are the candidate's numbers of record on v1.4.1; the v1.4 numbers are not compared with them again.
+- **Next:** Chain 3: buy and hold and the sell discipline to 2026-08-21, the larger-half and large-cap runs of decision 55 item 3.
+
+### 2026-11-24 · decision 41's arms re-read under decision 50 (decision 56)
+git `eeb268f`
+- **Did:** Paired per-year re-read, no new runs, of the two arms decision 41 closed by a fixed bar: the forest alone with a monthly top 5 and with score weights, each against the forest's top 10 (bt_nonloser_dd30_top10_cap2). All three backtests ran on 2026-11-23 on the rebuilt v1.4 at git 0f08aa1 and a3ad89a.
+- **Got:** Top 5 minus top 10: yearly portfolio return -1.55 points a year (se 0.84), ahead in 5 of 16 years, both halves negative; buys' 3-year lead over same-size peers -1.0 point (se 1.0), 5 of 16. Score weights minus equal weights: -0.03 points a year (se 0.05), 5 of 16; lead over peers 0.00 (se 0.03).
+- **Concluded:** Decision 42 stands under decision 50's rule: the top 5 is worse by about 1.8 standard errors and score weights change nothing measurable. Neither is carried forward.
+- **Next:** The remaining re-read on the list, year_balance against plain ranks, needs both forests retrained on v1.4.1.
+
+### 2026-11-24 · candidate legs refit on dataset_v1.4.1 (decision 55)
+git `eeb268f`
+- **Did:** Carter asked for dataset_v1.4.1 (upstream decision 0021: the v1.4 code rebuilt on the 2026-11-21 Sharadar snapshot, same columns and row count, with a provenance block). Copied the candidate's three leg configs with dataset_version = dataset_v1.4.1 (suffix _v141) and ran them: the forest (seed 23, 112 ranks), momentum and return on capital. Prediction in the configs: fold metrics within noise of the v1.4 rebuild, p@20 within 0.01.
+- **Got:** Forest on v1.4.1: fold-mean PR-AUC 0.5848, p@20 0.750, p@50 0.741, base rate 0.393, 255,042 test rows. The v1.4 forest report on disk (old build, 2026-10-01): PR-AUC 0.5854, p@20 0.7875, p@50 0.754, 256,351 test rows. By year the p@20 differs most in 2008 (0.15 against 0.45) and 2006 (0.40 against 0.60). Bundles: forest_nonloser_dd30_3y_v141_f259c702a6a6, factor_mom_12_2_3y_v141_121349f6e682, factor_roc_greenblatt_3y_v141_4457ca01bcfb.
+- **Concluded:** The ranking quality is unchanged (PR-AUC within 0.001). The p@20 prediction missed: 20 picks a year is 320 picks, and the difference is 12 of them, 6 in 2008. The comparison is against the old build, which no longer exists; the rebuilt v1.4 was not rerun as a forest. Under CLAUDE.md the v1.4.1 numbers are the candidate's record from now on and are not compared with v1.4 numbers.
+- **Next:** The candidate's backtests on the new bundles (2005-2020, to 2026 buy and hold, to 2026 with the sell discipline), the two size-band backtests of decision 55, and the November prediction list.
+
 ### 2026-11-23 · dataset_v1.4 rebuild check (decision 54)
 git `0cf0d52` · [note](notes/2026-09-29-decisions.md)
 - **Did:** Carter: v1.4 was recreated after a migration (manifest created 2026-11-23). Re-scored the candidate forest bundle with the 2026-10-01 eval config on the rebuilt dataset; redid seed 23's paired comparisons against reruns on the rebuild.

@@ -1,0 +1,14 @@
+{
+  "name": "forest_nonloser_dd30_3y_v141__blend_mom_roc_peers_dv100k_v141",
+  "promoted_utc": "2026-11-24T09:36:16+00:00",
+  "source_report": "reports/forest_nonloser_dd30_3y_v141__blend_mom_roc_peers_dv100k_v141.md",
+  "run_id": "a92b28b25856",
+  "config_hash": "274a7dd5f261c9ba",
+  "git_sha": "eeb268f42ee06caddb332e0eec5322664aa1ccea",
+  "dataset_version": "1.4.1",
+  "config_path": "",
+  "note": "The candidate's mean-rank blend screened inside the 100k floor on dataset_v1.4.1 (decision 55): lead over same-size peers +0.030 / +0.053 a year (2005-12 / 2013-20), ahead in 13 of 16 years; losers 0.26 / 0.16 against peers' 0.33 / 0.28.",
+  "files": [
+    "forest_nonloser_dd30_3y_v141__blend_mom_roc_peers_dv100k_v141.md"
+  ]
+}

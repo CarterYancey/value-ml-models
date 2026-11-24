@@ -1,0 +1,14 @@
+{
+  "name": "bt_nonloser_mom_roc_top10_cap2_rankfloor_largehalf_to2026_v141_6e4886b5b0216c00",
+  "promoted_utc": "2026-11-24T09:36:25+00:00",
+  "source_report": "reports/backtest/bt_nonloser_mom_roc_top10_cap2_rankfloor_largehalf_to2026_v141_6e4886b5b0216c00.md",
+  "run_id": "",
+  "config_hash": "",
+  "git_sha": "",
+  "dataset_version": "",
+  "config_path": "",
+  "note": "The larger-half variant to 2026-08-21 on dataset_v1.4.1, context only (decision 57): final 1,246,400 against the candidate's 1,159,740 and SPY's 1,326,084; TWR 11.76%, MWR 12.74%, drawdown -39.3%. Trails SPY by less than the candidate in four of six years 2021-26, by 0.2 to 1.2 points.",
+  "files": [
+    "bt_nonloser_mom_roc_top10_cap2_rankfloor_largehalf_to2026_v141_6e4886b5b0216c00.md"
+  ]
+}

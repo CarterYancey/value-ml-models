@@ -682,6 +682,45 @@ in [PLAN.md](PLAN.md); check items off (and add new ones) as work proceeds.
       `n_estimators`) at full budget via a follow-up sweep file — no
       harness change needed, just two sweep configs.
 
+### Next, after 2026-11-24 (decisions 55-57)
+
+The dataset of record is `dataset_v1.4.1` (upstream decision 0021).
+Every run row now carries `dataset_sha256`. The candidate's legs,
+screens and backtests were rerun on it; the results are in
+docs/notes/2026-11-24-v141-and-size-band.md and findings.md. The
+November 2026 list was produced from the v1.4.1 deployment bundles.
+
+- [ ] **Carter: merge `claude/results-2026-11-24`** (it includes
+      `claude/results-2026-11-23`, pull request 20, which can then be
+      closed). Also `claude/plain-writing` (GLOSSARY.md and the writing
+      rules in CLAUDE.md), merged into the results branch.
+- [ ] **Carter: the November 2026 list** (docs/paper-trading.md, "Checked
+      end to end (2026-11-24)"): RPRX, KO, EBAY, CHD, SAIC, V, HAS,
+      NDSN, WAB, PSX. What is bought is Carter's.
+- [ ] **Carter: the larger-half filter** (decision 58). Adding
+      `log_marketcap_rank >= 0.5` to the candidate's investability
+      filter earned 0.3 to 0.75 points a year more on three seeds
+      (mean +0.59; the candidate's seed spread 0.42), with a 1.5 to
+      1.9 point shallower drawdown, and ended 6% behind SPY to 2026
+      where the candidate ends 13% behind. Confirm or decline. If
+      confirmed: `bt_..._rankfloor_largehalf_sell20_to2026` and a
+      second `--filter` in the runbook.
+- [ ] Large caps (`log_marketcap_rank >= 0.8`): same money as the
+      candidate, but 4 points fewer losers and a 1.5-point larger lead
+      over same-size peers, both beyond two standard errors (decision
+      57). Not carried forward on money. Worth a look if the goal is
+      ever restated as fewer losers at the same return.
+- [ ] Seven failed runs were logged on 2026-11-24 from two chain-script
+      errors (a wrong config path; a copy that overwrote the `[model]`
+      name): they count as trials in their cells under the ledger's
+      rule. Noted here so the counts are not a mystery.
+- [ ] `year_balance` against plain ranks on the screen, re-read under
+      decision 50 (both forests need refitting on v1.4.1). Low priority.
+- [ ] Upstream (as before): market-state columns per snapshot date and
+      the peer-relative label (docs/notes/2026-11-23-calibration-plan.md,
+      "Upstream request"). Done upstream: patch versions and the
+      provenance block (decision 0021).
+
 ### Next, after the third round of 2026-11-23 (decisions 50-51)
 
 How results are judged (decision 50): picks against same-size peers,
@@ -696,15 +735,17 @@ backtest. A bar set beforehand is a prediction, not a gate.
 - [x] (decision 53: an equivalent, not a replacement) `label_3y_cagr_ge_0` (open, decision 51), if Carter agrees it fits
       the thesis: forest seeds 232 and 1776, paired in the mean-rank blend;
       if the gain holds, a backtest beside the candidate at the same SHA.
-- [ ] Rerun the candidate's to-2026 backtests (`*_rankfloor_to2026`,
+- [x] (done on `dataset_v1.4.1` instead, decision 55) Rerun the candidate's to-2026 backtests (`*_rankfloor_to2026`,
       `*_rankfloor_sell20_to2026`) on the rebuilt v1.4 so that findings'
       table and new runs share a dataset build (decision 54).
-- [ ] Upstream: a content hash of dataset.parquet in the manifest, or a
+- [x] (upstream decision 0021, 2026-11-24: both; downstream logs
+      `dataset_sha256`, decision 55) Upstream: a content hash of dataset.parquet in the manifest, or a
       new version number for any rebuild (decision 54).
 - [ ] Why worst rank selects better and earns less: smaller stocks,
       holding past 3 years, or the 2008 fall (decision 51's hypotheses).
       Low priority.
-- [ ] Re-read earlier arms closed by a fixed bar under decision 50's rule
+- [x] (decision 56: top 5 and score weights re-read, decision 42 stands;
+      `year_balance` left, see the 2026-11-24 section) Re-read earlier arms closed by a fixed bar under decision 50's rule
       (paired, with noise). Candidates: decision 41's top-5 and score
       weights, and `year_balance` against plain ranks on the screen.
 

@@ -1,0 +1,14 @@
+{
+  "name": "bt_nonloser_mom_roc_top10_cap2_rankfloor_sell20_to2026_v141_a7a2718d2cdb14a9",
+  "promoted_utc": "2026-11-24T09:36:20+00:00",
+  "source_report": "reports/backtest/bt_nonloser_mom_roc_top10_cap2_rankfloor_sell20_to2026_v141_a7a2718d2cdb14a9.md",
+  "run_id": "",
+  "config_hash": "",
+  "git_sha": "",
+  "dataset_version": "",
+  "config_path": "",
+  "note": "The candidate's rank sell discipline to 2026-08-21 on dataset_v1.4.1 (decision 55): final 1,294,414, TWR 11.48%, MWR 13.02%, drawdown -41.3%, costs 15,166. Ahead of buy and hold in money, still behind SPY (1,326,084); trailed SPY in every year of 2021-26 but 2022.",
+  "files": [
+    "bt_nonloser_mom_roc_top10_cap2_rankfloor_sell20_to2026_v141_a7a2718d2cdb14a9.md"
+  ]
+}

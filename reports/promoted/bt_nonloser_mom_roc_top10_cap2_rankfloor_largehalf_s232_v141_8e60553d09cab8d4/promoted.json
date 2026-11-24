@@ -1,0 +1,14 @@
+{
+  "name": "bt_nonloser_mom_roc_top10_cap2_rankfloor_largehalf_s232_v141_8e60553d09cab8d4",
+  "promoted_utc": "2026-11-24T09:52:40+00:00",
+  "source_report": "reports/backtest/bt_nonloser_mom_roc_top10_cap2_rankfloor_largehalf_s232_v141_8e60553d09cab8d4.md",
+  "run_id": "",
+  "config_hash": "",
+  "git_sha": "",
+  "dataset_version": "",
+  "config_path": "",
+  "note": "The larger-half variant on seed 232, dataset_v1.4.1, 2005-2020 (decision 58): TWR 12.56% against the candidate's 11.86% on the same seed, drawdown -38.6%; paired yearly +0.76 (se 0.46).",
+  "files": [
+    "bt_nonloser_mom_roc_top10_cap2_rankfloor_largehalf_s232_v141_8e60553d09cab8d4.md"
+  ]
+}

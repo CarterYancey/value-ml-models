@@ -1,0 +1,14 @@
+{
+  "name": "bt_nonloser_mom_roc_top10_cap2_rankfloor_largehalf_s1776_v141_c181c7da704b8c67",
+  "promoted_utc": "2026-11-24T09:52:42+00:00",
+  "source_report": "reports/backtest/bt_nonloser_mom_roc_top10_cap2_rankfloor_largehalf_s1776_v141_c181c7da704b8c67.md",
+  "run_id": "",
+  "config_hash": "",
+  "git_sha": "",
+  "dataset_version": "",
+  "config_path": "",
+  "note": "The larger-half variant on seed 1776, dataset_v1.4.1, 2005-2020 (decision 58): TWR 12.50% against the candidate's 12.18%, drawdown -39.6%; paired yearly +0.34 (se 0.52). The smallest of the three gaps.",
+  "files": [
+    "bt_nonloser_mom_roc_top10_cap2_rankfloor_largehalf_s1776_v141_c181c7da704b8c67.md"
+  ]
+}
