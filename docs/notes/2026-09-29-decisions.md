@@ -2131,3 +2131,52 @@ forest anyway, rather than being swapped in alone now.
 *For the rule:* TWR alone can reward a gain made while the account is
 small. From now on, a money comparison reports TWR, MWR and final value
 together, and a gain shows in MWR as well before it counts.
+
+### 54. dataset_v1.4 was rebuilt on 2026-11-23: what that explains, and what it touches
+
+*Carter (2026-11-24):* v1.4 was lost in a migration and recreated.
+The manifest says `created_utc` 2026-11-23T00:59:31Z, which is after
+every run logged up to 2026-10-01 and before every run of this
+session.
+
+*Checked:* the candidate's forest bundle (`53ceedd93e6d`, trained on
+the old build) was re-scored with the same eval config (hash
+`f7aa5d21017e8b47`, logged 2026-10-01) on the rebuilt dataset.
+- **Rows.** The test row counts differ in every fold, from −34 (2012)
+  to +6 (2005), and base rates move in the fourth decimal.
+- **Screen.** The same-size lead moves from +0.030 / +0.027 to
+  +0.032 / +0.029. Losers move from 0.197 / 0.116 to 0.194 / 0.119.
+- **Code.** The backtest and filter code between the two runs only
+  adds options that are off by default (worst rank, market-cap weights,
+  filter parsing). It is not ruled out by a run, but row counts do not
+  come from it.
+
+*Explained:*
+- **The candidate's backtest.** It moved from 12.15% to 11.90% (1,747
+  to 1,742 buys), decision 51's untraced difference: most likely the
+  rebuild.
+- **The plain-ranks forest of decision 46.** Its screen differed from
+  the bundle (+0.036 / +0.024 against +0.030 / +0.027). Part of that
+  is the rebuild (the bundle re-scored: +0.032 / +0.029). The rest is
+  a forest trained on the new build against one trained on the old.
+
+*Touched this session, and corrected:* seed 23's mean-rank blend and
+cell C screens were the 2026-10-01 reports (old build), paired against
+today's arms. Redone on the rebuild (`reports/rerun_dataset_rebuild/`):
+- worst minus mean rank: +0.0126 a year (was +0.0114), 11 of 16;
+- "came back" alone: +0.0047 (was +0.0064), 7 of 16;
+- "came back" in the blend: +0.0086 (2.0 se, was +0.0075), 12 of 16.
+
+No decision changes. Decisions 51 and 53 rested on backtests, and
+every backtest of this session ran on the rebuild on both sides.
+
+*From now on:*
+- A number logged before 2026-11-23 on v1.4 belongs to the old build.
+  This includes findings.md's candidate table, the 38 earlier backtest
+  configurations and the holdout look.
+- It is compared with a new run only after rerunning it on the rebuild.
+- Before comparing two runs, check that both used the same dataset
+  build.
+- *Upstream request (Carter):* a content hash of `dataset.parquet` in
+  the manifest, or a new version number for a rebuild, so that this is
+  caught by the ledger instead of by a backtest.

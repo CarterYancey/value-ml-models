@@ -121,8 +121,9 @@ floor). Simulated, 35 bps a side, buys and deposits 2005 to
 13. **A screen gain is not a money gain.** Worst rank's buys led peers by
     0.6–1.0 points a year more on three seeds, and its portfolio earned
     0.6–0.7 less (TWR), with a drawdown 4–5 points deeper (decision 51).
-    The same candidate config gives 11.90% on current code against
-    12.15% recorded (untraced): compare backtests at one git SHA.
+    The candidate gives 11.90% against 12.15% recorded because v1.4 was
+    rebuilt on 2026-11-23 (decision 54): numbers from before that date
+    are from the old build; rerun before comparing.
 
 Earlier notes: [notes/](notes/), linked from the decision log.
 

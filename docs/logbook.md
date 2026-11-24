@@ -14,6 +14,13 @@ read** stub; a correction is a new entry that names the old one.
 
 <!-- entries -->
 
+### 2026-11-23 · dataset_v1.4 rebuild check (decision 54)
+git `0cf0d52` · [note](notes/2026-09-29-decisions.md)
+- **Did:** Carter: v1.4 was recreated after a migration (manifest created 2026-11-23). Re-scored the candidate forest bundle with the 2026-10-01 eval config on the rebuilt dataset; redid seed 23's paired comparisons against reruns on the rebuild.
+- **Got:** Test row counts differ in every fold (-34 to +6); same-size lead +0.030/+0.027 -> +0.032/+0.029. Seed 23 redone: worst vs mean +0.0126 (11/16); came-back alone +0.0047 (7/16); came-back blend +0.0086 (2.0 se, 12/16).
+- **Concluded:** The rebuild explains the candidate backtest's 12.15 -> 11.90% and part of decision 46's plain-ranks difference. No decision changes (all of this session's backtests are on the rebuild). Pre-2026-11-23 v1.4 numbers are from the old build.
+- **Next:** Upstream: a content hash in the manifest. Rerun the candidate to 2026 on the rebuild before quoting findings' table next to new runs.
+
 ### 2026-11-23 · came-back label: seeds and backtests (decisions 52-53)
 git `a2ffb07` · [note](notes/2026-11-23-judging-picks.md)
 - **Did:** forest_cagr_ge0b_3y on seeds 232/1776, screened alone and in the mean-rank blend paired against cell C per seed; three backtests of the candidate with the forest leg swapped, against the candidate on the same seeds (identical src).
