@@ -1,21 +1,24 @@
 # Paper trading the candidate
 
-What is carried forward to paper trading, how to produce each month's
-list, and how the record will be read. Decisions 24 (the candidate), 25
-(the floor), 28 to 36 of the
-[decision log](notes/2026-09-29-decisions.md). Evidence:
+This runbook says what is carried forward to paper trading, how to
+produce each month's list, and how the record will be read. The rule
+comes from the [decision log](notes/2026-09-29-decisions.md): decision
+24 is the candidate, decision 25 is the floor, and decisions 28 to 36
+refine them. The evidence is in three notes:
 [backtests to 2023](notes/2026-09-30-backtests.md),
-[the run to 2026](notes/2026-10-01-out-of-sample.md),
+[the run to 2026](notes/2026-10-01-out-of-sample.md) and
 [same-size peers and large caps](notes/2026-10-01-large-caps.md).
+Terms are defined in [GLOSSARY.md](../GLOSSARY.md).
 
 Nothing here is a performance claim. The figures are simulated,
-cost-adjusted and selection-biased (35 backtest configurations on the
-same years); paper trading is the first evidence that will not be.
+cost-adjusted and selection-biased, since 35 backtest configurations
+ran on the same years. Paper trading is the first evidence that will
+not be.
 
 ## What is traded
 
-Two paper portfolios that buy the same ten stocks each month and
-differ only in whether they sell:
+Two paper portfolios buy the same ten stocks each month and differ
+only in whether they sell:
 
 | | buys | sells |
 |---|---|---|
@@ -26,9 +29,10 @@ differ only in whether they sell:
 
 The picks come from three rankings of the same stocks, averaged. Only
 the first is a trained model. The other two are single columns of the
-dataset wrapped as "models" (`rank_factor`: no parameters are learned,
-the score is the column), so that the backtest, `vml-eval` and
-`vml-predict` can treat all three alike and combine them by rank.
+dataset wrapped as "models" of kind `rank_factor`. No parameters are
+learned, and the score is the column. The wrapping lets the backtest,
+`vml-eval` and `vml-predict` treat all three alike and combine them by
+rank.
 
 | leg | config | what it is | what it contributes |
 |---|---|---|---|
@@ -38,17 +42,21 @@ the score is the column), so that the backtest, `vml-eval` and
 
 `vml-predict` given one bundle ranks today's stocks by that model, as
 it always has. Given several, it ranks the stocks on each and writes
-one list ordered by the **mean of the ranks**: that list is the
-blend. So `vml-predict <forest> <momentum> <return-on-capital> ...`
-means "the three bundle directories".
+one list ordered by the **mean of the ranks**. That list is the blend.
+So `vml-predict <forest> <momentum> <return-on-capital> ...` means
+"the three bundle directories".
 
 ## The rule
 
-Each month, on the stocks with `dollar_volume_3m_rank >= 0.2` (the
-least-traded fifth is left out; Carter's choice of floor, decision
-25): rank them on each of the three legs, average the three ranks,
-walk down the list and take the first ten, skipping a stock once two
-of the picks already share its sector. Equal amounts in each.
+Each month, take the stocks with `dollar_volume_3m_rank >= 0.2`. The
+floor leaves out the least-traded fifth and is Carter's choice
+(decision 25). Then:
+
+1. Rank the stocks on each of the three legs.
+2. Average the three ranks.
+3. Walk down the list and take the first ten. Skip a stock once two of
+   the picks already share its sector.
+4. Put equal amounts in each.
 
 ## Once: build the three deployment bundles
 
@@ -65,16 +73,16 @@ uv run vml-train-deploy experiments/factor_roc_greenblatt_3y_v141.toml
 Each prints its bundle directory
 (`experiments/models/<name>_deployment_<run id>`). The forest is
 deterministic for its seed. Refit the forest when a new dataset
-version arrives, and at least once a year: the backtest's forest is
+version arrives, and at least once a year. The backtest's forest is
 refit every year end, on the rows whose three-year outcome is known
 by then.
 
 ## Each month: the list
 
-1. Get the inference dataset from upstream (`make inference`:
-   `data/datasets/inference_<date>/`). Check `manifest.json`: `as_of`
-   is the day you expect and `rows_with_stale_price` is small
-   (data/manual.md §9).
+1. Get the inference dataset from upstream with `make inference`. It
+   lands in `data/datasets/inference_<date>/`. Check in `manifest.json`
+   that `as_of` is the day you expect and that `rows_with_stale_price`
+   is small. Section 9 of data/manual.md explains both fields.
 2. Produce the list:
 
    ```sh
@@ -87,18 +95,19 @@ by then.
    ```
 
    It prints the ten picks and writes the full ranking to
-   `predictions/` with a `pick` column (1 to 10), the sector, and each
-   leg's rank and score. The sidecar `.meta.json` records the bundles,
-   the filter and the rule.
+   `predictions/`. The file has a `pick` column from 1 to 10, the
+   sector, and each leg's rank and score. The sidecar `.meta.json`
+   records the bundles, the filter and the rule.
 3. **Portfolio A:** buy the ten, equal amounts, on the next trading
    day. Keep the CSV: it is the record of what was chosen and why.
 4. **Portfolio B:** buy the same ten. Then, for every stock already
    held, find its row in the full ranking. Sell it if it is not in
-   the file, or if its position (row number divided by the number of
-   rows) is beyond 0.20. In the backtest this sold about 15 holdings
-   a year.
+   the file. Sell it also if its position, the row number divided by
+   the number of rows, is beyond 0.20. In the backtest this sold about
+   15 holdings a year.
 
-5. **What the picks resemble** (optional, for reading the list):
+5. **What the picks resemble.** This step is optional and helps in
+   reading the list:
 
    ```sh
    uv run vml-analogues <the same three bundles> data/datasets/inference_<date> \
@@ -106,60 +115,68 @@ by then.
    ```
 
    For each pick it lists the fifteen historical stocks the models
-   treated most alike (the same forest leaves, the same momentum and
-   return on capital), when that was, and what they went on to do
-   over one and three years. It explains a pick; it does not estimate
-   it: the forest was fitted on those rows (docs/deployment.md).
+   treated most alike: the same forest leaves, the same momentum and
+   return on capital. It says when that was and what they went on to
+   do over one and three years. It explains a pick and does not
+   estimate it, because the forest was fitted on those rows. See
+   docs/deployment.md.
 
-The backtest buys on the first trading day of the month with 35 bps
-a side. Use fractional shares, or an amount per pick well above the
-share prices: with whole shares at 100 a pick the backtest filled
-only 64 to 87 of 120 orders a year after 2020 (it did not change the
-result, but it is a rule nobody chose).
+In the backtest, each buy happens on the first trading day of the
+month and costs 35 bps a side. Use fractional shares, or an amount per
+pick well above the share prices. With whole shares at 100 a pick, the
+backtest filled only 64 to 87 of 120 orders a year after 2020. That
+did not change the result, but it is a rule nobody chose.
 
 ## The dataset of record (2026-11-24)
 
-The three configs above end in `_v141`: they are the October configs
+The three configs above have names that end in `_v141`. They are the October configs
 with `dataset_version = "dataset_v1.4.1"` and nothing else changed
 (decision 55). The October configs without the suffix trained on
 `dataset_v1.4`, a build that was replaced on 2026-11-23 and is no
 longer the dataset of record. When upstream ships a new version or
 patch, copy the three configs again with the new version and refit
-the bundles; never edit a config that has run.
+the bundles. Never edit a config that has run.
 
 ## Checked end to end (2026-11-24): the November 2026 list
 
-The three deployment bundles were refit on `dataset_v1.4.1`
-(1,395,705 labeled rows, effective size 48,281) and `vml-predict` ran
-with the flags above on `inference_2026-11-20` (3,716 rows, 15 with a
-stale price, 2,973 above the floor). The ten picks by mean rank, at
-most two per sector: RPRX, KO, EBAY, CHD, SAIC, V, HAS, NDSN, WAB, PSX.
-The full ranking and its sidecar are
+On 2026-11-24 the three deployment bundles were refit on
+`dataset_v1.4.1`, on 1,395,705 labeled rows with an effective size of
+48,281. Then `vml-predict` ran with the flags above on
+`inference_2026-11-20`. That dataset has 3,716 rows, and 15 of them
+have a stale price. Of the rest, 2,973 pass Carter's floor. The ten
+picks by mean rank, at most two per sector, are RPRX, KO, EBAY, CHD,
+SAIC, V, HAS, NDSN, WAB and PSX. The full ranking is
 `predictions/inference_2026-11-20__multi__forest_nonloser_dd30_3y_v141__factor_mom_12_2_3y_v141__factor_roc_greenblatt_3y_v141.csv`
-and `.csv.meta.json` on the lab branch `claude/lab-2026-11-24`, and
-the list is in the session note
-([2026-11-24](notes/2026-11-24-v141-and-size-band.md), section 7).
-One of the ten (RPRX) was in the August dry run's top 10 and four were
-in its top 50; the August list came from a different quarter's
-snapshots and a forest trained on the old build.
+on the lab branch `claude/lab-2026-11-24`, with its sidecar
+`.csv.meta.json` beside it. The list is also in section 7 of the
+[session note](notes/2026-11-24-v141-and-size-band.md). One of the
+ten, RPRX, was in the August dry run's top 10. Four were in its top
+50. The August list came from a different quarter's snapshots and a
+forest trained on the old build, so most of the turnover is expected.
 
 ## Checked end to end (2026-10-01)
 
-The three deployment bundles were built in the sandbox
-(1,387,763 labeled rows, effective size 47,994) and `vml-predict` was
-run with the flags above on the cross-section the backtest saw on
-2026-08-03 (each stock's latest completed-quarter snapshot; 3,057
-stocks after the floor, the backtest's own count). Nine of its ten
-picks are the backtest's ten for that month (JCI, GOOGL, JNJ, EA, CW,
-RPRX, AAPL, ESE, FTI; CAT where the backtest had PH). The one
+On 2026-10-01 the three deployment bundles were built in the sandbox,
+on 1,387,763 labeled rows with an effective size of 47,994. Then
+`vml-predict` ran with the flags above on the cross-section the
+backtest saw on 2026-08-03. That cross-section is each stock's latest
+completed-quarter snapshot. It held 3,057 stocks after the floor,
+which is the backtest's own count. Nine of its ten picks are the
+backtest's ten for that month: JCI, GOOGL, JNJ, EA, CW, RPRX, AAPL,
+ESE and FTI. The tenth is CAT where the backtest had PH. The one
 difference is the forest: the deployment fit has seen more rows than
-the backtest's year-end refit for 2026. This was a check of the path,
-not a list to trade: a real run needs a real inference dataset, whose
-ranks are taken fresh over that day's stocks.
+the backtest's year-end refit for 2026. This was a check of the path
+and not a list to trade. A real run needs a real inference dataset,
+whose ranks are taken fresh over that day's stocks.
 
 ## What it has shown
 
-Simulated, 35 bps a side, 1,000 a month:
+These figures come from the old v1.4 build, as run on 2026-10-01, and
+are retired context (decision 55). The numbers of record on
+`dataset_v1.4.1` are in findings.md and in section 4 of the
+[session note of 2026-11-24](notes/2026-11-24-v141-and-size-band.md).
+The figures are simulated, with 35 bps a side and deposits of 1,000 a
+month:
 
 | | 2005–2020, a year | 2021 to 2026-08 | whole period | worst drawdown | final value on 260,000 |
 |---|---|---|---|---|---|
@@ -167,60 +184,74 @@ Simulated, 35 bps a side, 1,000 a month:
 | A, buy and hold | 12.7% | 7.3% | 11.3% | −41.4% | 1,193,902 |
 | B, sell discipline | 13.6% | 7.6% | 12.0% | −39.6% | 1,344,630 |
 
-- 2005–2020: ahead of SPY by 3.3 (A) and 4.2 (B) points a year, in
-  both halves (the dollar-floor version was repeated on three forest
-  seeds); per buy, +2.5 points a year over three years, 61% of buys
-  beating SPY, 20% losing money; against stocks of their own size,
-  +4.6 and +5.9 points a year in the two halves.
-- 2021–2026: behind SPY in five of six years (2022: ahead by 3.2
-  points; 2024 to 2026: behind by 9 to 14). The buys of 2021–23
-  trailed SPY by 11 to 17 points a year over three years, were about
-  level with stocks of their own size (−1.6 points a year), and 32%
-  to 41% lost money.
-- The forest on the sealed holdout (2021–23 snapshots): top 20 a year
-  right 0.65 of the time, top 50 0.73, base rate 0.38.
+- On 2005–2020, portfolio A was ahead of SPY by 3.3 points a year and
+  portfolio B by 4.2. Both led in both halves, and the dollar-floor
+  version was repeated on three forest seeds. Per buy, over three
+  years, the picks beat SPY by 2.5 points a year. Of the buys, 61%
+  beat SPY and 20% lost money. Against stocks of their own size the
+  buys led by 4.6 points a year in the first half and 5.9 in the
+  second.
+- In 2021 to 2026 the portfolios were behind SPY in five of six years.
+  In 2022 they were ahead by 3.2 points. From 2024 to 2026 they were
+  behind by 9 to 14 points a year. The buys of 2021–23 trailed SPY by
+  11 to 17 points a year over three years. They were about level with
+  stocks of their own size, at −1.6 points a year. Between 32% and 41%
+  of them lost money.
+- On the sealed holdout, the 2021–23 snapshots, the forest's top 20 a
+  year met the label 0.65 of the time. Its top 50 met it 0.73 of the
+  time, against a base rate of 0.38.
 
 ## The assumption it is traded under, and what would count against it
 
-Carter's working assumption (decision 36): 2021–26 is a bubble led by
-stocks that fail a value investor's test; a value strategy trails
-through it and leads again during and after the correction. The
-support and the limits are in decision 35: on 1999–2004 a stand-in
-for the candidate led by 9 points a year for the buys of 2000–02;
-the years in which that bubble grew are before the data.
+Carter's working assumption (decision 36) is that 2021–26 is a bubble
+led by stocks that fail a value investor's test. On that reading a
+value strategy trails through the bubble and leads again during and
+after the correction. The support and the limits are in decision 35.
+On 1999–2004 a stand-in for the candidate led by 9 points a year for
+the buys of 2000–02. The years in which that bubble grew are before
+the data.
 
 So that the paper record can be read against something written
 beforehand:
 
-- *Expected under the assumption, while the market keeps rising as it
-  has:* trailing SPY by something like the 9 to 14 points a year of
-  2024–26, with the picks' share of losers staying well under the
-  average stock's and their lead over same-size stocks near zero.
-- *Expected in a correction:* ahead of SPY, by more than in 2022
-  (+3.2 points) and towards 2008 (+11.4), and ahead of same-size
-  stocks.
-- *What would count against it:* a fall of 20% or more in SPY through
-  which the portfolios are not ahead of it; or the picks losing money
-  as often as stocks of their own size for a year or more (2021–23:
-  22% of the forest's picks against 34% of their peers).
+- *While the market keeps rising as it has, the assumption expects*
+  the portfolios to trail SPY. The margin should be something like the
+  9 to 14 points a year of 2024–26. The picks' share of losers stays well under the
+  average stock's, and their lead over same-size stocks stays near
+  zero.
+- *In a correction, the assumption expects* the portfolios to be ahead
+  of SPY and ahead of same-size stocks. The margin over SPY should be
+  more than the 3.2 points of 2022 and towards the 11.4 of 2008.
+- *Two things would count against it.* The first is a fall of 20% or
+  more in SPY through which the portfolios are not ahead of it. The
+  second is the picks losing money as often as stocks of their own
+  size for a year or more. In 2021–23, 22% of the forest's picks lost
+  money against 34% of their peers.
 
-Read the record on three things, in this order: the picks against
-stocks of their own size (`vs_peers`: selection), the share of picks
-losing money, and the portfolios against SPY.
+Read the record on three things, in this order:
+
+1. Read the picks against stocks of their own size first. The
+   `vs_peers` table measures selection.
+2. Read the share of picks losing money second.
+3. Read the portfolios against SPY last.
 
 ## Reproduce the evidence
 
 ```sh
-uv run vml-run experiments/forest_nonloser_dd30_3y.toml          # the fold bundle, about 5 min
-uv run vml-run experiments/factor_mom_12_2_3y.toml
-uv run vml-run experiments/factor_roc_greenblatt_3y.toml
+# the record of 2026-11-24 on dataset_v1.4.1 (findings.md): the _v141 configs
+uv run vml-run experiments/forest_nonloser_dd30_3y_v141.toml          # the fold bundle, about 5 min
+uv run vml-run experiments/factor_mom_12_2_3y_v141.toml
+uv run vml-run experiments/factor_roc_greenblatt_3y_v141.toml
 # point `bundles` in the portfolio configs at the three directories, then
-uv run vml-backtest experiments/portfolios/bt_nonloser_mom_roc_top10_cap2_rankfloor_to2026.toml         # A
-uv run vml-backtest experiments/portfolios/bt_nonloser_mom_roc_top10_cap2_rankfloor_sell20_to2026.toml  # B
+uv run vml-backtest experiments/portfolios/bt_nonloser_mom_roc_top10_cap2_rankfloor_to2026_v141.toml         # A
+uv run vml-backtest experiments/portfolios/bt_nonloser_mom_roc_top10_cap2_rankfloor_sell20_to2026_v141.toml  # B
+# the figures above ("What it has shown") came from the configs without _v141, on a build that no longer exists
 ```
 
-Promoted reports: `reports/promoted/` (`forest_nonloser_dd30_3y`,
-`factor_mom_12_2_3y`, `factor_roc_greenblatt_3y`, and the two
-backtests `bt_nonloser_mom_roc_top10_cap2_rankfloor_to2026_*` and
-`..._sell20_to2026_*`). The backtest reports print each year's buys
-against all candidates and against same-size peers.
+The promoted reports are under `reports/promoted/`. They are
+`forest_nonloser_dd30_3y_v141`, the screen
+`forest_nonloser_dd30_3y_v141__blend_mom_roc_peers_dv100k_v141`, and
+the two backtests
+`bt_nonloser_mom_roc_top10_cap2_rankfloor_to2026_v141_*` and
+`..._sell20_to2026_v141_*`. The backtest reports print each year's
+buys against all candidates and against same-size peers.

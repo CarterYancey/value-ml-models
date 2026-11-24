@@ -10,6 +10,8 @@ lists the words to avoid for it. How the code implements a thing is in
 `docs/experiments.md`, `docs/backtesting.md` and `docs/workflow.md`,
 not here. Add a term the first time a document needs it, in the same
 change. The format follows Matt Pocock's `domain-modeling` skill.
+Phrases that the writing check refuses are listed in
+`docs/writing_denylist.toml`, with the day each one was objected to.
 
 ## Data
 
@@ -200,6 +202,26 @@ change. The format follows Matt Pocock's `domain-modeling` skill.
   `vml-predict`. Its scores are a ranking, never an evaluation.
 - **Lab branch** — a `claude/lab-*` branch that holds every config and
   report of a session. Never merged.
+
+## Backtests
+
+- **Final value** — what the portfolio is worth at the end of a
+  backtest, after deposits, costs and sells. It is the first number
+  read for a backtest, with TWR and MWR beside it (decision 53).
+  _Avoid_: money, "in money", "on money".
+- **TWR** — the time-weighted return, a year: the compound growth rate
+  of one unit held from the first day to the last. Deposit timing does
+  not affect it. _Avoid_: CAGR for a portfolio, which is a label's
+  horizon return.
+- **MWR** — the money-weighted return, a year: the internal rate of
+  return of the deposits and the final value.
+- **Worst drawdown** — the largest fall from a peak to a later low in
+  the portfolio's value over the run. _Avoid_: max drawdown, which
+  names the label column `fwd_3y_max_drawdown_from_entry`.
+- **Lead over same-size peers** — the buys' mean excess CAGR minus
+  their same-size peers' mean excess CAGR, by cohort. It measures the
+  selection and nothing else. _Avoid_: alpha, edge, "the selection"
+  used as a number.
 
 ## The project
 

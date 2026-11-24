@@ -207,49 +207,66 @@ invariants below are this repo's equivalents.
   the resulting fit has no test set: `vml-predict` output is a ranking,
   never an evaluation result.
 
-## Writing: one vocabulary, checkable sentences
+## Writing: one vocabulary, and a check that runs
 
 Carter reads these records after weeks away. On 2026-11-24 Carter
-found findings.md and the logbook "almost unreadable". The cause was
-not jargon but compression: dropped subjects and verbs, shorthand in
-parentheses, numbers run together with slashes, and terms that each
-document used in its own way. Two instruments fix this, and both are
-mechanical enough to check.
+found findings.md and the logbook "almost unreadable". The same day,
+with a first set of written rules in place, Carter found the session's
+closing message unreadable in the same way. The cause is not jargon.
+It is sentences without a finite verb, shorthand coined on the spot,
+aphorisms, and clauses hidden in parentheses. A written rule did not
+stop these habits, so the repository checks the text instead.
 
-**The glossary.** [GLOSSARY.md](GLOSSARY.md) is the shared
-vocabulary: one term per concept, with the words to avoid. Use its
-terms exactly, in every doc, note, logbook entry, TODO item, config
-`note` and commit message. A technical term that is in the glossary
-beats a plain paraphrase: write "selection-biased", not "flatters the
-model". When a new concept appears, add its entry to the glossary in
-the same change, and do not define it again inline. Challenge a term
-that conflicts with the glossary rather than using both.
+**The glossary is the vocabulary.** [GLOSSARY.md](GLOSSARY.md) holds
+one term per concept, with the words to avoid. Use its terms exactly,
+in every doc, note, logbook entry, TODO item, config `note` and commit
+message. A glossary term beats a plain paraphrase: "selection-biased"
+is the term, and its _Avoid_ list says what not to write. When a new
+concept appears, add its entry to the glossary in the same change.
 
-**Sentence rules**, from ASD-STE100 (Simplified Technical English),
-structural rules only. Each can be checked by pointing at a word or a
-punctuation mark.
+**The check runs itself.** `vml-writing <files>` applies the rules
+below and exits 1 on an error. Its code is src/harness/writing.py. It
+runs on every reply through the `Stop` hook and on every edit to a
+prose file through the `PostToolUse` hook in `.claude/settings.json`.
+`vml-logbook add` and `vml-promote --note` refuse text that fails it.
+Test a draft with `vml-writing --text`. The checks are these:
 
-- Keep the subject, the verb and the article in every sentence. No
-  fragments after a colon and no shorthand in parentheses:
-  "Carter reads this as a bubble", not "(Carter's reading)".
-- Active voice. Say who did what.
-- Record a person's view in their own terms, not in a mechanism you
-  substituted for it. Carter's view of 2021–26 is "a bubble that
-  deflates", not "the index's largest members stop leading". The
-  second is your explanation of the first, and the two are not the
-  same claim.
-- At most 25 words in a sentence. One idea per sentence.
-- No semicolons. Split the sentence instead.
-- No noun stacks of four or more words.
-- Numbers: one per sentence, or a table. Never
-  "+0.046 / +0.059 / −0.016 for 2005–12 / 2013–20 / 2021–23".
+- `fragment` refuses a sentence without a subject and a finite verb.
+  An imperative such as "Run the queue" passes.
+- `long` refuses a sentence of more than 25 words.
+- `semicolon` refuses every semicolon. Split the sentence.
+- `parenthetical` refuses a clause in parentheses. A decision number,
+  a seed, a date or a file name may stand in parentheses.
+- `numbers` refuses three or more measurements in a sentence. Put them
+  in a table. Dates, years, "13 of 16", decision numbers and seeds are
+  not measurements.
+- `denylist` refuses every phrase in `docs/writing_denylist.toml`.
+  Every phrase Carter objects to goes there the same day, with the
+  quote.
+- `aphorism` refuses a sentence that contrasts two nouns after "is
+  ..., not", and one that starts "What is".
+- `pronoun` refuses gendered third-person pronouns. Nobody here has
+  stated pronouns other than they/them.
+- `dash` refuses a dash between clauses.
+- Passive voice and four nouns in a row are warnings and never refused.
+
+The fragment, noun-stack and passive checks need spaCy with
+`en_core_web_sm`. Install it with `uv pip install -e '.[writing]'` and
+then `python -m spacy download en_core_web_sm`. Without it the check
+runs the other rules and says what it skipped.
+
+Two rules the check cannot apply:
+
+- Record a person's view in their own terms, and never in a mechanism
+  you substituted for it. Carter's view of 2021–26 is "a bubble that
+  deflates". "The index's largest members stop leading" was my
+  explanation of that view, and Carter called it inaccurate.
 - Keep every hedge and qualifier. A shorter sentence that turns "may"
   into "is" states a different claim.
-- A sequence of three or more steps or conditions is a list.
 
 `docs/logbook.md` entries are never edited after the fact, so the old
-style stays there. Everything written from now on follows this
-section.
+style stays there. GLOSSARY.md keeps the format of the
+`domain-modeling` skill, and the hook does not check it.
 
 ## Before writing a conclusion
 

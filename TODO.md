@@ -682,44 +682,53 @@ in [PLAN.md](PLAN.md); check items off (and add new ones) as work proceeds.
       `n_estimators`) at full budget via a follow-up sweep file — no
       harness change needed, just two sweep configs.
 
-### Next, after 2026-11-24 (decisions 55-57)
+### Next, after 2026-11-24 (decisions 55-58)
 
 The dataset of record is `dataset_v1.4.1` (upstream decision 0021).
 Every run row now carries `dataset_sha256`. The candidate's legs,
-screens and backtests were rerun on it; the results are in
+screens and backtests were rerun on it. The results are in
 docs/notes/2026-11-24-v141-and-size-band.md and findings.md. The
 November 2026 list was produced from the v1.4.1 deployment bundles.
+The writing check of CLAUDE.md "Writing" was added the same day, on
+`claude/writing-check`.
 
-- [ ] **Carter: merge `claude/results-2026-11-24`** (it includes
-      `claude/results-2026-11-23`, pull request 20, which can then be
-      closed). Also `claude/plain-writing` (GLOSSARY.md and the writing
-      rules in CLAUDE.md), merged into the results branch.
-- [ ] **Carter: the November 2026 list** (docs/paper-trading.md, "Checked
-      end to end (2026-11-24)"): RPRX, KO, EBAY, CHD, SAIC, V, HAS,
-      NDSN, WAB, PSX. What is bought is Carter's.
-- [ ] **Carter: the larger-half filter** (decision 58). Adding
+- [ ] **Carter merges `claude/writing-check`.** It includes
+      `claude/results-2026-11-24`, which includes
+      `claude/results-2026-11-23` (pull request 20) and
+      `claude/plain-writing`. Pull request 20 can then be closed.
+- [ ] **Carter decides on the November 2026 list.** It is in docs/paper-trading.md
+      under "Checked end to end (2026-11-24)": RPRX, KO, EBAY, CHD,
+      SAIC, V, HAS, NDSN, WAB and PSX. Carter decides what is bought.
+- [ ] **Carter decides on the larger-half filter (decision 58).** Adding
       `log_marketcap_rank >= 0.5` to the candidate's investability
-      filter earned 0.3 to 0.75 points a year more on three seeds
-      (mean +0.59; the candidate's seed spread 0.42), with a 1.5 to
-      1.9 point shallower drawdown, and ended 6% behind SPY to 2026
-      where the candidate ends 13% behind. Confirm or decline. If
-      confirmed: `bt_..._rankfloor_largehalf_sell20_to2026` and a
-      second `--filter` in the runbook.
-- [ ] Large caps (`log_marketcap_rank >= 0.8`): same money as the
-      candidate, but 4 points fewer losers and a 1.5-point larger lead
-      over same-size peers, both beyond two standard errors (decision
-      57). Not carried forward on money. Worth a look if the goal is
-      ever restated as fewer losers at the same return.
-- [ ] Seven failed runs were logged on 2026-11-24 from two chain-script
-      errors (a wrong config path; a copy that overwrote the `[model]`
-      name): they count as trials in their cells under the ledger's
-      rule. Noted here so the counts are not a mystery.
-- [ ] `year_balance` against plain ranks on the screen, re-read under
-      decision 50 (both forests need refitting on v1.4.1). Low priority.
-- [ ] Upstream (as before): market-state columns per snapshot date and
-      the peer-relative label (docs/notes/2026-11-23-calibration-plan.md,
-      "Upstream request"). Done upstream: patch versions and the
-      provenance block (decision 0021).
+      filter earned more on all three seeds. The gap in TWR was 0.32
+      to 0.75 points a year. Its mean was 0.59 against a candidate
+      seed spread of 0.42. The drawdown was 1.5 to 1.9 points
+      shallower. To 2026 the filter ends 6% behind SPY where the
+      candidate ends 13% behind. Carter confirms or declines. If
+      confirmed, the next steps are the backtest
+      `bt_..._rankfloor_largehalf_sell20_to2026` and a second
+      `--filter` in the runbook.
+- [ ] Large caps (`log_marketcap_rank >= 0.8`) earned the same final
+      value as the candidate. Four points fewer of its buys lost money,
+      and its lead over same-size peers was 1.5 points larger. Both
+      gaps are beyond two standard errors (decision 57). It was not
+      carried forward because the final value did not improve. It is
+      worth a look if the goal is ever restated as fewer losers at the
+      same return.
+- [ ] Seven failed runs were logged on 2026-11-24 from one chain-script
+      error, a copy that overwrote the `[model]` name. An earlier
+      error, a wrong config path, failed four backtests before they
+      reached the ledger. The seven count as trials in their cells
+      under the ledger's rule, and this note says why the counts are
+      higher.
+- [ ] Re-read `year_balance` against plain ranks on the screen under
+      decision 50. Both forests need refitting on v1.4.1. This is low
+      priority.
+- [ ] Upstream requests stand. They are market-state columns per
+      snapshot date and the peer-relative label, listed under "Upstream
+      request" in docs/notes/2026-11-23-calibration-plan.md. Upstream
+      has done patch versions and the provenance block (decision 0021).
 
 ### Next, after the third round of 2026-11-23 (decisions 50-51)
 

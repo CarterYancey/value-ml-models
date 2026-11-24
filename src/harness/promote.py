@@ -468,6 +468,15 @@ def main(argv=None) -> int:
             print(p)
         return 0
 
+    if args.note:
+        from harness import writing
+
+        report = writing.check_text(args.note)
+        if report.errors:
+            raise ConfigError(
+                "--note fails the writing check; rewrite it:\n"
+                + report.format(warnings=False)
+            )
     dest = promote(
         args.target, reports_dir=reports_dir, force=args.force,
         note=args.note, experiments_dir=Path(args.experiments_dir),

@@ -573,6 +573,21 @@ def queue_main() -> None:
     raise SystemExit(_queue_main())
 
 
+def _check_entry_writing(*fields: str) -> None:
+    """Refuse an entry that fails the writing check (CLAUDE.md "Writing").
+
+    Each field is checked as its own paragraph. The error lists the
+    sentences, so the fix is a rewrite of the command line, not a flag."""
+    from harness import writing
+
+    report = writing.check_text("\n\n".join(f for f in fields if f))
+    if report.errors:
+        raise ConfigError(
+            "the entry fails the writing check; rewrite these sentences:\n"
+            + report.format(warnings=False)
+        )
+
+
 def _logbook_main(argv=None) -> int:
     import argparse
 
@@ -603,6 +618,7 @@ def _logbook_main(argv=None) -> int:
         note = Path(args.note) if args.note else None
         if note and not note.exists():
             raise ConfigError(f"note {note} does not exist")
+        _check_entry_writing(args.did, args.got, args.concluded, args.next_step)
         if args.sweep:
             name, facts = sweep_facts(
                 args.sweep, reports_dir=args.reports_dir,
