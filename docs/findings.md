@@ -1,43 +1,53 @@
 # Findings
 
-What is known now, by cell, and what is planned. Kept short on purpose:
-**this file is rewritten, not appended to**, and stays under about 150
-lines.
+This file says what we know now, label by label, and what is planned.
+It is rewritten each time rather than appended to, and it stays under
+about 250 lines.
 
-- What was done, in order: [logbook.md](logbook.md). Read that first.
-- Tables, checks and reasoning: the note a conclusion links to, in
-  [notes/](notes/). Unattended sessions: [agents.md](agents.md).
+- [logbook.md](logbook.md) records what was done, in order. Read it
+  first.
+- Each conclusion below links to a note in [notes/](notes/) that holds
+  the tables, checks and reasoning. [agents.md](agents.md) describes
+  how an unattended session works.
 
-Numbers are walk-forward fold means over test years 2005–2020 (16
-folds, `split_folds.parquet` of the named dataset version),
-**selection-biased** by the trial counts given; none is a result of
-record. Never compared across dataset versions or universes.
+**How to read the numbers.** Unless a line says otherwise, a number is
+a fold mean over the 16 walk-forward folds with test years 2005 to
+2020. The folds are those of `split_folds.parquet` in the named dataset
+version. Each number is the best of the trials counted beside it, so it
+is selection-biased. None is a result of record. Numbers from different
+dataset versions, or from different universes, are never compared.
+
+Terms such as *cell*, *look*, *p@20*, *base rate*, *lead* and
+*same-size peers* are defined once, in [GLOSSARY.md](../GLOSSARY.md).
 
 ## Next session: start here
 
-1. What happened to the candidate after 2023, and why:
-   [out of sample](notes/2026-10-01-out-of-sample.md). What was tried
-   next: [large caps](notes/2026-10-01-large-caps.md). How:
-   [decisions](notes/2026-09-29-decisions.md) 27–35.
-2. What to do next: TODO.md, "Next, from Carter's direction of
-   2026-10-01", and [the research plan](notes/2026-10-01-research-plan.md).
-   The candidate's runbook: [paper-trading.md](paper-trading.md).
-3. One branch carries everything for `Claude`:
-   `claude/results-2026-10-01b` (five code changes, docs, promoted
-   results, the ledger shard). Every config and report is on the lab
-   branch `claude/lab-2026-10-01` (not for merging).
+1. For what happened to the candidate after 2023, and why, read the
+   [out-of-sample note](notes/2026-10-01-out-of-sample.md). For what
+   was tried next, read the [large-caps note](notes/2026-10-01-large-caps.md).
+   Items 27 to 35 of the [decision log](notes/2026-09-29-decisions.md)
+   record how those choices were made.
+2. For what to do next, read TODO.md under "Next, from Carter's
+   direction of 2026-10-01" and the
+   [research plan](notes/2026-10-01-research-plan.md). The candidate's
+   paper-trading runbook is [paper-trading.md](paper-trading.md).
+3. The branch `claude/results-2026-10-01b` carries everything meant for
+   `Claude`: five code changes, the docs, the promoted results and the
+   ledger shard. Every config and report sits on the lab branch
+   `claude/lab-2026-10-01`, which is not for merging.
 
 ## State (2026-10-01)
 
-The goal (Carter): a manageable number of high-precision, low-risk
-selections with upside, judged on what a portfolio of the picks went
-on to do, then on precision.
+Carter's goal is a manageable number of high-precision, low-risk
+selections with upside. They are judged first on what a portfolio of
+the picks went on to do, and second on precision.
 
-**The candidate** (decision 24, unchanged): cell C's forest, 12-month
-momentum and return on capital by mean rank; top 10 a month, at most
-2 per sector, equal weights, `dollar_volume_3m_rank >= 0.2` (Carter's
-floor). Simulated, 35 bps a side, buys and deposits 2005 to
-2026-08-21, the forest refit each year end after 2020:
+**The candidate** (decision 24, unchanged) is the forest trained on
+cell C, combined by mean rank with 12-month momentum and return on
+capital. It buys the top 10 each month, at most 2 per sector, with equal
+weights, inside Carter's floor (`dollar_volume_3m_rank >= 0.2`). The
+backtest charges 35 bps a side. It buys and deposits from 2005 to
+2026-08-21 and refits the forest at each year end after 2020:
 
 | | final value on 260,000 | time-weighted | worst drawdown | 2005–2020 | 2021–2026 |
 |---|---|---|---|---|---|
@@ -45,76 +55,105 @@ floor). Simulated, 35 bps a side, buys and deposits 2005 to
 | **candidate, buy and hold** | 1,193,902 | 11.3% | −41.4% | 12.7% | 7.3% |
 | candidate, rank sell discipline | 1,344,630 | 12.0% | −39.6% | 13.6% | 7.6% |
 
-**It is not shown to beat SPY.** Buy and hold was 37% ahead in money
-at the end of 2020 and is 10% behind in August 2026: −8.6 / +3.2 /
-−2.9 / −12.5 / −14.4 / −12.7 points against SPY in the calendar years
-2021 to 2026. Its buys of 2021–23 trailed SPY by 11 to 17 points a
-year over three years and 32% to 41% lost money (2005–2020: +2.5,
-20%). 35 backtest configurations; the four to 2026 are the fixed
-candidate and its variant, not a selection.
+**The candidate is not shown to beat SPY.** The buy-and-hold version
+was 37% ahead of SPY in money at the end of 2020 and 10% behind in
+August 2026. Its yearly return minus SPY's, by calendar year:
 
-| cell (3y, `dataset_v1.4`) | trials | best | status |
+| 2021 | 2022 | 2023 | 2024 | 2025 | 2026 |
+|---|---|---|---|---|---|
+| −8.6 | +3.2 | −2.9 | −12.5 | −14.4 | −12.7 |
+
+The stocks it bought in 2021 to 2023 trailed SPY by 11 to 17 points a
+year over the following three years, and 32% to 41% of them lost
+money. For the buys of 2005 to 2020 the same two figures were +2.5
+points and 20%. In all, 35 backtest configurations were tried. The
+four runs that reach 2026 are the fixed candidate and its variant, so
+they were not selected on the 2021–26 years.
+
+| cell (3-year horizon, `dataset_v1.4`) | trials | best result | status |
 |---|---|---|---|
-| C, "not a loser": `fwd_3y_cagr >= 0 & fwd_3y_max_drawdown_from_entry < 0.3` | 96 on all rows; 38 inside the 100k floor; 14 inside large caps | forest on 112 ranks: p@20 0.79 (base 0.39); against same-size peers a lead of +0.03 a year, losers 0.20 / 0.12 against 0.33 / 0.26 | **the candidate's forest**; **holdout look 1 of 1**: p@20 0.65, top 50 0.73, base 0.38 |
-| `label_3y_beat_spy` inside large caps | 16 | forest: PR-AUC 0.48 (base 0.45); no lead after 2013 | closed: not learnable with size held fixed |
+| C, "not a loser" (see vocabulary) | 96 on all rows; 38 inside the 100k dollar-volume floor; 14 inside large caps | forest on 112 rank features: p@20 0.79 against a base rate of 0.39. Inside the floor it led same-size peers by 0.03 a year; 20% of its picks lost money for the 2005–12 entries and 12% for 2013–20, against 33% and 26% of the peers | **the candidate's forest**. **Holdout look 1 of 1**: p@20 0.65, top 50 0.73, base rate 0.38 |
+| `label_3y_beat_spy` inside large caps | 16 | forest: PR-AUC 0.48 against a base rate of 0.45; no lead after 2013 | closed: not learnable once size is held fixed |
 | `fwd_3y_excess_cagr > 0 & fwd_3y_max_drawdown_from_entry < 0.3` inside large caps | 10 | p@20 below the base rate | closed |
-| 1y, A, B, whole path, `fwd_3y_cagr >= 0.15` | see notes | | closed earlier |
+| the 1-year labels, cells A and B, the whole-path labels, `fwd_3y_cagr >= 0.15` | see the notes | | closed earlier |
 
 ## Conclusions that stand
 
-1. **The forest predicts "not a loser" on data it was not chosen on,
-   and that is what it is good for.** Holdout (Carter, 2026-10-01,
-   look 1 of 1): top 20 a year right 0.65 of the time, top 50 0.73,
-   base rate 0.38; 28% of the top 20 lost money against 54% of all
-   rows. Net of size too: 22% of its 2021–23 picks lost money against
-   34% of same-size stocks. Decision 29; out-of-sample note.
-2. **Size decides more than any model, and "beats the average stock"
-   is not skill.** The smaller half of the investable stocks trailed
-   SPY by 12, 18 and 33 points a year over three years in 2005–12,
-   2013–20 and 2021–23; the largest 5% by 0, 2.5 and 6.5. More than
-   half of every lead over "all rows" in the earlier notes was the
-   picks being large. **Read a selection against same-size peers**:
-   `vs_peers` in every backtest report, `peer_column` on the screen.
+1. **The forest predicts "not a loser" on data it was never chosen on,
+   and that is what it is good for.** Carter ran the one holdout look
+   in cell C on 2026-10-01. Of the top 20 picks a year, 65% met the
+   label. Of the top 50, 73% did. The base rate was 38%. Among the top
+   20, 28% lost money, against 54% of all rows. The lead survives a
+   size adjustment: 22% of its 2021–23 picks lost money, against 34%
+   of same-size peers. See decision 29 and the out-of-sample note.
+2. **Company size decides more than any model, and "beats the average
+   stock" is not skill.** The table shows the three-year
+   lead over SPY, in points a year, by the year the stocks were bought.
+
+   | bought in | smaller half of investable stocks | largest 5% |
+   |---|---|---|
+   | 2005–12 | −12 | 0 |
+   | 2013–20 | −18 | −2.5 |
+   | 2021–23 | −33 | −6.5 |
+
+   More than half of every lead over all rows in the earlier notes
+   came from the picks being large companies. So every selection is
+   read against same-size peers. Each backtest report has a
+   `vs_peers` table and the screen has a `peer_column`.
 3. **Against same-size stocks the candidate led by 5 to 6 points a
-   year in 2005–2020 and by nothing after.** Its buys' lead over
-   same-month, same-size candidates: +0.046 / +0.059 for 2005–12 /
-   2013–20, −0.016 for 2021–23 (the forest alone +0.023 / +0.027 /
-   +0.006). What momentum and return on capital added to the forest
-   reversed; the lead was already zero for the buys of 2019 and 2020.
-4. **In 2021–26 SPY outran equal-weighted stocks of every size**, its
-   own thirty largest members included (−3.3 points a year): the
-   index was carried by a few very large, volatile companies, which a
-   model of calm ranks in the middle (NVDA about 1,500th of 3,400 on
-   the forest in three Januaries). No equal-weighted selection from
-   this universe kept up. Condition (2) of the thesis, the era.
+   year in 2005–2020 and by nothing after.** The table shows the three-year
+   lead over same-size peers, in points a year, by the year the stocks
+   were bought.
+
+   | bought in | the candidate | the forest alone |
+   |---|---|---|
+   | 2005–12 | +4.6 | +2.3 |
+   | 2013–20 | +5.9 | +2.7 |
+   | 2021–23 | −1.6 | +0.6 |
+
+   What momentum and return on capital added to the forest reversed
+   sign. The lead was already zero for the buys of 2019 and 2020.
+4. **In 2021–26 SPY beat equal-weighted portfolios of stocks of every
+   size**, including its own thirty largest members, which trailed it
+   by 3.3 points a year. A few very large, volatile companies carried
+   the index. A model that favours calm stocks ranks them in the
+   middle. In three Januaries the forest placed NVDA about 1,500th of
+   3,400. No equal-weighted selection from this universe kept up. This
+   is condition (2) of the thesis, the one about the era.
 5. **Among large companies the features rank risk and one quality
-   factor, and nothing else.** Inside the largest fifth, forests on
-   "not a loser" lead same-size peers by 2 points a year; return on
-   capital alone by 3 to 4, the conservative score alone by 3; "beat
-   SPY", as a label or as a regression, is not learned (no lead after
-   2013). The forest separates the worst quintile and nothing above
-   it. Large-caps note.
-6. **The forest's sector habit is in its target, not its inputs.**
-   With `sector` as an input it picks the same utilities and REITs
-   (34% of picks) at the same precision; without the volatility ranks
-   it finds them through cash-flow stability
-   ([features](notes/2026-09-30-features-and-floor.md)). Return on
-   capital as a second ranking is what removes them.
-7. **Selection is by rank within the period, not by confidence** (an
-   honest calibrator is years behind the regime); a shorter horizon,
-   theory-led features, a training-time floor, label thresholds,
-   forest parameters and the seed move little.
-   [blends](notes/2026-09-30-blends-and-calibration.md),
-   [searches](notes/2026-09-29-searches-nonloser.md)
-   A forest on the nine Piotroski signals beats one on their sum
-   (PR-AUC 0.507 against 0.466 in cell C), mostly through "operating
-   cash flow positive"; both are far below the ranks (0.585).
-8. **A rank sell discipline added 0.7 points a year over 21 years**
-   and nothing in 2021–26; it is why that variant ends level with SPY.
-9. **Instruments** ([process issues](notes/process-issues.md)):
-   backtest reports before 2026-10-01 print years that run December
-   to December; the delisting convention understates acquired stocks
-   on the screen (not in the backtest's per-buy reading).
+   factor, and nothing else.** Inside large caps, forests on "not a
+   loser" lead same-size peers by 2 points a year. Return on capital
+   alone leads by 3 to 4 points. The conservative score alone leads by
+   3. Models of "beat SPY", as a label or as a regression target, show
+   no lead after 2013. The forest
+   separates the worst quintile from the rest and nothing above it.
+   See the large-caps note.
+6. **The forest's taste for utilities and REITs comes from its target,
+   not its inputs.** Given `sector` as an input, the forest picks the
+   same utilities and REITs, 34% of its picks, at the same precision.
+   Without the volatility ranks it finds them anyway, through
+   cash-flow stability
+   ([features note](notes/2026-09-30-features-and-floor.md)).
+   Adding return on capital as a second ranking is what removes them.
+7. **Selection is by rank within the period, not by confidence.** An
+   honest calibrator may only use outcomes that were observable at the
+   time, so it runs years behind the regime. These changes moved the
+   result little: a shorter horizon, theory-led features, a
+   training-time liquidity floor, label thresholds, forest parameters
+   and the seed. See the
+   [blends note](notes/2026-09-30-blends-and-calibration.md) and the
+   [searches note](notes/2026-09-29-searches-nonloser.md). One side
+   result: in cell C, a forest on the nine separate Piotroski signals
+   scores a PR-AUC of 0.507 and a forest on their sum 0.466. The gain
+   comes mostly through the "operating cash flow positive" signal.
+   Both are far below the forest on the 112 ranks, which scores 0.585.
+8. **A rank-based sell discipline added 0.7 points a year over 21
+   years** and nothing in 2021–26. It is why that variant ends level
+   with SPY.
+9. **Two known instrument faults** ([process issues](notes/process-issues.md)).
+   Backtest reports dated before 2026-10-01 print "years" that run
+   December to December. The delisting convention understates acquired
+   stocks on the screen, though not in the backtest's per-buy reading.
 
 Earlier work: [backtests to 2023](notes/2026-09-30-backtests.md),
 [pick anatomy](notes/2026-09-29-pick-anatomy.md),
@@ -124,67 +163,80 @@ Earlier work: [backtests to 2023](notes/2026-09-30-backtests.md),
 
 ## The thesis, and the working assumption
 
-A high precision on a modest target is achievable and held out of
-sample. It bought fewer losers and shallower falls; it did not buy the
-index's return in 2021–26, when the index earned more than every size
-of stock.
+The thesis is that high precision on a modest target is achievable,
+and it held out of sample: the candidate bought fewer losers and
+suffered shallower falls. What it did not do is earn the index's
+return in 2021–26, years in which the index beat every size of stock.
 
-**Carter's working assumption (decision 36):** 2021–26 is a bubble
-led by stocks that fail a value investor's test; a value strategy
-trails through it and leads again during and after the correction,
-and it is waited out. *For it:* item 4, and the one precedent in the
-data: on 1999–2004, years nothing here was chosen on, a stand-in for
-the candidate trailed in 1999 and led for the buys of 2000–02 by 9
-points a year, against SPY and same-size stocks alike. *What the
-record cannot show:* the years that bubble grew are before the data
-(Sharadar starts in 1998); the candidate's same-size lead had already
-gone for the buys of 2019–20; 1999 was a run-up in small stocks, now
-the excess is in a few giants inside the index; and whether the buys
-of 2021–23 recover. Decision 35;
-[out of sample](notes/2026-10-01-out-of-sample.md), "The last bubble".
+**Carter's working assumption (decision 36)** is that 2021–26 is a
+bubble led by stocks that fail a value investor's test. On that
+reading a value strategy trails through the bubble, leads again during
+and after the correction, and should be waited out.
+
+Evidence for it: conclusion 4 above, and the one precedent in the
+data. On 1999–2004, years no model here was chosen on, a stand-in for
+the candidate trailed in 1999. For the buys of 2000–02 it then led by
+9 points a year, against SPY and against same-size peers alike.
+
+What the record cannot show: the years in which that earlier bubble
+grew are before the data (Sharadar starts in 1998). The candidate's
+same-size lead had already gone for the buys of 2019–20. The 1999
+run-up was in small stocks, whereas today's excess is in a few giants
+inside the index. And nobody yet knows whether the buys of 2021–23
+recover. See decision 35 and the section "The last bubble" of the
+[out-of-sample note](notes/2026-10-01-out-of-sample.md).
 
 ## Open questions
 
-- Whether the lead comes back when the index's largest members stop
-  leading (Carter's reading). Only paper trading and time can say.
-- Whether information outside prices and statements ranks upside
-  (insider and institutional transactions, market state). Upstream.
+- Is 2021–26 a bubble, and does the candidate lead again when it
+  deflates? Carter's working assumption is that it is one, led by
+  stocks that fail a value investor's test, and that a value strategy
+  trails through it and leads again during and after the correction.
+  Only paper trading and time can answer.
+- Can information outside prices and financial statements rank upside:
+  insider and institutional transactions, the state of the market?
+  Those features would have to be built upstream.
 
 ## Plan
 
-Carter's direction (2026-10-01, decision 36): the bubble reading is
-the working assumption; the candidate goes to paper trading as it is;
-the search continues and widens.
+Carter's direction of 2026-10-01 (decision 36): treat the bubble
+reading as the working assumption, paper-trade the candidate as it is,
+and keep widening the search.
 
-1. Paper trading: [paper-trading.md](paper-trading.md). The path was
-   run end to end (9 of the backtest's 10 picks for August 2026).
-2. Queued, no new code: an over-priced-stock model ("fell 50% from
-   entry") and continuous growth models. Then blends by worst rank,
-   and sessions on calibration and on other model families:
+1. Paper trading follows [paper-trading.md](paper-trading.md). The
+   path has been run end to end once and reproduced 9 of the
+   backtest's 10 picks for August 2026.
+2. Queued, needing no new code: an over-priced-stock model (label
+   "fell 50% from entry") and continuous growth models. After those,
+   blends by worst rank, then sessions on calibration and on other
+   model families. See the
    [research plan](notes/2026-10-01-research-plan.md).
-3. New arms are judged on walk-forward 2005–2020 against same-size
-   peers, both halves, three seeds, the rule before the run; 2021–26
-   is context. With it set aside nothing on disk is untouched by the
-   choices: paper trading is the out-of-sample evidence.
+3. Every new arm is judged on the walk-forward test years 2005–2020,
+   against same-size peers, in both halves, on three seeds. The
+   decision rule is written down before the run. The years 2021–26 are
+   context only. Even so, every number on disk was touched by past
+   choices. Paper trading is the only clean out-of-sample evidence.
 
 ## Sealed holdout record
 
-From `reports/final_evals.csv` (20 looks; the counts are part of every
-holdout number). PR-AUC against the base rate, holdout test year in
-brackets:
+`reports/final_evals.csv` records 20 looks at the sealed holdout so
+far. The look count is part of every holdout number: a cell looked at
+twice is no longer a clean test. Each row gives PR-AUC against the
+base rate, with the holdout test year in brackets.
 
 | cell | looks | what the looks showed |
 |---|---|---|
-| **3y C, "not a loser" (v1.4 [2021–23])** | **1** | **p@20 0.65, top 50 0.73 vs base 0.38; PR-AUC 0.56; picks −0.09 a year against SPY (all rows −0.25)** |
-| 2y cagr_ge_0 (v1.0 [2022], v1.1 [2022]) | 3 + 2 | PR-AUC 0.62–0.68 vs base 0.51 |
-| 1y cagr_ge_0 (v1.1 [2023]) | 3 | PR-AUC 0.59–0.65 vs 0.51 |
-| 1y beat_spy (v1.1 [2023]) | 3 | 0.29–0.31 vs 0.27, barely any skill |
-| 2y beat_spy (v1.0, v1.1 [2022]) | 1 + 2 | technicals 0.20 vs 0.21 (**none**); valuation 0.26 |
-| 5y beat_spy (v1.1 [2019]) | 2 | technicals 0.18 vs 0.17 (**none**); valuation 0.24 |
-| 5y cagr_ge_0 (v1.1 [2019]) | 2 | 0.66–0.68 vs 0.50 |
-| 2y cagr_ge_8 (v1.0) | 1 | p@20 0.35 vs 0.30 |
+| **3y C, "not a loser" (v1.4 [2021–23])** | **1** | **p@20 0.65, top 50 0.73, base rate 0.38; PR-AUC 0.56; picks −0.09 a year against SPY, all rows −0.25** |
+| 2y cagr_ge_0 (v1.0 [2022], v1.1 [2022]) | 3 + 2 | PR-AUC 0.62–0.68 against a base rate of 0.51 |
+| 1y cagr_ge_0 (v1.1 [2023]) | 3 | 0.59–0.65 against 0.51 |
+| 1y beat_spy (v1.1 [2023]) | 3 | 0.29–0.31 against 0.27: barely any skill |
+| 2y beat_spy (v1.0, v1.1 [2022]) | 1 + 2 | technicals 0.20 against 0.21 (**no skill**); valuation 0.26 |
+| 5y beat_spy (v1.1 [2019]) | 2 | technicals 0.18 against 0.17 (**no skill**); valuation 0.24 |
+| 5y cagr_ge_0 (v1.1 [2019]) | 2 | 0.66–0.68 against 0.50 |
+| 2y cagr_ge_8 (v1.0) | 1 | p@20 0.35 against 0.30 |
 
-A look inside a universe consumes the label's cell. The look in cell
-C has no baselines on the holdout rows (a baseline there is a further
-read, and Carter's). Process rules: CLAUDE.md; incidents:
+A look inside a universe uses up the whole label's cell. The one look
+in cell C has no baselines computed on the holdout rows. Computing one
+would be a second look, and that look is Carter's to take. Process
+rules are in CLAUDE.md. Incidents are in
 [notes/process-issues.md](notes/process-issues.md).
