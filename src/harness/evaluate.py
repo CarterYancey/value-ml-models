@@ -234,6 +234,7 @@ def evaluate_bundle(
         # name); the manifest's own dataset_version field is a separate
         # build-identity string ("X.Y") and is not expected to match it.
         dataset = Dataset(Path(data_root) / train_config.dataset_version)
+        run_log.base_row["dataset_sha256"] = dataset.data_sha256
         declared = {
             c
             for group in ("features", "ranks", "sector_ranks")

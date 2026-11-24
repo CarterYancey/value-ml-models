@@ -189,6 +189,10 @@ def write_report(
     lines.append("")
     lines.append(f"- run id: `{run_id}`")
     lines.append(f"- dataset version: `{dataset.version}` (pinned, immutable)")
+    data_sha = getattr(dataset, "data_sha256", "")
+    if data_sha:
+        lines.append(f"- dataset sha256: `{data_sha}` (dataset.parquet, "
+                     "from the manifest's provenance block)")
     lines.append(f"- config hash: `{config.config_hash}`")
     lines.append(f"- git SHA: `{git_sha}`")
     lines.append(f"- seed: {config.seed}")

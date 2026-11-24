@@ -1,18 +1,18 @@
 {
   "upstream_repo": "https://github.com/CarterYancey/radarash-dataset",
   "upstream_root": "/home/carter/radarash-dataset",
-  "upstream_commit": "ff44f4c1a5f87e2320640a4588c1d917f3bd1cda",
+  "upstream_commit": "54b57fac532c58db9243ca3d72c352df8d620013",
   "upstream_branch": "Claude",
   "upstream_dirty": false,
-  "synced_utc": "2026-09-26T16:06:31+00:00",
+  "synced_utc": "2026-11-24T09:07:50+00:00",
   "files": {
     "manual.md": {
       "upstream_path": "docs/manual.md",
-      "sha256": "676b76aadeba1cfba5a50a4778d648fa9a3b94a02e1d2131c5ad69f0ce66aeeb"
+      "sha256": "3b6fa60c616f64763afe21ae5a061d2d17a3ab3cdb040883acaf9b420f0b588b"
     },
     "dataset.md": {
       "upstream_path": "docs/dataset.md",
-      "sha256": "a7301698e0413bb3a6cc6446446276a130a368786c6bcd74f8c5c4192f3089c4"
+      "sha256": "dd7acde4fb853628eddfac720d2a6f2815d5d531e87ba3d040f985c618de0570"
     },
     "labels.md": {
       "upstream_path": "docs/labels.md",

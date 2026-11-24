@@ -840,7 +840,13 @@ def write_backtest_report(
         "",
         f"- run `{run_id}`, git `{git_sha}`, backtest config "
         f"`{config.config_hash}`",
-        f"- dataset `{dataset.version}`, price panel `{panel.version}` "
+        f"- dataset `{dataset.version}`"
+        + (
+            f" (sha256 `{getattr(dataset, 'data_sha256', '')}`)"
+            if getattr(dataset, "data_sha256", "")
+            else ""
+        )
+        + f", price panel `{panel.version}` "
         f"(benchmark `{panel.benchmark_name}`)",
         f"- buy window: {buy_years[0]}–{buy_years[-1]} (last buy "
         f"{buy_end.date()}), valuation through {valuation_end.date()}; "

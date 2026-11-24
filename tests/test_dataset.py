@@ -102,3 +102,20 @@ def test_fit_arrays_do_not_pin_the_frame(dataset_dir):
         assert not any(np.shares_memory(arr, b) for b in blocks)
     # and the weights are their own array, not a slice of anything
     assert binary.sample_weight.flags.owndata
+
+
+def test_data_sha256_is_empty_without_provenance(dataset_dir):
+    # manifests written before upstream decision 0021 have no block
+    assert Dataset(dataset_dir).data_sha256 == ""
+
+
+def test_data_sha256_reads_the_provenance_block(tmp_path):
+    import json
+
+    root = build_mini_dataset(tmp_path, "dataset_prov")
+    manifest = json.loads((root / "manifest.json").read_text())
+    manifest["provenance"] = {
+        "files": {"dataset.parquet": {"sha256": "ab" * 32, "bytes": 1}}
+    }
+    (root / "manifest.json").write_text(json.dumps(manifest))
+    assert Dataset(root).data_sha256 == "ab" * 32
