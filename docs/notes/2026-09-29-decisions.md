@@ -2410,3 +2410,11 @@ logbook's old entries stay as they are. The branch is
 of 2026-11-24, all from the second chain-script error. The 4 runs that
 failed on the wrong config path left no ledger rows. Decision 58 said
 4 and now says 7.
+
+*Changed the same day, on Carter's instruction:* the two Claude Code
+hooks are removed. Carter does not want a check that runs on every
+turn, because it could affect the agent's coding and reasoning. The
+rules live in the project skill `.claude/skills/writing/SKILL.md`,
+which an agent invokes before writing documentation or a reply and at
+no other time. The skill's procedure runs `vml-writing` on the draft.
+The command gates in `vml-logbook add` and `vml-promote --note` stay.
