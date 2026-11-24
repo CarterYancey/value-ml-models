@@ -1,0 +1,51 @@
+# Candidate carried forward from forest_pick_anatomy_3y
+# (docs/notes/2026-09-29-decisions.md, decision 5;
+# docs/notes/2026-09-29-pick-anatomy.md). A regular config so that
+# vml-run saves the walk-forward fold bundle, which vml-eval re-scores
+# under other selection rules and vml-backtest trades.
+#
+# Cell A, the primary cell, for comparison with cell C in the backtest.
+#
+# Model and columns: set1 of forest_candidate_sets_3y, class weight
+# 1.0, the ranks group (112 columns on dataset_v1.4), seed 23: the
+# configuration of the sweep, one of its three seeds.
+#
+# Expected: the fold rows of the sweep's seed-23 run of this cell,
+# unchanged (p@20 0.519). top_k and score_thresholds differ from the sweep's,
+# so the hash differs and this is one more configuration in the cell.
+name = "forest_cagr10_dd20_3y"
+dataset_version = "dataset_v1.4"
+min_dataset_version = "1.4"
+scheme = "walkforward"
+folds = "all"
+horizon_years = 3
+label = "fwd_3y_cagr >= 0.1 & fwd_3y_max_drawdown_from_entry < 0.2"
+feature_groups = ["ranks"]
+seed = 23
+top_k = [20, 10, 5, 50, 100]
+score_thresholds = [0.4, 0.45, 0.5, 0.55]
+precision_targets = [0.75, 0.9]
+pick_outcomes = [
+  "label_3y_beat_spy",
+  "fwd_3y_excess_cagr",
+  "fwd_3y_cagr",
+  "fwd_3y_max_drawdown_from_entry",
+  "fwd_3y_cagr < 0",
+  "fwd_3y_cagr < -0.1",
+  "fwd_3y_max_drawdown_from_entry >= 0.4",
+  "fwd_3y_cagr >= 0.15",
+  "fwd_3y_cagr >= 0.25",
+  "fwd_3y_excess_cagr >= 0.05",
+]
+
+[model]
+name = "random_forest"
+bootstrap = true
+class_weight = 1.0
+n_jobs = 8
+criterion = "entropy"
+max_depth = 4
+max_features = 0.205191
+max_samples = 0.663781
+min_samples_leaf = 72
+n_estimators = 490

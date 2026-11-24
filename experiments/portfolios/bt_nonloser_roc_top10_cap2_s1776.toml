@@ -1,0 +1,56 @@
+# Decision 21 of docs/notes/2026-09-29-decisions.md (2026-09-30). The
+# template of decision 6 with a cap of 2 per sector (decision 7);
+# every figure is read beside SPY under the same deposits, and beside
+# the per-buy table ("What the buys went on to do").
+#
+# What would make a new candidate, fixed before the run: final value at
+# or above SPY's (732,110), time-weighted CAGR of 10.6% or more (SPY
+# 9.58% plus a point), worst drawdown at least 5 points shallower than
+# SPY's -52.9%, and a positive mean 3-year excess per buy for the buys
+# of 2005-12 and of 2013-20.
+#
+# Cell C's forest (seed 1776) and return on capital by mean rank:
+# the seed check the quality blend never had. Seed 23: final value
+# 694,945, time-weighted 9.65%, money-weighted 11.18%, drawdown -41.2%.
+#
+# Prediction (2026-09-30): time-weighted CAGR within 0.7 points of
+# 9.65%, worst drawdown within 3 points of -41.2%, per-buy mean 3-year
+# excess of +0.005 or more.
+name = "bt_nonloser_roc_top10_cap2_s1776"
+dataset_version = "dataset_v1.4"
+prices_version = "prices_v1.0"
+
+bundles = [
+    "experiments/models/forest_nonloser_dd30_3y_s1776_003a8739d3d5",
+    "experiments/models/factor_roc_greenblatt_3y_da640394cbba",
+]
+
+[signal]
+combine = "mean_rank"
+max_staleness_days = 200
+model_update = "refit"
+label_lag_days = 45
+
+[[investability]]
+column = "dollar_volume_3m"
+op = ">="
+value = 100000.0
+
+[portfolio]
+strategy = "buy_and_hold"
+top_k = 10
+weighting = "equal"
+monthly_cash = 1000.0
+max_per_group = 2
+group_column = "sector"
+
+[execution]
+cost_bps = 35.0
+benchmark_cost_bps = 0.0
+max_quote_age_days = 3
+delist_after_days = 30
+
+[window]
+start = 2005-01-01
+end = 2020-12-31
+valuation_end = 2023-12-29

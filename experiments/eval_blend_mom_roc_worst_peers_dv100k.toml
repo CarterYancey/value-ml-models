@@ -1,0 +1,62 @@
+# Decision 38 of docs/notes/2026-09-29-decisions.md (2026-11-23):
+# research-plan item 3. The candidate's three legs (the cell-C forest,
+# 12-month momentum, return on capital) combined by WORST rank instead
+# of mean rank: a stock scores by its rank share in the leg that likes
+# it least, so the screen's top 10 a quarter are the stocks in every
+# leg's top N. Everything else is eval_blend_mom_roc_peers_dv100k
+# (decision 33): the same bundles, floor, screen and peers, evaluated
+# on forest_nonloser_dd30_3y_53ceedd93e6d (seed 23).
+#
+# The bar (that screen, entries of 2005-12 / 2013-20, mean of yearly
+# fwd_3y_excess_cagr minus same-size peers): +0.022 / +0.053, losers
+# (3y CAGR < 0) 0.275 / 0.153. The forest alone: +0.030 / +0.027,
+# losers 0.197 / 0.116.
+# Rule (decision 38, before the run): worst rank carries forward if
+# its lead is 0.01 or more above mean rank's in both halves (>= 0.032
+# / >= 0.063) with losers no more than 0.03 above mean rank's.
+# Carried forward means: seeds 232 and 1776 for both modes, then one
+# backtest beside the candidate's.
+#
+# Predictions, written before the run (2026-11-23):
+#   1. Lead +0.01 to +0.04 for 2005-12 and +0.03 to +0.06 for
+#      2013-20: the worst rank keeps the stocks all three legs like,
+#      which is roughly the mean rank's top with its extremes cut.
+#   2. Losers between the forest's and the mean rank's in both halves
+#      (a leg that hates a stock is usually the forest hating a
+#      volatile momentum name, and those are what lose).
+#   3. It does not pass the rule.
+#   Rival: the stocks one leg ranks last are the mean-rank blend's
+#   losers; cutting them lowers losers by 0.05 or more while keeping
+#   the momentum and quality tilt, and the lead rises past the bar.
+name = "blend_mom_roc_worst_peers_dv100k"
+blend = [
+  "experiments/models/factor_mom_12_2_3y_97c0f095cf48",
+  "experiments/models/factor_roc_greenblatt_3y_da640394cbba",
+]
+blend_combine = "worst_rank"
+top_k = [20, 50]
+pick_outcomes = [
+  "label_3y_beat_spy",
+  "fwd_3y_excess_cagr",
+  "fwd_3y_cagr",
+  "fwd_3y_max_drawdown_from_entry",
+  "fwd_3y_cagr < 0",
+  "fwd_3y_cagr < -0.1",
+  "fwd_3y_max_drawdown_from_entry >= 0.4",
+  "fwd_3y_cagr >= 0.15",
+  "fwd_3y_cagr >= 0.25",
+  "fwd_3y_excess_cagr >= 0.05",
+]
+
+[pick_screen]
+per = "quarter"
+top_k = 10
+max_per_group = 2
+group_column = "sector"
+peer_column = "log_marketcap_rank"
+peer_bins = 20
+
+[[universe]]
+column = "dollar_volume_3m"
+op = ">="
+value = 100000

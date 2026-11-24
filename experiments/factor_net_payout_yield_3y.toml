@@ -1,0 +1,39 @@
+# A single factor as a fold bundle, to be blended by mean rank with
+# cell C's forest on the portfolio screen (vml-eval, `blend`) and, if
+# the screen says so, in a backtest: net payout yield, the third leg of the conservative formula (low volatility, momentum, payout).
+# Decision 19 of docs/notes/2026-09-29-decisions.md. A rank factor fits
+# nothing; the folds only fix which rows are scored. Run in cell C so
+# that it reads against the label of the forest it is blended with.
+name = "factor_net_payout_yield_3y"
+dataset_version = "dataset_v1.4"
+min_dataset_version = "1.4"
+scheme = "walkforward"
+folds = "all"
+horizon_years = 3
+label = "fwd_3y_cagr >= 0 & fwd_3y_max_drawdown_from_entry < 0.3"
+feature_groups = ["ranks"]
+seed = 7
+top_k = [20, 50]
+pick_outcomes = [
+  "label_3y_beat_spy",
+  "fwd_3y_excess_cagr",
+  "fwd_3y_cagr",
+  "fwd_3y_max_drawdown_from_entry",
+  "fwd_3y_cagr < 0",
+  "fwd_3y_cagr < -0.1",
+  "fwd_3y_max_drawdown_from_entry >= 0.4",
+  "fwd_3y_cagr >= 0.15",
+  "fwd_3y_cagr >= 0.25",
+  "fwd_3y_excess_cagr >= 0.05",
+]
+
+[pick_screen]
+per = "quarter"
+top_k = 10
+max_per_group = 2
+group_column = "sector"
+
+[model]
+name = "rank_factor"
+rank_column = "net_payout_yield_rank"
+higher_is_better = true

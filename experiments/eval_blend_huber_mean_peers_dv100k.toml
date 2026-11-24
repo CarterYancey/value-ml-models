@@ -1,0 +1,48 @@
+# Decision 39 of docs/notes/2026-09-29-decisions.md (2026-11-23): the
+# cell-C forest (forest_nonloser_dd30_3y_53ceedd93e6d, seed 23: which
+# stocks are unlikely to lose) blended by mean_rank with the huber
+# regressor on 3y CAGR (lgbm_regressor_growth_allrows_3y set0, config
+# 7c1507e3f386652f: which stocks have the largest expected return).
+# Same floor, screen and peers as decision 33. One of two
+# configurations (worst rank, mean rank) on these years.
+#
+# Rule (decision 39, before the run): lead over same-size peers
+# >= 0.040 / >= 0.063 for entries of 2005-12 / 2013-20 and losers
+# (3y CAGR < 0) <= 0.227 / <= 0.146.
+#
+# Predictions, written before the run (2026-11-23):
+#   worst rank: lead +0.04 to +0.06 / +0.03 to +0.05; losers 0.20 to
+#     0.28 / 0.13 to 0.22; fails the rule on the 2013-20 lead.
+#   mean rank: lead between the forest's and huber's (+0.04 to +0.06 /
+#     +0.03 to +0.05), losers above worst rank's; fails.
+#   Rival: the intersection drops huber's fragile tail and the
+#   forest's dull calm stocks at once, and worst rank passes.
+name = "blend_huber_mean_peers_dv100k"
+blend = ["experiments/models/lgbm_regressor_growth_allrows_3y__fwd_3y_cagr__set0_233299a55d4c"]
+blend_combine = "mean_rank"
+top_k = [20, 50]
+pick_outcomes = [
+  "label_3y_beat_spy",
+  "fwd_3y_excess_cagr",
+  "fwd_3y_cagr",
+  "fwd_3y_max_drawdown_from_entry",
+  "fwd_3y_cagr < 0",
+  "fwd_3y_cagr < -0.1",
+  "fwd_3y_max_drawdown_from_entry >= 0.4",
+  "fwd_3y_cagr >= 0.15",
+  "fwd_3y_cagr >= 0.25",
+  "fwd_3y_excess_cagr >= 0.05",
+]
+
+[pick_screen]
+per = "quarter"
+top_k = 10
+max_per_group = 2
+group_column = "sector"
+peer_column = "log_marketcap_rank"
+peer_bins = 20
+
+[[universe]]
+column = "dollar_volume_3m"
+op = ">="
+value = 100000
