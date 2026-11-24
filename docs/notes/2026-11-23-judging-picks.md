@@ -150,3 +150,19 @@ Predictions:
 - Does not pass: held.
 - The rival (compounds to more than +0.4) held on TWR and failed on
   money.
+
+## Correction (2026-11-24): the dataset rebuild (decision 54)
+
+In §2 and §3, the seed-23 mean-rank blend and cell C screens were
+reports from 2026-10-01, scored on the v1.4 build from before the
+rebuild. Rerun on the rebuild (`reports/rerun_dataset_rebuild/`):
+
+| paired comparison | as written | on the rebuild |
+|---|---|---|
+| worst minus mean rank, seed 23 | +0.0114 (11/16) | +0.0126 (se 0.0055, 11/16) |
+| "came back" alone minus cell C, seed 23 | +0.0064 (8/16) | +0.0047 (se 0.0051, 7/16) |
+| "came back" blend minus cell C blend, seed 23 | +0.0075 (10/16) | +0.0086 (se 0.0042, 12/16) |
+
+Seeds 232 and 1776 and every backtest ran on the rebuild on both
+sides. Section 2's "untraced" difference in the candidate's TWR (12.15%
+to 11.90%) is the rebuild.

@@ -689,13 +689,18 @@ crash years included; arms carried forward on paired per-year gains
 beyond noise (about 2 se, ahead in 10+ of 16 years), then seeds, then a
 backtest. A bar set beforehand is a prediction, not a gate.
 
-- [ ] Trace why `bt_nonloser_mom_roc_top10_cap2_rankfloor` (config
+- [x] (decision 54: the dataset_v1.4 rebuild of 2026-11-23) Trace why `bt_nonloser_mom_roc_top10_cap2_rankfloor` (config
       `6005c9c0a2869bc9`) gives TWR 11.90% / 1,742 buys at git `cfa451c`
       and 12.15% / 1,747 at `f96037d`. Until then, compare backtests only
       at one git SHA.
 - [x] (decision 53: an equivalent, not a replacement) `label_3y_cagr_ge_0` (open, decision 51), if Carter agrees it fits
       the thesis: forest seeds 232 and 1776, paired in the mean-rank blend;
       if the gain holds, a backtest beside the candidate at the same SHA.
+- [ ] Rerun the candidate's to-2026 backtests (`*_rankfloor_to2026`,
+      `*_rankfloor_sell20_to2026`) on the rebuilt v1.4 so that findings'
+      table and new runs share a dataset build (decision 54).
+- [ ] Upstream: a content hash of dataset.parquet in the manifest, or a
+      new version number for any rebuild (decision 54).
 - [ ] Why worst rank selects better and earns less: smaller stocks,
       holding past 3 years, or the 2008 fall (decision 51's hypotheses).
       Low priority.
