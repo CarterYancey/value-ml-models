@@ -10,10 +10,9 @@ sentence, so the repository can refuse text instead of asking for care.
 
 Three callers use it:
 
-- ``vml-writing`` (this module's ``main``) checks files or text.
-- ``scripts/hooks/writing_hook.py`` runs it from Claude Code's ``Stop``
-  hook on every reply and from ``PostToolUse`` on text written to the
-  docs.
+- ``vml-writing`` (this module's ``main``) checks files or text. The
+  ``writing`` skill in ``.claude/skills/writing/`` runs it on every
+  draft of a document or a reply before the draft is saved or sent.
 - ``vml-logbook add`` and ``vml-promote --note`` refuse an entry or a
   note that fails.
 

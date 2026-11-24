@@ -689,8 +689,8 @@ Every run row now carries `dataset_sha256`. The candidate's legs,
 screens and backtests were rerun on it. The results are in
 docs/notes/2026-11-24-v141-and-size-band.md and findings.md. The
 November 2026 list was produced from the v1.4.1 deployment bundles.
-The writing check of CLAUDE.md "Writing" was added the same day, on
-`claude/writing-check`.
+The `writing` skill and the check `vml-writing` were added the same
+day, on `claude/writing-check` (decision 59).
 
 - [ ] **Carter merges `claude/writing-check`.** It includes
       `claude/results-2026-11-24`, which includes
