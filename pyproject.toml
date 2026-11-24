@@ -19,6 +19,7 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = ["pytest>=8"]
+writing = ["spacy>=3.7"]  # plus: python -m spacy download en_core_web_sm
 
 [project.scripts]
 vml-run = "harness.cli:main"
@@ -32,6 +33,7 @@ vml-promote = "harness.promote:main"
 vml-backtest = "portfolio.backtest:main"
 vml-queue = "harness.lab:queue_main"
 vml-logbook = "harness.lab:logbook_main"
+vml-writing = "harness.writing:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]

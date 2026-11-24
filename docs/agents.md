@@ -281,6 +281,7 @@ In the sandbox, from the repository root:
 ```sh
 git fetch origin && git checkout -b claude/lab-$(date +%F) origin/Claude
 uv sync    # or: uv pip install -e .
+uv pip install -e '.[writing]' && uv run python -m spacy download en_core_web_sm   # the writing check, CLAUDE.md "Writing"
 cat >> /etc/sandbox-persistent.sh <<'EOF'
 export VML_RESULTS="experiments/ledger/$SANDBOX_VM_ID.csv"
 export VML_LEDGER_READ="/run/sandbox/source/experiments/results.csv"

@@ -49,3 +49,21 @@ experiments/eval_blend_mom_roc_large.toml
 experiments/sweeps/baseline_factors_crash_dd50.toml
 experiments/sweeps/forest_crash_dd50.toml
 experiments/sweeps/lgbm_regressor_growth_allrows_3y.toml
+# The session of 2026-11-24 (docs/notes/2026-11-24-v141-and-size-band.md,
+# decisions 55 to 58): the candidate's legs refit on dataset_v1.4.1, its
+# screens and backtests on that version, the size-band variants and the
+# seed check. A promoted backtest or evaluation does not name its config.
+experiments/factor_mom_12_2_3y_v141.toml
+experiments/factor_roc_greenblatt_3y_v141.toml
+experiments/eval_screen_dv100k_v141.toml
+experiments/eval_blend_mom_roc_peers_dv100k_v141.toml
+experiments/portfolios/bt_nonloser_mom_roc_top10_cap2_rankfloor_v141.toml
+experiments/portfolios/bt_nonloser_mom_roc_top10_cap2_rankfloor_to2026_v141.toml
+experiments/portfolios/bt_nonloser_mom_roc_top10_cap2_rankfloor_sell20_to2026_v141.toml
+experiments/portfolios/bt_nonloser_mom_roc_top10_cap2_rankfloor_largehalf_v141.toml
+experiments/portfolios/bt_nonloser_mom_roc_top10_cap2_rankfloor_largecap_v141.toml
+experiments/portfolios/bt_nonloser_mom_roc_top10_cap2_rankfloor_largehalf_to2026_v141.toml
+experiments/portfolios/bt_nonloser_mom_roc_top10_cap2_rankfloor_s232_v141.toml
+experiments/portfolios/bt_nonloser_mom_roc_top10_cap2_rankfloor_s1776_v141.toml
+experiments/portfolios/bt_nonloser_mom_roc_top10_cap2_rankfloor_largehalf_s232_v141.toml
+experiments/portfolios/bt_nonloser_mom_roc_top10_cap2_rankfloor_largehalf_s1776_v141.toml

@@ -14,6 +14,13 @@ read** stub; a correction is a new entry that names the old one.
 
 <!-- entries -->
 
+### 2026-11-24 · writing-check
+git `f56517f` · [note](notes/2026-09-29-decisions.md)
+- **Did:** Turned the writing rules of CLAUDE.md into a program, vml-writing, after Carter quoted seven phrases from the closing message as unreadable. Wired it into a Stop hook and a PostToolUse hook in .claude/settings.json, into vml-logbook add and into vml-promote --note. Seeded docs/writing_denylist.toml with every phrase Carter has quoted. Rewrote findings.md, paper-trading.md, the session note and the TODO section of 2026-11-24 until the check passed.
+- **Got:** The check catches all seven quoted phrases and the earlier quotes of the day. The fragment check needs spaCy and skips itself without it. The ledger holds 7 failed rows of 2026-11-24, where findings.md and decision 58 said 4.
+- **Concluded:** A written rule did not change how I write. A check that refuses the text can. The denylist is the record of Carter's objections, dated, and the hook runs before Carter sees a reply.
+- **Next:** Carter reviews the check and the rewritten documents on claude/writing-check. The Stop hook needs the sandbox session restarted, or /hooks opened once, to load.
+
 ### 2026-11-24 · the larger-half filter on seeds 232 and 1776 (decisions 57, 58)
 git `eeb268f` · [note](notes/2026-11-24-v141-and-size-band.md)
 - **Did:** Refit the candidate forest on seeds 232 and 1776 on dataset_v1.4.1 and backtested the candidate and the larger-half variant (log_marketcap_rank >= 0.5 added) on each, 2005-2020 valued end 2023, paired per seed. A first attempt failed: the seed configs' copy had overwritten the [model] name with the experiment name, and the four backtests then ran with an empty bundle path; 6 failed rows plus 1 from a manual rerun are in the ledger and count as trials.

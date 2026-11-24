@@ -2372,5 +2372,41 @@ paper-trading rule gains the filter (`--filter` twice in
 What this does not change: the candidate's record against SPY in
 2021–26 (the larger half ends 6% behind SPY where the candidate ends
 13% behind, decision 57). Backtest configurations on 2005–2020: 45
-completed (38 on v1.4, 7 on v1.4.1), and 4 failed runs of 2026-11-24
-that count under the ledger's rule.
+completed (38 on v1.4, 7 on v1.4.1), and 7 failed runs of 2026-11-24
+that count under the ledger's rule. Corrected on 2026-11-24 from 4 to
+7: the ledger holds 7 failed rows, see decision 59.
+
+### 59. The writing rules become a check that runs
+
+*What happened (2026-11-24):* after the session's closing message,
+Carter quoted seven phrases from it as unreadable. The first set of
+writing rules was already in CLAUDE.md. Carter wrote that an
+instruction is not a sufficient solution and asked for a better one.
+
+*Decided:* the rules are now a program, `vml-writing`, in
+src/harness/writing.py. It refuses nine things:
+
+1. a sentence without a finite verb,
+2. a sentence over 25 words,
+3. a semicolon,
+4. a clause in parentheses,
+5. three or more measurements in a sentence,
+6. a phrase from `docs/writing_denylist.toml`,
+7. an aphorism,
+8. a gendered pronoun,
+9. a dash between clauses.
+
+A `Stop` hook in `.claude/settings.json` runs it
+on every reply before Carter sees it. A `PostToolUse` hook runs it on
+every edit to a prose file. `vml-logbook add` and `vml-promote --note`
+refuse text that fails it. The denylist holds every phrase Carter has
+quoted, with the date, so a correction never regresses. The documents
+findings.md, paper-trading.md, the session note of 2026-11-24 and the
+TODO section of 2026-11-24 were rewritten until the check passed. The
+logbook's old entries stay as they are. The branch is
+`claude/writing-check`, on top of `claude/results-2026-11-24`.
+
+*Correction to decision 58, same day:* the ledger holds 7 failed rows
+of 2026-11-24, all from the second chain-script error. The 4 runs that
+failed on the wrong config path left no ledger rows. Decision 58 said
+4 and now says 7.

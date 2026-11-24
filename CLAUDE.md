@@ -8,6 +8,8 @@ invariants below are this repo's equivalents.
 
 ## Orientation
 
+- **GLOSSARY.md** — the shared vocabulary, one term per concept. Use
+  its terms; add to it when a concept is new.
 - **README.md** — overview + setup/usage only; extended explanations go
   in `docs/` (experiments, workflow, deployment, backtesting, diagnostics).
 - **PLAN.md** — architecture, design principles, phase roadmap.
@@ -18,7 +20,7 @@ invariants below are this repo's equivalents.
   failures included, before starting the next thing.
 - **docs/findings.md** — what is known now, by cell, the holdout
   record and the plan. Rewritten, not appended to, and kept under
-  about 150 lines: tables and reasoning go in a note under
+  about 250 lines: tables and reasoning go in a note under
   `docs/notes/` that the logbook entry links to.
 - **docs/agents.md** — how an unattended session works (the run queue,
   checkpoints, stop rules, lab branches) and what it needs set up.
@@ -204,6 +206,67 @@ invariants below are this repo's equivalents.
   rule 7 — it reads no split tags, so it is not a holdout violation), but
   the resulting fit has no test set: `vml-predict` output is a ranking,
   never an evaluation result.
+
+## Writing: one vocabulary, and a check that runs
+
+Carter reads these records after weeks away. On 2026-11-24 Carter
+found findings.md and the logbook "almost unreadable". The same day,
+with a first set of written rules in place, Carter found the session's
+closing message unreadable in the same way. The cause is not jargon.
+It is sentences without a finite verb, shorthand coined on the spot,
+aphorisms, and clauses hidden in parentheses. A written rule did not
+stop these habits, so the repository checks the text instead.
+
+**The glossary is the vocabulary.** [GLOSSARY.md](GLOSSARY.md) holds
+one term per concept, with the words to avoid. Use its terms exactly,
+in every doc, note, logbook entry, TODO item, config `note` and commit
+message. A glossary term beats a plain paraphrase: "selection-biased"
+is the term, and its _Avoid_ list says what not to write. When a new
+concept appears, add its entry to the glossary in the same change.
+
+**The check runs itself.** `vml-writing <files>` applies the rules
+below and exits 1 on an error. Its code is src/harness/writing.py. It
+runs on every reply through the `Stop` hook and on every edit to a
+prose file through the `PostToolUse` hook in `.claude/settings.json`.
+`vml-logbook add` and `vml-promote --note` refuse text that fails it.
+Test a draft with `vml-writing --text`. The checks are these:
+
+- `fragment` refuses a sentence without a subject and a finite verb.
+  An imperative such as "Run the queue" passes.
+- `long` refuses a sentence of more than 25 words.
+- `semicolon` refuses every semicolon. Split the sentence.
+- `parenthetical` refuses a clause in parentheses. A decision number,
+  a seed, a date or a file name may stand in parentheses.
+- `numbers` refuses three or more measurements in a sentence. Put them
+  in a table. Dates, years, "13 of 16", decision numbers and seeds are
+  not measurements.
+- `denylist` refuses every phrase in `docs/writing_denylist.toml`.
+  Every phrase Carter objects to goes there the same day, with the
+  quote.
+- `aphorism` refuses a sentence that contrasts two nouns after "is
+  ..., not", and one that starts "What is".
+- `pronoun` refuses gendered third-person pronouns. Nobody here has
+  stated pronouns other than they/them.
+- `dash` refuses a dash between clauses.
+- Passive voice and four nouns in a row are warnings and never refused.
+
+The fragment, noun-stack and passive checks need spaCy with
+`en_core_web_sm`. Install it with `uv pip install -e '.[writing]'` and
+then `python -m spacy download en_core_web_sm`. Without it the check
+runs the other rules and says what it skipped.
+
+Two rules the check cannot apply:
+
+- Record a person's view in their own terms, and never in a mechanism
+  you substituted for it. Carter's view of 2021–26 is "a bubble that
+  deflates". "The index's largest members stop leading" was my
+  explanation of that view, and Carter called it inaccurate.
+- Keep every hedge and qualifier. A shorter sentence that turns "may"
+  into "is" states a different claim.
+
+`docs/logbook.md` entries are never edited after the fact, so the old
+style stays there. GLOSSARY.md keeps the format of the
+`domain-modeling` skill, and the hook does not check it.
 
 ## Before writing a conclusion
 
