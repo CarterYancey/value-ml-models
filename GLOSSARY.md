@@ -75,6 +75,16 @@ change. The format follows Matt Pocock's `domain-modeling` skill.
   on top of the 100k floor: liquid stocks that fell 40% or more from
   their 52-week high. It measures a fall within the last year, where
   the fallen universe measures a state. Introduced in decision 64.
+- **F30, F70, W30, W50, W70** — the same two universes at other depths:
+  F followed by a number is `dist_5y_high <= -0.<number>` and W followed
+  by a number is `dist_52w_high <= -0.<number>`, each on top of the 100k
+  floor. Together with F50 and W40 they form the grid of decision 70.
+- **The 2020 window** — a backtest window with buys from 2006 to 2020
+  and the account valued on 2020-12-31, SPY on the same deposits. The
+  fallen-stock program's comparison window from decision 70, chosen
+  because Carter's working assumption is that the market since 2021 is
+  a bubble. The same buys valued at the end of 2023 are "the 2023
+  window". _Avoid_: pre-bubble window, early window.
 - **Recovery label** — the label `fwd_3y_cagr >= 0.26`: the stock at
   least doubled within 3 years. Used inside the fallen universe.
   _Avoid_: doubler, 2x label.
@@ -217,11 +227,12 @@ change. The format follows Matt Pocock's `domain-modeling` skill.
   `snapshot_date` is before it. The cutoff is recorded in the bundle,
   in the ledger row and in every prediction sidecar (decision 60).
   _Avoid_: "pre-bubble model", "clean model", "untainted model".
-- **Lab branch** — a `claude/lab-*` branch that holds every config and
-  report of a session. Created off `origin/Claude` by `vml-queue
-  new-lab`, never off another lab branch, and never merged. When its
-  results branch has merged it becomes the tag `archive/lab-<date>` and
-  the branch is deleted (decision 68).
+- **Lab branch** — a branch named `claude/lab-<date>` that holds every
+  config and report of one session. `vml-queue new-lab` creates it from
+  `origin/Claude`. It is never created from another lab branch and never
+  merged anywhere. Once the session's results branch has merged,
+  `vml-queue archive-lab` tags the branch's last commit
+  `archive/lab-<date>` and deletes the branch (decision 68).
 
 ## Backtests
 
@@ -231,8 +242,10 @@ change. The format follows Matt Pocock's `domain-modeling` skill.
   _Avoid_: money, "in money", "on money".
 - **TWR** — the time-weighted return, a year: the compound growth rate
   of one unit held from the first day to the last. Deposit timing does
-  not affect it. _Avoid_: CAGR for a portfolio, which is a label's
-  horizon return.
+  not affect it, so a huge return on a tiny early account counts as
+  much as a year on a full one. A TWR is read only beside the final
+  value, the MWR and the per-year table (decision 71). _Avoid_: CAGR
+  for a portfolio, which is a label's horizon return.
 - **MWR** — the money-weighted return, a year: the internal rate of
   return of the deposits and the final value.
 - **Worst drawdown** — the largest fall from a peak to a later low in
