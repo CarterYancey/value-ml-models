@@ -65,6 +65,19 @@ change. The format follows Matt Pocock's `domain-modeling` skill.
   top of a liquidity floor. As a backtest filter it is the proposed
   change to the candidate (decision 58). _Avoid_: large stocks, big
   caps, when this exact band is meant.
+- **The fallen universe (F50)** — the universe `dist_5y_high <= -0.5`
+  on top of the 100k floor: liquid stocks that trade 50% or more below
+  their own 5-year high. A stock with no 5-year price history is
+  outside it. Introduced in decision 61. _Avoid_: drawdown stocks,
+  beaten-down stocks, losers (that word means a pick whose CAGR was
+  below zero).
+- **The fresh-fall universe (W40)** — the universe `dist_52w_high <= -0.4`
+  on top of the 100k floor: liquid stocks that fell 40% or more from
+  their 52-week high. It measures a fall within the last year, where
+  the fallen universe measures a state. Introduced in decision 64.
+- **Recovery label** — the label `fwd_3y_cagr >= 0.26`: the stock at
+  least doubled within 3 years. Used inside the fallen universe.
+  _Avoid_: doubler, 2x label.
 - **Same-size peers** — the rows in the same 5% band of
   `log_marketcap_rank` in the same month as a pick. Every selection
   is read against them, because company size explains most of a lead

@@ -705,12 +705,10 @@ docs/notes/2026-11-25-training-cutoff.md. The code is on
       and the cutoff lists beside the runbook, so that the record shows
       how often the two lists differ. This costs one forest refit a
       month and a minute of compute.
-- [ ] Merge order: `claude/revert-writing-check` (decision 66) includes
-      `claude/deploy-train-end`, `claude/fix-docs`,
-      `claude/writing-check` and `claude/results-2026-11-24`, and
-      undoes the writing check, the writing skill and the doc rewrite.
-      Pull request 21 (`claude/fix-docs`) is superseded and should be
-      closed unmerged.
+- [ ] Merge order: `claude/results-2026-11-25` (decision 67) is the one
+      branch to merge. It includes the training cutoff, the fallen-stock
+      program's records and the withdrawal of the writing check
+      (decision 66), on top of every November branch before it.
 
 ### Next, after 2026-11-24 (decisions 55-58)
 
@@ -722,7 +720,7 @@ November 2026 list was produced from the v1.4.1 deployment bundles.
 The writing check of CLAUDE.md "Writing" was added the same day, on
 `claude/writing-check`, and withdrawn on 2026-11-25 (decision 66).
 
-- [ ] **Carter merges `claude/revert-writing-check`.** It includes
+- [ ] **Carter merges `claude/results-2026-11-25`.** It includes
       `claude/results-2026-11-24`, which includes
       `claude/results-2026-11-23` (pull request 20) and
       `claude/plain-writing`. Pull request 20 can then be closed.

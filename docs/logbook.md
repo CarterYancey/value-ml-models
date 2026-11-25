@@ -14,6 +14,111 @@ read** stub; a correction is a new entry that names the old one.
 
 <!-- entries -->
 
+### 2026-11-25 · lgbm_fallen50_cells_3y
+4 runs · `dataset_v1.4.1` · 2 cells · git `6b0c28c` · [summary](../reports/sweeps/lgbm_fallen50_cells_3y/lgbm_fallen50_cells_3y_summary.md) · [note](notes/2026-11-25-fallen-stocks.md)
+- **Did:** I ran two LightGBM classifiers inside F50 on cell C and on the recovery label, at seed 23 on folds 2006 to 2020.
+- **Got:** On cell C the first set reached a p@20 of 0.527 against a base rate of 0.285. Its screen led same-size peers by 0.050 in the first half and 0.056 in the second, with losers at 0.352. On the recovery label the two sets reached p@20 values of 0.203 and 0.243. Their leads were within 0.011 of zero.
+- **Concluded:** A second model family matches the forest on cell C, within 0.01 of p@20 as predicted, and has no skill on the recovery label. The recovery of a fallen stock is not in these columns for any of the tree models.
+- **Next:** No further model family runs inside F50.
+
+### 2026-11-25 · forest_fallen50_deeper_3y
+6 runs · `dataset_v1.4.1` · 2 cells · git `6b0c28c` · [summary](../reports/sweeps/forest_fallen50_deeper_3y/forest_fallen50_deeper_3y_summary.md) · [note](notes/2026-11-25-fallen-stocks.md)
+- **Did:** I ran three forests inside F50 on the recovery label and on the path-free target fwd_3y_cagr >= 0.1. The deepest forest had depth 8, and the leaves shrank as the depth grew. The seed was 23 and the folds 2006 to 2020.
+- **Got:** On the recovery label the p@20 was 0.217 at depth 4. At depth 8 it was 0.207, against a base rate of 0.156. No depth led same-size peers in the second half. On the path-free target the p@20 reached 0.477 against a base rate of 0.320. Its screen's mean 3-year CAGR was at most 0.008. Its losers were at least 0.423.
+- **Concluded:** Deeper trees do not learn the recovery label, as predicted. The path-free target is learned a little and is learned as calm, and its picks earn nothing. The prediction that its screen's mean CAGR would exceed the cell C forest's 0.037 did not hold.
+- **Next:** The recovery label gets no further run. Decisions 65 and 66 say what the program found.
+
+### 2026-11-25 · the candidate's bundles inside the fresh-fall universes, and the two F50 forests combined (eval_screen_fresh40_peers, eval_screen_fresh40_cfo_half_peers, eval_screen_fallen50_cfo_half_peers, blend_mom_roc_fresh40_cfo_half_peers, blend_fallen50_recovery_worst, blend_fallen50_recovery_mean)
+git `6ce512c` · [note](notes/2026-11-25-fallen-stocks.md)
+- **Did:** I evaluated the candidate's forest without refitting in three universes. They were W40, the archetype of W40 with cash flow positive and the larger half, and F50 with the same two filters. I evaluated the candidate's blend inside the archetype. I combined the two round-1 F50 forests by worst rank and by mean rank.
+- **Got:** Inside W40 the candidate's forest led same-size peers by 0.011 in the first half and 0.054 in the second, with losers at 0.470. Inside the archetype its lead was -0.024 in the first half and 0.021 in the second. Its picks' mean 3-year CAGR there was -0.024 against the peers' -0.023. Inside F50 with the two filters the lead was 0.025 and 0.035, with a mean CAGR of 0.029. The worst-rank combination's lead was 0.005 and 0.033, below the cell C forest alone.
+- **Concluded:** The archetype fails. The candidate's forest has no lead inside it and its picks lose money 45% of the time. The backtest of decision 64.6 does not run. The predicted mean CAGR of 0.08 did not hold because the archetype's base rate came from the crash years. The recovery forest adds nothing to the cell C forest in either combination.
+- **Next:** Decision 65 records the reading and the two backtests for the record.
+
+### 2026-11-25 · forest_fresh40half_cells_3y
+2 runs · `dataset_v1.4.1` · 2 cells · git `6ce512c` · [summary](../reports/sweeps/forest_fresh40half_cells_3y/forest_fresh40half_cells_3y_summary.md) · [note](notes/2026-11-25-fallen-stocks.md)
+- **Did:** I ran the candidate's forest configuration inside W40 with the larger half by market cap, on cell C and on the recovery label. The seed was 23, on all 16 folds.
+- **Got:** In cell C the screen's mean 3-year CAGR was -0.002 against the peers' -0.043. The lead was 0.038 in 2005-12 and 0.043 in 2013-20. Losers were 0.430. On the recovery label the screen precision was 0.136 against the peers' 0.153.
+- **Concluded:** The prediction of a mean CAGR above 0.06 in both halves did not hold, by a wide margin. The larger half's base rate of +0.053 came from the crash years, where almost half of its rows sit. A portfolio that buys every quarter does not earn it.
+- **Next:** Decision 65 records why the base rates misled.
+
+### 2026-11-25 · forest_fresh40_cells_3y
+2 runs · `dataset_v1.4.1` · 2 cells · git `6ce512c` · [summary](../reports/sweeps/forest_fresh40_cells_3y/forest_fresh40_cells_3y_summary.md) · [note](notes/2026-11-25-fallen-stocks.md)
+- **Did:** I ran the candidate's forest configuration inside the fresh-fall universe W40 on cell C and on the recovery label. The seed was 23, on all 16 folds, with bundles saved.
+- **Got:** In cell C the p@20 was 0.431 against a base rate of 0.220. The screen's mean 3-year CAGR was 0.018 against the peers' -0.054. The lead was 0.066 in 2005-12 and 0.079 in 2013-20. Losers were 0.423 against the peers' 0.518. On the recovery label the screen precision was 0.131 against the peers' 0.150.
+- **Concluded:** The lead of 7 points a year in both halves is the largest in the program. It is twice the candidate's forest's lead when evaluated inside W40. In a fresh fall, training inside the population helps. The picks still earn under 2% a year, and the recovery label is not learned. The p@20 came in 0.02 below its predicted range.
+- **Next:** The forest inside W40 with the larger half is read beside it.
+
+### 2026-11-25 · baseline_factors_fallen50_3y_f06
+48 runs · `dataset_v1.4.1` · 4 cells · git `6ce512c` · [summary](../reports/sweeps/baseline_factors_fallen50_3y_f06/baseline_factors_fallen50_3y_f06_summary.md) · [note](notes/2026-11-25-fallen-stocks.md)
+- **Did:** I ran the 12 single-factor bars inside F50 for the four cells on folds 2006 to 2020. That is 48 runs, after the first launch on all folds failed 23 times at fold 2005.
+- **Got:** In cell C the lowest 36-month volatility had a screen precision of 0.443 against the peers' 0.318, and the conservative score 0.402. The F50 forest had 0.430. The volatility bar's lead was 0.007 in the first half and 0.085 in the second. On the recovery label the best bar was the earnings yield against its own 5-year median, with a screen precision of 0.193 against 0.162. The deepest-fallen tenth lost money 85% of the time.
+- **Concluded:** Prediction 1 of decision 61 held in cell C, where the two volatility bars lead on precision. It missed on the recovery label, where return on capital and the Altman score have no skill. The forest beats every bar on mean CAGR and is the only arm that leads in both halves.
+- **Next:** The bars inside W40 follow in round 4.
+
+### 2026-11-25 · forest_fallen50_5y
+2 runs · `dataset_v1.4.1` · 2 cells · git `6ce512c` · [summary](../reports/sweeps/forest_fallen50_5y/forest_fallen50_5y_summary.md) · [note](notes/2026-11-25-fallen-stocks.md)
+- **Did:** I ran the candidate's forest configuration inside F50 on two 5-year cells, doubled and tripled within 5 years. The seed was 23 and the folds 2008 to 2018.
+- **Got:** On the doubled cell the p@20 was 0.336 against a base rate of 0.222. The screen's lead over same-size peers was 0.054 in 2008-12 and 0.000 in 2013-18. On the tripled cell the p@20 was 0.159 against 0.115. Its lead was 0.064 in the first half and -0.023 in the second.
+- **Concluded:** Both p@20 values came in below their predicted ranges, and the lead held in the first half only. The 5-year recovery is not learned any better than the 3-year one. Whatever skill appears sits in the folds that trained on the 2008 crash.
+- **Next:** The 5-year horizon gets no further run in this program.
+
+### 2026-11-25 · forest_fallen70_cells_3y
+2 runs · `dataset_v1.4.1` · 2 cells · git `6ce512c` · [summary](../reports/sweeps/forest_fallen70_cells_3y/forest_fallen70_cells_3y_summary.md) · [note](notes/2026-11-25-fallen-stocks.md)
+- **Did:** I ran the candidate's forest configuration inside F70, stocks 70% or more below their 5-year high, on cell C and on the recovery label. The seed was 23 and the folds 2006 to 2020.
+- **Got:** In cell C the screen's mean 3-year CAGR was -0.005 against the peers' -0.083. The lead was 0.044 in the first half and 0.106 in the second. Losers were 0.433 against the peers' 0.544. On the recovery label the lead was -0.026 in the first half and 0.029 in the second.
+- **Concluded:** The config predicted three things and all three came true. The picks earn less than inside F50. The losers are above 0.35, and the lead over peers is the largest of the three depths. The forest separates more where more is at stake, and the population drags every pick down.
+- **Next:** The depth of the fall is a clean dose-response and needs no further run.
+
+### 2026-11-25 · forest_fallen30_cells_3y
+2 runs · `dataset_v1.4.1` · 2 cells · git `6ce512c` · [summary](../reports/sweeps/forest_fallen30_cells_3y/forest_fallen30_cells_3y_summary.md) · [note](notes/2026-11-25-fallen-stocks.md)
+- **Did:** I ran the candidate's forest configuration inside F30, stocks 30% or more below their 5-year high, on cell C and on the recovery label. The seed was 23 and the folds 2006 to 2020.
+- **Got:** In cell C the screen's mean 3-year CAGR was 0.056 against the peers' 0.017. The lead was 0.040 in the first half and 0.039 in the second. Losers were 0.327 against the peers' 0.419. On the recovery label the lead was 0.030 in the first half and -0.002 in the second.
+- **Concluded:** The prediction held. F30 sits between the all-rows forest and the F50 forest on the mean CAGR and on losers. Its lead over peers is within 0.02 of the F50 forest's. A milder fall means a better population and a smaller lead.
+- **Next:** I read F70 next for the other end of the dose-response.
+
+### 2026-11-25 · forest_fallen50half_cells_3y
+2 runs · `dataset_v1.4.1` · 2 cells · git `6ce512c` · [summary](../reports/sweeps/forest_fallen50half_cells_3y/forest_fallen50half_cells_3y_summary.md) · [note](notes/2026-11-25-fallen-stocks.md)
+- **Did:** I ran the candidate's forest configuration inside F50 with the larger half by market cap, on cell C and on the recovery label. The seed was 23 and the folds 2006 to 2020.
+- **Got:** In cell C the screen's mean 3-year CAGR was 0.035 against the F50 forest's 0.037. The lead over same-size peers was 0.038 in the first half and 0.051 in the second. Losers were 0.393. On the recovery label the lead was 0.020 in both halves.
+- **Concluded:** The prediction of a mean CAGR 0.03 above the F50 forest's did not hold. Its rival held: the larger fallen stocks earn no more than the forest's picks from all of F50. The forest already prefers them.
+- **Next:** I read the depth of the fall next.
+
+### 2026-11-25 · forest_fallen50cfo_cells_3y
+2 runs · `dataset_v1.4.1` · 2 cells · git `6ce512c` · [summary](../reports/sweeps/forest_fallen50cfo_cells_3y/forest_fallen50cfo_cells_3y_summary.md) · [note](notes/2026-11-25-fallen-stocks.md)
+- **Did:** I ran the candidate's forest configuration inside F50 with operating cash flow positive, on cell C and on the recovery label. The seed was 23 and the folds 2006 to 2020.
+- **Got:** In cell C the screen's mean 3-year CAGR was 0.043 against the F50 forest's 0.037. The lead over same-size peers was 0.043 in the first half and 0.057 in the second. Losers were 0.377. On the recovery label the lead was -0.014 in both halves.
+- **Concluded:** The filter changes the forest's picks by under 0.01 a year. The rival of the config's prediction held: the forest already finds the cash-positive stocks inside F50. The recovery label is not learned here either.
+- **Next:** I read the larger half and the depth of the fall next.
+
+### 2026-11-25 · baseline_factors_fresh40_3y
+24 runs · `dataset_v1.4.1` · 2 cells · git `2073c71` · [summary](../reports/sweeps/baseline_factors_fresh40_3y/baseline_factors_fresh40_3y_summary.md) · [note](notes/2026-11-25-fallen-stocks.md)
+- **Did:** I ran the 12 single-factor bars inside the fresh-fall universe W40 for cell C and the recovery label on all 16 folds. That is 24 runs.
+- **Got:** In cell C the lowest 36-month volatility had a screen precision of 0.347 against the peers' 0.264. Its picks' mean 3-year CAGR was -0.047. The earnings yield against its own 5-year median had the largest lead, 0.081 in the first half and 0.058 in the second. On the recovery label no bar's screen precision was more than 0.015 above the peers'.
+- **Concluded:** The prediction held: the volatility bars lead on precision and no bar has skill on the recovery label. Every bar's picks lose money on average inside W40, which the forest trained there does not.
+- **Next:** The fresh-fall forests are read beside these bars.
+
+### 2026-11-25 · lgbm_regressor_fallen50_3y
+6 runs · `dataset_v1.4.1` · 2 cells · git `042e844` · [summary](../reports/sweeps/lgbm_regressor_fallen50_3y/lgbm_regressor_fallen50_3y_summary.md) · [note](notes/2026-11-25-fallen-stocks.md)
+- **Did:** I ran LightGBM regressions inside the fallen universe F50 on the 3-year CAGR and on the 3-year excess CAGR. The objectives were huber, quantile 0.5 and quantile 0.25, at seed 23 on folds 2006 to 2020. The CAGR arms were measured on the recovery label and the excess arms on beat SPY. That is 6 runs.
+- **Got:** On the 3-year CAGR the huber arm's screen led same-size fallen peers by 0.000 and the quantile 0.5 arm by 0.026. The quantile 0.25 arm led by 0.032. Its losers were 0.438 against the peers' 0.476. No CAGR arm's screen precision on the recovery label was more than 0.011 above the peers'. On the excess CAGR the quantile 0.5 arm led by 0.043. The quantile 0.25 arm led by 0.029. The best mean 3-year CAGR of any arm's screen was 0.012.
+- **Concluded:** The regression reframe inside F50 is weaker than the cell C forest, whose lead was 0.054 with losers at 0.388. The quantile arms lead the huber arm, as predicted, and no arm comes near a screen mean CAGR of 0.105. Predicting the size of a fallen stock's return from its own columns adds nothing over predicting that it will not lose.
+- **Next:** The chain of rounds 2 and 4 is running. The regression reframe gets no further run inside F50.
+
+### 2026-11-25 · the candidate's forest and blend evaluated inside the fallen universe F50 (screen_fallen50_peers, blend_mom_roc_fallen50_peers)
+git `1867f1e` · [note](notes/2026-11-25-fallen-stocks.md)
+- **Did:** I evaluated the candidate's forest and its mean-rank blend inside the fallen universe F50 without refitting. The universe sat on the eval config of vml-eval. The screen read the picks against same-size fallen peers over all 16 folds.
+- **Got:** The forest's screen precision inside F50 was 0.478 against the peers' 0.324. Its picks' mean 3-year CAGR was 0.043 against the peers' -0.020. The lead was 0.059 in 2005-12 and 0.066 in 2013-20. Losers were 0.377 against the peers' 0.477. The blend's screen precision was 0.381 against the peers' 0.302. Its picks' mean CAGR was 0.015 against the peers' -0.040, and its losers were 0.458.
+- **Concluded:** The candidate's forest, trained on every row, picks among fallen stocks as well as a forest trained inside F50 does. Its lead over same-size fallen peers is 6 points a year and its losers are 0.38. Prediction 5 of decision 61 said this forest would have fewer losers and a lower mean CAGR than the F50-trained forest. The losers were fewer, and the mean CAGR was higher. The blend is worse than the forest alone inside F50, so momentum and return on capital do not help among fallen stocks.
+- **Next:** Round 2 of decision 62 asks whether the value investor's filters change this.
+
+### 2026-11-25 · forest_fallen50_cells_3y
+12 runs · `dataset_v1.4.1` · 4 cells · git `1867f1e` · [summary](../reports/sweeps/forest_fallen50_cells_3y/forest_fallen50_cells_3y_summary.md) · [note](notes/2026-11-25-fallen-stocks.md)
+- **Did:** I ran the candidate's forest configuration inside the fallen universe F50 on four cells with three feature sets at seed 23. The folds were 2006 to 2020 and the bundles were saved. That is 12 runs, read on the portfolio screen against same-size fallen peers.
+- **Got:** In cell C the forest on the 112 ranks reached a p@20 of 0.533 against a base rate of 0.285. Its screen precision was 0.430 against the peers' 0.331. The picks' mean 3-year CAGR was 0.037 against the peers' -0.017. The lead was 0.047 in 2006-12 and 0.060 in 2013-20. Losers were 0.388 against the peers' 0.464. The theory-led feature set reached a p@20 of 0.440. On the recovery label the forest reached a p@20 of 0.217 against a base rate of 0.156. Its screen precision there was 0.185 against the peers' 0.170. On beat SPY the screen precision was 0.313 against the peers' 0.346. On the big-winner label it was 0.225 against 0.217.
+- **Concluded:** Inside F50 the forest learns calm and nothing else. It finds the fallen stocks that do not lose, with a lead of about 5 points a year over same-size fallen peers. It cannot tell which fallen stocks recover or beat SPY. Its picks earn 3.7% a year, far below the candidate's 10.5% on the same screen, because the fallen population earns less. Prediction 2 of decision 61 missed on both cells. Prediction 3 missed and its rival held: the theory-led set is 0.09 behind the ranks. Prediction 4 held in part, because the lead was 0.047 in the first half and the losers were 0.39.
+- **Next:** I will run round 2 of decision 62 and round 3 of decision 63 as chains. The regression reframe inside F50 is running now.
+
 ### 2026-11-25 · the training cutoff: the candidate's forecasts without the recent years (decision 60)
 git `9f452a5` · [note](notes/2026-11-25-training-cutoff.md)
 - **Did:** Carter asked how the forecasts on inference_2026-11-20 change when the deployable candidate does not train on the past five years. I added vml-train-deploy --train-end, the training cutoff, with tests, and scripts/compare_predictions.py. I refit the candidate's forest on dataset_v1.4.1 with cutoffs 2021-01-01 and 2018-01-01 and ran the runbook's vml-predict with each beside the deployed forest.

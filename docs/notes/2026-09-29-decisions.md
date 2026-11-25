@@ -2473,6 +2473,312 @@ after late 2017 for the trades of 2021–2023, produced the shortfall
 against SPY. So the backtest does not support the taint as the cause
 of the shortfall.
 
+### 61. Session of 2026-11-25: the fallen-stock program, from Carter's value-investing question
+
+*Carter (2026-11-25):* The latest candidate beat SPY from 2005 to 2020,
+but it relies mostly on momentum. Carter is not ready to give up on a
+more principled value-investing model. Carter named one principle. A
+value investor finds stocks whose share price took a large hit that is
+disproportional to the adversity the company faces. The investor sees a
+long history of success and expects the company to come back two to
+three times over the next few years. Carter asked two questions. The
+first asked whether the models take full advantage of a stock's prior
+years. The second asked whether we could find all examples of a deep
+fall and identify which ones are most likely to recover. Carter asked
+me to explore this and related ideas, to try everything that needs no
+upstream change, and to document what does.
+
+*Facts checked first.* I read base rates on the walk-forward test rows
+of 2005 to 2020 inside the 100k floor on `dataset_v1.4.1`. This was a
+reading of label columns on walk-forward rows, with no model and no
+ledger row. I did not read the holdout rows. The reading is in
+docs/notes/2026-11-25-fallen-stocks.md. The main facts are these:
+
+| rows inside the 100k floor | rows | not a loser | doubled in 3 years | beat SPY | lost half or more | mean 3y CAGR |
+|---|---|---|---|---|---|---|
+| all | 200,472 | 0.409 | 0.135 | 0.381 | 0.191 | +0.004 |
+| within 10% of the 5-year high | 39,381 | 0.580 | 0.097 | 0.446 | 0.064 | +0.061 |
+| 50% or more below the 5-year high | 50,887 | 0.295 | 0.178 | 0.342 | 0.302 | −0.046 |
+| the same, cash flow from operations positive | 31,535 | 0.369 | 0.207 | 0.401 | 0.209 | +0.022 |
+| the same, dividends paid in each of the last 5 years or more | 7,990 | 0.419 | 0.237 | 0.423 | 0.170 | +0.059 |
+| the same, the larger half by market cap | 18,453 | 0.399 | 0.206 | 0.410 | 0.182 | +0.037 |
+
+Fallen stocks are a population with more doublers and far more losers
+than the rest. The recovery rate moves strongly with the year of entry.
+Fallen stocks bought in 2009 doubled 35% of the time. Those bought in
+2006, 2007, 2014 or 2017 doubled under 9% of the time. Quality, a
+dividend record and size each raise the recovery rate and cut the
+losers inside the population. The candidate's forest gives the 5-year
+drawdown rank 1.3% of its importance. It gives the 3-year reversal rank
+0.3%. Two volatility ranks take 32%. The models therefore read a
+stock's prior years mostly through its volatility.
+
+*Decided:*
+
+1. **The fallen universe.** `dist_5y_high <= -0.5` together with the
+   100k floor, written F50 here. It holds the liquid stocks that
+   trade 50% or more below their own 5-year high. The GLOSSARY gains
+   the term. A stock without a 5-year history has a NULL in the
+   column and is outside the universe. That fits the principle,
+   because a long history is required.
+2. **Four cells inside F50.** Cell C, not a loser. The recovery label
+   `fwd_3y_cagr >= 0.26`, which is doubling within 3 years. The label
+   `label_3y_beat_spy`. The label `fwd_3y_excess_cagr >= 0.1`, a big
+   winner against SPY. Each cell starts with zero trials.
+3. **The runs, in order.** The single-factor bars inside F50 for the
+   four cells, 12 factors each. The candidate's forest configuration
+   inside F50 on the four cells with three feature sets at seed 23,
+   with bundles saved. The LightGBM regression on 3-year CAGR and on
+   excess CAGR inside F50, with huber and two quantile objectives. The
+   candidate's own forest and blend evaluated inside F50 without
+   refitting, through `vml-eval` with the universe on the eval config.
+4. **I read the arms on the portfolio screen.** The screen takes the
+   top 10 per quarter and at most 2 per sector, with peers the
+   same-size fallen stocks. Then I read absolute outcomes against the
+   candidate blend's screen inside the 100k floor on v1.4.1. That
+   screen has a mean 3-year CAGR of 0.105 and losers at 0.208. Its
+   mean excess CAGR is +0.009. I read both halves separately.
+5. **I wrote the rule before the runs.** An arm goes to seeds 232 and
+   1776 when it meets either of two conditions in both halves:
+   - its screen's mean 3-year CAGR is at or above 0.105
+   - its lead over same-size fallen peers is 0.05 or more, with losers
+     at 0.30 or below
+
+   An arm goes to a backtest when all three seeds meet the same
+   condition. The backtest carries `dist_5y_high <= -0.5` as an
+   investability filter beside the rank floor. I read it by TWR
+   against the candidate's 11.76% on 2005–2020.
+6. **The lab branch** is `claude/lab-2026-11-25b`, created off
+   `claude/deploy-train-end` with the two earlier lab branches merged
+   in for their reports and ledger rows.
+
+*I wrote these predictions before the runs.*
+
+1. The lowest 36-month volatility and the conservative score will be
+   the two best bars on screen precision in cell C inside F50. They
+   were in every universe so far. Return on capital and the Altman score lead on the recovery
+   label.
+2. The forest on the 112 ranks inside F50 reaches these p@20 values:
+
+   | cell | base rate | predicted p@20 |
+   |---|---|---|
+   | C, not a loser | 0.30 | 0.55 to 0.70 |
+   | recovery, doubled in 3 years | 0.18 | 0.30 to 0.40 |
+
+3. The theory-led feature set is the ranks without the technical
+   family plus the 47 unranked columns. Inside F50 it comes within
+   0.03 of the 112 ranks on p@20. On all rows it was 0.12 behind. The
+   rival is that volatility matters as much among fallen stocks as
+   elsewhere, and the gap stays near 0.12.
+4. No arm's screen has a mean 3-year CAGR at or above 0.105 in both
+   halves. The forest's screen inside F50 leads same-size fallen peers
+   by 0.05 or more in both halves. Its losers are between 0.25 and
+   0.35.
+5. The candidate's own forest, evaluated inside F50, picks the calmest
+   fallen stocks. It has fewer losers than a forest trained inside F50
+   and a lower mean CAGR.
+
+*I amended this decision the same day, before any run completed.* The first launch
+failed at fold 2005 with "the universe leaves fold 2005 without train
+rows". The column `dist_5y_high` needs five years of prices, and the
+data start in 1998, so no row before 2002 is inside F50. Fold 2005
+trains on rows up to 2001. I counted the training rows inside F50 per
+fold:
+
+| fold | training rows inside F50 | effective size |
+|---|---|---|
+| 2005 | 0 | 0 |
+| 2006 | 11,936 | 351 |
+| 2007 | 24,811 | 729 |
+| 2008 | 38,203 | 1,126 |
+| 2020 | 155,184 | 4,626 |
+
+7. **I run the F50 sweeps on the 15 folds from 2006 to 2020.** The two
+   halves become 2006–12 and 2013–20. Fold 2006 is thin and its
+   numbers are read with that in mind. The two runs that failed before
+   I stopped the chain are in the ledger and count as trials in cell C
+   inside F50. The `vml-eval` runs of the candidate's bundles keep all
+   16 folds, because the bundles were trained on all rows.
+
+### 62. The fallen-stock program, round 2: the value investor's tests as universes, the depth of the fall, the 5-year horizon
+
+*Written on 2026-11-25 while the round-1 forest sweep was running, and
+before any of its results were read.* The base rates of decision 61
+showed that a few columns known at the snapshot separate the fallen
+stocks that recover from the rest. Round 2 asks whether a forest
+trained inside one of those populations picks better than one trained
+inside all of F50. It also asks how the answer moves with the depth of
+the fall and with the horizon.
+
+*Round 2 rests on these base rates.* They come from the same reading
+as decision 61, the walk-forward test rows of 2005 to 2020 inside the
+100k floor:
+
+| population | rows | not a loser | doubled in 3 years | lost half | mean 3y CAGR |
+|---|---|---|---|---|---|
+| F30, 30% or more below the 5-year high | 80,110 | 0.341 | 0.163 | 0.250 | −0.020 |
+| F50 | 50,887 | 0.295 | 0.178 | 0.302 | −0.046 |
+| F70, 70% or more below | 27,173 | 0.234 | 0.182 | 0.382 | −0.092 |
+| F50, operating cash flow positive | 31,535 | 0.369 | 0.207 | 0.209 | +0.022 |
+| F50, the larger half | 18,453 | 0.399 | 0.206 | 0.182 | +0.037 |
+| F50, dividends paid 5 years running or more | 7,990 | 0.419 | 0.237 | 0.170 | +0.059 |
+
+The dividend payers inside F50 are too few for a model. Its median
+quarter holds 27 rows inside F50 and its thinnest quarter holds one.
+It stays a bar and a possible filter, not a universe.
+
+*Decided:*
+
+1. **Two sub-universes get their own forests**, each on cell C and on
+   the recovery label. The forest is the candidate's configuration on
+   the 112 ranks at seed 23, on folds 2006 to 2020. The first is F50 with
+   `piotroski_cfo_positive == true`. The second is F50 with
+   `log_marketcap_rank >= 0.5`.
+2. **The depth of the fall gets a dose-response.** The same forest runs
+   inside F30 and inside F70, on the same two cells.
+3. **The 5-year horizon gets two cells inside F50**, doubled within
+   5 years, `fwd_5y_cagr >= 0.149`, and tripled, `fwd_5y_cagr >= 0.246`.
+   The 5-year folds that have training rows inside F50 are 2008 to
+   2018, so those are the folds.
+4. **The two round-1 forests inside F50 are combined** by worst rank
+   and by mean rank through `vml-eval`, without refitting. The worst
+   rank of a not-a-loser forest and a recovery forest is one list of
+   stocks that both forests rank high.
+5. **The single-factor bars run again** as
+   `baseline_factors_fallen50_3y_f06`, the copy of the round-1 file
+   with folds 2006 to 2020.
+6. Each config carries its prediction in its header. The rule of
+   decision 61.5 applies to every arm.
+
+*What would change the plan:* a round-1 result far above its base rate
+is read as leakage first. The universe code path was built on 2026-09-30 and has run in nine
+universes. `dist_5y_high` is a feature column of the manifest. So the
+risk is low. If round 1 shows
+the forest with no lead over same-size fallen peers, round 2 still
+runs, because the sub-universes ask a different question.
+
+### 63. The fallen-stock program, round 3: deeper trees, a second model family, and the recovery label learned on every row
+
+*Written on 2026-11-25 after the first nine runs of round 1 were read
+in the ledger and before round 2 ran.* The round-1 forest inside F50
+finds "not a loser" with a lead over same-size fallen peers of about
+5 points a year. It has almost no skill on the recovery label:
+
+| recovery label inside F50, forest on the 112 ranks | value |
+|---|---|
+| p@20 | 0.217 |
+| base rate | 0.156 |
+| screen precision | 0.185 |
+| screen precision of same-size peers | 0.170 |
+
+In cell C the theory-led feature set is 0.09 behind the 112 ranks on
+p@20. Prediction 3 of decision 61 therefore missed, and its rival held.
+
+*Decided:*
+
+1. **Deeper forests on the recovery label inside F50.** The candidate's
+   forest has depth 4. The two new sets have depth 6 and depth 8, with
+   smaller leaves. A recovery may need interactions a depth-4 tree
+   cannot express.
+2. **A modest path-free target inside F50**, `fwd_3y_cagr >= 0.1`, on
+   the same three forests. A value investor holds through the drawdown,
+   and cell C penalises a further 30% fall.
+3. **LightGBM classifiers inside F50** on cell C and on the recovery
+   label, with two parameter sets from `lgbm_candidate_sets_3y`.
+4. **The recovery label learned on every row and evaluated inside F50**,
+   through `universe_scope = "test"`. This asks whether the forest
+   learns recovery better with ten times the training rows.
+5. The predictions are in the config headers. In short, I expect no arm to reach a p@20 of 0.26 on the recovery
+   label. I expect the forest to learn the path-free target as calm,
+   like cell C.
+
+### 64. The fallen-stock program, round 4: the fresh fall, measured against the 52-week high
+
+*Written on 2026-11-25 while the round-1 regression sweep was running.*
+Carter's words were "a stock experiences a deep fall", an event. The
+5-year high measures a state, and a stock 50% below it may have sat
+there for years. `dist_52w_high` measures a fall within the last year.
+It needs one year of prices, so every fold has training rows and no
+fold restriction applies. I read its base rates on the same rows as
+decision 61:
+
+| population inside the 100k floor | rows | not a loser | doubled in 3 years | beat SPY | lost half | mean 3y CAGR |
+|---|---|---|---|---|---|---|
+| W40, 40% or more below the 52-week high | 40,886 | 0.237 | 0.187 | 0.327 | 0.362 | −0.076 |
+| W40, the larger half | 12,951 | 0.367 | 0.251 | 0.441 | 0.193 | +0.053 |
+| W40, operating cash flow positive, the larger half | 10,268 | 0.404 | 0.266 | 0.472 | 0.151 | +0.085 |
+| W40, 3-year return before the last year at or above zero, dividends 5 years running | 2,894 | 0.443 | 0.256 | 0.484 | 0.124 | +0.092 |
+| F50, operating cash flow positive, the larger half | 15,432 | 0.425 | 0.212 | 0.425 | 0.156 | +0.054 |
+
+The third row is the value investor's archetype as the dataset can
+state it. It is a large company that still earns cash and whose price
+fell 40% within the year. One in four of those doubled within 3 years. Two
+in three did not lose money. Its mean return is 8 points a year above
+the whole fallen population's. It still trails SPY by 3 points a year
+on average.
+
+*Decided:*
+
+1. **The fresh-fall universe W40** is `dist_52w_high <= -0.4` with the
+   100k floor. The GLOSSARY gains the term.
+2. **The candidate's forest configuration runs inside W40 and inside
+   W40 with the larger half**, cells C and recovery, all 16 folds.
+3. **The single-factor bars run inside W40** for the same two cells.
+4. **The candidate's own forest is evaluated without refitting** in
+   three universes:
+   - W40
+   - the W40 archetype, with cash flow positive and the larger half
+   - F50 with the same two filters
+ The blend is evaluated inside
+   the W40 archetype. These are reads of the deployed candidate under
+   a tighter investability filter, and need no new model.
+5. The predictions are in the config headers. In short, the forest learns calm in W40 as in F50, and the recovery
+   label stays unlearned. The archetype's screen earns 8% a year or
+   more with losers at 0.30 or below.
+6. **What would go to a backtest.** The candidate's forest inside
+   the archetype may meet the rule of decision 61.5 on the screen. Then
+   the backtest is the candidate's config with the three filters added
+   to its investability, on 2005–2020. I read it against the
+   candidate's 11.76%.
+   That tests a portfolio rule, not a new model, and it is the cheapest
+   path from this program to money.
+
+### 65. Rounds 2 and 4 read: the depth of the fall, the archetype's failure, and two backtests for the record
+
+*I wrote this on 2026-11-25 after the second chain finished, before I read round 3.* The tables are in
+[2026-11-25-fallen-stocks.md](2026-11-25-fallen-stocks.md).
+
+*What the runs showed.* The forest's lead over same-size fallen peers
+grows with the depth of the fall and the picks' own return falls with
+it. Inside F30 the lead is 0.039 and the mean CAGR +0.056. Inside F70
+the lead is 0.077 and the mean CAGR −0.005. The value investor's two filters are cash flow positive and the larger
+half. They change the forest's picks' return by under 0.01 a year. The recovery label is not learned in any
+universe or at any horizon. The fresh-fall forest leads its peers by 7 points a year in both
+halves, the largest lead of the program. Its picks earn under 2% a
+year. The archetype has no lead at all.
+
+*Why the base rates misled.* The archetype's rows earn +0.085 a year
+when every row counts once and −0.028 when every quarter counts once.
+Almost half of its rows come from 2008 and 2009. A portfolio that buys
+every quarter does not get the crash years' return. The attraction of
+the fallen population is mostly the attraction of buying in a crash.
+
+*Decided:*
+
+1. **No arm meets the rule of decision 61.5**, so none goes to seeds
+   as a candidate. The archetype backtest of decision 64.6 does not run.
+2. **Two backtests run for the record, not as a selection.** They answer Carter's question by final value and TWR: what does a
+   portfolio of fallen stocks chosen by the best model here earn? The first trades the
+   cell C forest trained inside F50, alone, inside F50 with Carter's
+   rank floor, 2006–2020. The second trades the cell C forest trained
+   inside F30 the same way inside F30. Each is read against the
+   candidate's 11.76% and against SPY's 9.58%. I predict for each a TWR under SPY's and a drawdown deeper than −50%.
+   I predict buys that lead same-size candidates by 3 points a year or
+   more. These two
+   backtests are the only money reading of the program, and I state
+   their count with every figure from them.
+3. **Round 3 runs as planned**, and its reading closes the program
+   unless it contradicts the pattern above.
 ### 66. The writing check and the writing skill are withdrawn
 
 *What happened (2026-11-25):* Carter wrote that the session of
@@ -2509,3 +2815,35 @@ this branch and should be closed unmerged.
 *Open:* the write-ups of the November experiments still need a form
 Carter can follow. That is a separate task, and this decision does not
 choose the form.
+
+### 67. One results branch for November, and the branch list cut to four
+
+*What happened (2026-11-25):* Carter found the branch list unreadable.
+Twenty branches were on the remote. Every November topic branch was an
+ancestor of one tip, and `claude/lab-2026-11-25b` stood 198 commits
+ahead of `Claude` while carrying the history of every earlier lab branch,
+whose content pull requests 17 to 19 had already merged by copy.
+
+*Decided:*
+
+1. `claude/results-2026-11-25` is the one branch to merge into
+   `Claude`. It is `claude/revert-writing-check` plus the fallen-stock
+   program's records from the lab branch: the logbook entries, decisions
+   61 to 66, the note of 2026-11-25 and the ledger shard. It therefore
+   contains `worst-rank`, `blend-gate`, `calibration`,
+   `results-2026-11-23`, `dataset-provenance`, `results-2026-11-24`,
+   `plain-writing`, `writing-check`, `fix-docs`, `deploy-train-end` and
+   `revert-writing-check`. Those eleven branches are deleted, and pull
+   requests 20 and 21 are closed as superseded.
+2. The lab branches of 2026-09-28, 09-30, 10-01, 11-23, 11-24 and 11-25
+   are deleted. Each is an ancestor of `claude/lab-2026-11-25b`, so no
+   commit is lost. That branch stays as the lab archive of the autumn,
+   and the next session starts a fresh lab branch off `Claude`, as
+   docs/agents.md section 4 says.
+3. The lab branch's docs/paper-trading.md held the two sections of
+   2026-11-24 twice, from repeated merges. The results branch has them
+   once, and the lab branch takes the results branch's copy.
+
+No configs were promoted for the fallen-stock program. Its results are
+negative on the recovery label and a match for the forest on cell C, and
+the records carry them. Promotion is a separate decision.
