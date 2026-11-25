@@ -14,6 +14,13 @@ read** stub; a correction is a new entry that names the old one.
 
 <!-- entries -->
 
+### 2026-11-25 · lgbm_regressor_fallen50_3y
+6 runs · `dataset_v1.4.1` · 2 cells · git `042e844` · [summary](../reports/sweeps/lgbm_regressor_fallen50_3y/lgbm_regressor_fallen50_3y_summary.md) · [note](notes/2026-11-25-fallen-stocks.md)
+- **Did:** I ran LightGBM regressions inside the fallen universe F50 on the 3-year CAGR and on the 3-year excess CAGR. The objectives were huber, quantile 0.5 and quantile 0.25, at seed 23 on folds 2006 to 2020. The CAGR arms were measured on the recovery label and the excess arms on beat SPY. That is 6 runs.
+- **Got:** On the 3-year CAGR the huber arm's screen led same-size fallen peers by 0.000 and the quantile 0.5 arm by 0.026. The quantile 0.25 arm led by 0.032. Its losers were 0.438 against the peers' 0.476. No CAGR arm's screen precision on the recovery label was more than 0.011 above the peers'. On the excess CAGR the quantile 0.5 arm led by 0.043. The quantile 0.25 arm led by 0.029. The best mean 3-year CAGR of any arm's screen was 0.012.
+- **Concluded:** The regression reframe inside F50 is weaker than the cell C forest, whose lead was 0.054 with losers at 0.388. The quantile arms lead the huber arm, as predicted, and no arm comes near a screen mean CAGR of 0.105. Predicting the size of a fallen stock's return from its own columns adds nothing over predicting that it will not lose.
+- **Next:** The chain of rounds 2 and 4 is running. The regression reframe gets no further run inside F50.
+
 ### 2026-11-25 · the candidate's forest and blend evaluated inside the fallen universe F50 (screen_fallen50_peers, blend_mom_roc_fallen50_peers)
 git `1867f1e` · [note](notes/2026-11-25-fallen-stocks.md)
 - **Did:** I evaluated the candidate's forest and its mean-rank blend inside the fallen universe F50 without refitting. The universe sat on the eval config of vml-eval. The screen read the picks against same-size fallen peers over all 16 folds.
