@@ -247,3 +247,23 @@ picks earn 10.5%. The fallen population earns 10 points a year less
 than the stocks near their highs, and no selection inside it closed
 that gap. In cell C the theory-led set was 0.09 behind the ranks on p@20. That
 is the gap seen on all rows, so the rival of prediction 3 held.
+
+### Round 1: the regression reframe inside F50
+
+Sweep `lgbm_regressor_fallen50_3y`, seed 23, folds 2006 to 2020, 6 runs.
+The CAGR arms are measured on the recovery label and the excess arms
+on beat SPY. The screen columns are as above.
+
+| target | objective | p@20 | base rate | screen precision | peers | mean 3y CAGR | peers | lead, first half | lead, second half | losers | peers |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| 3y CAGR | huber | 0.177 | 0.156 | 0.170 | 0.169 | −0.038 | −0.039 | +0.007 | −0.006 | 0.493 | 0.497 |
+| 3y CAGR | quantile 0.5 | 0.200 | 0.156 | 0.177 | 0.166 | −0.008 | −0.034 | +0.026 | +0.026 | 0.468 | 0.488 |
+| 3y CAGR | quantile 0.25 | 0.177 | 0.156 | 0.132 | 0.157 | +0.007 | −0.025 | +0.019 | +0.044 | 0.438 | 0.476 |
+| 3y excess CAGR | huber | 0.353 | 0.315 | 0.345 | 0.343 | −0.022 | −0.033 | +0.017 | +0.008 | 0.477 | 0.493 |
+| 3y excess CAGR | quantile 0.5 | 0.403 | 0.315 | 0.387 | 0.345 | +0.012 | −0.032 | +0.033 | +0.053 | 0.448 | 0.492 |
+| 3y excess CAGR | quantile 0.25 | 0.377 | 0.315 | 0.368 | 0.350 | +0.008 | −0.021 | +0.014 | +0.042 | 0.425 | 0.473 |
+
+The quantile arms lead the huber arm, as predicted. The best lead is
+0.043 and the best mean CAGR is 0.012, both below the cell C forest's.
+Predicting the size of a fallen stock's return adds nothing over
+predicting that it will not lose.
