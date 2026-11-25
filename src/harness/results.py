@@ -36,6 +36,10 @@ from pathlib import Path
 
 import pandas as pd
 
+
+class LedgerError(RuntimeError):
+    """A ledger file that cannot be read as the record it is."""
+
 FIELDS = [
     "run_id",
     "logged_utc",
@@ -120,6 +124,11 @@ class ResultsStore:
             if write_header:
                 writer.writeheader()
             writer.writerow(record)
+            # the row is the record of the run: force it to disk, so that
+            # a machine that dies a moment later (the sandbox on
+            # 2026-11-25 02:55, decision 68) leaves a whole row or none
+            fh.flush()
+            os.fsync(fh.fileno())
 
     def _existing_header(self) -> list[str] | None:
         """The header row of this store's file, or None when the file
@@ -173,9 +182,17 @@ class ResultsStore:
         files = self.ledger_files()
         if not files:
             return pd.DataFrame(columns=FIELDS)
-        frames = [
-            pd.read_csv(f, dtype=str, keep_default_na=False) for f in files
-        ]
+        frames = []
+        for f in files:
+            try:
+                frames.append(pd.read_csv(f, dtype=str, keep_default_na=False))
+            except pd.errors.ParserError as exc:
+                raise LedgerError(
+                    f"ledger file {f} does not parse ({exc}). A row cut "
+                    "short, usually the last one, means the machine died "
+                    "while a run was logging itself: remove the fragment, "
+                    "re-run that config, and say so in the logbook."
+                ) from exc
         if len(frames) == 1:
             df = frames[0]
         else:

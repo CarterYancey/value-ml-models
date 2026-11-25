@@ -24,7 +24,9 @@ build that no longer exists and is context only.
 
 ## Next session: start here
 
-1. The latest session was 2026-11-25. Its note is
+1. The latest sessions were on 2026-11-25. Their notes are
+   [the fallen-stock program](notes/2026-11-25-fallen-stocks.md),
+   decisions 61 to 69, and
    [a deployable candidate that does not train on the recent years](notes/2026-11-25-training-cutoff.md),
    decision 60 of the [decision log](notes/2026-09-29-decisions.md).
    The session of 2026-11-24 wrote
@@ -33,12 +35,11 @@ build that no longer exists and is context only.
    that decisions 38 to 54 link to.
 2. TODO.md says what to do next, under "Next, after 2026-11-24". The
    candidate's runbook is [paper-trading.md](paper-trading.md).
-3. The branch `claude/results-2026-11-25` carries this file, the
-   training cutoff, the fallen-stock program's records and the
-   withdrawal of the writing check (decisions 66 and 67). It contains
-   every November topic branch before it, so it is the one branch to
-   merge into `Claude`. Configs and reports are on the lab branch
-   `claude/lab-2026-11-25b`, which is not for merging.
+3. The branch `claude/results-2026-11-25b` carries this file, the
+   fallen-stock program's close (decision 69), the lab-branch rule and
+   the memory fix (decision 68). Configs and reports are on the lab
+   branch `claude/lab-2026-11-25b`, which is archived once this branch
+   merges and never merged itself.
 
 ## State (2026-11-24)
 
@@ -60,6 +61,17 @@ forest at each year end after 2020. All three legs were refit on
 | SPY, same deposits | 1,326,084 | 10.9% | 13.2% | −52.9% |
 | **candidate, buy and hold** | 1,159,740 | 11.0% | 12.2% | −41.0% |
 | candidate, rank sell discipline | 1,294,414 | 11.5% | 13.0% | −41.3% |
+
+**The fallen-stock program is closed (decisions 61 to 69).** Carter
+asked whether a model can find the fallen stocks that come back. Inside
+the liquid stocks 50% or more below their 5-year high, the cell C
+forest leads same-size fallen peers by 5 points a year with a fifth
+fewer losers, and no tree model learns the recovery label at any
+depth. A portfolio of the forest's picks inside that universe, 2006 to
+2020, ends 2023 with 660,061 on 180,000 against SPY's 664,685, with a
+worst drawdown of −57.5%. The candidate's own run earns a TWR of 11.76%
+where this one earns 10.25%. The forest picks the fallen stocks that do
+not fall further, not the ones that come back. Nothing goes forward.
 
 **The candidate is not shown to beat SPY.** At the end of 2020 it was
 ahead of SPY by final value and by TWR. In August 2026 it is 13%

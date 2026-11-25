@@ -163,7 +163,10 @@ class ModelSet:
                     "across dataset versions are never compared — retrain "
                     "or re-pin"
                 )
-            missing = sorted(set(b.feature_columns) - set(dataset.data.columns))
+            declared = {
+                c for g in dataset.manifest["columns"] for c in dataset.columns(g)
+            }
+            missing = sorted(set(b.feature_columns) - declared)
             if missing:
                 raise DatasetValidationError(
                     f"dataset {dataset.version} lacks feature columns bundle "

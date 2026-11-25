@@ -14,6 +14,13 @@ read** stub; a correction is a new entry that names the old one.
 
 <!-- entries -->
 
+### 2026-11-25 · the two backtests for the record (decision 65): bt_fallen50_forestC_top10_cap2_rankfloor, bt_fallen30_forestC_top10_cap2_rankfloor
+git `77dec7f` · configs `3bbf0d1552a571ad` and `3bf38d97bca05b0b` · [note](notes/2026-11-25-fallen-stocks.md)
+- **Did:** I reran the two backtests that decision 65 ordered, after the sandbox died at 02:55 while the first F50 run was writing its ledger row and left empty report files and a truncated row. I removed the truncated fragment, made the ledger writer fsync each row, and cut the backtest's memory from 11.6 GB to 9.7 GB by reading column projections instead of the full frame (decision 68). Each backtest trades the cell C forest trained inside its universe, alone, with Carter's rank floor, 2006 to 2020, valued at the end of 2023.
+- **Got:** F50: final value 660,061 on 180,000, TWR 10.25%, worst drawdown −57.5%, buys lead same-size candidates by 9.2 points a year over 3 years. F30: 634,784, TWR 10.31%, drawdown −48.1%, lead 6.9 points. SPY on the same deposits: 664,685, TWR 9.72%, drawdown −52.8%. The candidate's 2005 to 2020 run: TWR 11.76%, drawdown −41.0%.
+- **Concluded:** Two of three predictions held in F50 and one in F30. The TWR did not fall under SPY's as I predicted, but both portfolios end with less money than SPY because they lose in the late years when the account is largest, and both are far behind the candidate. The forest picks the fallen stocks that do not fall further and not the ones that come back. The program is closed (decision 69). No arm goes forward.
+- **Next:** Build the results branch and close the lab branch. The market-state question stays an upstream request.
+
 ### 2026-11-25 · lgbm_fallen50_cells_3y
 4 runs · `dataset_v1.4.1` · 2 cells · git `6b0c28c` · [summary](../reports/sweeps/lgbm_fallen50_cells_3y/lgbm_fallen50_cells_3y_summary.md) · [note](notes/2026-11-25-fallen-stocks.md)
 - **Did:** I ran two LightGBM classifiers inside F50 on cell C and on the recovery label, at seed 23 on folds 2006 to 2020.

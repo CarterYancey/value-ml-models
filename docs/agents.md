@@ -149,8 +149,14 @@ Most sweeps change the state table and nothing else.
 
 ## Git
 
-- Work on a lab branch, `claude/lab-<date>`, created off the branch the
-  session was given. Never commit to `Claude` or `main`.
+- Work on a lab branch, `claude/lab-<date>`, created off `origin/Claude`
+  by `vml-queue new-lab`. Never commit to `Claude` or `main`. Never
+  create a lab branch off another lab branch, and never merge one lab
+  branch into another: the configs and reports of the old session would
+  travel with the new one for ever, and the branch's commit count
+  against `Claude` would grow with every session (decision 68).
+  `vml-queue checkpoint` refuses a lab branch whose history contains
+  another lab branch's tip, live or archived.
 - `vml-queue checkpoint` force-adds what a crash would take with it:
   the ledger shard, sweep summaries, config copies, result records,
   queued configs, the logbook, findings and notes. It refuses to run
@@ -161,6 +167,10 @@ Most sweeps change the state table and nothing else.
   names anything else, `--fix` untracks it, and the `pr-hygiene`
   workflow runs the same check on every pull request into `Claude` or
   `main`.
+- **A finished lab branch is archived, not kept.** Once its results
+  branch has merged, `vml-queue archive-lab <branch> --delete` tags the
+  tip `archive/lab-<date>` and deletes the branch. The configs and
+  reports stay reachable from the tag, and the branch list stays short.
 - Push after every checkpoint. If a push fails, say so in the turn's
   output and try once more after the next sweep.
 
@@ -279,8 +289,8 @@ below the cores the sandbox really has.
 In the sandbox, from the repository root:
 
 ```sh
-git fetch origin && git checkout -b claude/lab-$(date +%F) origin/Claude
 uv sync    # or: uv pip install -e .
+uv run vml-queue new-lab      # claude/lab-<today>, created off origin/Claude
 cat >> /etc/sandbox-persistent.sh <<'EOF'
 export VML_RESULTS="experiments/ledger/$SANDBOX_VM_ID.csv"
 export VML_LEDGER_READ="/run/sandbox/source/experiments/results.csv"
@@ -302,4 +312,11 @@ vml-promote <name> --note "..."        # for each result worth keeping
 python scripts/check_tracked_configs.py   # must print "nothing added"
 git commit -m "..." && git push -u origin claude/results-<date>
 gh pr create --base Claude --fill
+```
+
+When the pull request has merged, close the lab branch:
+
+```sh
+git checkout claude/results-<date>
+uv run vml-queue archive-lab claude/lab-<date> --delete   # tag archive/lab-<date>, delete the branch
 ```

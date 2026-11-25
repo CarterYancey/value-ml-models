@@ -52,6 +52,18 @@ NOTES_DIR = Path("docs/notes")
 #: branches a checkpoint may commit to: topic branches only
 LAB_BRANCH_PREFIX = "claude/"
 
+#: the branch a lab branch is created from (`vml-queue new-lab`)
+LAB_BASE = "origin/Claude"
+
+#: refs whose history a lab branch must not contain: the other lab
+#: branches, live or archived. A lab branch that is created off, or merges,
+#: another lab branch carries that branch's configs and reports forever,
+#: and its commit count against `Claude` grows with every session.
+OTHER_LAB_REF_PATTERNS = (
+    "refs/remotes/origin/claude/lab-*",
+    "refs/tags/archive/lab-*",
+)
+
 LOGBOOK_HEADER = """# Logbook
 
 One entry per sweep or run, newest first: what was done, what came out,
@@ -341,6 +353,95 @@ def current_branch() -> str:
     return _git("rev-parse", "--abbrev-ref", "HEAD").stdout.strip()
 
 
+def lab_refs_in_history(branch: str) -> list[str]:
+    """The other lab refs, live `origin/claude/lab-*` branches and
+    `archive/lab-*` tags, whose tip is an ancestor of HEAD. A clean lab
+    branch has none: it was created off `origin/Claude` and never merged
+    another lab branch."""
+    refs = _git(
+        "for-each-ref", "--format=%(refname)", *OTHER_LAB_REF_PATTERNS
+    ).stdout.split()
+    found = []
+    for ref in refs:
+        if ref == f"refs/remotes/origin/{branch}":
+            continue
+        contained = _git("merge-base", "--is-ancestor", ref, "HEAD", check=False)
+        if contained.returncode == 0:
+            found.append(ref.removeprefix("refs/remotes/").removeprefix("refs/tags/"))
+    return found
+
+
+def _refuse_tangled_lab(branch: str) -> None:
+    tangled = lab_refs_in_history(branch)
+    if tangled:
+        raise ConfigError(
+            f"{branch} contains the history of {', '.join(tangled)}. A lab "
+            f"branch is created off {LAB_BASE} with `vml-queue new-lab` and "
+            "is never created off, or merged with, another lab branch. "
+            "Start a fresh lab branch; copy a config you still need by hand."
+        )
+
+
+def new_lab(day: str | None = None, *, base: str = LAB_BASE, fetch: bool = True) -> str:
+    """Create `claude/lab-<day>` off `origin/Claude` and check it out.
+    Refuses a working tree with uncommitted tracked changes, so a
+    session's half-written records are not carried over unnoticed. A
+    name already taken gets a letter suffix (`-b`, `-c`, ...)."""
+    if _git("status", "--porcelain", "--untracked-files=no").stdout.strip():
+        raise ConfigError(
+            "the working tree has uncommitted changes; checkpoint or commit "
+            "them on the current branch before starting a lab branch"
+        )
+    if fetch:
+        _git("fetch", "-q", "origin")
+    taken = set(
+        _git("for-each-ref", "--format=%(refname:short)",
+             "refs/heads/", "refs/remotes/origin/").stdout.split()
+    )
+    stem = f"{LAB_BRANCH_PREFIX}lab-{day or date.today().isoformat()}"
+    name = stem
+    for suffix in "bcdefghijklmnopqrstuvwxyz":
+        if name not in taken and f"origin/{name}" not in taken:
+            break
+        name = f"{stem}{suffix}"
+    _git("checkout", "-q", "-b", name, base)
+    return name
+
+
+def archive_lab(branch: str | None = None, *, push: bool = True, delete: bool = False) -> dict:
+    """Tag a finished lab branch `archive/lab-<day>`, so that its configs
+    and reports stay reachable after the branch is deleted, and with
+    `delete` remove the branch locally and on origin."""
+    branch = branch or current_branch()
+    if not branch.startswith(f"{LAB_BRANCH_PREFIX}lab-"):
+        raise ConfigError(f"{branch!r} is not a lab branch ({LAB_BRANCH_PREFIX}lab-<date>)")
+    if delete and current_branch() == branch:
+        raise ConfigError("check out another branch before deleting this one")
+    tag = "archive/" + branch.removeprefix(LAB_BRANCH_PREFIX)
+    tip = _git("rev-parse", branch).stdout.strip()
+    existing = _git("rev-parse", "-q", "--verify", f"refs/tags/{tag}", check=False)
+    if existing.returncode == 0 and existing.stdout.strip() != tip:
+        raise ConfigError(
+            f"the tag {tag} exists and points elsewhere; the archive of a lab "
+            "branch is made once, at its final tip"
+        )
+    if existing.returncode != 0:
+        _git("tag", tag, branch)
+    out = {"branch": branch, "tag": tag, "pushed": False, "deleted": False, "error": ""}
+    if push:
+        res = _git("push", "origin", tag, check=False)
+        out["pushed"] = res.returncode == 0
+        if not out["pushed"]:
+            out["error"] = (res.stderr or res.stdout).strip()[-400:]
+    if delete:
+        _git("branch", "-D", branch)
+        res = _git("push", "origin", "--delete", branch, check=False)
+        out["deleted"] = True
+        if res.returncode != 0 and not out["error"]:
+            out["error"] = (res.stderr or res.stdout).strip()[-400:]
+    return out
+
+
 def checkpoint_paths(
     *,
     results_path: str | Path = DEFAULT_RESULTS,
@@ -397,9 +498,9 @@ def checkpoint(
     if not branch.startswith(LAB_BRANCH_PREFIX):
         raise ConfigError(
             f"checkpoints go on `{LAB_BRANCH_PREFIX}*` branches; this is "
-            f"{branch!r}. Create one first: git checkout -b "
-            f"{LAB_BRANCH_PREFIX}lab-<date>"
+            f"{branch!r}. Create one first: vml-queue new-lab"
         )
+    _refuse_tangled_lab(branch)
     paths = checkpoint_paths(
         results_path=results_path, reports_dir=reports_dir,
         queue_path=queue_path, logbook=logbook,
@@ -518,11 +619,36 @@ def _queue_main(argv=None) -> int:
     cp = sub.add_parser("checkpoint", help="commit (and push) what a crash would lose")
     cp.add_argument("-m", "--message", default="lab: checkpoint")
     cp.add_argument("--push", action="store_true")
+    nl = sub.add_parser(
+        "new-lab", help=f"create claude/lab-<today> off {LAB_BASE} and check it out",
+    )
+    nl.add_argument("--date", default=None, help="YYYY-MM-DD instead of today")
+    nl.add_argument("--no-fetch", action="store_true", help="do not fetch origin first")
+    al = sub.add_parser(
+        "archive-lab",
+        help="tag a finished lab branch archive/lab-<date>; --delete removes the branch",
+    )
+    al.add_argument("branch", nargs="?", default=None)
+    al.add_argument("--no-push", action="store_true")
+    al.add_argument("--delete", action="store_true")
     args = parser.parse_args(argv)
     try:
         if args.command == "status":
             print(format_states(queue_states(args.queue, args.reports_dir)))
             return 0
+        if args.command == "new-lab":
+            name = new_lab(args.date, fetch=not args.no_fetch)
+            print(f"on {name}, created off {LAB_BASE}")
+            return 0
+        if args.command == "archive-lab":
+            out = archive_lab(args.branch, push=not args.no_push, delete=args.delete)
+            text = f"tagged {out['tag']} at {out['branch']}"
+            text += ", pushed" if out["pushed"] else ""
+            text += ", branch deleted" if out["deleted"] else ""
+            if out["error"]:
+                text += f"; FAILED: {out['error']}"
+            print(text)
+            return 0 if not out["error"] else 2
         if args.command == "checkpoint":
             out = checkpoint(
                 args.message, push=args.push, results_path=args.results,

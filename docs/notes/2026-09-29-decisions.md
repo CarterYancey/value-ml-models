@@ -2847,3 +2847,64 @@ whose content pull requests 17 to 19 had already merged by copy.
 No configs were promoted for the fallen-stock program. Its results are
 negative on the recovery label and a match for the forest on cell C, and
 the records carry them. Promotion is a separate decision.
+
+
+### 68. The sandbox died under a backtest; the ledger, the memory and the lab-branch rule
+
+*What happened (2026-11-25):* Carter found the Claude Code tab and
+the sandbox monitor crashed in the morning, and the error was not
+noted. The evidence inside the sandbox is this. The Claude Code
+transcript stops mid-line at 02:55:29. The F50 backtest of decision 65
+created its five report files at 02:55:48 and 02:55:49, every one of
+them empty, and its ledger row ends inside the quoted metrics. Files
+created but never flushed are the signature of a machine that died,
+not of a process that was killed. The rerun of the sibling F30 backtest
+measured a peak of 11.58 GB on the 14 GB machine, which has no swap.
+Three places loaded the whole 390-column dataset frame to read one
+column or check column names. No kernel log or memory counter survives
+a sandbox restart, so the host's sandbox logs hold the cause. The lead
+is memory.
+
+*Decided:*
+
+1. **The ledger is repaired.** The cut fragment of run 256a693ab845 is
+   removed, and the F50 and F30 backtests are rerun, with their
+   failed first attempts left in the ledger. `ResultsStore.append`
+   flushes and fsyncs each row, and `ResultsStore.load` raises
+   `LedgerError` naming the file when a row is cut. The F50 rerun
+   reproduced the cut row's final value and drawdown exactly.
+2. **The backtest reads column projections.** `dataset.frame(columns)`
+   replaces `dataset.data` in the backtest's coverage check, the
+   cross-section builder and the bundle check, and in
+   `scripts/build_price_panel.py`. The backtest's peak fell from
+   11.58 GB to 9.74 GB and its wall time from 154 to 97 seconds. The
+   rest of the footprint is the yearly refits. One heavy job at a time
+   stays the rule.
+3. **A lab branch is created off `origin/Claude` and never off another
+   lab branch.** `vml-queue new-lab` creates it. `vml-queue checkpoint`
+   refuses a lab branch whose history contains another lab branch's
+   tip, live or archived. `vml-queue archive-lab <branch> --delete`
+   tags a finished lab branch `archive/lab-<date>` and deletes it once
+   its results have merged. This is why `claude/lab-2026-11-25b` stood
+   198 commits ahead of `Claude`: it carried every lab branch since
+   2026-09-28, each created off the one before.
+
+*What remains open:* the host-side cause. Carter can read the sandbox
+daemon's log for 2026-11-25 between 02:55 and 03:00 local time.
+
+### 69. The fallen-stock program is closed
+
+*What happened (2026-11-25):* the two backtests of decision 65 ran.
+Their reading is in the note under "Round 5".
+
+*Decided:* no arm of the program goes forward. The two backtests are
+the program's money reading, two runs for the record and none for
+selection. Inside F50 the cell C forest leads same-size fallen
+candidates by 9 points a year, and inside F30 by 7, and both portfolios
+still end 2023 with less money than SPY and far behind the candidate.
+The recovery label is not learnable from these columns for any tree
+model, at any depth, trained inside the universe or on every row. The
+population's attraction is the attraction of buying in a crash, which
+is the market-state question already asked upstream. The configs,
+reports and bundles stay on the lab branch, which is archived, and the
+ledger carries every trial.

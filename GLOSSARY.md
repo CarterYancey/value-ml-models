@@ -218,7 +218,10 @@ change. The format follows Matt Pocock's `domain-modeling` skill.
   in the ledger row and in every prediction sidecar (decision 60).
   _Avoid_: "pre-bubble model", "clean model", "untainted model".
 - **Lab branch** — a `claude/lab-*` branch that holds every config and
-  report of a session. Never merged.
+  report of a session. Created off `origin/Claude` by `vml-queue
+  new-lab`, never off another lab branch, and never merged. When its
+  results branch has merged it becomes the tag `archive/lab-<date>` and
+  the branch is deleted (decision 68).
 
 ## Backtests
 
