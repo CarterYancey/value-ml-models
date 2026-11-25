@@ -1,19 +1,16 @@
 # value-ml-models
 
-This repository trains models, evaluates them and builds portfolios on top
-of the versioned datasets that
-[`sharadar-dataset`](https://github.com/CarterYancey/sharadar-dataset)
-produces. It consumes a pinned `dataset_vX.Y/` directory and never touches
-raw Sharadar data.
+Model training, evaluation, and portfolio construction on top of the versioned
+datasets produced by [`sharadar-dataset`](https://github.com/CarterYancey/sharadar-dataset).
+This repo consumes a pinned `dataset_vX.Y/` directory and never touches raw
+Sharadar data.
 
 It trains **interpretable, calibrated** classifiers that predict, from
-point-in-time fundamentals, whether a stock will meet a return criterion
-over a horizon. [GLOSSARY.md](GLOSSARY.md) lists the horizons.
-Two examples of such a criterion are "at least 5% CAGR over the next 3
-years" and "beats SPY over the next year". The portfolio code then turns
-the ranked probabilities into portfolios. Evaluation is walk-forward,
-purged and era-sliced. [PLAN.md](PLAN.md) holds the design
-and roadmap, and [TODO.md](TODO.md) holds the task list.
+point-in-time fundamentals, whether a stock will meet return criteria over
+1/2/3/5-year horizons (e.g. "≥ 5% CAGR over the next 3 years", "beats SPY over
+the next year"), and turns ranked probabilities into portfolios — evaluated
+honestly (walk-forward, purged, era-sliced). Status and roadmap:
+[PLAN.md](PLAN.md), [TODO.md](TODO.md).
 
 ## Setup
 
@@ -23,8 +20,8 @@ Requires Python 3.12+ and [uv](https://docs.astral.sh/uv/):
 uv sync
 ```
 
-Data is git-ignored. Place a dataset directory from `sharadar-dataset`
-under `data/datasets/`, or symlink it there:
+Data is git-ignored. Place (or symlink) a dataset directory from
+`sharadar-dataset` under `data/datasets/`:
 
 ```
 data/datasets/dataset_v1.0/
@@ -34,14 +31,14 @@ data/datasets/dataset_v1.0/
 └── manifest.json         provenance: version, params, counts, column layout
 ```
 
-Never edit files inside a dataset directory. Fixes are upstream changes that
+Never edit files inside a dataset directory; fixes are upstream changes that
 produce a new version.
 
 ## Usage
 
-One experiment is one TOML config in `experiments/`. The harness logs every
-run to `experiments/results.csv` and writes reports to `reports/`. Git
-ignores reports until `vml-promote` promotes them.
+One experiment = one TOML config in `experiments/`. Every run is logged to
+`experiments/results.csv`; reports go to `reports/` (git-ignored until
+promoted).
 
 ```sh
 # train + evaluate one config (saves a model bundle)
