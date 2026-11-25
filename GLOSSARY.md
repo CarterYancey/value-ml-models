@@ -73,6 +73,10 @@ Phrases that the writing check refuses are listed in
   outside it. Introduced in decision 61. _Avoid_: drawdown stocks,
   beaten-down stocks, losers (that word means a pick whose CAGR was
   below zero).
+- **The fresh-fall universe (W40)** — the universe `dist_52w_high <= -0.4`
+  on top of the 100k floor: liquid stocks that fell 40% or more from
+  their 52-week high. It measures a fall within the last year, where
+  the fallen universe measures a state. Introduced in decision 64.
 - **Recovery label** — the label `fwd_3y_cagr >= 0.26`: the stock at
   least doubled within 3 years. Used inside the fallen universe.
   _Avoid_: doubler, 2x label.

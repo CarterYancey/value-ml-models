@@ -1,0 +1,51 @@
+# Decision 64 (2026-11-25): the candidate's forest evaluated inside the
+# value investor's fresh-fall universe: W40, operating cash flow positive,
+# the larger half (10,268 test rows; base rates: beat SPY 0.472, doubled
+# 0.266, lost half 0.151, mean 3y CAGR +0.085). Prediction: the screen's
+# mean 3y CAGR is at or above 0.08 in both halves, losers at or below
+# 0.30, and the lead over same-size peers inside the universe is under
+# 0.04 (the filters did the work).
+name = "eval_screen_fresh40_cfo_half_peers"
+top_k = [20, 50]
+precision_targets = [0.75, 0.9]
+pick_outcomes = [
+  "label_3y_beat_spy",
+  "fwd_3y_excess_cagr",
+  "fwd_3y_cagr",
+  "fwd_3y_max_drawdown_from_entry",
+  "fwd_3y_cagr < 0",
+  "fwd_3y_cagr < -0.1",
+  "fwd_3y_max_drawdown_from_entry >= 0.4",
+  "fwd_3y_cagr >= 0.15",
+  "fwd_3y_cagr >= 0.26",
+  "fwd_3y_excess_cagr >= 0.05",
+  "fwd_3y_excess_cagr >= 0.1",
+]
+
+[pick_screen]
+per = "quarter"
+top_k = 10
+max_per_group = 2
+group_column = "sector"
+peer_column = "log_marketcap_rank"
+peer_bins = 20
+
+[[universe]]
+column = "dist_52w_high"
+op = "<="
+value = -0.4
+
+[[universe]]
+column = "dollar_volume_3m"
+op = ">="
+value = 100000
+
+[[universe]]
+column = "piotroski_cfo_positive"
+op = "=="
+value = true
+
+[[universe]]
+column = "log_marketcap_rank"
+op = ">="
+value = 0.5

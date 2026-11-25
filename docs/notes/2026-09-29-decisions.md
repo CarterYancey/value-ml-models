@@ -2685,3 +2685,51 @@ p@20. Prediction 3 of decision 61 therefore missed, and its rival held.
 5. The predictions are in the config headers. In short, I expect no arm to reach a p@20 of 0.26 on the recovery
    label. I expect the forest to learn the path-free target as calm,
    like cell C.
+
+### 64. The fallen-stock program, round 4: the fresh fall, measured against the 52-week high
+
+*Written on 2026-11-25 while the round-1 regression sweep was running.*
+Carter's words were "a stock experiences a deep fall", an event. The
+5-year high measures a state, and a stock 50% below it may have sat
+there for years. `dist_52w_high` measures a fall within the last year.
+It needs one year of prices, so every fold has training rows and no
+fold restriction applies. I read its base rates on the same rows as
+decision 61:
+
+| population inside the 100k floor | rows | not a loser | doubled in 3 years | beat SPY | lost half | mean 3y CAGR |
+|---|---|---|---|---|---|---|
+| W40, 40% or more below the 52-week high | 40,886 | 0.237 | 0.187 | 0.327 | 0.362 | −0.076 |
+| W40, the larger half | 12,951 | 0.367 | 0.251 | 0.441 | 0.193 | +0.053 |
+| W40, operating cash flow positive, the larger half | 10,268 | 0.404 | 0.266 | 0.472 | 0.151 | +0.085 |
+| W40, 3-year return before the last year at or above zero, dividends 5 years running | 2,894 | 0.443 | 0.256 | 0.484 | 0.124 | +0.092 |
+| F50, operating cash flow positive, the larger half | 15,432 | 0.425 | 0.212 | 0.425 | 0.156 | +0.054 |
+
+The third row is the value investor's archetype as the dataset can
+state it. It is a large company that still earns cash and whose price
+fell 40% within the year. One in four of those doubled within 3 years. Two
+in three did not lose money. Its mean return is 8 points a year above
+the whole fallen population's. It still trails SPY by 3 points a year
+on average.
+
+*Decided:*
+
+1. **The fresh-fall universe W40** is `dist_52w_high <= -0.4` with the
+   100k floor. The GLOSSARY gains the term.
+2. **The candidate's forest configuration runs inside W40 and inside
+   W40 with the larger half**, cells C and recovery, all 16 folds.
+3. **The single-factor bars run inside W40** for the same two cells.
+4. **The candidate's own forest is evaluated without refitting** in
+   three universes: W40, the W40 archetype with cash flow positive and
+   the larger half, and F50 with the same two filters. The blend is evaluated inside
+   the W40 archetype. These are reads of the deployed candidate under
+   a tighter investability filter, and need no new model.
+5. The predictions are in the config headers. In short, the forest learns calm in W40 as in F50, and the recovery
+   label stays unlearned. The archetype's screen earns 8% a year or
+   more with losers at 0.30 or below.
+6. **What would go to a backtest.** The candidate's forest inside
+   the archetype may meet the rule of decision 61.5 on the screen. Then
+   the backtest is the candidate's config with the three filters added
+   to its investability, on 2005–2020. I read it against the
+   candidate's 11.76%.
+   That tests a portfolio rule, not a new model, and it is the cheapest
+   path from this program to money.

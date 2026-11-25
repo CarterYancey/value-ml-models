@@ -1,0 +1,38 @@
+# Decision 64 (2026-11-25): the candidate's forest, trained on every row,
+# evaluated inside the fresh-fall universe W40 without refitting, against
+# same-size peers inside W40. Prediction: a lead over peers of 0.04 or
+# more in both halves, losers 0.35 to 0.45, mean 3y CAGR under 0.05.
+name = "eval_screen_fresh40_peers"
+top_k = [20, 50]
+precision_targets = [0.75, 0.9]
+pick_outcomes = [
+  "label_3y_beat_spy",
+  "fwd_3y_excess_cagr",
+  "fwd_3y_cagr",
+  "fwd_3y_max_drawdown_from_entry",
+  "fwd_3y_cagr < 0",
+  "fwd_3y_cagr < -0.1",
+  "fwd_3y_max_drawdown_from_entry >= 0.4",
+  "fwd_3y_cagr >= 0.15",
+  "fwd_3y_cagr >= 0.26",
+  "fwd_3y_excess_cagr >= 0.05",
+  "fwd_3y_excess_cagr >= 0.1",
+]
+
+[pick_screen]
+per = "quarter"
+top_k = 10
+max_per_group = 2
+group_column = "sector"
+peer_column = "log_marketcap_rank"
+peer_bins = 20
+
+[[universe]]
+column = "dist_52w_high"
+op = "<="
+value = -0.4
+
+[[universe]]
+column = "dollar_volume_3m"
+op = ">="
+value = 100000

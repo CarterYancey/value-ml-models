@@ -1,0 +1,50 @@
+# Decision 64 (2026-11-25): the candidate's mean-rank blend evaluated
+# inside W40, operating cash flow positive, the larger half. Prediction:
+# below the forest alone on mean 3y CAGR, as inside F50.
+name = "blend_mom_roc_fresh40_cfo_half_peers"
+blend = [
+  "experiments/models/factor_mom_12_2_3y_v141_121349f6e682",
+  "experiments/models/factor_roc_greenblatt_3y_v141_4457ca01bcfb",
+]
+top_k = [20, 50]
+pick_outcomes = [
+  "label_3y_beat_spy",
+  "fwd_3y_excess_cagr",
+  "fwd_3y_cagr",
+  "fwd_3y_max_drawdown_from_entry",
+  "fwd_3y_cagr < 0",
+  "fwd_3y_cagr < -0.1",
+  "fwd_3y_max_drawdown_from_entry >= 0.4",
+  "fwd_3y_cagr >= 0.15",
+  "fwd_3y_cagr >= 0.26",
+  "fwd_3y_excess_cagr >= 0.05",
+  "fwd_3y_excess_cagr >= 0.1",
+]
+
+[pick_screen]
+per = "quarter"
+top_k = 10
+max_per_group = 2
+group_column = "sector"
+peer_column = "log_marketcap_rank"
+peer_bins = 20
+
+[[universe]]
+column = "dist_52w_high"
+op = "<="
+value = -0.4
+
+[[universe]]
+column = "dollar_volume_3m"
+op = ">="
+value = 100000
+
+[[universe]]
+column = "piotroski_cfo_positive"
+op = "=="
+value = true
+
+[[universe]]
+column = "log_marketcap_rank"
+op = ">="
+value = 0.5

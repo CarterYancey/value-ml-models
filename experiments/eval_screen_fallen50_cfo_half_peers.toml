@@ -1,0 +1,49 @@
+# Decision 64 (2026-11-25): the candidate's forest evaluated inside F50,
+# operating cash flow positive, the larger half (15,432 test rows; base
+# rates: beat SPY 0.425, doubled 0.212, lost half 0.156, mean 3y CAGR
+# +0.054). Prediction: mean 3y CAGR of the screen between 0.05 and 0.09,
+# losers at or below 0.30, lead over peers under 0.04.
+name = "eval_screen_fallen50_cfo_half_peers"
+top_k = [20, 50]
+precision_targets = [0.75, 0.9]
+pick_outcomes = [
+  "label_3y_beat_spy",
+  "fwd_3y_excess_cagr",
+  "fwd_3y_cagr",
+  "fwd_3y_max_drawdown_from_entry",
+  "fwd_3y_cagr < 0",
+  "fwd_3y_cagr < -0.1",
+  "fwd_3y_max_drawdown_from_entry >= 0.4",
+  "fwd_3y_cagr >= 0.15",
+  "fwd_3y_cagr >= 0.26",
+  "fwd_3y_excess_cagr >= 0.05",
+  "fwd_3y_excess_cagr >= 0.1",
+]
+
+[pick_screen]
+per = "quarter"
+top_k = 10
+max_per_group = 2
+group_column = "sector"
+peer_column = "log_marketcap_rank"
+peer_bins = 20
+
+[[universe]]
+column = "dist_5y_high"
+op = "<="
+value = -0.5
+
+[[universe]]
+column = "dollar_volume_3m"
+op = ">="
+value = 100000
+
+[[universe]]
+column = "piotroski_cfo_positive"
+op = "=="
+value = true
+
+[[universe]]
+column = "log_marketcap_rank"
+op = ">="
+value = 0.5
