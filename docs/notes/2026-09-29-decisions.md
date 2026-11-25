@@ -2815,3 +2815,35 @@ this branch and should be closed unmerged.
 *Open:* the write-ups of the November experiments still need a form
 Carter can follow. That is a separate task, and this decision does not
 choose the form.
+
+### 67. One results branch for November, and the branch list cut to four
+
+*What happened (2026-11-25):* Carter found the branch list unreadable.
+Twenty branches were on the remote. Every November topic branch was an
+ancestor of one tip, and `claude/lab-2026-11-25b` stood 198 commits
+ahead of `Claude` while carrying the history of every earlier lab branch,
+whose content pull requests 17 to 19 had already merged by copy.
+
+*Decided:*
+
+1. `claude/results-2026-11-25` is the one branch to merge into
+   `Claude`. It is `claude/revert-writing-check` plus the fallen-stock
+   program's records from the lab branch: the logbook entries, decisions
+   61 to 66, the note of 2026-11-25 and the ledger shard. It therefore
+   contains `worst-rank`, `blend-gate`, `calibration`,
+   `results-2026-11-23`, `dataset-provenance`, `results-2026-11-24`,
+   `plain-writing`, `writing-check`, `fix-docs`, `deploy-train-end` and
+   `revert-writing-check`. Those eleven branches are deleted, and pull
+   requests 20 and 21 are closed as superseded.
+2. The lab branches of 2026-09-28, 09-30, 10-01, 11-23, 11-24 and 11-25
+   are deleted. Each is an ancestor of `claude/lab-2026-11-25b`, so no
+   commit is lost. That branch stays as the lab archive of the autumn,
+   and the next session starts a fresh lab branch off `Claude`, as
+   docs/agents.md section 4 says.
+3. The lab branch's docs/paper-trading.md held the two sections of
+   2026-11-24 twice, from repeated merges. The results branch has them
+   once, and the lab branch takes the results branch's copy.
+
+No configs were promoted for the fallen-stock program. Its results are
+negative on the recovery label and a match for the forest on cell C, and
+the records carry them. Promotion is a separate decision.
