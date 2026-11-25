@@ -173,8 +173,8 @@ invariant 4.
    The first is the number of trading days since the 5-year high, which
    says whether the fall is fresh or three years old. The second is the
    number of earlier falls of 50% or more in the stock's history, with
-   the share of them that recovered, which says whether the stock has
-   done this before.
+   the share of them that recovered. It says whether the stock has done
+   this before.
 3. **A 10-year record exists only for dividends.** Three counts over the last ten
    fiscal years would extend it:
    - the years with positive net income
