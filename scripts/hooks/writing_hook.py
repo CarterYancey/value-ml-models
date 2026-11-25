@@ -45,12 +45,8 @@ def prose_path(path: str) -> bool:
     return rel in PROSE_FILES or any(rel.startswith(d) for d in PROSE_DIRS)
 
 
-def last_turn_text(transcript: Path, since_last_block: bool = False) -> str:
-    """Concatenate the assistant text blocks after the last human message.
-
-    With ``since_last_block`` (a recheck after this hook blocked), start
-    instead after the last text the harness injected, which is the block
-    reason: text shown before it cannot be rewritten any more."""
+def last_turn_text(transcript: Path) -> str:
+    """Concatenate the assistant text blocks after the last human message."""
     entries = []
     for line in transcript.read_text().splitlines():
         try:
@@ -59,8 +55,8 @@ def last_turn_text(transcript: Path, since_last_block: bool = False) -> str:
             continue
     start = 0
     for i, e in enumerate(entries):
-        if e.get("type") != "user":
-            continue
+        if e.get("type") != "user" or e.get("isMeta"):
+            continue        # isMeta: text the harness injected, not the person
         content = (e.get("message") or {}).get("content")
         if isinstance(content, list):
             if any(isinstance(c, dict) and c.get("type") == "tool_result" for c in content):
@@ -68,10 +64,8 @@ def last_turn_text(transcript: Path, since_last_block: bool = False) -> str:
             content = " ".join(c.get("text", "") for c in content if isinstance(c, dict))
         if not isinstance(content, str):
             continue
-        injected = bool(e.get("isMeta")) or content.lstrip().startswith(
-            ("<system-reminder>", "[Request interrupted"))
-        if injected and not since_last_block:
-            continue        # text the harness injected, not the person
+        if content.lstrip().startswith(("<system-reminder>", "[Request interrupted")):
+            continue
         start = i
     texts = []
     for e in entries[start:]:
@@ -98,12 +92,11 @@ def on_stop(payload: dict) -> dict:
     path = payload.get("transcript_path")
     if not path or not Path(path).exists():
         return {}
-    text = last_turn_text(Path(path), since_last_block=bool(payload.get("stop_hook_active")))
-    session = payload.get("session_id", "")
+    text = last_turn_text(Path(path))
     if not text.strip():
-        _rounds(session, reset=True)
         return {}
     report = writing.check_text(text)
+    session = payload.get("session_id", "")
     if not report.errors:
         _rounds(session, reset=True)
         out = {}
