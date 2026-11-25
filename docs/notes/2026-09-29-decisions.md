@@ -2719,8 +2719,11 @@ on average.
    W40 with the larger half**, cells C and recovery, all 16 folds.
 3. **The single-factor bars run inside W40** for the same two cells.
 4. **The candidate's own forest is evaluated without refitting** in
-   three universes: W40, the W40 archetype with cash flow positive and
-   the larger half, and F50 with the same two filters. The blend is evaluated inside
+   three universes:
+   - W40
+   - the W40 archetype, with cash flow positive and the larger half
+   - F50 with the same two filters
+ The blend is evaluated inside
    the W40 archetype. These are reads of the deployed candidate under
    a tighter investability filter, and need no new model.
 5. The predictions are in the config headers. In short, the forest learns calm in W40 as in F50, and the recovery
