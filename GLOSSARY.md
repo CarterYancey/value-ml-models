@@ -10,8 +10,6 @@ lists the words to avoid for it. How the code implements a thing is in
 `docs/experiments.md`, `docs/backtesting.md` and `docs/workflow.md`,
 not here. Add a term the first time a document needs it, in the same
 change. The format follows Matt Pocock's `domain-modeling` skill.
-Phrases that the writing check refuses are listed in
-`docs/writing_denylist.toml`, with the day each one was objected to.
 
 ## Data
 

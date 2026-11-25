@@ -33,11 +33,12 @@ build that no longer exists and is context only.
    that decisions 38 to 54 link to.
 2. TODO.md says what to do next, under "Next, after 2026-11-24". The
    candidate's runbook is [paper-trading.md](paper-trading.md).
-3. The branch `claude/deploy-train-end` carries the training cutoff
-   and this file, on top of `claude/fix-docs`, which is on top of
-   `claude/writing-check`. That branch carries the writing check on
-   top of `claude/results-2026-11-24`, which holds the November code,
-   docs, promoted results and ledger shard. It is built on
+3. The branch `claude/revert-writing-check` carries the training
+   cutoff and this file, and undoes the writing check and the writing
+   skill (decision 66). It is on top of `claude/deploy-train-end`,
+   `claude/fix-docs` and `claude/writing-check`, which sit on
+   `claude/results-2026-11-24`, the branch that holds the November
+   code, docs, promoted results and ledger shard. It is built on
    `claude/results-2026-11-23`, which pull request 20 still holds
    open. Configs and reports are on the lab branches
    `claude/lab-2026-11-24` and `claude/lab-2026-11-25`, which are not
