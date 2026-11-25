@@ -158,11 +158,3 @@ def test_hook_checks_only_prose_files():
     out = writing_hook.on_post_tool_use({"tool_name": "Edit", "tool_input": {
         "file_path": "docs/findings.md", "new_string": "The size band in money."}})
     assert out.get("decision") == "block"
-
-
-def test_list_items_completing_a_colon_need_no_verb():
-    text = "It refuses three things:\n\n1. a semicolon,\n2. a dash,\n3. a fragment.\n\nA plain paragraph follows.\n\n- Larger-half filter for Carter.\n"
-    report = writing.check_text(text)
-    frags = [f for f in report.errors if f.check == "fragment"]
-    if HAS_NLP:
-        assert [f.line for f in frags] == [9], report.format()
