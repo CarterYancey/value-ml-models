@@ -421,6 +421,9 @@ def run_backtest(
         metrics = {
             "deposits": strategy_result.total_deposits,
             "final_value": strategy_result.final_value,
+            # the CAGR of record (decision 72): the money-weighted growth
+            # rate of the deposits into the final value; the column keeps
+            # its old name so earlier rows read the same
             "mwr_annualized": xirr(strategy_result.cashflows),
             "twr_cagr": twr_cagr(strategy_result.monthly),
             "max_drawdown": max_drawdown(
@@ -428,6 +431,7 @@ def run_backtest(
             ),
             "costs_paid": strategy_result.total_costs,
             "benchmark_final_value": benchmark_result.final_value,
+            "benchmark_mwr_annualized": xirr(benchmark_result.cashflows),
             "benchmark_twr_cagr": twr_cagr(benchmark_result.monthly),
             "prices_version": panel.version,
             "buy_years": f"{buy_years[0]}-{buy_years[-1]}",

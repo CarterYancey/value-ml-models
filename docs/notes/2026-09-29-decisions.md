@@ -3018,6 +3018,14 @@ and, after the seed runs that decision 61.5 requires, at seeds 232 and
 1776 as well. The note's round 6 has the tables. Decision 71 reads
 them.
 
+*Amended 2026-11-25 (decision 72):* the rule of item 3 read "money and
+TWR". Under the metric of record adopted in decision 72, the CAGR, the
+rule reads "beats SPY on the CAGR", which with identical deposits is
+the same as beating it on money. F50 passes it at every seed (12.92%,
+12.86% and 13.14% against SPY's 12.58%). Prediction 3's "W50 and W70
+below SPY on TWR by 2 points or more" reads on the CAGR as 1.5 and 5.6
+points below.
+
 ### 71. Round 6 read: the F50 portfolio beats SPY before 2021 at three seeds and stays far behind the candidate; the program closes again
 
 *What the runs showed (2026-11-25):* before 2021, the portfolio that
@@ -3058,3 +3066,68 @@ gave a 5,700-dollar account a +1,911% year.
    column, or a price floor Carter wants tested.
 5. **The 2020 window stays a standing risk.** It is recorded in TODO.md
    as a choice to challenge when the bubble question is answered.
+
+*Amended 2026-11-25 (decision 72):* item 2 is replaced by decision 72,
+which takes the TWR out of the headline and makes the CAGR the metric
+of record. Read on the CAGR, the F50 portfolio beats SPY before 2021
+by 0.3 to 0.6 points a year (12.86% to 13.14% against 12.58%), and the
+W70 portfolio is 5.6 points below SPY, in step with its final value.
+The figures above were read on TWR and stand as written.
+
+### 72. The CAGR replaces the TWR as the metric of record for a backtest; the Foamex move is real
+
+*What happened (2026-11-25):* Carter read decision 71 and doubted the
+W70 run's one 4-cent stock: no stock goes from 4 cents to 15 dollars in
+five months, so the move looked like an upstream error. He asked that
+the CAGR, not the TWR, be the metric.
+
+*What I checked.* The raw Sharadar record for Foamex International
+(permaticker 123699, ticker `FMXLQ`, with `FMXIQ` and `FMXI` as earlier
+tickers). The unadjusted close was 1 cent on 2006-01-03 and 4.51
+dollars on 2006-05-01; the price panel's 4 cents and 18 dollars are
+those prices multiplied by 4 for the 1-for-4 reverse split of May 2007.
+Sharadar's daily table has the company's market value going from 0.7
+million dollars in January 2006 to 80 million in April while the
+enterprise value stayed near 900 million: the debt was worth what it
+had been and the equity went from nothing to something. The reason is
+on the public record. Foamex filed for chapter 11 in September 2005;
+in 2006 its largest shareholders agreed to fund the plan with new
+equity; the rights offering of December 2006 sold shares at 2.25
+dollars; and the company left bankruptcy in February 2007 with the old
+shareholders keeping their stock. The move is real. What the data
+cannot give is the entry price to better than a factor of two:
+Sharadar records whole cents, and a stock quoted anywhere below 1.5
+cents is "1 cent". The 2006 return of the W70 run is a real gain on a
+position of 100 dollars, measured from a price known only to within a
+factor of two.
+
+*Decided:*
+
+1. **The CAGR is the metric of record for a backtest.** It is the
+   annual rate at which the deposits compounded into the final value:
+   the internal rate of return of the dated deposits and the final
+   value (XIRR). The report's headline names it `cagr`; the ledger
+   keeps the column name `mwr_annualized` so that earlier rows read
+   the same, and gains `benchmark_mwr_annualized`. Both legs of a
+   backtest get identical deposits, so the CAGR ranks them as the final
+   value does, and the disagreement between a TWR and a final value
+   that rounds 5 and 6 kept meeting cannot arise under it.
+2. **The TWR leaves the headline.** It stays in the report as `twr`,
+   after the drawdown, and in the per-year table, where a year's return
+   is a year's return and the headline CAGR does the weighting by
+   money. It is read only beside the final value, the CAGR and the
+   per-year table. Decision 71.2 said as much and is replaced by this.
+3. **What the change does to the round-6 reading.** Nothing changes
+   order: the CAGRs of the 2020 window stand in the order of the final
+   values. F50 beats SPY by 0.3 to 0.6 points of CAGR at three seeds
+   (12.86% to 13.14% against 12.58%), where the TWR had said 0.7 to
+   0.9. The candidate on the same window, from its valuation file,
+   has a CAGR of 15.2% against SPY's 11.9%. W70's CAGR of 7.0% is 5.6
+   points below SPY's. Round 5's
+   prediction of a return below SPY's, which did not hold on the TWR,
+   would have held on the CAGR (11.89% and 11.55% against 11.96%); the
+   note says so beside the original reading. No conclusion of decisions
+   69 to 71 changes.
+4. **The Foamex position stays in the record.** It is not an upstream
+   error and nothing is removed or rerun. The price-floor question of
+   decision 71.3 stands: the floors let a real 1-cent stock through.

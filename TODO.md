@@ -682,22 +682,25 @@ in [PLAN.md](PLAN.md); check items off (and add new ones) as work proceeds.
       `n_estimators`) at full budget via a follow-up sweep file — no
       harness change needed, just two sweep configs.
 
-### Next, after 2026-11-25, second session (decisions 61 to 71)
+### Next, after 2026-11-25, second session (decisions 61 to 72)
 
-The fallen-stock program (decisions 61 to 71, note
+The fallen-stock program (decisions 61 to 72, note
 docs/notes/2026-11-25-fallen-stocks.md) asked whether a model can find
 the stocks that recover after a deep fall. It cannot, with these
 columns. The "not a loser" forest inside F50 gives a portfolio of fallen
 stocks that beats SPY by 2.5% to 4.9% on money before 2021 at three
 seeds, with a drawdown 5 points deeper than SPY's, and stays far behind
 the candidate. Every deeper fall loses to SPY. The program is closed;
-three questions are Carter's.
+three questions are Carter's. The metric of record for a backtest is
+now the CAGR, the money-weighted growth rate of the deposits, and the
+TWR is read only beside it (decision 72).
 
 Also on 2026-11-25 the sandbox died while a backtest was writing its
 ledger row. The ledger was repaired, the backtest's memory use was cut,
 and a command now enforces the lab-branch rule (decision 68).
 
-- [ ] **Carter merges `claude/results-2026-11-25b`.** After the merge,
+- [ ] **Carter merges `claude/results-2026-11-25b`.** It also carries
+      the report change of decision 72 (`cagr` in the headline). After the merge,
       from any other branch, run
       `uv run vml-queue archive-lab claude/lab-2026-11-25b --delete`.
       The next session starts with `uv run vml-queue new-lab`.
@@ -710,9 +713,10 @@ and a command now enforces the lab-branch rule (decision 68).
       candidate's 36% lead over SPY on the same window and a drawdown
       17 points shallower. Nothing is promoted until Carter decides.
 - [ ] **Carter decides whether to add a price floor** to the backtest's
-      investability filter (decision 71.3). A 4-cent bankrupt stock
-      passed the 100k dollar-volume floor and the rank floor in 2006.
-      The filter would change every backtest's universe.
+      investability filter (decision 71.3). A bankrupt stock at 1 cent,
+      a real price (decision 72), passed the 100k dollar-volume floor
+      and the rank floor in 2006. The filter would change every
+      backtest's universe.
 - [ ] **The 2020 comparison window is a standing risk** (decision 70.1).
       It drops the years in which SPY was strongest and was chosen after
       the portfolios lost ground in them. Challenge it when the bubble
