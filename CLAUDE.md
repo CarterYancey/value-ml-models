@@ -217,22 +217,22 @@ It is sentences without a finite verb, shorthand coined on the spot,
 aphorisms, and clauses hidden in parentheses.
 
 **Invoke the `writing` skill** (`.claude/skills/writing/SKILL.md`)
-before you write or edit anything a person will read. That means a doc
-under docs/, findings.md, a note, the decision log and a TODO item. It
-also means a logbook entry, a promote note, a commit message, and every
-reply to Carter. Do not invoke it while reading code, debugging or reasoning about an
+before you write or edit anything a person will read: a doc under
+docs/, findings.md, a note, the decision log, a TODO item, a logbook
+entry, a promote note, a commit message, and every reply to Carter.
+Do not invoke it while reading code, debugging or reasoning about an
 experiment. The skill holds the procedure, the sentence rules and the
 examples Carter rejected. Its procedure is: write the draft, run
 `vml-writing` on it, fix every error, then save or send.
 
-**The glossary is the vocabulary.** [GLOSSARY.md](GLOSSARY.md) holds one term per
+**The vocabulary.** [GLOSSARY.md](GLOSSARY.md) holds one term per
 concept, with the words to avoid. Use its terms exactly, in every doc,
 note, logbook entry, TODO item, config `note` and commit message. When
 a new concept appears, add its entry to the glossary in the same
 change. `docs/writing_denylist.toml` holds every phrase Carter has
 objected to, dated. Add to it the same day. Never remove an entry.
 
-**The check is a command.** `vml-writing <files>` and `vml-writing --text` apply the
+**The check.** `vml-writing <files>` and `vml-writing --text` apply the
 skill's sentence rules and exit 1 on an error. The code is
 src/harness/writing.py. `vml-logbook add` and `vml-promote --note`
 refuse text that fails it. The fragment, noun-stack and passive checks
