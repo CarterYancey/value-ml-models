@@ -2656,17 +2656,24 @@ runs, because the sub-universes ask a different question.
 *Written on 2026-11-25 after the first nine runs of round 1 were read
 in the ledger and before round 2 ran.* The round-1 forest inside F50
 finds "not a loser" with a lead over same-size fallen peers of about
-5 points a year, but it has almost no skill on the recovery label. Its
-p@20 on that label is 0.217 against a base rate of 0.156. Its screen
-precision there is 0.185 against the peers' 0.170. The theory-led
-feature set is 0.09 behind the 112 ranks on p@20 in cell C, so
-prediction 3 of decision 61 missed and its rival held.
+5 points a year. It has almost no skill on the recovery label:
+
+| recovery label inside F50, forest on the 112 ranks | value |
+|---|---|
+| p@20 | 0.217 |
+| base rate | 0.156 |
+| screen precision | 0.185 |
+| screen precision of same-size peers | 0.170 |
+
+In cell C the theory-led feature set is 0.09 behind the 112 ranks on
+p@20. Prediction 3 of decision 61 therefore missed, and its rival held.
 
 *Decided:*
 
-1. **Deeper forests on the recovery label inside F50**, depth 6 with
-   40 rows a leaf and depth 8 with 30, beside the candidate's depth 4.
-   A recovery may need interactions a depth-4 tree cannot express.
+1. **Deeper forests on the recovery label inside F50.** The candidate's
+   forest has depth 4. The two new sets have depth 6 and depth 8, with
+   smaller leaves. A recovery may need interactions a depth-4 tree
+   cannot express.
 2. **A modest path-free target inside F50**, `fwd_3y_cagr >= 0.1`, on
    the same three forests. A value investor holds through the drawdown,
    and cell C penalises a further 30% fall.
@@ -2675,6 +2682,6 @@ prediction 3 of decision 61 missed and its rival held.
 4. **The recovery label learned on every row and evaluated inside F50**,
    through `universe_scope = "test"`. This asks whether the forest
    learns recovery better with ten times the training rows.
-5. The predictions are in the config headers. In short, I expect no
-   arm to reach a p@20 of 0.26 on the recovery label, and I expect the
-   path-free target to be learned as calm, like cell C.
+5. The predictions are in the config headers. In short, I expect no arm to reach a p@20 of 0.26 on the recovery
+   label. I expect the forest to learn the path-free target as calm,
+   like cell C.
