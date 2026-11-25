@@ -55,18 +55,14 @@ def last_turn_text(transcript: Path) -> str:
             continue
     start = 0
     for i, e in enumerate(entries):
-        if e.get("type") != "user" or e.get("isMeta"):
-            continue        # isMeta: text the harness injected, not the person
+        if e.get("type") != "user":
+            continue
         content = (e.get("message") or {}).get("content")
-        if isinstance(content, list):
-            if any(isinstance(c, dict) and c.get("type") == "tool_result" for c in content):
-                continue
-            content = " ".join(c.get("text", "") for c in content if isinstance(c, dict))
-        if not isinstance(content, str):
-            continue
-        if content.lstrip().startswith(("<system-reminder>", "[Request interrupted")):
-            continue
-        start = i
+        if isinstance(content, str):
+            start = i
+        elif isinstance(content, list) and not any(
+                isinstance(c, dict) and c.get("type") == "tool_result" for c in content):
+            start = i
     texts = []
     for e in entries[start:]:
         if e.get("type") != "assistant":
