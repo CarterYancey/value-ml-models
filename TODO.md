@@ -682,6 +682,25 @@ in [PLAN.md](PLAN.md); check items off (and add new ones) as work proceeds.
       `n_estimators`) at full budget via a follow-up sweep file — no
       harness change needed, just two sweep configs.
 
+### Next, after 2026-11-25, second session (decisions 61-69)
+
+The fallen-stock program ran and closed (decision 69, note
+docs/notes/2026-11-25-fallen-stocks.md). The sandbox died under a
+backtest at 02:55; the ledger was repaired, the backtest's memory cut,
+and the lab-branch rule made a command (decision 68).
+
+- [ ] **Carter merges `claude/results-2026-11-25b`.** Then
+      `uv run vml-queue archive-lab claude/lab-2026-11-25b --delete`
+      from another branch, and the next session starts with
+      `uv run vml-queue new-lab`.
+- [ ] **Carter reads the host's sandbox log** for 2026-11-25, 02:55 to
+      03:00 local, to confirm or refute the memory cause of decision 68.
+- [ ] A `vml-backtest` still peaks near 9.7 GB on the 14 GB sandbox.
+      The yearly refits hold the rest. Run one heavy job at a time, and
+      measure a new kind of run before chaining it.
+- [ ] The market-state question is the program's one open lead and is
+      an upstream request, not a run here.
+
 ### Next, after 2026-11-25 (decision 60)
 
 Carter asked how the forecasts on `inference_2026-11-20` change when

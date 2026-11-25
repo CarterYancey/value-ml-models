@@ -418,3 +418,50 @@ inside F50. It still leads same-size peers by 0.106 in the first half. Its peers
 and its picks lose money 47% of the time. The lead falls to 0.032 in
 the second half. It is not carried forward, and it is recorded as an
 open oddity.
+
+
+### Round 5: the two backtests for the record
+
+Decision 65 ordered two backtests, not as a selection but as the only
+money reading of the program. Each trades the cell C forest trained
+inside its universe, alone, with Carter's rank floor: top 10 a month,
+at most 2 per sector, equal weights, 35 bps a side, buys 2006 to 2020,
+valued at the end of 2023. The 2006 start is the fold restriction of
+this note, so SPY's numbers below are SPY's own over the same deposits
+and are not the candidate's 2005 to 2020 SPY figures.
+
+| portfolio | final value on 180,000 | TWR | MWR | worst drawdown | buys | lead over same-size candidates, 3y | losers, 3y |
+|---|---|---|---|---|---|---|---|
+| SPY, same deposits | 664,685 | 9.72% | 11.96% | −52.8% | | | |
+| cell C forest inside F50 (`bt_fallen50_forestC_top10_cap2_rankfloor`, config 3bbf0d1552a571ad) | 660,061 | 10.25% | 11.89% | −57.5% | 1,749 | +9.2 points | 0.347 against 0.493 |
+| cell C forest inside F30 (`bt_fallen30_forestC_top10_cap2_rankfloor`, config 3bf38d97bca05b0b) | 634,784 | 10.31% | 11.55% | −48.1% | 1,770 | +6.9 points | 0.331 against 0.454 |
+| the candidate, 2005 to 2020 (decision 55, for scale) | 932,471 on 192,000 | 11.76% | 13.65% | −41.0% | 1,741 | | |
+
+The predictions of decision 65 and what held:
+
+| prediction | F50 | F30 |
+|---|---|---|
+| TWR under SPY's | did not hold, 10.25% against 9.72% | did not hold, 10.31% against 9.72% |
+| drawdown deeper than −50% | held, −57.5% | did not hold, −48.1% |
+| buys lead same-size candidates by 3 points a year or more | held, +9.2 | held, +6.9 |
+
+Both portfolios end with less money than SPY on the same deposits
+while their TWR is higher. The difference is timing. The fallen
+portfolios earned their excess in 2006 and 2009 to 2013, and lost to
+SPY in 2014, 2015, 2018 and 2019, when the deposits already in the
+account were larger. The 1-year reading says the same: the buys trail
+the candidates they were chosen from in the crash recoveries of 2009
+and 2020, when every fallen stock rose, and lead them in ordinary years.
+The forest picks the fallen stocks that do not fall further. It does
+not pick the ones that come back. Both portfolios are far behind the
+candidate's 11.76% and both lose at least a third of their buys over
+three years. The program's count of backtests is two, both for the
+record, and no further run is planned.
+
+Both backtests were run twice. The first F50 run finished at 02:55 on
+2026-11-25 in the second that the sandbox died, so its five report
+files are empty and its ledger row was cut inside the metrics. The
+first F30 run of 12:42 failed at its final step because the cut row
+made the ledger unreadable. Decision 68 records the repair. The rerun
+of F50 reproduced the cut row's final value and drawdown to the last
+digit.
