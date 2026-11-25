@@ -89,9 +89,9 @@ benchmark, share losing money, share that stopped printing early). A
 stock that stops printing exits at its final print and the proceeds
 ride the benchmark to the horizon. The pooled row is logged
 (`buy_mean_excess_3y`, `buy_beat_3y`, ...). Read it beside the
-headline: time-weighted return gives the small early portfolio the
-weight of the large late one, money-weighted return the reverse, and
-two strategies can swap places between them; one buy, one vote says
+headline: the CAGR weights each year by the money the account held,
+so the late years on a full account decide it, while one buy, one
+vote gives every buy the same weight and says
 whether the selection was good in the early years and in the late
 ones. It excludes costs and sizing, so it is a reading of the
 selection, not of the portfolio.
@@ -122,8 +122,12 @@ universe could have escaped. The pooled rows are logged as
 Reports land in
 `reports/backtest/<name>_<config-hash>.*` (report, equity/trades/
 rebalances CSVs — trades carry tickers, per-model scores, and realized
-profit on sells — and the equity plot), lead with money- and
-time-weighted results, the per-year era slice with crash years tagged
+profit on sells — and the equity plot), lead with the final value and
+the CAGR (the money-weighted growth rate of the deposits into the
+final value, XIRR; the metric of record since decision 72, `cagr` in
+the report and `mwr_annualized` in the ledger), the worst drawdown and
+the time-weighted return (`twr`, read only beside the others), then
+the per-year era slice with crash years tagged
 (a year runs from the first trading day of January to the first of the
 next January: the portfolio is valued monthly, and a month's return is
 counted in the year the month starts in; reports written before

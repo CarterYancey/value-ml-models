@@ -267,7 +267,8 @@ investability statement (filters or an explicit, report-flagged
 `"none"`); mandatory `cost_bps`; and a `Strategy` interface (candidates +
 cash + positions → orders) so richer portfolio management (rebalancing,
 sells, position caps) plugs in without touching the engine. Reports lead
-with money-weighted (XIRR) and time-weighted results, drawdowns, the
+with the final value and the money-weighted CAGR (XIRR; the metric of
+record, decision 72), drawdowns, the time-weighted return, the
 per-year era slice with crash tagging, the defensive-hypothesis check,
 the candidate funnel, and full provenance.
 

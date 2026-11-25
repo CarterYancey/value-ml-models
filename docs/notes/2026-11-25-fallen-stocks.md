@@ -441,12 +441,12 @@ whose 3-year return was below zero, with the candidates' share after
 lead over all candidates as the lead over same-size candidates; the
 figures below are corrected and the prediction's reading is unchanged.
 
-| portfolio | final value on 180,000 | TWR | MWR | worst drawdown | buys | lead over the candidates, 3y | lead over same-size candidates, 3y | losers, 3y |
+| portfolio | final value on 180,000 | CAGR | TWR | worst drawdown | buys | lead over the candidates, 3y | lead over same-size candidates, 3y | losers, 3y |
 |---|---|---|---|---|---|---|---|---|
-| SPY, same deposits | 664,685 | 9.72% | 11.96% | −52.8% | | | | |
-| "not a loser" forest inside F50 (`bt_fallen50_forestC_top10_cap2_rankfloor`, config 3bbf0d1552a571ad) | 660,061 | 10.25% | 11.89% | −57.5% | 1,749 | +9.2 points | +6.6 points | 0.347 against 0.493 |
-| "not a loser" forest inside F30 (`bt_fallen30_forestC_top10_cap2_rankfloor`, config 3bf38d97bca05b0b) | 634,784 | 10.31% | 11.55% | −48.1% | 1,770 | +6.9 points | +3.9 points | 0.331 against 0.454 |
-| the candidate, 2005 to 2020 (decision 55, for scale) | 932,471 on 192,000 | 11.76% | 13.65% | −41.0% | 1,741 | | | |
+| SPY, same deposits | 664,685 | 11.96% | 9.72% | −52.8% | | | | |
+| "not a loser" forest inside F50 (`bt_fallen50_forestC_top10_cap2_rankfloor`, config 3bbf0d1552a571ad) | 660,061 | 11.89% | 10.25% | −57.5% | 1,749 | +9.2 points | +6.6 points | 0.347 against 0.493 |
+| "not a loser" forest inside F30 (`bt_fallen30_forestC_top10_cap2_rankfloor`, config 3bf38d97bca05b0b) | 634,784 | 11.55% | 10.31% | −48.1% | 1,770 | +6.9 points | +3.9 points | 0.331 against 0.454 |
+| the candidate, 2005 to 2020 (decision 55, for scale) | 932,471 on 192,000 | 13.65% | 11.76% | −41.0% | 1,741 | | | |
 
 The predictions of decision 65 and what held:
 
@@ -455,6 +455,10 @@ The predictions of decision 65 and what held:
 | TWR under SPY's | did not hold, 10.25% against 9.72% | did not hold, 10.31% against 9.72% |
 | drawdown deeper than −50% | held, −57.5% | did not hold, −48.1% |
 | buys lead same-size candidates by 3 points a year or more | held, +6.6 | held, +3.9 |
+
+Read on the CAGR, the metric of record since decision 72, the first
+prediction would have held: F50's 11.89% and F30's 11.55% are under
+SPY's 11.96%. The table keeps the reading as it was made.
 
 Both portfolios end with less money than SPY on the same deposits
 while their TWR is higher. The reason is timing. The fallen portfolios
@@ -565,24 +569,27 @@ screen table above, traded alone inside its universe: every month the
 one sector, equal weights, 35 basis points a side, buys from 2006 to
 2020 with year-end refits. The 2020 window values the account on
 2020-12-31 and the 2023 window on 2023-12-29. SPY on the same deposits
-of 180,000: 500,058 at the end of 2020 (TWR 9.67%, MWR 12.58%, worst
-drawdown −52.8%) and 664,685 at the end of 2023 (TWR 9.72%). The last
+of 180,000: 500,058 at the end of 2020 (CAGR 12.58%, TWR 9.67%, worst
+drawdown −52.8%) and 664,685 at the end of 2023 (CAGR 11.96%). The CAGR
+is the money-weighted growth rate of the deposits, the metric of record
+since decision 72; this table was first written with the TWR beside the
+MWR, and the same numbers stand under their new name. The last
 two columns read the buys of the 2020 window over the three years
 after each buy, against the candidates of the same rebalance in the
 buy's own market-cap band; "losers" is the share of buys with a
 negative 3-year return. The twelve new runs and the two of round 5 are
 all the backtests the program has run: fourteen, all for the record.
 
-| universe | final value, 2020 window | TWR | MWR | worst drawdown | final value, 2023 window | TWR, 2023 window | lead over same-size candidates, 3y | losers, 3y |
+| universe | final value, 2020 window | CAGR | TWR | worst drawdown | final value, 2023 window | CAGR, 2023 window | lead over same-size candidates, 3y | losers, 3y |
 |---|---|---|---|---|---|---|---|---|
-| SPY, same deposits | 500,058 | 9.67% | 12.58% | −52.8% | 664,685 | 9.72% | | |
-| F30 | 491,271 | 10.59% | 12.37% | −48.1% | 634,784 | 10.31% | +5.0 points | 0.335 |
-| F50 | **514,776** | 10.57% | 12.92% | −57.5% | 660,061 | 10.25% | +7.6 points | 0.358 |
-| F70 | 476,627 | 6.78% | 12.02% | −75.5% | 661,625 | 7.57% | +10.0 points | 0.424 |
-| W30 | 499,881 | 9.90% | 12.58% | −57.3% | 627,263 | 9.56% | +6.0 points | 0.372 |
-| W40 | 470,923 | 10.10% | 11.88% | −61.3% | 608,957 | 9.91% | +8.3 points | 0.398 |
-| W50 | 441,845 | 8.80% | 11.13% | −60.2% | 558,797 | 8.69% | +8.4 points | 0.457 |
-| W70 | 312,884 | 16.99% | 7.00% | −92.9% | 349,663 | 14.68% | +4.7 points | 0.621 |
+| SPY, same deposits | 500,058 | 12.58% | 9.67% | −52.8% | 664,685 | 11.96% | | |
+| F30 | 491,271 | 12.37% | 10.59% | −48.1% | 634,784 | 11.55% | +5.0 points | 0.335 |
+| F50 | **514,776** | 12.92% | 10.57% | −57.5% | 660,061 | 11.89% | +7.6 points | 0.358 |
+| F70 | 476,627 | 12.02% | 6.78% | −75.5% | 661,625 | 11.91% | +10.0 points | 0.424 |
+| W30 | 499,881 | 12.58% | 9.90% | −57.3% | 627,263 | 11.44% | +6.0 points | 0.372 |
+| W40 | 470,923 | 11.88% | 10.10% | −61.3% | 608,957 | 11.17% | +8.3 points | 0.398 |
+| W50 | 441,845 | 11.13% | 8.80% | −60.2% | 558,797 | 10.41% | +8.4 points | 0.457 |
+| W70 | 312,884 | 7.00% | 16.99% | −92.9% | 349,663 | 6.17% | +4.7 points | 0.621 |
 
 The configs are `bt_fallen{30,50,70}_forestC_top10_cap2_rankfloor` and
 `bt_fresh{30,40,50,70}_forestC_top10_cap2_rankfloor`, each with a
@@ -592,9 +599,10 @@ entry.
 Four readings follow.
 
 First, Carter's question. On the years before 2021 the F50 portfolio
-beats SPY on every measure: 514,776 against 500,058 on money, 10.57%
-against 9.67% on TWR, 12.92% against 12.58% on MWR. F30 and W30 end
-within 2% of SPY on money, W30 by 177 dollars, with a higher TWR. Every
+beats SPY on every measure: 514,776 against 500,058 on money, 12.92%
+against 12.58% on CAGR, 10.57% against 9.67% on TWR. F30 and W30 end
+within 2% of SPY on money, W30 by 177 dollars and at SPY's own CAGR of
+12.58%, both with a higher TWR. Every
 universe deeper than 50% ends behind SPY on money, by 5% (F70) to 37%
 (W70). The suspicion that started this round was right for F50 and
 wrong for everything deeper: the deep-fall portfolios were behind SPY
@@ -607,12 +615,19 @@ was +1,911%. In January 2006 it bought 2,491 shares of Foamex
 (`FMXLQ`, in bankruptcy) at 4 cents, about 100 dollars, and the stock
 reached 15 dollars by May. That one position took an account of 5,700
 to 67,000 in a month, and the TWR carries that month forever, however
-small the account was. The money-weighted return of 7.0% and the final
-value say what the deposits earned. The rule for reading from here on:
-a TWR is never read without the final value, the MWR and the per-year
-table beside it. The same run shows a hole in the investability
+small the account was. Its CAGR of 7.0% against SPY's 12.58% and its
+final value say what the deposits earned. Decision 71 made a reading
+rule of it, and decision 72 the same day went further: the TWR left the
+headline and the CAGR became the metric of record. Carter doubted the
+Foamex move itself. Decision 72 records the check: the raw Sharadar
+prices (1 cent to 4.51 dollars unadjusted, times 4 for a later reverse
+split), the daily market value (0.7 million to 80 million dollars with
+the enterprise value unchanged) and the bankruptcy record (equity kept
+at the February 2007 emergence after a rights offering at 2.25 dollars)
+agree that the move was real, from an entry price known only to within
+a factor of two. The same run shows a hole in the investability
 filter: the 100k dollar-volume floor and Carter's rank floor let a
-4-cent bankrupt stock through. Whether to add a price floor is
+real 1-cent bankrupt stock through. Whether to add a price floor is
 Carter's call, and it is a config change, not a code change.
 
 Third, the depth of the fall. Money falls with the depth at both
@@ -627,7 +642,8 @@ do not fall further, and the deeper the population has fallen, the
 less that is worth.
 
 Fourth, the rule of decision 70.3. F50 is the one portfolio that beats
-SPY on both money and TWR on the 2020 window, and its buys lead
+SPY on money, and so on the CAGR, and on TWR on the 2020 window, and
+its buys lead
 same-size candidates by 7.6 points, so it goes to seeds 232 and 1776.
 My prediction that no portfolio would meet the rule did not hold. The
 seed runs are read below.
@@ -639,7 +655,7 @@ The predictions of decision 70 and what held:
 | the lead over same-size peers grows with the depth at both horizons, and the picks' return falls with it | held at the 5-year horizon and up to W50 at the 52-week horizon; the lead collapses at W70 |
 | F50 above SPY on money and TWR on the 2020 window; F30 within 5% on money with a higher TWR | held (readings of the valuation files, not predictions) |
 | every 52-week portfolio below SPY on money on both windows | held |
-| W50 and W70 below SPY on TWR by 2 points or more | did not hold: W50 by 0.9 points, and W70's TWR is above SPY's for the reason above |
+| W50 and W70 below SPY on TWR by 2 points or more | did not hold: W50 by 0.9 points, and W70's TWR is above SPY's for the reason above (on the CAGR, W50 is 1.5 points below and W70 5.6) |
 | W30 the closest 52-week portfolio to SPY | held |
 | every drawdown deeper than −50% except F30's, deepening with the depth | held, with W50 one point shallower than W40 |
 | no portfolio meets the rule of decision 70.3 | did not hold: F50 meets it |
@@ -650,22 +666,24 @@ was trained twice more (`forest_fallen50_cellC_seeds_3y`) and each
 seed's portfolio was backtested on both windows. The screen agreed with
 seed 23 within 0.02 on every figure. The portfolios:
 
-| F50 portfolio | final value, 2020 window | TWR | MWR | worst drawdown | final value, 2023 window | TWR, 2023 window | lead over same-size candidates, 3y | losers, 3y |
+| F50 portfolio | final value, 2020 window | CAGR | TWR | worst drawdown | final value, 2023 window | CAGR, 2023 window | lead over same-size candidates, 3y | losers, 3y |
 |---|---|---|---|---|---|---|---|---|
-| SPY, same deposits | 500,058 | 9.67% | 12.58% | −52.8% | 664,685 | 9.72% | | |
-| seed 23 (`bt_fallen50_forestC_top10_cap2_rankfloor`) | 514,776 | 10.57% | 12.92% | −57.5% | 660,061 | 10.25% | +7.6 points | 0.358 |
-| seed 232 (`bt_fallen50_forestC_s232_top10_cap2_rankfloor`) | 512,346 | 10.58% | 12.86% | −58.0% | 649,287 | 10.19% | +8.0 points | 0.352 |
-| seed 1776 (`bt_fallen50_forestC_s1776_top10_cap2_rankfloor`) | 524,688 | 10.34% | 13.14% | −58.1% | 697,903 | 10.29% | +7.3 points | 0.353 |
-| the candidate, 2005 to 2020 (`bt_nonloser_mom_roc_top10_cap2_rankfloor_v141`), read from its valuation file | 728,211 against SPY's 536,924 on 192,000 | 12.43% against 9.38% | | −41.0% | 932,471 against 732,110 | 11.76% | | |
+| SPY, same deposits | 500,058 | 12.58% | 9.67% | −52.8% | 664,685 | 11.96% | | |
+| seed 23 (`bt_fallen50_forestC_top10_cap2_rankfloor`) | 514,776 | 12.92% | 10.57% | −57.5% | 660,061 | 11.89% | +7.6 points | 0.358 |
+| seed 232 (`bt_fallen50_forestC_s232_top10_cap2_rankfloor`) | 512,346 | 12.86% | 10.58% | −58.0% | 649,287 | 11.75% | +8.0 points | 0.352 |
+| seed 1776 (`bt_fallen50_forestC_s1776_top10_cap2_rankfloor`) | 524,688 | 13.14% | 10.34% | −58.1% | 697,903 | 12.39% | +7.3 points | 0.353 |
+| the candidate, 2005 to 2020 (`bt_nonloser_mom_roc_top10_cap2_rankfloor_v141`), read from its valuation file | 728,211 against SPY's 536,924 on 192,000 | 15.22% against 11.92% | 12.43% against 9.38% | −41.0% | 932,471 against 732,110 | 13.65% | | |
 
 Before 2021 the F50 portfolio beats SPY at all three seeds, by 2.5% to
-4.9% on money and by 0.7 to 0.9 points of TWR, with a worst drawdown 5
+4.9% on money, which is 0.3 to 0.6 points of CAGR (12.86% to 13.14%
+against 12.58%) and 0.7 to 0.9 points of TWR, with a worst drawdown 5
 points deeper than SPY's. On the 2023 window two seeds end below SPY
 and one above. My prediction that one of the two new seeds would end
 below SPY on money before 2021 did not hold; the arm passes the rule
 of decision 70.3 at every seed. It is still a long way behind the
 candidate. On the same 2020 window the candidate holds 36% more than
-SPY where F50 holds 3% more, and the candidate's drawdown is 17 points
+SPY where F50 holds 3% more, a CAGR of 15.2% against SPY's 11.9% where
+F50's is 12.9% against 12.6%, and the candidate's drawdown is 17 points
 shallower. The candidate's start of 2005 and its larger deposits do
 not change that reading, because both figures are ratios to SPY on the
 same deposits.
@@ -679,8 +697,10 @@ does not give a portfolio that competes with the candidate. The grid
 adds a dose-response in money: the deeper the fall that defines the
 universe, the less the portfolio ends with, at both horizons, while
 the forest's lead over the stocks it chose from grows. The W70 run
-adds the rule that a TWR is read only beside the final value, the MWR
-and the per-year table. Whether the F50 portfolio is worth running as
+took the TWR out of the headline: the metric of record for a backtest
+is the CAGR, the money-weighted growth rate of the deposits, which
+ranks portfolios as their final value does (decision 72). Whether the
+F50 portfolio is worth running as
 a second portfolio beside the candidate, for its different population,
 is Carter's decision (decision 71). The program's backtest count is
 eighteen, all for the record.

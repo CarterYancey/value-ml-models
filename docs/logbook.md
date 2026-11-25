@@ -14,6 +14,13 @@ read** stub; a correction is a new entry that names the old one.
 
 <!-- entries -->
 
+### 2026-11-25 · the CAGR replaces the TWR as the metric of record (decision 72)
+git `67704fa` · [note](notes/2026-11-25-fallen-stocks.md)
+- **Did:** Checked Carter's doubt about the Foamex move in the W70 run against the raw Sharadar prices, the daily market value and the bankruptcy record. Moved the backtest report's headline to the money-weighted CAGR (XIRR, the ledger's mwr_annualized, now with benchmark_mwr_annualized beside it) and put the TWR after the drawdown. Re-read round 6 on the CAGR from the 18 existing reports; nothing was rerun.
+- **Got:** Foamex (FMXLQ): unadjusted close 1 cent on 2006-01-03 and 4.51 dollars on 2006-05-01 (the panel multiplies by 4 for the May 2007 reverse split); market value 0.7 million to 80 million dollars with enterprise value near 900 million; equity kept at the February 2007 emergence after a rights offering at 2.25. CAGR on the 2020 window, SPY 12.58%: F50 12.92 / 12.86 / 13.14 at seeds 23 / 232 / 1776; F30 12.37, W30 12.58, F70 12.02, W40 11.88, W50 11.13, W70 7.00. 2023 window, SPY 11.96%: F50 11.89 / 11.75 / 12.39; F30 11.55, F70 11.91, W30 11.44, W40 11.17, W50 10.41, W70 6.17.
+- **Concluded:** The move is real, measured from a price known only to within a factor of two. With identical deposits the CAGR ranks every portfolio as its final value does, so the disagreement between TWR and money that rounds 5 and 6 kept meeting cannot recur. No conclusion of decisions 69 to 71 changes; round 5's prediction of a return below SPY's would have held on the CAGR.
+- **Next:** Carter's decisions of 71.1 and 71.3 stand. New backtest reports carry cagr in the headline.
+
 ### 2026-11-25 · the F50 forest at seeds 232 and 1776 in money: four backtests of decision 70.3
 git `f24b95e` · [note](notes/2026-11-25-fallen-stocks.md)
 - **Did:** I backtested the F50 "not a loser" forest at seeds 232 and 1776, each alone inside F50 with Carter's rank floor as in round 5, on the 2020 window and on the 2023 window. Configs bt_fallen50_forestC_s232_top10_cap2_rankfloor (327f5553be10e945; _to2020 cb229f57e68b775a) and bt_fallen50_forestC_s1776_top10_cap2_rankfloor (4fcedb18e23941fa; _to2020 ed78c5163ea0caf8). I also read the candidate's valuation file (bt_nonloser_mom_roc_top10_cap2_rankfloor_v141, config f2236a06a7cf9526) at 2020-12-01 for the comparison.

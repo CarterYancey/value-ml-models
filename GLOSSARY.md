@@ -238,16 +238,27 @@ change. The format follows Matt Pocock's `domain-modeling` skill.
 
 - **Final value** — what the portfolio is worth at the end of a
   backtest, after deposits, costs and sells. It is the first number
-  read for a backtest, with TWR and MWR beside it (decision 53).
+  read for a backtest, with the CAGR beside it (decisions 53 and 72).
   _Avoid_: money, "in money", "on money".
+- **CAGR of a backtest** — the metric of record for a backtest
+  (decision 72): the annual rate at which the deposits compounded into
+  the final value, the internal rate of return of the dated deposits
+  and the final value (XIRR). It is `cagr` in the report's headline and
+  `mwr_annualized` in the ledger, where the column keeps its old name.
+  Both legs of a backtest get identical deposits, so the CAGR ranks
+  them as the final value does. A label's CAGR is a different thing:
+  the horizon return of one stock, `fwd_{H}y_cagr`. _Avoid_: MWR,
+  money-weighted return, which named this number before decision 72.
 - **TWR** — the time-weighted return, a year: the compound growth rate
   of one unit held from the first day to the last. Deposit timing does
-  not affect it, so a huge return on a tiny early account counts as
-  much as a year on a full one. A TWR is read only beside the final
-  value, the MWR and the per-year table (decision 71). _Avoid_: CAGR
-  for a portfolio, which is a label's horizon return.
-- **MWR** — the money-weighted return, a year: the internal rate of
-  return of the deposits and the final value.
+  not affect it, so a month on a tiny early account counts as much as
+  a month on a full one; the W70 portfolio of decision 71 had the
+  program's highest TWR and its least money. It is not a metric of
+  record. It stays in the report after the drawdown and in the
+  per-year table, and is read only beside the final value, the CAGR
+  and the per-year table (decisions 71 and 72).
+- **MWR** — the old name of the CAGR of a backtest (before decision
+  72). Use CAGR; the ledger column is still `mwr_annualized`.
 - **Worst drawdown** — the largest fall from a peak to a later low in
   the portfolio's value over the run. _Avoid_: max drawdown, which
   names the label column `fwd_3y_max_drawdown_from_entry`.
