@@ -202,3 +202,48 @@ invariant 4.
    `dist_5y_high` exists from 2002, and a 10-year high would exist from
    2008. Nothing can be done about the start date. A 10-year high
    column would still be worth having for the deployment years.
+
+### Round 1: the candidate's forest configuration inside F50
+
+Sweep `forest_fallen50_cells_3y`, seed 23, folds 2006 to 2020, 12 runs.
+The screen takes the top 10 per quarter with at most 2 per sector. The
+peers are the same-size fallen stocks of the quarter. "Lead" is the
+picks' mean 3-year CAGR minus the peers'. The halves are 2006–12 and
+2013–20.
+
+| cell inside F50 | feature set | p@20 | base rate | screen precision | peers | mean 3y CAGR | peers | lead, first half | lead, second half | losers | peers |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| C, not a loser | 112 ranks | 0.533 | 0.285 | 0.430 | 0.331 | +0.037 | −0.017 | +0.047 | +0.060 | 0.388 | 0.464 |
+| C, not a loser | theory-led, 144 | 0.440 | 0.285 | 0.370 | 0.322 | +0.022 | −0.022 | +0.002 | +0.080 | 0.438 | 0.475 |
+| C, not a loser | ranks + 47, 159 | 0.547 | 0.285 | 0.433 | 0.331 | +0.033 | −0.016 | +0.043 | +0.053 | 0.395 | 0.463 |
+| recovery, doubled | 112 ranks | 0.217 | 0.156 | 0.185 | 0.170 | −0.042 | −0.034 | +0.015 | −0.028 | 0.472 | 0.486 |
+| recovery, doubled | theory-led | 0.183 | 0.156 | 0.183 | 0.165 | −0.037 | −0.034 | −0.005 | −0.002 | 0.468 | 0.488 |
+| recovery, doubled | ranks + 47 | 0.197 | 0.156 | 0.180 | 0.167 | −0.058 | −0.030 | −0.018 | −0.036 | 0.480 | 0.485 |
+| beat SPY | 112 ranks | 0.360 | 0.315 | 0.313 | 0.346 | −0.011 | −0.018 | −0.003 | +0.017 | 0.457 | 0.469 |
+| beat SPY | theory-led | 0.327 | 0.315 | 0.327 | 0.343 | +0.002 | −0.022 | −0.002 | +0.047 | 0.442 | 0.472 |
+| beat SPY | ranks + 47 | 0.323 | 0.315 | 0.323 | 0.345 | −0.002 | −0.020 | +0.002 | +0.033 | 0.440 | 0.471 |
+| beat SPY by 10 points | 112 ranks | 0.233 | 0.198 | 0.225 | 0.217 | −0.022 | −0.029 | +0.009 | +0.005 | 0.472 | 0.484 |
+| beat SPY by 10 points | theory-led | 0.213 | 0.198 | 0.220 | 0.213 | −0.002 | −0.033 | +0.004 | +0.055 | 0.420 | 0.487 |
+| beat SPY by 10 points | ranks + 47 | 0.220 | 0.198 | 0.213 | 0.213 | −0.016 | −0.032 | −0.006 | +0.036 | 0.443 | 0.488 |
+
+The candidate's own bundles, trained on every row and evaluated inside
+F50 over all 16 folds, for comparison:
+
+| bundle inside F50 | screen precision | peers | mean 3y CAGR | peers | lead, 2005–12 | lead, 2013–20 | losers | peers |
+|---|---|---|---|---|---|---|---|---|
+| the candidate's forest | 0.478 | 0.324 | +0.043 | −0.020 | +0.059 | +0.066 | 0.377 | 0.477 |
+| the candidate's blend, forest with momentum and return on capital | 0.381 | 0.302 | +0.015 | −0.040 | +0.052 | +0.059 | 0.458 | 0.506 |
+| the candidate's blend inside the 100k floor, all stocks | 0.684 | | +0.105 | | | | 0.208 | |
+
+Three readings follow. First, inside F50 the forest learns calm and
+nothing else. On cell C it leads same-size fallen peers by 5 points a
+year with a fifth fewer losers. Three labels ask for a rise: the
+recovery label, beat SPY, and beat SPY by 10 points. On each of them
+the forest's screen precision is within 0.03 of the peers'. Its lead
+is within 0.02 of zero. Second, the forest trained on every row does as well
+inside F50 as the forest trained there. The population did not need its
+own model. Third, the picks earn 4% a year, where the candidate's
+picks earn 10.5%. The fallen population earns 10 points a year less
+than the stocks near their highs, and no selection inside it closed
+that gap. In cell C the theory-led set was 0.09 behind the ranks on p@20. That
+is the gap seen on all rows, so the rival of prediction 3 held.

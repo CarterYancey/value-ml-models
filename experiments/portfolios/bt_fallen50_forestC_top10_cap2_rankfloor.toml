@@ -1,0 +1,58 @@
+# Decision 61 (2026-11-25), the fallen-stock program: a backtest of the
+# not-a-loser forest trained inside the fallen universe F50
+# (forest_fallen50_cells_3y, cell C, 112 ranks, seed 23), traded alone:
+# top 10 a month, at most 2 per sector, equal weights, Carter's rank
+# floor, inside dist_5y_high <= -0.5 (the bundle's universe, carried as
+# investability). 2006-2020 with year-end refits, valued end of 2023.
+# The candidate's run on v1.4.1 (bt_nonloser_mom_roc_top10_cap2_rankfloor_v141)
+# is the comparison: TWR 11.76%, drawdown -41.0%, 2005-2020.
+# Prediction, written before the run: TWR between 2% and 7%, below SPY's,
+# a drawdown deeper than -50%, and a share of buys that lost money over
+# three years above 0.35. The buys lead same-size candidates (vs_peers)
+# by 4 points a year or more.
+name = "bt_fallen50_forestC_top10_cap2_rankfloor"
+dataset_version = "dataset_v1.4.1"
+prices_version = "prices_v1.0"
+
+bundles = [
+    "experiments/models/forest_fallen50_cells_3y__label_3y_cagr_ge_0p0_and_3y_max_drawdown_from_entry_lt_0p3__fs0_b98ceed78486",
+]
+
+[signal]
+max_staleness_days = 200
+model_update = "refit"
+label_lag_days = 45
+
+[[investability]]
+column = "dollar_volume_3m_rank"
+op = ">="
+value = 0.2
+
+[[investability]]
+column = "dist_5y_high"
+op = "<="
+value = -0.5
+
+[[investability]]
+column = "dollar_volume_3m"
+op = ">="
+value = 100000
+
+[portfolio]
+strategy = "buy_and_hold"
+top_k = 10
+weighting = "equal"
+monthly_cash = 1000.0
+max_per_group = 2
+group_column = "sector"
+
+[execution]
+cost_bps = 35.0
+benchmark_cost_bps = 0.0
+max_quote_age_days = 3
+delist_after_days = 30
+
+[window]
+start = 2006-01-01
+end = 2020-12-31
+valuation_end = 2023-12-29

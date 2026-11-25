@@ -14,6 +14,20 @@ read** stub; a correction is a new entry that names the old one.
 
 <!-- entries -->
 
+### 2026-11-25 · the candidate's forest and blend evaluated inside the fallen universe F50 (screen_fallen50_peers, blend_mom_roc_fallen50_peers)
+git `1867f1e` · [note](notes/2026-11-25-fallen-stocks.md)
+- **Did:** I evaluated the candidate's forest and its mean-rank blend inside the fallen universe F50 without refitting. The universe sat on the eval config of vml-eval. The screen read the picks against same-size fallen peers over all 16 folds.
+- **Got:** The forest's screen precision inside F50 was 0.478 against the peers' 0.324. Its picks' mean 3-year CAGR was 0.043 against the peers' -0.020. The lead was 0.059 in 2005-12 and 0.066 in 2013-20. Losers were 0.377 against the peers' 0.477. The blend's screen precision was 0.381 against the peers' 0.302. Its picks' mean CAGR was 0.015 against the peers' -0.040, and its losers were 0.458.
+- **Concluded:** The candidate's forest, trained on every row, picks among fallen stocks as well as a forest trained inside F50 does. Its lead over same-size fallen peers is 6 points a year and its losers are 0.38. Prediction 5 of decision 61 said this forest would have fewer losers and a lower mean CAGR than the F50-trained forest. The losers were fewer, and the mean CAGR was higher. The blend is worse than the forest alone inside F50, so momentum and return on capital do not help among fallen stocks.
+- **Next:** Round 2 of decision 62 asks whether the value investor's filters change this.
+
+### 2026-11-25 · forest_fallen50_cells_3y
+12 runs · `dataset_v1.4.1` · 4 cells · git `1867f1e` · [summary](../reports/sweeps/forest_fallen50_cells_3y/forest_fallen50_cells_3y_summary.md) · [note](notes/2026-11-25-fallen-stocks.md)
+- **Did:** I ran the candidate's forest configuration inside the fallen universe F50 on four cells with three feature sets at seed 23. The folds were 2006 to 2020 and the bundles were saved. That is 12 runs, read on the portfolio screen against same-size fallen peers.
+- **Got:** In cell C the forest on the 112 ranks reached a p@20 of 0.533 against a base rate of 0.285. Its screen precision was 0.430 against the peers' 0.331. The picks' mean 3-year CAGR was 0.037 against the peers' -0.017. The lead was 0.047 in 2006-12 and 0.060 in 2013-20. Losers were 0.388 against the peers' 0.464. The theory-led feature set reached a p@20 of 0.440. On the recovery label the forest reached a p@20 of 0.217 against a base rate of 0.156. Its screen precision there was 0.185 against the peers' 0.170. On beat SPY the screen precision was 0.313 against the peers' 0.346. On the big-winner label it was 0.225 against 0.217.
+- **Concluded:** Inside F50 the forest learns calm and nothing else. It finds the fallen stocks that do not lose, with a lead of about 5 points a year over same-size fallen peers. It cannot tell which fallen stocks recover or beat SPY. Its picks earn 3.7% a year, far below the candidate's 10.5% on the same screen, because the fallen population earns less. Prediction 2 of decision 61 missed on both cells. Prediction 3 missed and its rival held: the theory-led set is 0.09 behind the ranks. Prediction 4 held in part, because the lead was 0.047 in the first half and the losers were 0.39.
+- **Next:** I will run round 2 of decision 62 and round 3 of decision 63 as chains. The regression reframe inside F50 is running now.
+
 ### 2026-11-25 · the training cutoff: the candidate's forecasts without the recent years (decision 60)
 git `9f452a5` · [note](notes/2026-11-25-training-cutoff.md)
 - **Did:** Carter asked how the forecasts on inference_2026-11-20 change when the deployable candidate does not train on the past five years. I added vml-train-deploy --train-end, the training cutoff, with tests, and scripts/compare_predictions.py. I refit the candidate's forest on dataset_v1.4.1 with cutoffs 2021-01-01 and 2018-01-01 and ran the runbook's vml-predict with each beside the deployed forest.
