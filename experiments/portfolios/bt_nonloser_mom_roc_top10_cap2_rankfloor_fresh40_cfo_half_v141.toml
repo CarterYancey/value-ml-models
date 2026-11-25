@@ -1,0 +1,68 @@
+# Decision 64.6 (2026-11-25), the fallen-stock program: the candidate's
+# config (bt_nonloser_mom_roc_top10_cap2_rankfloor_v141, the three v1.4.1
+# legs by mean rank, top 10 a month, 2 per sector, Carter's rank floor)
+# with three investability filters added, the value investor's fresh-fall
+# archetype: dist_52w_high <= -0.4, piotroski_cfo_positive == true,
+# log_marketcap_rank >= 0.5. A portfolio rule on the deployed candidate,
+# not a new model. 2005-2020, valued end of 2023. Run only if the screen
+# of the candidate's forest inside this universe meets decision 61.5.
+# Prediction, written before the run: TWR between 8% and 12% (the
+# candidate 11.76%, SPY 9.58%), a worst drawdown deeper than the
+# candidate's -41.0%, and the buys' 3-year lead over same-size
+# candidates larger than the candidate's. Rival: the forest's calm picks
+# inside a fresh-fall universe are the stocks that fell for a reason, and
+# the TWR is under 8%.
+name = "bt_nonloser_mom_roc_top10_cap2_rankfloor_fresh40_cfo_half_v141"
+dataset_version = "dataset_v1.4.1"
+prices_version = "prices_v1.0"
+
+bundles = [
+    "experiments/models/forest_nonloser_dd30_3y_v141_f259c702a6a6",
+    "experiments/models/factor_mom_12_2_3y_v141_121349f6e682",
+    "experiments/models/factor_roc_greenblatt_3y_v141_4457ca01bcfb",
+]
+
+[signal]
+combine = "mean_rank"
+max_staleness_days = 200
+model_update = "refit"
+label_lag_days = 45
+
+[[investability]]
+column = "dollar_volume_3m_rank"
+op = ">="
+value = 0.2
+
+[[investability]]
+column = "dist_52w_high"
+op = "<="
+value = -0.4
+
+[[investability]]
+column = "piotroski_cfo_positive"
+op = "=="
+value = true
+
+[[investability]]
+column = "log_marketcap_rank"
+op = ">="
+value = 0.5
+
+[portfolio]
+strategy = "buy_and_hold"
+top_k = 10
+weighting = "equal"
+monthly_cash = 1000.0
+max_per_group = 2
+group_column = "sector"
+
+[execution]
+cost_bps = 35.0
+benchmark_cost_bps = 0.0
+max_quote_age_days = 3
+delist_after_days = 30
+
+[window]
+start = 2005-01-01
+end = 2020-12-31
+valuation_end = 2023-12-29
