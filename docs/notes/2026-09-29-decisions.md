@@ -2593,3 +2593,88 @@ fold:
    I stopped the chain are in the ledger and count as trials in cell C
    inside F50. The `vml-eval` runs of the candidate's bundles keep all
    16 folds, because the bundles were trained on all rows.
+
+### 62. The fallen-stock program, round 2: the value investor's tests as universes, the depth of the fall, the 5-year horizon
+
+*Written on 2026-11-25 while the round-1 forest sweep was running, and
+before any of its results were read.* The base rates of decision 61
+showed that a few columns known at the snapshot separate the fallen
+stocks that recover from the rest. Round 2 asks whether a forest
+trained inside one of those populations picks better than one trained
+inside all of F50. It also asks how the answer moves with the depth of
+the fall and with the horizon.
+
+*Round 2 rests on these base rates.* They come from the same reading
+as decision 61, the walk-forward test rows of 2005 to 2020 inside the
+100k floor:
+
+| population | rows | not a loser | doubled in 3 years | lost half | mean 3y CAGR |
+|---|---|---|---|---|---|
+| F30, 30% or more below the 5-year high | 80,110 | 0.341 | 0.163 | 0.250 | −0.020 |
+| F50 | 50,887 | 0.295 | 0.178 | 0.302 | −0.046 |
+| F70, 70% or more below | 27,173 | 0.234 | 0.182 | 0.382 | −0.092 |
+| F50, operating cash flow positive | 31,535 | 0.369 | 0.207 | 0.209 | +0.022 |
+| F50, the larger half | 18,453 | 0.399 | 0.206 | 0.182 | +0.037 |
+| F50, dividends paid 5 years running or more | 7,990 | 0.419 | 0.237 | 0.170 | +0.059 |
+
+The dividend payers inside F50 are too few for a model. Its median
+quarter holds 27 rows inside F50 and its thinnest quarter holds one.
+It stays a bar and a possible filter, not a universe.
+
+*Decided:*
+
+1. **Two sub-universes get their own forests**, each on cell C and on
+   the recovery label. The forest is the candidate's configuration on
+   the 112 ranks at seed 23, on folds 2006 to 2020. The first is F50 with
+   `piotroski_cfo_positive == true`. The second is F50 with
+   `log_marketcap_rank >= 0.5`.
+2. **The depth of the fall gets a dose-response.** The same forest runs
+   inside F30 and inside F70, on the same two cells.
+3. **The 5-year horizon gets two cells inside F50**, doubled within
+   5 years, `fwd_5y_cagr >= 0.149`, and tripled, `fwd_5y_cagr >= 0.246`.
+   The 5-year folds that have training rows inside F50 are 2008 to
+   2018, so those are the folds.
+4. **The two round-1 forests inside F50 are combined** by worst rank
+   and by mean rank through `vml-eval`, without refitting. The worst
+   rank of a not-a-loser forest and a recovery forest is one list of
+   stocks that both forests rank high.
+5. **The single-factor bars run again** as
+   `baseline_factors_fallen50_3y_f06`, the copy of the round-1 file
+   with folds 2006 to 2020.
+6. Each config carries its prediction in its header. The rule of
+   decision 61.5 applies to every arm.
+
+*What would change the plan:* a round-1 result far above its base rate
+is read as leakage first. The universe code path was built on 2026-09-30 and has run in nine
+universes. `dist_5y_high` is a feature column of the manifest. So the
+risk is low. If round 1 shows
+the forest with no lead over same-size fallen peers, round 2 still
+runs, because the sub-universes ask a different question.
+
+### 63. The fallen-stock program, round 3: deeper trees, a second model family, and the recovery label learned on every row
+
+*Written on 2026-11-25 after the first nine runs of round 1 were read
+in the ledger and before round 2 ran.* The round-1 forest inside F50
+finds "not a loser" with a lead over same-size fallen peers of about
+5 points a year, but it has almost no skill on the recovery label. Its
+p@20 on that label is 0.217 against a base rate of 0.156. Its screen
+precision there is 0.185 against the peers' 0.170. The theory-led
+feature set is 0.09 behind the 112 ranks on p@20 in cell C, so
+prediction 3 of decision 61 missed and its rival held.
+
+*Decided:*
+
+1. **Deeper forests on the recovery label inside F50**, depth 6 with
+   40 rows a leaf and depth 8 with 30, beside the candidate's depth 4.
+   A recovery may need interactions a depth-4 tree cannot express.
+2. **A modest path-free target inside F50**, `fwd_3y_cagr >= 0.1`, on
+   the same three forests. A value investor holds through the drawdown,
+   and cell C penalises a further 30% fall.
+3. **LightGBM classifiers inside F50** on cell C and on the recovery
+   label, with two parameter sets from `lgbm_candidate_sets_3y`.
+4. **The recovery label learned on every row and evaluated inside F50**,
+   through `universe_scope = "test"`. This asks whether the forest
+   learns recovery better with ten times the training rows.
+5. The predictions are in the config headers. In short, I expect no
+   arm to reach a p@20 of 0.26 on the recovery label, and I expect the
+   path-free target to be learned as calm, like cell C.
