@@ -1,0 +1,27 @@
+# Decision 62 (2026-11-25): as eval_blend_fallen50_recovery_worst.toml,
+# by mean rank. Prediction: between the parents on every screen column.
+name = "blend_fallen50_recovery_mean"
+blend = ["experiments/models/forest_fallen50_cells_3y__label_3y_cagr_ge_0p26__fs0_4ceb08d2ebc0"]
+blend_combine = "mean_rank"
+top_k = [20, 50]
+pick_outcomes = [
+  "label_3y_beat_spy",
+  "fwd_3y_excess_cagr",
+  "fwd_3y_cagr",
+  "fwd_3y_max_drawdown_from_entry",
+  "fwd_3y_cagr < 0",
+  "fwd_3y_cagr < -0.1",
+  "fwd_3y_max_drawdown_from_entry >= 0.4",
+  "fwd_3y_cagr >= 0.15",
+  "fwd_3y_cagr >= 0.26",
+  "fwd_3y_excess_cagr >= 0.05",
+  "fwd_3y_excess_cagr >= 0.1",
+]
+
+[pick_screen]
+per = "quarter"
+top_k = 10
+max_per_group = 2
+group_column = "sector"
+peer_column = "log_marketcap_rank"
+peer_bins = 20

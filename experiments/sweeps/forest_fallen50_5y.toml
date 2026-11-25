@@ -1,0 +1,72 @@
+# Decision 62 (2026-11-25): the fallen-stock program, round 2, Carter's
+# horizon taken literally: "come back two to three times over the next
+# few years". Two 5-year cells inside F50: fwd_5y_cagr >= 0.149 (doubled
+# within 5 years; base rate 0.239 inside F50 against 0.224 on all liquid
+# rows) and fwd_5y_cagr >= 0.246 (tripled; 0.127 against 0.093). The
+# candidate's forest configuration, 112 ranks, seed 23. Folds 2008-2018:
+# the 5-year folds run 2005-2018 and folds 2005-2007 have no training row
+# inside F50 (5-year labels observable before 2008 start before 2003).
+# Prediction: p@20 of 0.40 to 0.55 on the doubled cell (base 0.24) and
+# 0.25 to 0.40 on the tripled cell (base 0.13); the screen's picks lead
+# same-size fallen peers by 0.04 or more a year over 5 years in both
+# halves (2008-12 and 2013-18); the mean 5y CAGR of the picks is below
+# 0.10 in both halves.
+# Run: vml-sweep experiments/sweeps/forest_fallen50_5y.toml --save-models
+name = "forest_fallen50_5y"
+dataset_version = "dataset_v1.4.1"
+min_dataset_version = "1.4"
+scheme = "walkforward"
+folds = [2008, 2009, 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018]
+seeds = [23]
+top_k = [20, 50]
+score_thresholds = [0.5, 0.6, 0.7]
+precision_targets = [0.75, 0.9]
+rank_metric = "precision_at_20"
+pick_outcomes = [
+  "label_5y_beat_spy",
+  "fwd_5y_excess_cagr",
+  "fwd_5y_cagr",
+  "fwd_5y_max_drawdown_from_entry",
+  "fwd_5y_cagr < 0",
+  "fwd_5y_cagr >= 0.149",
+  "fwd_5y_cagr >= 0.246",
+  "fwd_3y_cagr >= 0.26",
+  "fwd_3y_cagr < 0",
+]
+
+sets = [
+  {criterion = "entropy", max_depth = 4, max_features = 0.205191, max_samples = 0.663781, min_samples_leaf = 72, n_estimators = 490},
+]
+
+[pick_screen]
+per = "quarter"
+top_k = 10
+max_per_group = 2
+group_column = "sector"
+peer_column = "log_marketcap_rank"
+peer_bins = 20
+
+[[universe]]
+column = "dist_5y_high"
+op = "<="
+value = -0.5
+
+[[universe]]
+column = "dollar_volume_3m"
+op = ">="
+value = 100000
+
+[[cells]]
+label = "fwd_5y_cagr >= 0.149"
+
+[[cells]]
+label = "fwd_5y_cagr >= 0.246"
+
+[[features]]
+groups = ["ranks"]
+
+[model]
+name = "random_forest"
+bootstrap = true
+class_weight = 1.0
+n_jobs = 8
