@@ -153,3 +153,50 @@ Its 23 failed runs are in the ledger and count as trials.
 ## Runs
 
 The runs are listed in decision 61 and their results follow below.
+
+## What needs an upstream change
+
+Carter asked me to document the ideas that need a dataset change and
+move on. These are the columns and labels this program could not test.
+Each is a point-in-time quantity of a stock's own history, or an
+aggregate across rows of a date, so each belongs upstream under
+invariant 4.
+
+1. **Fundamental drawdowns are missing.** The dataset does not say how
+   far trailing earnings, revenue and operating cash flow sit below
+   their own 5-year and 10-year peaks. With `dist_5y_high` beside such
+   columns, a model could read "the price fell by half and the business
+   fell by a tenth" directly. The relative-value columns are the nearest
+   thing on disk, and they compare yields with a median rather than
+   levels with a peak.
+2. **The shape of the fall is missing.** Two columns would describe it.
+   The first is the number of trading days since the 5-year high, which
+   says whether the fall is fresh or three years old. The second is the
+   number of earlier falls of 50% or more in the stock's history, with
+   the share of them that recovered, which says whether the stock has
+   done this before.
+3. **A 10-year record exists only for dividends.** Three counts would
+   extend it: the number of the last ten fiscal years with positive net
+   income, the number with positive operating cash flow, and the number
+   with revenue above the year before. The dividend columns carry the
+   strongest conditioning of any column in the tables above.
+4. **The fall is not measured against the sector or the market.** Two
+   columns would do that: the stock's `dist_5y_high` minus its sector's
+   median, and SPY's own distance from its 5-year high at the snapshot
+   date. A stock that fell by half while its sector fell by half is a
+   different case from one that fell alone. The market's distance from
+   its high is part of the market-state request of 2026-11-23.
+5. **A true recovery label is missing.** "The forward path reached the
+   entry-date 5-year high within H years" is row-wise, and it needs the
+   forward path's maximum, which the labels do not store. The dataset
+   stores only the terminal window's maximum. Such a label would say
+   whether a stock came all the way back. The recovery label here says
+   only that it doubled.
+6. **The peer-relative label of 2026-11-23 is still wanted.** Inside the
+   fallen universe the base rate of every label moves with the year of
+   entry, from 0.04 to 0.35. No model of a stock's own columns can be
+   calibrated to that.
+7. **The price history is short.** Sharadar's prices start in 1998, so
+   `dist_5y_high` exists from 2002, and a 10-year high would exist from
+   2008. Nothing can be done about the start date. A 10-year high
+   column would still be worth having for the deployment years.
