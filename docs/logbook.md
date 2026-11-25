@@ -14,6 +14,13 @@ read** stub; a correction is a new entry that names the old one.
 
 <!-- entries -->
 
+### 2026-11-25 · baseline_factors_fresh40_3y
+24 runs · `dataset_v1.4.1` · 2 cells · git `2073c71` · [summary](../reports/sweeps/baseline_factors_fresh40_3y/baseline_factors_fresh40_3y_summary.md) · [note](notes/2026-11-25-fallen-stocks.md)
+- **Did:** I ran the 12 single-factor bars inside the fresh-fall universe W40 for cell C and the recovery label on all 16 folds. That is 24 runs.
+- **Got:** In cell C the lowest 36-month volatility had a screen precision of 0.347 against the peers' 0.264. Its picks' mean 3-year CAGR was -0.047. The earnings yield against its own 5-year median had the largest lead, 0.081 in the first half and 0.058 in the second. On the recovery label no bar's screen precision was more than 0.015 above the peers'.
+- **Concluded:** The prediction held: the volatility bars lead on precision and no bar has skill on the recovery label. Every bar's picks lose money on average inside W40, which the forest trained there does not.
+- **Next:** The fresh-fall forests are read beside these bars.
+
 ### 2026-11-25 · lgbm_regressor_fallen50_3y
 6 runs · `dataset_v1.4.1` · 2 cells · git `042e844` · [summary](../reports/sweeps/lgbm_regressor_fallen50_3y/lgbm_regressor_fallen50_3y_summary.md) · [note](notes/2026-11-25-fallen-stocks.md)
 - **Did:** I ran LightGBM regressions inside the fallen universe F50 on the 3-year CAGR and on the 3-year excess CAGR. The objectives were huber, quantile 0.5 and quantile 0.25, at seed 23 on folds 2006 to 2020. The CAGR arms were measured on the recovery label and the excess arms on beat SPY. That is 6 runs.
