@@ -56,7 +56,6 @@ uv run python scripts/run_baselines.py dataset_v1.0
 # browse past work; keep a result
 uv run vml-experiments list --grep <something>
 uv run vml-promote <experiment-name> --note "one-line conclusion"
-uv run vml-writing docs/findings.md        # the writing check (CLAUDE.md "Writing"); --text reads a draft from stdin
 
 # sealed holdout: once per cell, when you would act on the model
 uv run python scripts/run_final_eval.py experiments/<selected>.toml
