@@ -104,6 +104,62 @@ def test_cli_text_mode(tmp_path):
     assert data["errors"] >= 1
 
 
+def test_hook_blocks_a_reply_and_passes_a_clean_one(tmp_path):
+    sys.path.insert(0, str(ROOT / "scripts" / "hooks"))
+    import writing_hook  # noqa: E402
+
+    writing_hook.STATE_DIR = tmp_path / "state"
+
+    def transcript(reply: str) -> Path:
+        p = tmp_path / "t.jsonl"
+        rows = [
+            {"type": "user", "message": {"content": "Please report."}},
+            {"type": "assistant", "message": {"content": [{"type": "text", "text": "I am reading the ledger first."}]}},
+            {"type": "user", "message": {"content": [{"type": "tool_result", "content": "ok"}]}},
+            {"type": "assistant", "message": {"content": [{"type": "text", "text": reply}]}},
+        ]
+        p.write_text("\n".join(json.dumps(r) for r in rows))
+        return p
+
+    bad = writing_hook.on_stop({"hook_event_name": "Stop", "session_id": "s1",
+                                "transcript_path": str(transcript("The size band in money."))})
+    assert bad.get("decision") == "block"
+    assert "in money" in bad["reason"]
+    good = writing_hook.on_stop({"hook_event_name": "Stop", "session_id": "s1",
+                                 "transcript_path": str(transcript("I reran the three backtests."))})
+    assert good.get("decision") is None
+
+
+def test_hook_rounds_are_capped(tmp_path):
+    sys.path.insert(0, str(ROOT / "scripts" / "hooks"))
+    import writing_hook  # noqa: E402
+
+    writing_hook.STATE_DIR = tmp_path / "state"
+    p = tmp_path / "t.jsonl"
+    p.write_text(json.dumps({"type": "user", "message": {"content": "x"}}) + "\n" + json.dumps(
+        {"type": "assistant", "message": {"content": [{"type": "text", "text": "The size band in money."}]}}))
+    first = writing_hook.on_stop({"session_id": "s2", "transcript_path": str(p)})
+    assert first["decision"] == "block"
+    outs = [writing_hook.on_stop({"session_id": "s2", "transcript_path": str(p), "stop_hook_active": True})
+            for _ in range(writing_hook.MAX_ROUNDS)]
+    assert "systemMessage" in outs[-1] and outs[-1].get("decision") is None
+
+
+def test_hook_checks_only_prose_files():
+    sys.path.insert(0, str(ROOT / "scripts" / "hooks"))
+    import writing_hook  # noqa: E402
+
+    assert writing_hook.prose_path("docs/findings.md")
+    assert writing_hook.prose_path(str(ROOT / "TODO.md"))
+    assert not writing_hook.prose_path("docs/logbook.md")
+    assert not writing_hook.prose_path("GLOSSARY.md")
+    assert not writing_hook.prose_path("src/harness/writing.py")
+    assert not writing_hook.prose_path("data/manual.md")
+    out = writing_hook.on_post_tool_use({"tool_name": "Edit", "tool_input": {
+        "file_path": "docs/findings.md", "new_string": "The size band in money."}})
+    assert out.get("decision") == "block"
+
+
 def test_list_items_completing_a_colon_need_no_verb():
     text = "It refuses three things:\n\n1. a semicolon,\n2. a dash,\n3. a fragment.\n\nA plain paragraph follows.\n\n- Larger-half filter for Carter.\n"
     report = writing.check_text(text)
