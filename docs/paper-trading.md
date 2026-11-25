@@ -157,6 +157,32 @@ ten, RPRX, was in the August dry run's top 10. Four were in its top
 50. The August list came from a different quarter's snapshots and a
 forest trained on the old build, so most of the turnover is expected.
 
+## The dataset of record (2026-11-24)
+
+The three configs above end in `_v141`: they are the October configs
+with `dataset_version = "dataset_v1.4.1"` and nothing else changed
+(decision 55). The October configs without the suffix trained on
+`dataset_v1.4`, a build that was replaced on 2026-11-23 and is no
+longer the dataset of record. When upstream ships a new version or
+patch, copy the three configs again with the new version and refit
+the bundles; never edit a config that has run.
+
+## Checked end to end (2026-11-24): the November 2026 list
+
+The three deployment bundles were refit on `dataset_v1.4.1`
+(1,395,705 labeled rows, effective size 48,281) and `vml-predict` ran
+with the flags above on `inference_2026-11-20` (3,716 rows, 15 with a
+stale price, 2,973 above the floor). The ten picks by mean rank, at
+most two per sector: RPRX, KO, EBAY, CHD, SAIC, V, HAS, NDSN, WAB, PSX.
+The full ranking and its sidecar are
+`predictions/inference_2026-11-20__multi__forest_nonloser_dd30_3y_v141__factor_mom_12_2_3y_v141__factor_roc_greenblatt_3y_v141.csv`
+and `.csv.meta.json` on the lab branch `claude/lab-2026-11-24`, and
+the list is in the session note
+([2026-11-24](notes/2026-11-24-v141-and-size-band.md), section 7).
+One of the ten (RPRX) was in the August dry run's top 10 and four were
+in its top 50; the August list came from a different quarter's
+snapshots and a forest trained on the old build.
+
 ## Checked end to end (2026-10-01)
 
 On 2026-10-01 the three deployment bundles were built in the sandbox,

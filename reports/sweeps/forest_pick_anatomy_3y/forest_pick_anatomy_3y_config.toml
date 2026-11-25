@@ -1,0 +1,104 @@
+# What are the picks made of, and what changes them? Three kinds of
+# label x two feature sets, read on the tails of the picks' returns
+# (docs/notes/2026-09-29-decisions.md, decision 1).
+#
+# forest_label_rungs_dd_entry_3y showed that moving the thresholds of
+# one kind of label does not move what the picks go on to do. This
+# sweep changes the kind of label and the columns instead:
+#
+#   cells
+#     A  fwd_3y_cagr >= 0.1 & fwd_3y_max_drawdown_from_entry < 0.2
+#        the primary cell (base rate 0.21)
+#     B  fwd_3y_excess_cagr > 0 & fwd_3y_max_drawdown_from_entry < 0.2
+#        beat the market without a deep loss: the upside is relative
+#     C  fwd_3y_cagr >= 0 & fwd_3y_max_drawdown_from_entry < 0.3
+#        "not a loser": the modest target of the project's thesis
+#   feature sets
+#     fs0  the ranks group, 112 columns (the reference)
+#     fs1  ranks minus the technical family, 97 columns: fundamentals
+#          only. It scored p@20 0.40-0.42 in cell A against 0.50
+#          (forest_feature_sets_dd_entry_3y); what its picks went on to
+#          do was not recorded.
+#
+# Model: set1 of forest_candidate_sets_3y, class weight 1.0, as in the
+# rungs. Seeds 23, 232, 1776.
+#
+# Outcomes and top_k as in baseline_pick_anatomy_3y, which is the bar.
+# top_k and pick_outcomes are in the config hash, so A/fs0 is 3 more
+# configurations in the primary cell although it refits a known model.
+#
+# Predictions, written before the run:
+#   1. A/fs0 reproduces the rungs' centre cell: p@20 0.500, picks beat
+#      SPY 0.498.
+#   2. A/fs0 picks: losers (fwd_3y_cagr < 0) under 0.15 against an
+#      all-row rate near 0.45; big winners (>= 0.25) at or under the
+#      all-row rate. That is Carter's reading.
+#   3. fs1 against fs0, in every cell: more big winners and more big
+#      losers, a higher drawdown, and a median excess CAGR that is not
+#      higher (within 0.01).
+#   4. Cell B with fs0 picks nearly what cell A picks: beat_spy hit
+#      rate within 0.03 of A's. On v1.4 forests had no edge over a
+#      single factor on 3y beat_spy.
+#   5. Cell C reaches p@20 of 0.70 or more with fs0, the first cell
+#      above the 0.65 the thesis asks for, and its picks' outcomes are
+#      within noise of cell A's.
+#   6. p@5 and p@10 are within 0.03 of p@20 in cell A: the top of the
+#      ranking is not purer than the top 20.
+#   If 3 fails with fs1 picks ahead on median excess CAGR in 2013-20
+#   on every seed, fundamentals-only becomes the feature set to build
+#   on. If 6 fails with p@5 well above p@20, fewer picks is the
+#   cheapest route to precision.
+#
+# Read fold means from the ledger, era table before the pooled number;
+# p@20 is against each cell's own label and is not compared between
+# cells.
+#
+# Expanded: 3 cells x 2 feature sets x 1 set x 3 seeds = 18 runs.
+# Run: uv run vml-sweep experiments/sweeps/forest_pick_anatomy_3y.toml
+name = "forest_pick_anatomy_3y"
+dataset_version = "dataset_v1.4"
+min_dataset_version = "1.4"
+scheme = "walkforward"
+folds = "all"
+seeds = [23, 232, 1776]
+top_k = [20, 10, 5, 50]
+precision_targets = [0.75, 0.9]
+rank_metric = "precision_at_20"
+pick_outcomes = [
+  "label_3y_beat_spy",
+  "fwd_3y_excess_cagr",
+  "fwd_3y_cagr",
+  "fwd_3y_max_drawdown_from_entry",
+  "fwd_3y_cagr < 0",
+  "fwd_3y_cagr < -0.1",
+  "fwd_3y_max_drawdown_from_entry >= 0.4",
+  "fwd_3y_cagr >= 0.15",
+  "fwd_3y_cagr >= 0.25",
+  "fwd_3y_excess_cagr >= 0.05",
+]
+
+sets = [
+  {criterion = "entropy", max_depth = 4, max_features = 0.205191, max_samples = 0.663781, min_samples_leaf = 72, n_estimators = 490},  # forest_candidate_sets_3y set1
+]
+
+[[cells]]
+label = "fwd_3y_cagr >= 0.1 & fwd_3y_max_drawdown_from_entry < 0.2"
+
+[[cells]]
+label = "fwd_3y_excess_cagr > 0 & fwd_3y_max_drawdown_from_entry < 0.2"
+
+[[cells]]
+label = "fwd_3y_cagr >= 0 & fwd_3y_max_drawdown_from_entry < 0.3"
+
+[[features]]
+groups = ["ranks"]
+
+[[features]]
+groups = ["ranks"]
+exclude_families = ["ranks/technical"]
+
+[model]
+name = "random_forest"
+bootstrap = true
+class_weight = 1.0
+n_jobs = 8

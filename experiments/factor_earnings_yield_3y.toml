@@ -1,0 +1,39 @@
+# A single factor as a fold bundle, to be combined by mean rank with
+# cell C's forest in a backtest (docs/notes/2026-09-29-decisions.md,
+# decision 8): the value factor, highest earnings_yield_rank first.
+#
+# A rank factor fits nothing; the folds only fix which rows are
+# scored. Run in cell C so that its report reads against the same
+# label as the forest it is combined with. One more configuration in
+# that cell.
+#
+# Expected: p@20 far below the forest's 0.79. The factor is not a
+# candidate on its own; its report is read for what its picks went on
+# to do.
+name = "factor_earnings_yield_3y"
+dataset_version = "dataset_v1.4"
+min_dataset_version = "1.4"
+scheme = "walkforward"
+folds = "all"
+horizon_years = 3
+label = "fwd_3y_cagr >= 0 & fwd_3y_max_drawdown_from_entry < 0.3"
+feature_groups = ["ranks"]
+seed = 7
+top_k = [20, 10, 5, 50, 100]
+pick_outcomes = [
+  "label_3y_beat_spy",
+  "fwd_3y_excess_cagr",
+  "fwd_3y_cagr",
+  "fwd_3y_max_drawdown_from_entry",
+  "fwd_3y_cagr < 0",
+  "fwd_3y_cagr < -0.1",
+  "fwd_3y_max_drawdown_from_entry >= 0.4",
+  "fwd_3y_cagr >= 0.15",
+  "fwd_3y_cagr >= 0.25",
+  "fwd_3y_excess_cagr >= 0.05",
+]
+
+[model]
+name = "rank_factor"
+rank_column = "earnings_yield_rank"
+higher_is_better = true

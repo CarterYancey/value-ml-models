@@ -1,0 +1,51 @@
+# Decision 41 (2026-11-23): one of the two backtests decision 40 named
+# after the forest's top 10 a year beat its ranks 11-50 (precision
+# +0.060 / +0.065, losers -0.093 / -0.072). The forest alone, as in
+# bt_nonloser_dd30_top10_cap2 (the bar, rerun with the current code
+# for its vs_peers table), one change.
+# Rule (before the run): carried forward if the buys' 3-year lead
+# over same-size candidates is >= the bar's + 0.01 for buys of both
+# 2005-12 and 2013-20, and the worst drawdown is no more than 5 points
+# deeper.
+# Change: top_k 5 instead of 10 (cap 2 per sector kept).
+# Prediction: lead within 0.01 of the bar in both halves (the top 5 a
+# year were no purer than the top 10), drawdown 0 to 5 points deeper;
+# not carried forward. Rival: concentration buys the purer top and the
+# lead rises by 0.01+.
+name = "bt_nonloser_dd30_top5_cap2"
+dataset_version = "dataset_v1.4"
+prices_version = "prices_v1.0"
+
+bundles = [
+    "experiments/models/forest_nonloser_dd30_3y_53ceedd93e6d",
+]
+
+[signal]
+combine = "product"
+max_staleness_days = 200
+model_update = "refit"
+label_lag_days = 45
+
+[[investability]]
+column = "dollar_volume_3m"
+op = ">="
+value = 100000.0
+
+[portfolio]
+strategy = "buy_and_hold"
+top_k = 5
+weighting = "equal"
+monthly_cash = 1000.0
+max_per_group = 2
+group_column = "sector"
+
+[execution]
+cost_bps = 35.0
+benchmark_cost_bps = 0.0
+max_quote_age_days = 3
+delist_after_days = 30
+
+[window]
+start = 2005-01-01
+end = 2020-12-31
+valuation_end = 2023-12-29

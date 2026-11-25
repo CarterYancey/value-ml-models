@@ -1,0 +1,43 @@
+# Decision 47 (2026-11-23): the huber regressor on 3y CAGR (seed 23,
+# lgbm_regressor_growth_allrows_3y set0, refit 233299a55d4c), top 10 a
+# month by predicted CAGR, judged on money beside the forest's
+# bt_nonloser_dd30_top10_cap2 and SPY. One bundle combined by
+# mean_rank (a ranking: predicted returns are not probabilities).
+# Rule and prediction: decision 47 of docs/notes/2026-09-29-decisions.md.
+name = "bt_huber_cagr_top10_cap2"
+dataset_version = "dataset_v1.4"
+prices_version = "prices_v1.0"
+
+bundles = [
+    "experiments/models/lgbm_regressor_growth_allrows_3y__fwd_3y_cagr__set0_233299a55d4c",
+]
+
+[signal]
+combine = "mean_rank"
+max_staleness_days = 200
+model_update = "refit"
+label_lag_days = 45
+
+[[investability]]
+column = "dollar_volume_3m"
+op = ">="
+value = 100000.0
+
+[portfolio]
+strategy = "buy_and_hold"
+top_k = 10
+weighting = "equal"
+monthly_cash = 1000.0
+max_per_group = 2
+group_column = "sector"
+
+[execution]
+cost_bps = 35.0
+benchmark_cost_bps = 0.0
+max_quote_age_days = 3
+delist_after_days = 30
+
+[window]
+start = 2005-01-01
+end = 2020-12-31
+valuation_end = 2023-12-29

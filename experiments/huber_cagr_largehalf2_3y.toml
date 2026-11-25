@@ -1,0 +1,63 @@
+# Decision 48 (2026-11-23): the huber regressor on 3y CAGR, seed 23,
+# trained on every row as in lgbm_regressor_growth_allrows_3y set0
+# (same parameters, so the same models), read inside the larger half of
+# the investable stocks. Rule and predictions: decision 48.
+# Replaces huber_cagr_largehalf_3y.toml, which failed on validation
+# (its model name was overwritten by the config name); nothing else differs.
+name = "huber_cagr_largehalf2_3y"
+dataset_version = "dataset_v1.4"
+min_dataset_version = "1.4"
+scheme = "walkforward"
+folds = "all"
+seed = 23
+label = "fwd_3y_cagr"
+eval_label = "label_3y_cagr_ge_10"
+top_k = [20, 50]
+precision_targets = [0.75, 0.9]
+universe_scope = "test"
+pick_outcomes = [
+  "label_3y_beat_spy",
+  "fwd_3y_excess_cagr",
+  "fwd_3y_cagr",
+  "fwd_3y_max_drawdown_from_entry",
+  "fwd_3y_cagr < 0",
+  "fwd_3y_cagr < -0.1",
+  "fwd_3y_max_drawdown_from_entry >= 0.4",
+  "fwd_3y_cagr >= 0.15",
+  "fwd_3y_cagr >= 0.25",
+  "fwd_3y_excess_cagr >= 0.05",
+]
+
+[pick_screen]
+per = "quarter"
+top_k = 10
+max_per_group = 2
+group_column = "sector"
+peer_column = "log_marketcap_rank"
+peer_bins = 20
+
+[[universe]]
+column = "dollar_volume_3m"
+op = ">="
+value = 100000
+
+[features]
+groups = ["ranks"]
+
+[model]
+name = "lightgbm_regressor"
+objective = "huber"
+winsorize = 0.01
+n_estimators = 300
+learning_rate = 0.05
+num_leaves = 15
+min_child_samples = 60
+subsample = 0.8
+subsample_freq = 1
+colsample_bytree = 0.8
+reg_lambda = 1.0
+
+[[universe]]
+column = "log_marketcap_rank"
+op = ">="
+value = 0.5

@@ -1,0 +1,59 @@
+# Decision 39 of docs/notes/2026-09-29-decisions.md (2026-11-23): the
+# huber arm of lgbm_regressor_growth_allrows_3y (fwd_3y_cagr, set0),
+# refit unchanged with its bundle saved (the queue does not save
+# models), so it can be blended with the cell-C forest in vml-eval.
+# Same configuration as the sweep's set0 run (config hash
+# 7c1507e3f386652f expected): not a new trial; the run must reproduce
+# its fold metrics (seeded), which is the check that nothing changed.
+name = "lgbm_regressor_growth_allrows_3y__fwd_3y_cagr__set0"
+dataset_version = "dataset_v1.4"
+min_dataset_version = "1.4"
+scheme = "walkforward"
+folds = "all"
+seed = 23
+label = "fwd_3y_cagr"
+eval_label = "label_3y_cagr_ge_10"
+top_k = [20, 50]
+precision_targets = [0.75, 0.9]
+universe_scope = "test"
+pick_outcomes = [
+  "label_3y_beat_spy",
+  "fwd_3y_excess_cagr",
+  "fwd_3y_cagr",
+  "fwd_3y_max_drawdown_from_entry",
+  "fwd_3y_cagr < 0",
+  "fwd_3y_cagr < -0.1",
+  "fwd_3y_max_drawdown_from_entry >= 0.4",
+  "fwd_3y_cagr >= 0.15",
+  "fwd_3y_cagr >= 0.25",
+  "fwd_3y_excess_cagr >= 0.05",
+]
+
+[pick_screen]
+per = "quarter"
+top_k = 10
+max_per_group = 2
+group_column = "sector"
+peer_column = "log_marketcap_rank"
+peer_bins = 20
+
+[[universe]]
+column = "dollar_volume_3m"
+op = ">="
+value = 100000
+
+[features]
+groups = ["ranks"]
+
+[model]
+name = "lightgbm_regressor"
+objective = "huber"
+winsorize = 0.01
+n_estimators = 300
+learning_rate = 0.05
+num_leaves = 15
+min_child_samples = 60
+subsample = 0.8
+subsample_freq = 1
+colsample_bytree = 0.8
+reg_lambda = 1.0

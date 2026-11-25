@@ -1,0 +1,61 @@
+# Decision 36 of docs/notes/2026-09-29-decisions.md (2026-10-01): the
+# single-factor bars for forest_crash_dd50, same universe, cells and
+# screen. Which one column best marks a stock about to fall 50%:
+# highest volatility (12 and 36 months), highest beta, the largest
+# one-day jump of the past month (the lottery stocks), lowest return
+# on capital, lowest conservative score, highest 12-month momentum
+# (the high-flyers). Deterministic: one seed.
+#
+# Prediction (2026-10-01): highest 12-month volatility is the best
+# bar on p@20 in both cells and within 0.10 of the forest's p@20 in
+# the one-year cell; highest momentum is the worst.
+name = "baseline_factors_crash_dd50"
+seeds = [7]
+sets = [
+  {rank_column = "vol_12m_rank", higher_is_better = true},
+  {rank_column = "vol_36m_rank", higher_is_better = true},
+  {rank_column = "beta_12m_rank", higher_is_better = true},
+  {rank_column = "max_ret_21d_rank", higher_is_better = true},
+  {rank_column = "roc_greenblatt_rank", higher_is_better = false},
+  {rank_column = "conservative_score_rank", higher_is_better = false},
+  {rank_column = "mom_12_2_rank", higher_is_better = true},
+]
+dataset_version = "dataset_v1.4"
+min_dataset_version = "1.4"
+scheme = "walkforward"
+folds = [2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020]
+top_k = [20, 50, 100]
+score_thresholds = [0.3, 0.4, 0.5, 0.6, 0.7]
+precision_targets = [0.75, 0.9]
+rank_metric = "precision_at_20"
+pick_outcomes = [
+  "fwd_1y_cagr",
+  "fwd_1y_excess_cagr",
+  "fwd_1y_max_drawdown_from_entry",
+  "fwd_1y_cagr < -0.3",
+  "fwd_1y_cagr >= 0.3",
+  "fwd_1y_max_drawdown_from_entry >= 0.5",
+]
+
+[pick_screen]
+per = "quarter"
+top_k = 10
+peer_column = "log_marketcap_rank"
+peer_bins = 20
+
+[[universe]]
+column = "dollar_volume_3m_rank"
+op = ">="
+value = 0.5
+
+[[cells]]
+label = "fwd_1y_max_drawdown_from_entry >= 0.5"
+
+[[cells]]
+label = "fwd_3y_max_drawdown_from_entry >= 0.5"
+
+[[features]]
+groups = ["ranks"]
+
+[model]
+name = "rank_factor"
