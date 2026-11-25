@@ -1,0 +1,53 @@
+# Decision 70 (2026-11-25), the fallen-stock program, round 6: the cell C
+# forest trained inside W40 (dist_52w_high <= -0.4 with the 100k floor), traded
+# alone inside W40: top 10 a month, at most 2 per sector, equal weights,
+# Carter's rank floor, 35 bps a side, buys 2006-2020 with year-end refits,
+# valued at the end of 2020.
+# The run to 2020 is the comparison window of decision 70: Carter's working assumption is that the market since 2021 is a bubble that deflates, so the strategies are compared before it. This is a risky choice, documented to be challenged.
+# Prediction, written before the run: TWR below SPY's on both windows, final value under SPY's, drawdown deeper than -55%; lead 7 points or more (the screen said +0.066 and +0.079); losers above 0.42.
+name = "bt_fresh40_forestC_top10_cap2_rankfloor_to2020"
+dataset_version = "dataset_v1.4.1"
+prices_version = "prices_v1.0"
+
+bundles = [
+    "experiments/models/forest_fresh40_cells_3y__label_3y_cagr_ge_0p0_and_3y_max_drawdown_from_entry_lt_0p3_86f2d1626a6e",
+]
+
+[signal]
+max_staleness_days = 200
+model_update = "refit"
+label_lag_days = 45
+
+[[investability]]
+column = "dollar_volume_3m_rank"
+op = ">="
+value = 0.2
+
+[[investability]]
+column = "dist_52w_high"
+op = "<="
+value = -0.4
+
+[[investability]]
+column = "dollar_volume_3m"
+op = ">="
+value = 100000
+
+[portfolio]
+strategy = "buy_and_hold"
+top_k = 10
+weighting = "equal"
+monthly_cash = 1000.0
+max_per_group = 2
+group_column = "sector"
+
+[execution]
+cost_bps = 35.0
+benchmark_cost_bps = 0.0
+max_quote_age_days = 3
+delist_after_days = 30
+
+[window]
+start = 2006-01-01
+end = 2020-12-31
+valuation_end = 2020-12-31

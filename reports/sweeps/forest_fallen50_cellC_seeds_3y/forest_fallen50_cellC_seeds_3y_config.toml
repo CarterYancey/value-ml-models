@@ -1,0 +1,69 @@
+# Decision 70.3 (2026-11-25), the fallen-stock program, round 6: the F50
+# "not a loser" forest met the rule on the 2020 window at seed 23 (final
+# value 514,776 against SPY's 500,058, TWR 10.57% against 9.67%, lead over
+# same-size candidates 7.6 points), so it goes to seeds 232 and 1776 as
+# decision 61.5 requires. Same configuration as forest_fallen50_cells_3y,
+# cell C, the 112 ranks, folds 2006-2020, bundles saved for the backtests.
+# Prediction, written before the run: each seed's screen inside F50 is
+# within 0.03 of seed 23's precision (0.430) and within 0.02 of its mean 3y
+# CAGR (+0.037); on the 2020-window backtest each seed ends within 5% of
+# SPY on money either way and above SPY on TWR, and at least one of the two
+# ends below SPY on money, so the arm does not pass at all three seeds.
+# Run: vml-sweep experiments/sweeps/forest_fallen50_cellC_seeds_3y.toml --save-models
+name = "forest_fallen50_cellC_seeds_3y"
+dataset_version = "dataset_v1.4.1"
+min_dataset_version = "1.4"
+scheme = "walkforward"
+folds = [2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020]
+seeds = [232, 1776]
+top_k = [20, 50]
+score_thresholds = [0.5, 0.6, 0.7]
+precision_targets = [0.75, 0.9]
+rank_metric = "precision_at_20"
+pick_outcomes = [
+  "label_3y_beat_spy",
+  "fwd_3y_excess_cagr",
+  "fwd_3y_cagr",
+  "fwd_3y_max_drawdown_from_entry",
+  "fwd_3y_cagr < 0",
+  "fwd_3y_cagr < -0.1",
+  "fwd_3y_max_drawdown_from_entry >= 0.4",
+  "fwd_3y_cagr >= 0.15",
+  "fwd_3y_cagr >= 0.26",
+  "fwd_3y_excess_cagr >= 0.05",
+  "fwd_3y_excess_cagr >= 0.1",
+]
+
+sets = [
+  {criterion = "entropy", max_depth = 4, max_features = 0.205191, max_samples = 0.663781, min_samples_leaf = 72, n_estimators = 490},
+]
+
+[pick_screen]
+per = "quarter"
+top_k = 10
+max_per_group = 2
+group_column = "sector"
+peer_column = "log_marketcap_rank"
+peer_bins = 20
+
+[[universe]]
+column = "dist_5y_high"
+op = "<="
+value = -0.5
+
+[[universe]]
+column = "dollar_volume_3m"
+op = ">="
+value = 100000
+
+[[cells]]
+label = "fwd_3y_cagr >= 0 & fwd_3y_max_drawdown_from_entry < 0.3"
+
+[[features]]
+groups = ["ranks"]
+
+[model]
+name = "random_forest"
+bootstrap = true
+class_weight = 1.0
+n_jobs = 8

@@ -149,14 +149,16 @@ Most sweeps change the state table and nothing else.
 
 ## Git
 
-- Work on a lab branch, `claude/lab-<date>`, created off `origin/Claude`
-  by `vml-queue new-lab`. Never commit to `Claude` or `main`. Never
-  create a lab branch off another lab branch, and never merge one lab
-  branch into another: the configs and reports of the old session would
-  travel with the new one for ever, and the branch's commit count
-  against `Claude` would grow with every session (decision 68).
-  `vml-queue checkpoint` refuses a lab branch whose history contains
-  another lab branch's tip, live or archived.
+- Work on a lab branch named `claude/lab-<date>`. Create it with
+  `vml-queue new-lab`, which branches from `origin/Claude`. Never commit
+  to `Claude` or `main`. Never create a lab branch from another lab
+  branch, and never merge one lab branch into another. A lab branch is
+  never merged into `Claude`, so an older lab branch in its history
+  stays there for good, and the branch's distance from `Claude` grows
+  with every session (decision 68). `vml-queue checkpoint` checks for
+  this and refuses to run on a lab branch whose history contains the
+  last commit of another lab branch, whether that branch still exists
+  or was archived as a tag.
 - `vml-queue checkpoint` force-adds what a crash would take with it:
   the ledger shard, sweep summaries, config copies, result records,
   queued configs, the logbook, findings and notes. It refuses to run
@@ -167,10 +169,12 @@ Most sweeps change the state table and nothing else.
   names anything else, `--fix` untracks it, and the `pr-hygiene`
   workflow runs the same check on every pull request into `Claude` or
   `main`.
-- **A finished lab branch is archived, not kept.** Once its results
-  branch has merged, `vml-queue archive-lab <branch> --delete` tags the
-  tip `archive/lab-<date>` and deletes the branch. The configs and
-  reports stay reachable from the tag, and the branch list stays short.
+- **A finished lab branch is archived, not kept.** Once the session's
+  results branch has merged into `Claude`, run
+  `vml-queue archive-lab <branch> --delete`. It tags the branch's last
+  commit `archive/lab-<date>` and deletes the branch. The configs and
+  reports remain reachable through the tag, and the branch list stays
+  short.
 - Push after every checkpoint. If a push fails, say so in the turn's
   output and try once more after the next sweep.
 

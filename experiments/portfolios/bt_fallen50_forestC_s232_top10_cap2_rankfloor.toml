@@ -1,0 +1,55 @@
+# Decision 70.3 (2026-11-25), the fallen-stock program, round 6: the F50
+# "not a loser" forest at seed 232 (forest_fallen50_cellC_seeds_3y), traded
+# alone inside F50 (dist_5y_high <= -0.5 with the 100k floor): top 10 a month,
+# at most 2 per sector, equal weights, Carter's rank floor, 35 bps a side,
+# buys 2006-2020 with year-end refits, valued at the end of 2023.
+# Seed 23 ended 2020 with 514,776 against SPY's 500,058, TWR 10.57% against 9.67%.
+# Prediction, written before the run: this seed ends within 5% of SPY on money
+# either way and above SPY on TWR; drawdown between -50% and -65%; lead over
+# same-size candidates within 2 points of seed 23's 7.6.
+name = "bt_fallen50_forestC_s232_top10_cap2_rankfloor"
+dataset_version = "dataset_v1.4.1"
+prices_version = "prices_v1.0"
+
+bundles = [
+    "experiments/models/forest_fallen50_cellC_seeds_3y__label_3y_cagr_ge_0p0_and_3y_max_drawdown_from_entry_lt_0p3__s232_0cb0ea8c1a5c",
+]
+
+[signal]
+max_staleness_days = 200
+model_update = "refit"
+label_lag_days = 45
+
+[[investability]]
+column = "dollar_volume_3m_rank"
+op = ">="
+value = 0.2
+
+[[investability]]
+column = "dist_5y_high"
+op = "<="
+value = -0.5
+
+[[investability]]
+column = "dollar_volume_3m"
+op = ">="
+value = 100000
+
+[portfolio]
+strategy = "buy_and_hold"
+top_k = 10
+weighting = "equal"
+monthly_cash = 1000.0
+max_per_group = 2
+group_column = "sector"
+
+[execution]
+cost_bps = 35.0
+benchmark_cost_bps = 0.0
+max_quote_age_days = 3
+delist_after_days = 30
+
+[window]
+start = 2006-01-01
+end = 2020-12-31
+valuation_end = 2023-12-29
