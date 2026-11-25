@@ -26,7 +26,7 @@ from harness.filters import describe_filters
 #: logged but not listed here (roc_auc, recall_at_k, thr_for_prec_*,
 #: and the mae/r2 fit diagnostics of regression runs) stays in the
 #: results store — logged, never headlined.
-_ERA_LEAD = ("n_test", "base_rate")
+_ERA_LEAD = ("n_test", "base_rate", "mean_score")
 _ERA_PREFIXES = (
     "precision_at_", "fwd_at_", "conf_at_", "n_at_prec_", "recall_at_prec_",
     "precision_at_thr_", "recall_at_thr_", "n_at_thr_",
@@ -189,6 +189,10 @@ def write_report(
     lines.append("")
     lines.append(f"- run id: `{run_id}`")
     lines.append(f"- dataset version: `{dataset.version}` (pinned, immutable)")
+    data_sha = getattr(dataset, "data_sha256", "")
+    if data_sha:
+        lines.append(f"- dataset sha256: `{data_sha}` (dataset.parquet, "
+                     "from the manifest's provenance block)")
     lines.append(f"- config hash: `{config.config_hash}`")
     lines.append(f"- git SHA: `{git_sha}`")
     lines.append(f"- seed: {config.seed}")
@@ -315,13 +319,29 @@ def write_report(
             f"`{artifacts['source_bundle']}`: models loaded, not refit — "
             "only the metric parameters differ from the training run"
         )
-    if artifacts and "blend" in artifacts:
+    if artifacts and "gate" in artifacts:
         lines.append(
-            "- **blend**: the score is the mean, over this bundle and "
+            "- **gate**: only test rows that pass "
+            + "; ".join(artifacts["gate"])
+            + f" are ranked (on average {artifacts['gate_kept']:.0%} of a "
+            "fold's test rows pass every gate); the rest are moved below "
+            "every kept row, in their own order. A screen of one model by "
+            "another: no Brier, no calibration, and PR-AUC is over the "
+            "gated ranking."
+        )
+    if artifacts and "blend" in artifacts:
+        mode = artifacts.get("blend_combine", "mean_rank")
+        how = (
+            "the mean"
+            if mode == "mean_rank"
+            else "the lowest (the worst rank; ties broken by the mean)"
+        )
+        lines.append(
+            f"- **blend**: the score is {how}, over this bundle and "
             + "; ".join(artifacts["blend"])
             + ", of each model's rank within the test quarter as a share "
             "of the quarter's rows (the backtest's `combine = "
-            '"mean_rank"` on test rows; a row a model has no score for '
+            f'"{mode}"` on test rows; a row a model has no score for '
             "is ranked on the others). A ranking, not a probability: no "
             "Brier, no calibration, and score thresholds are rank shares."
         )

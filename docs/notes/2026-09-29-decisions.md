@@ -1630,3 +1630,1220 @@ deployment bundles for the August 2026 cross-section, eight seconds;
 the ten picks' fifteen analogues each resemble the pool's safest
 corner (0% to 47% lost money over three years against 46% of the
 pool), as the in-sample caveat predicts they must.
+
+### 38. Session of 2026-11-23: run the three queued sweeps, build `worst_rank` beside them
+
+*Carter (2026-11-23):* "do anything you feel is best" toward a few
+high-precision, low-risk selections with upside; log the decisions;
+code on a feature branch, experiments off it.
+
+*Decided:*
+
+- **The lab** is `claude/lab-2026-11-23`, off `Claude` (PR #19
+  merged), with `claude/lab-2026-10-01` merged in so the queue sees
+  its result records. Nothing new is chosen on 2021–26 (decision 36).
+- **First, the queue as written on 2026-10-01**, unchanged and with
+  the predictions in its configs: `baseline_factors_crash_dd50`,
+  `forest_crash_dd50`, `lgbm_regressor_growth_allrows_3y`, run one
+  after another as a background chain (one heavy job at a time).
+  Each is read against its own config's rule and predictions.
+- **Meanwhile, in a separate worktree**, research-plan item 3:
+  `combine = "worst_rank"` in the backtest and in `vml-eval`'s
+  `blend`, on `claude/worst-rank` off `Claude`, with tests. Its first
+  use is the screen of the candidate's three legs by worst rank
+  against mean rank, against same-size peers, 2005–2020; the rule
+  for it (decision 34.3: a lead over peers 0.01 a year above the
+  mean-rank blend's in both halves, losers no more than 0.03 higher)
+  is fixed here, before the screen.
+- **What would change the order:** a quantile arm of the growth
+  sweep that passes its rule goes to three seeds before anything
+  else; a crash model whose high-confidence count rises *before*
+  2008 is read for a cash rule (research plan, item 2) before
+  blends.
+
+### 39. What the three sweeps and the worst-rank screen settle, and the blend of a loser-avoider with an upside model
+
+*What came out (2026-11-23; [note](2026-11-23-crash-growth-worst-rank.md)):*
+
+- **Over-priced stocks** (`forest_crash_dd50`): the one-year forest
+  (PR-AUC 0.251, base 0.137) is below `vol_12m_rank` alone (0.266);
+  the three-year forest is above every factor (0.490 against 0.451).
+  The one-year top 20 lost on average in 12 of 16 years but 19% of
+  them rose 30% or more and their mean was +58% for 2008 entries and
+  +100% for 2020's. The count of calls at score ≥ 0.5 falls from 408
+  (2005) to 1–7 (2018–20) and does not rise before 2008 or after.
+  **Decided:** no short leg, and no cash rule from the count of
+  high-confidence calls: the count follows how much crash the fold's
+  training window holds, not the coming year. Research plan item 2
+  closed; "market state" waits for upstream features (item 8).
+- **Worst rank of the candidate's three legs**: lead over same-size
+  peers +0.043 / +0.056 (mean rank +0.022 / +0.053), losers 0.259 /
+  0.150 (0.275 / 0.153). Decision 38's bar was 0.032 / 0.063: **not
+  carried forward**. `worst_rank` stays as a tool.
+- **Continuous growth models**: no arm passes decision 34.3. The low
+  quantiles land at or below the forest (q0.25 on CAGR +0.030 /
+  +0.026, losers 0.250 / 0.178). **Huber on 3y CAGR leads its peers by
+  +0.072 / +0.054, in 15 of 16 years**, with losers 0.394 / 0.372
+  (peers 0.474 / 0.451) and a median CAGR below the forest's picks'
+  in 13 of 16 years: it buys skew (small, fragile stocks whose winners
+  carry the mean), the mirror image of the forest, which buys calm.
+
+*Decided next:* the two together. The forest says which stocks are
+unlikely to lose; the huber regressor says which have the largest
+expected return. Their **worst rank** (every leg's top N) is the
+thesis's "low risk with upside" as a selection, and the reason
+`worst_rank` was built; the mean rank beside it. Two evaluations of
+the forest bundle (`forest_nonloser_dd30_3y_53ceedd93e6d`, seed 23)
+blended with the huber bundle, refit unchanged with
+`--save-models` (config hash 7c1507e3f386652f, not a new trial),
+same floor, screen and peers as decision 33.
+
+*Rule, before the run:* a blend carries forward (three seeds of both
+legs, then a backtest beside the candidate's) if its lead over
+same-size peers is at least **0.040 / 0.063** for entries of 2005–12 /
+2013–20 (0.01 above the better of the forest, +0.030 / +0.027, and the
+candidate, +0.022 / +0.053, in each half) **and** its losers are no
+more than 0.03 above the forest's (**≤ 0.227 / ≤ 0.146**). Two
+configurations on these years, stated with every figure.
+
+### 40. The forest and the huber model do not combine; does precision rise inside the forest's top 50?
+
+*What came out (2026-11-23):* the cell-C forest blended with the
+huber regressor on 3y CAGR (two configurations, these years): worst
+rank +0.028 / +0.017 over same-size peers, losers 0.266 / 0.244;
+mean rank +0.029 / +0.023, losers 0.247 / 0.231. Below both legs on
+the lead and above the forest on losers: both fail decision 39's
+rule, and every prediction (and the rival) is contradicted.
+Reading, a hypothesis: the legs' edges sit at different sizes (the
+forest's picks' peers lose 26–33% of the time, huber's 45–47%, the
+blends' 33–36%), and the stocks both rank well are mid-size ones
+where neither has an edge. Rival: a defect in blending a regressor
+bundle; against it, the same path reproduced decision 34's blends and
+the huber bundle reproduced its sweep run exactly. Nothing is built
+on the blend, so the separating run (the size breakdown of the picks
+by leg) is not spent. **Decided:** the huber regressor is not carried
+forward as a leg; blends of a calm model with a skew model are
+closed.
+
+*Next (research plan item 6, its first step):* whether the forest's
+outcome rises with rank *inside* its top 50 of a year. One evaluation
+of the forest bundle (seed 23) inside the 100k floor with top_k 5,
+10, 20, 50, 100, 200; bucket precision from the differences. What it
+decides, before the run: if the top 10 a year beats ranks 11–50 on
+precision by 0.05 or more and on losers by 0.05 or more in both
+halves, a concentrated portfolio (top 5 a month) and score-weighting
+get one backtest each; if not, confidence sizing is closed for the
+forest and the calibration session starts from the peer-relative
+target (upstream).
+
+### 41. The forest's top 10 is purer than its ranks 11–50: two backtests
+
+*What came out (2026-11-23, `topk_buckets2_dv100k`, one evaluation):*
+over the years of 2005–12 / 2013–20, the forest's top 10 a year were
+right 0.738 / 0.862 of the time against 0.678 / 0.797 for its ranks
+11–50, and lost money 0.138 / 0.075 against 0.231 / 0.147. Decision
+40's bar (0.05 on both, both halves) is met; its prediction (under
+0.05) is contradicted. The top 5 were not purer than the top 10
+(0.700 / 0.825). With 80 picks a half the difference is about one
+standard error.
+
+*Decided, as decision 40 said before the run:* one backtest each of a
+concentrated portfolio (`bt_nonloser_dd30_top5_cap2`) and of score
+weighting (`bt_nonloser_dd30_top10_cap2_score`), on the forest alone,
+2005–2020 valued to 2023, against `bt_nonloser_dd30_top10_cap2`
+rerun unchanged for its same-size table. Rule (in each config): the
+buys' 3-year lead over same-size candidates ≥ the bar's + 0.01 for
+the buys of both halves, worst drawdown no more than 5 points deeper.
+Two backtest configurations on these years, added to the 35.
+
+### 42. Neither concentration nor score weighting carries forward; confidence sizing is closed for the forest
+
+*What came out (2026-11-23, three backtests, 2005–2020 valued to
+2023, 35 bps a side):* the buys' 3-year lead over same-size
+candidates for the buys of 2005–12 / 2013–20: the forest's top 10
+(the bar, rerun unchanged for its `vs_peers` table, hash
+`f84cc5238ba25a0c`) +2.68 / +3.27 points, time-weighted 10.01%, worst
+drawdown −46.6%; top 5 +1.79 / +2.68, 8.38%, −55.9%; top 10 weighted
+by score +2.67 / +3.29, 9.98%, −47.2%. Decision 41's rule (bar + 1
+point in both halves, drawdown within 5 points) fails for both.
+Predictions: top 5 within a point of the bar (held), drawdown 0–5
+points deeper (contradicted: 9.3), score weighting level (held).
+
+*Decided:* the forest's purer top 10 of a year (decision 41) does not
+make a purer top 5 of a month; with 37 backtest configurations on
+these years now, confidence sizing and concentration are closed for
+the forest. Research plan item 6 continues only through a target
+whose base rate does not move with the market (the peer-relative
+label, upstream). The candidate is unchanged.
+
+### 43. Carter's three directions after decision 42 (2026-11-23)
+
+*Carter (2026-11-23):*
+1. Do not give up on predicting downside: other drawdown thresholds
+   and horizons (e.g. ≥ 30% within 3 years); even predicting future
+   volatility may be useful beside other models or in portfolio rules.
+2. Pursue the huber regression on 3y CAGR, although it contradicts
+   the thesis (a few big winners instead of modest returns at high
+   precision): try filtering out its losers with another model. If
+   making more money needs a different approach, it changes, while
+   staying principled.
+3. Calibration is the top priority. Top K is arbitrary; the wanted
+   rule is "buy every stock scoring over X%", which with a calibrated
+   model buys fewer stocks in risky years. Its own branch for
+   research, planning and implementation.
+
+*Decided (order and reasoning):*
+
+- **Calibration, on `claude/calibration`**, first in thought, run
+  around the others: a research-and-plan note
+  (`docs/notes/2026-11-23-calibration-plan.md`), then the code it
+  calls for, then its experiments. The starting observation, to be
+  checked in that note: every model so far reads within-quarter ranks
+  only, whose distribution is nearly the same every quarter, so no
+  calibrator on top of such a model can make it score fewer stocks
+  highly in a risky year; a model that is to be calibrated across eras
+  needs inputs that carry the level of the market (the raw columns of
+  the `features` group).
+- **Downside models** (`forest_downside_cells_3y`, one sweep, models
+  saved): "max drawdown from entry ≥ 30% / ≥ 50%" within 1 and 3
+  years, trained on every row and read inside the 100k floor (the
+  huber model's setting, so either can screen the other), with
+  single-factor bars (`vol_12m`, `vol_36m`, `beta_12m`). A downside
+  model is judged as a *filter*, not on its own precision: whether
+  dropping its worst-scored stocks lowers the losers of another
+  model's picks without cutting their lead (direction 2).
+- **The huber regression**: three seeds of both targets (CAGR, excess
+  CAGR), models saved, which also tests whether their difference is
+  chance (decision 39's open question). Then a **gate** in `vml-eval`
+  (new code, `claude/blend-gate`): rank by the evaluated bundle, keep
+  only rows another bundle scores in its top (or bottom) share of the
+  quarter. Rule for a gated huber arm, before any run: lead over
+  same-size peers ≥ +0.040 / +0.037 (the forest's + 0.01) in both
+  halves with losers ≤ 0.25 / 0.20, on every seed; carried forward to
+  a backtest beside the candidate's.
+
+### 44. Calibration: what is wrong, and the first experiment (`claude/calibration`)
+
+*Found while planning (2026-11-23,
+[calibration plan](2026-11-23-calibration-plan.md)):* decision 43's
+starting claim was wrong. The cell-C forest's confidence is not flat
+across years; its top-50 confidence is **negatively** correlated with
+the year's base rate (−0.58) and positively with the base rate of
+entries five years earlier (+0.63), the newest fully labeled rows in
+its training window, while the 3-year base rate itself tends to
+reverse after three to four years (autocorrelation −0.24 / −0.27).
+Hypothesis: the score level is the training window's prior, years
+late. A threshold rule on it buys most in 2007–08 (4,191 and 4,804
+rows over 0.6) and least in 2012 (561).
+
+*Decided:*
+
+- **Code** on `claude/calibration` (515 tests): `mean_score` beside
+  `base_rate` in every probabilistic fold and era table, and
+  `year_calib_corr` / `year_calib_mae` in the pooled metrics; a
+  `year_balance` training option (each fold's training years
+  reweighted to one positive share, each keeping its total weight,
+  the mandatory weights inside it; walk-forward, backtest refit and
+  deployment alike).
+- **First experiment** (`calib_levels_nonloser_{plain,yb}_3y`, four
+  runs): the candidate forest in cell C, read inside the 100k floor,
+  on {ranks, ranks + 15 raw level columns} × {plain, `year_balance`}.
+  Rule, before the run: `year_calib_corr` ≥ +0.3, p@20 within 0.03 of
+  the ranks-only forest, precision over 0.6 at least 0.55 in each half.
+  A passing arm goes to isotonic-lag calibration and then a threshold
+  backtest ("every stock over X", `min_score` with a large `top_k`).
+  If none passes, the market's level has to come from upstream
+  market-state features, and the request is written.
+- **Also on record:** `claude/blend-gate` (517 tests), `[[gate]]` in
+  `vml-eval`, for direction 2.
+
+### 45. Downside models read; three gates on the huber regressor
+
+*What came out (2026-11-23):* `forest_downside_cells_3y` against
+`baseline_factors_downside_cells`, inside the 100k floor: the forest
+matches `vol_12m_rank` alone over one year (PR-AUC 0.536 vs 0.538 for
+"fell 30%", 0.369 vs 0.359 for 50%) and beats it over three (0.710 vs
+0.678; 0.589 vs 0.549). The count of rows over 0.5 falls into 2008 and
+recovers after, the forest of cell C's wrong-way lag mirrored.
+Huber on CAGR, seeds 232 / 1776: +0.073 / +0.032 and +0.082 / +0.054
+over peers, losers 0.39–0.42; on excess CAGR +0.024 / +0.019 and
++0.027 / +0.006: the targets' difference is not the seed.
+
+*Decided:* three `[[gate]]` evaluations of the huber CAGR bundle,
+seed 23 (`233299a55d4c`): kept to the cell-C forest's top half, the
+3y "fell 30%" forest's bottom half, the 1y "fell 30%" forest's bottom
+half. Decision 43's rule; seeds 232 and 1776 only for a gate that
+passes on seed 23. Three configurations.
+
+### 46. Calibration across years is not reachable with the inputs on disk; the upstream request
+
+*What came out (2026-11-23,
+[note](2026-11-23-downside-gates-calibration.md) §3):* none of the four
+calibration arms reaches `year_calib_corr` ≥ +0.3 (best +0.07);
+adding the 15 level columns makes it worse (−0.33 / −0.25), and every
+arm's mean score is highest for 2007–08 entries. `year_balance` adds
+0.02–0.03 PR-AUC but not at the top (screen 2013–20 +0.013 against
++0.024). Four configurations in cell C.
+
+*Decided:*
+
+- The threshold rule ("every stock over X") is **not usable** on any
+  model built from these inputs, calibrated or not: it would buy most
+  at a market top. Not backtested (the plan's step 5 waits).
+- `year_balance` and the `year_calib_*` measures stay in the harness
+  (`claude/calibration`): the measures are how any future model is
+  judged for the rule.
+- **Upstream request** (Carter to forward): market-state columns,
+  one value per snapshot date, so that a model can learn the level:
+  the cross-sectional medians of valuation (earnings yield, book to
+  market) and volatility; breadth (share of stocks above their 200-day
+  average); SPY's trailing 12-month return and volatility; the term
+  spread and a credit spread if a point-in-time source exists. And
+  the peer-relative label. Written in the calibration plan's
+  "Upstream request" section.
+- Calibration research continues with the peer-relative target (the
+  within-year score can be calibrated: its base rate is constant), so
+  "every stock over X" becomes "every stock likely to beat its
+  same-size peers", a constant-count rule. That is not Carter's
+  fewer-in-bad-years rule; the market level stays the upstream part.
+
+### 47. The gates fail the loser rule; the regressor is judged on money
+
+*What came out (2026-11-23, three gated evaluations of the huber CAGR
+regressor, seed 23):* kept to the forest's top half +0.067 / +0.047,
+losers 0.353 / 0.347; to the 3y "fell 30%" bottom half +0.070 /
++0.047, 0.353 / 0.350; to the 1y "fell 30%" bottom half +0.066 /
++0.057, 0.347 / 0.325 (ungated +0.072 / +0.054, 0.394 / 0.372).
+Decision 43's rule (losers ≤ 0.25 / 0.20) fails for all three; no
+further seeds. Predictions: lead held (just above the range for
+2005–12), losers 0.25–0.33 contradicted (0.33–0.35).
+
+*Decided:* Carter (decision 43) puts money ahead of the thesis's form,
+and `vml-backtest` is the yardstick of record; a screen's loser share
+is a proxy. So:
+
+1. **One backtest of the ungated regressor**
+   (`bt_huber_cagr_top10_cap2`): seed 23, top 10 a month by predicted
+   CAGR (`mean_rank` over one bundle), at most 2 per sector, 100k floor,
+   35 bps, 2005–2020 valued to 2023, beside the forest's
+   (`bt_nonloser_dd30_top10_cap2`, TWR 10.01%, worst drawdown −46.6%)
+   and SPY (9.58%, −52.9%). Carried forward (three seeds, then the
+   run to 2026 as context) if its time-weighted return beats the
+   forest's by 1 point and SPY's, its buys lead same-size candidates in
+   both halves, and its worst drawdown is no deeper than SPY's + 10
+   points (−62.9%). Prediction: TWR 11–13%, drawdown −55% to −65%,
+   buys' 3y lead over peers +4 to +7 points, 35–40% of buys lose.
+2. **One tighter gate** (`gate_dd1y30_bottom25`): the regressor ranked
+   only among the calmest quarter by the 1y "fell 30%" model; decision
+   43's rule. Prediction: losers 0.27–0.32, lead +0.03 to +0.05: fails.
+   38 backtest configurations on 2005–2020 with (1).
+
+### 48. The regressor selects well in a band that trails; is it as good among larger companies?
+
+*What came out (2026-11-23):* `gate_dd1y30_bottom25`: +0.057 /
++0.036 over peers, losers 0.247 / 0.269: fails decision 43's rule
+(2013–20 on both). `bt_huber_cagr_top10_cap2` (hash
+`6a152781b2756b63`): TWR 9.39% (forest 10.01%, SPY 9.58%), worst
+drawdown −60.6%, buys' 3-year lead over same-size candidates +6.8 /
++6.5 points (forest +2.7 / +3.3), buys' excess over SPY −2.3 / −5.9,
+41% / 31% of buys lost money. Fails decision 47's rule. Predictions:
+TWR 11–13% contradicted; drawdown, lead over peers held; losers 35–40%
+half held. 38 backtest configurations on 2005–2020.
+
+*Reading:* the regressor's selection within a size band is the
+strongest measured here (more than twice the forest's lead over
+same-size stocks, in both halves), but it selects from small stocks,
+whose band trails SPY by 9–12 points a year: excellent selection in a
+losing band.
+
+*Decided:* measure the same seed-23 models inside the larger half of
+the investable stocks (`log_marketcap_rank >= 0.5` on top of the 100k
+floor, scope `test`: models unchanged, trained on every row), and the
+cell-C forest's bundle in the same universe as the bar. Two
+configurations (`huber_cagr_largehalf_3y`, `eval_screen_largehalf`).
+Rule, before the run: the regressor's lead over same-size peers at
+least the forest's + 0.01 in both halves, losers no more than the
+forest's + 0.05. If it passes: a backtest inside the larger half
+beside the forest's, three seeds. Prediction: lead +0.02 to +0.04,
+under the forest's + 0.01 in 2013–20 (inside large caps "beat SPY" was
+not learned, decision 34); fails. Rival: the regressor's within-band
+skill holds among larger stocks and it passes.
+
+### 49. The huber regressor is closed as a candidate
+
+*What came out (2026-11-23):* inside the larger half the regressor's
+picks lead same-size peers by −0.010 / +0.013 and lose as often as
+they do (0.36 / 0.33); the forest leads by +0.027 / +0.028 there.
+Decision 48's prediction held.
+
+*Decided:* the huber regressor on 3y CAGR is closed as a candidate and
+as a leg: its selection skill exists only among small stocks, whose
+band trails SPY by 9–12 points a year, and in money it ends behind the
+forest and SPY with a 61% drawdown (decision 48). What stays open: a
+model of within-band selection among small stocks is real (+6.5 to
++6.8 points a year over same-size candidates in the backtest), and
+would be worth something only with a way to hold that band without
+its beta to the small-stock market (a hedge or a short leg: not in the
+engine). Directions 1–3 of decision 43 are at the end of what the
+data on disk can answer: the next steps are upstream (market-state
+columns, the peer-relative label) and Carter's (model-family rules).
+
+### 50. Carter's correction of how results are judged; three runs that follow from it
+
+*Carter (2026-11-23), after decision 49:*
+
+1. **We do not care what the market does; we care how our picks do.**
+   Crashes are unexpected and the model is not asked to foresee them.
+   A model that buys fewer stocks in 2009–12 is fine if the few did
+   well; a model overconfident in a crash year is expected, but its
+   confident picks should be the *resilient* ones. Buying at a
+   reasonable price and having the market undervalue it for a while is
+   acceptable (it can be expected to come back within 2–5 years);
+   buying at an irrationally high price that fear then brings down to a
+   rational one is what is to be avoided.
+2. **Do not dismiss an arm for missing an arbitrary bar.** An arm
+   better than its predecessor by more than noise is carried forward
+   and built on; chasing noise is overfitting, so the noise has to be
+   measured.
+
+*What this changes:*
+
+- `year_calib_corr` (decision 44's bar of +0.3) measured whether the
+  score level tracks the market's year. By (1) that is not the
+  question; it stays a reported number, not a gate. (It is one number
+  per run, a correlation across the 16 years: the best arm was +0.07.
+  The 0.34–0.52 values in the per-year table are mean scores.) The
+  question for a score threshold is whether, within each year, the
+  picks over it beat the stocks around them, crash years included.
+- **The crash years, read Carter's way** (screens on disk, top 10 a
+  quarter, 100k floor; picks against same-size peers):
+
+  | entries | forest picks' 3y max drawdown | peers' | picks lost money | peers lost |
+  |---|---|---|---|---|
+  | 2007 | 0.46 | 0.57 | 0.40 | 0.60 |
+  | 2008 | 0.33 | 0.49 | 0.15 | 0.33 |
+
+  The forest's 2007–08 picks were the resilient ones; cell C's label
+  scored most of them failures because the market fell more than 30%
+  (precision 0.17–0.21 that year). *Measurement:* the 30% drawdown leg
+  of the label counts a market-wide fall against the stock. *Hypothesis:*
+  that leg is the "temporarily undervalued" case Carter calls
+  acceptable, and the label's base rate swings (0.16–0.66) because of
+  it. **`label_3y_cagr_ge_0` (3y CAGR ≥ 0, no path condition: the price
+  came back) has never been run on `dataset_v1.4`.**
+- **Carry-forward rule, from now on:** a paired per-year comparison of
+  the arm with its predecessor on the same screen (lead over same-size
+  peers; losers). Carry forward if the mean yearly difference is
+  positive at about two standard errors or more and the arm is ahead
+  in at least 10 of 16 years, with no half worse by more than its own
+  noise. Caveat: the 3-year windows of adjacent years overlap, so the
+  16 years are worth fewer independent draws; the standard error is a
+  floor, and seeds are the second check. Fixed bars set before a run
+  remain as predictions, no longer as gates.
+- **`worst_rank` re-read under it** (decision 39; paired, worst minus
+  mean rank, the candidate's legs, seed 23): lead +0.011 a year (se
+  0.0055, bootstrap 90% interval +0.003 to +0.020), ahead in 11 of 16
+  years; losers −0.009 (se 0.010, 8 of 16). The bar was missed by
+  0.007 in 2013–20 only. **Carried forward.**
+
+*Decided, three runs (predictions in their configs):*
+
+1. `worst_rank` on seeds 232 and 1776 (`vml-eval`, both modes): the
+   seed check of the paired gain.
+2. `bt_nonloser_mom_roc_worst_top10_cap2_rankfloor`: the candidate's
+   backtest (rank floor 0.2) with `combine = "worst_rank"`, nothing
+   else changed; read on TWR, drawdown and `vs_peers` beside the
+   candidate's 12.15% / −41.4%.
+3. `forest_cagr_ge0_3y`: the candidate forest's parameters, seed 23,
+   on `label_3y_cagr_ge_0`; evaluated on the same screen, alone and in
+   the candidate's blend.
+
+### 51. Worst rank stays a tool; the "came back" label is open
+
+*What came out (2026-11-23; [note](2026-11-23-judging-picks.md)):*
+
+- **Worst rank against mean rank.** The worst rank's buys led same-size
+  stocks by 0.6–1.0 points a year more on all three seeds, but its
+  portfolio earned 0.58–0.74 points a year less (TWR), with a drawdown
+  4–5 points deeper. That gap is larger than the seed spread. The
+  backtest is the yardstick of record, so the mean rank stays. Decision
+  50's carry-forward worked as meant: the arm went to money, and money
+  decided.
+  - *Lesson for the rule:* a screen gain of about one point a year does
+    not imply a money gain. The screen carries an arm forward to a
+    backtest, never into the candidate.
+- **The same config's TWR moved across code versions.** It went from
+  12.15% (git `f96037d`) to 11.90% (`cfa451c`), with 1,747 against
+  1,742 buys. This is not traced. Backtests are compared only at one
+  git SHA. Added to TODO.
+- **`label_3y_cagr_ge_0`.** It is within noise of cell C alone; in the
+  candidate's blend it leads by +0.0075 a year (1.7 se, 10 of 16
+  years); in the worst-rank blend it is below. Open: seeds 232 and 1776
+  of the forest, then a backtest in the mean-rank blend, if Carter
+  agrees that the label fits the thesis better. It carries no
+  drawdown leg, which is what he called acceptable.
+
+### 52. The "came back" label goes to seeds and money (Carter: yes)
+
+*Decided (2026-11-23):* `label_3y_cagr_ge_0` forests on seeds 232 and
+1776 (`forest_cagr_ge0b_3y_s232`, `_s1776`). Each is screened alone
+and in the candidate's mean-rank blend, paired against cell C's forest
+of the same seed. Then three backtests,
+`bt_cagr_ge0_mom_roc_top10_cap2_rankfloor{,_s232,_s1776}`: the
+candidate's config with the forest bundle swapped, nothing else. Each
+is read against the candidate on the same seed. Those candidate runs
+were made at git `cfa451c`; `src/` has not changed since (`git diff
+cfa451c HEAD -- src` is empty).
+
+*Rule (decision 50):*
+- **Screen.** Paired per year across the three seeds, the blend lead
+  ahead on average, at about 2 se, in 10 or more of 16 years.
+- **Money.** TWR above the candidate's on at least 2 of 3 seeds, with a
+  mean gap larger than the candidate's seed spread (0.33), and a
+  drawdown no more than 2 points deeper. Passing both replaces cell C's
+  forest in the candidate; that change would be Carter's to confirm.
+
+*Prediction:*
+- Screen: the lead +0.003 to +0.010 a year on the new seeds.
+- Money: TWR within ±0.4 of the candidate's on each seed, because the
+  picks barely differ (decision 51). It does not pass on money.
+
+*Rival:* the 2005–06 gain on the screen is real and compounds to more
+than +0.4.
+
+### 53. The "came back" label does not replace cell C in the candidate
+
+*What came out (2026-11-23; [note](2026-11-23-judging-picks.md) §4):*
+- **Screen.** In the mean-rank blend, about +0.005 a year on three
+  seeds, the same sign on each, under 2 se on each.
+- **Backtest.** TWR +0.13 to +0.59 (mean +0.42) on all three seeds,
+  earned in the 2005–07 years, when the account was small. Money-
+  weighted return −0.04 on average, and final value mixed (two seeds
+  lower). Drawdown about 3 points deeper on every seed.
+
+*Decided:* the candidate keeps cell C's forest. The rule failed on
+drawdown and on the screen's noise. In money the two labels are the
+same strategy. The label is recorded as an equivalent that fits Carter's
+statement of the thesis better: no penalty for a market-wide fall. It
+is to be preferred if a later change of the candidate retrains the
+forest anyway, rather than being swapped in alone now.
+
+*For the rule:* TWR alone can reward a gain made while the account is
+small. From now on, a money comparison reports TWR, MWR and final value
+together, and a gain shows in MWR as well before it counts.
+
+### 54. dataset_v1.4 was rebuilt on 2026-11-23: what that explains, and what it touches
+
+*Carter (2026-11-24):* v1.4 was lost in a migration and recreated.
+The manifest says `created_utc` 2026-11-23T00:59:31Z, which is after
+every run logged up to 2026-10-01 and before every run of this
+session.
+
+*Checked:* the candidate's forest bundle (`53ceedd93e6d`, trained on
+the old build) was re-scored with the same eval config (hash
+`f7aa5d21017e8b47`, logged 2026-10-01) on the rebuilt dataset.
+- **Rows.** The test row counts differ in every fold, from −34 (2012)
+  to +6 (2005), and base rates move in the fourth decimal.
+- **Screen.** The same-size lead moves from +0.030 / +0.027 to
+  +0.032 / +0.029. Losers move from 0.197 / 0.116 to 0.194 / 0.119.
+- **Code.** The backtest and filter code between the two runs only
+  adds options that are off by default (worst rank, market-cap weights,
+  filter parsing). It is not ruled out by a run, but row counts do not
+  come from it.
+
+*Explained:*
+- **The candidate's backtest.** It moved from 12.15% to 11.90% (1,747
+  to 1,742 buys), decision 51's untraced difference: most likely the
+  rebuild.
+- **The plain-ranks forest of decision 46.** Its screen differed from
+  the bundle (+0.036 / +0.024 against +0.030 / +0.027). Part of that
+  is the rebuild (the bundle re-scored: +0.032 / +0.029). The rest is
+  a forest trained on the new build against one trained on the old.
+
+*Touched this session, and corrected:* seed 23's mean-rank blend and
+cell C screens were the 2026-10-01 reports (old build), paired against
+today's arms. Redone on the rebuild (`reports/rerun_dataset_rebuild/`):
+- worst minus mean rank: +0.0126 a year (was +0.0114), 11 of 16;
+- "came back" alone: +0.0047 (was +0.0064), 7 of 16;
+- "came back" in the blend: +0.0086 (2.0 se, was +0.0075), 12 of 16.
+
+No decision changes. Decisions 51 and 53 rested on backtests, and
+every backtest of this session ran on the rebuild on both sides.
+
+*From now on:*
+- A number logged before 2026-11-23 on v1.4 belongs to the old build.
+  This includes findings.md's candidate table, the 38 earlier backtest
+  configurations and the holdout look.
+- It is compared with a new run only after rerunning it on the rebuild.
+- Before comparing two runs, check that both used the same dataset
+  build.
+- *Upstream request (Carter):* a content hash of `dataset.parquet` in
+  the manifest, or a new version number for a rebuild, so that this is
+  caught by the ledger instead of by a backtest.
+
+### 55. Session of 2026-11-24: dataset_v1.4.1, the candidate re-established on it, and the size band in money
+
+*Carter (2026-11-24):* the standing research prompt ("do anything you
+feel is best to reach this goal, log every decision"), and "be sure to
+use dataset_v1.4.1".
+
+*Facts checked:*
+- `dataset_v1.4.1` exists upstream (ADR 0021, 2026-11-24). It has the
+  same columns as `dataset_v1.4`, the same row count (1,537,293) and
+  the same effective sizes. It was built from the same interim files
+  as the rebuilt v1.4 of 2026-11-23, and its manifest carries a
+  provenance block: the raw Sharadar snapshot (2026-11-21), the code
+  commit, and a sha256 of every output file. Upstream calls the two
+  equivalent up to floating-point noise in the sample weights.
+- The ledger keys on the version string, so under CLAUDE.md no v1.4
+  number is compared with a v1.4.1 number. Every comparison this
+  session needs a v1.4.1 run on both sides.
+- The previous session's code (`worst_rank`, `year_balance`,
+  `[[gate]]`) is on `claude/results-2026-11-23`, pull request 20,
+  not yet merged. This session's lab branch, `claude/lab-2026-11-24`,
+  starts from that branch so that the code is available. The lab
+  branch of 2026-11-23 is merged in for its result records.
+
+*Decided, in order:*
+
+1. **Provenance in the record** (code, `claude/dataset-provenance`).
+   Every result record, ledger row and backtest report records the
+   dataset's `provenance.files["dataset.parquet"].sha256`, as upstream
+   manual §1 now asks. Datasets without a provenance block record an
+   empty value. `data/versions.md` gets a row for 1.4.1 and the synced
+   data docs are refreshed.
+2. **The candidate re-established on v1.4.1.** Copies of the three
+   leg configs with `dataset_version = "dataset_v1.4.1"` and the
+   suffix `_v141`: the forest, momentum and return on capital. Then
+   the candidate's backtests on the new bundles, nothing else changed:
+   2005–2020 with the rank floor, buy and hold to 2026-08-21, and the
+   sell discipline to 2026-08-21. These runs replace findings.md's
+   candidate table. The 2021–26 window is read for the fixed candidate
+   only, as decision 28 allows. *Prediction:* each number within the
+   noise of the rebuilt v1.4: the 2005–2020 run's TWR within 0.1 of
+   11.90%. No prediction for the to-2026 numbers against the October
+   table, which came from the old build.
+3. **The size band in money.** The record says the candidate's lead is
+   a same-size lead (findings, conclusion 3) and that the smaller half
+   of investable stocks trails SPY by 12 to 33 points a year over
+   three years (conclusion 2). The huber regressor failed in money
+   because it selected inside a band that trails SPY (decision 48).
+   The reverse question has not been asked in money: does the
+   candidate, restricted to a size band that keeps up with SPY, beat
+   SPY? Two backtests, the candidate's config plus one investability
+   filter: `log_marketcap_rank >= 0.5` (the larger half) and
+   `log_marketcap_rank >= 0.8` (large caps), 2005–2020. A run that
+   beats the candidate's TWR by more than the seed spread (0.33) with
+   a drawdown no deeper is traded to 2026 as context, then goes to
+   seeds 232 and 1776. *Prediction:* the larger half ends within 1
+   point of the candidate's TWR (the forest's same-size lead there is
+   +0.027 / +0.028 against +0.030 / +0.027 over all investable rows,
+   but the band's own return is higher), with a shallower drawdown.
+   Large caps end 1 to 3 points below the candidate: the forest only
+   separates the worst quintile there (decision 34). *Rival:* the
+   band effect dominates and the larger half beats the candidate by
+   more than 1 point. Backtest configurations on 2005–2020 after
+   this: 38 + 1 (the v1.4.1 rerun) + 2.
+4. **The November list.** `inference_2026-11-20` is on the host.
+   Deployment bundles are refit on v1.4.1 (the runbook says to refit
+   when a new dataset version arrives) and `vml-predict` is run with
+   the runbook's flags. This is a run of the runbook in the sandbox,
+   as on 2026-10-01, not a deployment decision. Carter decides what is
+   bought.
+
+*Not done, and why:* calibration (Carter's first priority) waits on
+the market-state columns upstream (decision 46); other model families
+wait on Carter's three rules (research plan item 7); the decision-50
+re-reads of closed arms need their bundles retrained on v1.4.1 and
+come after items 1–4 if time remains.
+
+### 56. Decision 41's arms re-read under decision 50's rule: closed stays closed
+
+*Why (2026-11-24):* TODO item from the third round of 2026-11-23:
+re-read the arms closed by a fixed bar with a paired per-year
+comparison. Decision 41 traded the forest alone with a monthly top 5
+and with score weights, against the forest's own top 10
+(`bt_nonloser_dd30_top10_cap2`). The three backtests ran on
+2026-11-23 between 06:26 and 06:30 UTC at git `0f08aa1` and
+`a3ad89a`, all on the rebuilt v1.4, so they share a dataset build.
+No new run: the reports on disk were read.
+
+*What came out:* arm minus predecessor, paired by year.
+
+| arm | yearly portfolio return 2005–2020 | buys' 3-year lead over same-size peers, by cohort | buys' loser share minus peers', by cohort |
+|---|---|---|---|
+| top 5 a month | −1.55 points a year (se 0.84), ahead in 5 of 16 years, both halves negative | −1.0 points (se 1.0), ahead 5 of 16 | +0.4 points (se 1.5), 8 of 16 |
+| score weights | −0.03 points (se 0.05), 5 of 16 | 0.00 (se 0.03), 3 of 16 | −0.02 (se 0.09), 5 of 16 |
+
+*Decided:* decision 42 stands. The monthly top 5 is worse than the
+top 10 by more than its noise (about 1.8 standard errors, with both
+halves negative), and score weights change nothing measurable. Neither
+is carried forward. The third re-read on the list, `year_balance`
+against plain ranks on the screen, needs both forests retrained on
+v1.4.1 and is left on the TODO list.
+
+### 57. The size-band runs read; the larger half goes to seeds and to 2026
+
+*What came out (2026-11-24, [note](2026-11-24-v141-and-size-band.md)
+§4–5; all on `dataset_v1.4.1`, 2005–2020 valued end of 2023):*
+
+| | candidate | larger half (`log_marketcap_rank >= 0.5`) | large caps (`>= 0.8`) |
+|---|---|---|---|
+| TWR | 11.76% | 12.51% | 12.06% |
+| MWR | 13.65% | 14.10% | 13.87% |
+| final value on 192,000 | 932,471 | 984,128 | 957,370 |
+| worst drawdown | −41.0% | −39.3% | −40.2% |
+| buys | 1,741 | 1,756 | 1,759 |
+| buys' 3-year lead over same-size peers, 2005–12 / 2013–20 | −0.002 / +0.020 | +0.003 / +0.019 | +0.019 / +0.031 |
+| buys that lost money, 2005–12 / 2013–20 | 0.36 / 0.23 | 0.35 / 0.22 | 0.32 / 0.19 |
+| the band's own excess over SPY (peers), 2005–12 / 2013–20 | +0.041 / −0.011 | +0.041 / −0.009 | +0.031 / −0.007 |
+
+Paired by year against the candidate: the larger half earns +0.72
+points a year of portfolio return (se 0.61, ahead in 11 of 16 years,
+both halves positive) with the same lead over peers (+0.15 points, se
+0.63) and 0.9 points fewer losers (se 0.8). Large caps earn the same
+(0.00 points a year, se 0.97, ahead 9 of 16) with a larger lead over
+peers (+1.5 points, se 0.7, ahead 12 of 16) and 3.9 points fewer
+losers (se 1.6).
+
+*Predictions:* the larger half within 1 point of the candidate's TWR
+held (+0.75) and the shallower drawdown held; the rival ("beats the
+candidate by more than 1 point") did not. Large caps 1 to 3 points
+below the candidate: **missed**. Inside large caps the candidate's
+picks select better against their peers and lose less often than
+anywhere else, and the money comes out the same because the band
+earns less.
+
+*Reading:* the candidate's peers already earn what the larger half's
+peers earn (+0.041 / −0.011 against +0.041 / −0.009), so the candidate
+was mostly buying from the larger half before the filter. The filter
+changes about one buy in twelve and removes a few losers. This is a
+measurement; whether the gain is more than noise is what the seeds
+decide.
+
+*Decided:* decision 55's rule is met by the larger half (TWR +0.75 >
+0.33, drawdown shallower), so it is carried forward: traded to
+2026-08-21 as context (the fixed rule, not a selection: it is read for
+this one variant, as decision 28 allows), and the forest refit on
+seeds 232 and 1776 on v1.4.1, each backtested as the candidate and as
+the larger half on 2005–2020, paired per seed. Large caps miss the
+rule by 0.03 on TWR, and the paired yearly reading says the money
+gain is zero; the fewer losers are recorded and it is not carried
+forward. *Rule for the seeds (decision 52's form):* TWR above the
+candidate's on at least 2 of 3 seeds with a mean gap above 0.33, MWR
+and final value above on the same seeds, drawdown no deeper. Passing
+would change the candidate's investability filter, which is Carter's
+to confirm. *Prediction:* the gap holds on the seeds (+0.4 to +1.0);
+to 2026 the larger half trails SPY by less than the candidate does
+(the giants that carried the index are in this band). Backtest
+configurations on 2005–2020 after this: 41 + 4 = 45.
+
+### 58. The larger-half filter passes its seed check; the change to the candidate is proposed to Carter
+
+*What came out (2026-11-24, [note](2026-11-24-v141-and-size-band.md)
+§5; `dataset_v1.4.1`, 2005–2020 valued end 2023, the candidate against
+the larger half on the same seed):*
+
+| seed | candidate TWR / MWR / final / drawdown | larger half TWR / MWR / final / drawdown | gap in TWR | paired yearly return |
+|---|---|---|---|---|
+| 23 | 11.76 / 13.65 / 932,471 / −41.0 | 12.51 / 14.10 / 984,128 / −39.3 | +0.75 | +0.72, se 0.61, ahead 11 of 16 |
+| 232 | 11.86 / 13.72 / 940,636 / −40.5 | 12.56 / 14.20 / 995,841 / −38.6 | +0.70 | +0.76, se 0.46, ahead 10 of 16 |
+| 1776 | 12.18 / 13.88 / 959,232 / −41.1 | 12.50 / 14.19 / 994,518 / −39.6 | +0.32 | +0.34, se 0.52, ahead 12 of 16 |
+
+The candidate's own seed spread on v1.4.1 is 0.42 points of TWR. The
+larger half is above it on every seed in TWR, MWR and final value,
+with a drawdown 1.5 to 1.9 points shallower, and the mean gap is
++0.59. The buys' lead over same-size peers is the same on every seed
+(within 0.1 point) and the loser share is 0.2 to 0.7 points lower.
+Decision 57's prediction (+0.4 to +1.0) held on two seeds and fell
+short on the third.
+
+*Decided:* decision 57's rule is met (TWR above on 3 of 3 seeds, mean
+gap above 0.33, MWR and final value above on the same seeds, drawdown
+no deeper). The gain is small, about 0.6 points a year, and it is the
+band, not the selection: the picks lead their peers by the same
+amount, and the filter removes about one buy in twelve from the
+smaller half, where the band trails SPY. **The proposed change to the
+candidate is one more investability filter, `log_marketcap_rank >=
+0.5`. The candidate itself is unchanged until Carter confirms** (the
+candidate is Carter's: decisions 24 and 25). If confirmed, the
+paper-trading rule gains the filter (`--filter` twice in
+`vml-predict`) and the sell-discipline variant is backtested with it.
+What this does not change: the candidate's record against SPY in
+2021–26 (the larger half ends 6% behind SPY where the candidate ends
+13% behind, decision 57). Backtest configurations on 2005–2020: 45
+completed (38 on v1.4, 7 on v1.4.1), and 7 failed runs of 2026-11-24
+that count under the ledger's rule. Corrected on 2026-11-24 from 4 to
+7: the ledger holds 7 failed rows, see decision 59.
+
+### 59. The writing rules become a check that runs
+
+*What happened (2026-11-24):* after the session's closing message,
+Carter quoted seven phrases from it as unreadable. The first set of
+writing rules was already in CLAUDE.md. Carter wrote that an
+instruction is not a sufficient solution and asked for a better one.
+
+*Decided:* the rules are now a program, `vml-writing`, in
+src/harness/writing.py. It refuses nine things:
+
+1. a sentence without a finite verb,
+2. a sentence over 25 words,
+3. a semicolon,
+4. a clause in parentheses,
+5. three or more measurements in a sentence,
+6. a phrase from `docs/writing_denylist.toml`,
+7. an aphorism,
+8. a gendered pronoun,
+9. a dash between clauses.
+
+A `Stop` hook in `.claude/settings.json` runs it
+on every reply before Carter sees it. A `PostToolUse` hook runs it on
+every edit to a prose file. `vml-logbook add` and `vml-promote --note`
+refuse text that fails it. The denylist holds every phrase Carter has
+quoted, with the date, so a correction never regresses. The documents
+findings.md, paper-trading.md, the session note of 2026-11-24 and the
+TODO section of 2026-11-24 were rewritten until the check passed. The
+logbook's old entries stay as they are. The branch is
+`claude/writing-check`, on top of `claude/results-2026-11-24`.
+
+*Correction to decision 58, same day:* the ledger holds 7 failed rows
+of 2026-11-24, all from the second chain-script error. The 4 runs that
+failed on the wrong config path left no ledger rows. Decision 58 said
+4 and now says 7.
+
+*Changed the same day, on Carter's instruction:* the two Claude Code
+hooks are removed. Carter does not want a check that runs on every
+turn, because it could affect the agent's coding and reasoning. The
+rules live in the project skill `.claude/skills/writing/SKILL.md`,
+which an agent invokes before writing documentation or a reply and at
+no other time. The skill's procedure runs `vml-writing` on the draft.
+The command gates in `vml-logbook add` and `vml-promote --note` stay.
+
+*Reversed on 2026-11-25 (decision 66):* Carter does not want any of
+the writing-check or writing-skill changes. The check, the skill, the
+denylist, the command gates and the "Writing" section of CLAUDE.md are
+reverted on `claude/revert-writing-check`. This entry stays as the
+record of what was tried.
+
+### 60. A deployable candidate that does not train on the recent years: the training cutoff
+
+*What happened (2026-11-25):* Carter restated the record: the candidate
+beats SPY on 2005–2020 and loses from 2021 to 2026. Carter reads the
+recent years as market madness that cannot last. Carter's concern is
+that the deployed candidate, refit on every labeled row, is tainted by
+training on the past few years. Carter asked for a comparison on the
+current inference dataset. It sets the deployed candidate's forecasts
+against those of a deployable version that does not train on the past
+five years.
+
+*Decided:*
+
+1. `vml-train-deploy` gains `--train-end DATE`, the training cutoff. The
+   deployment refit then fits only the labeled rows whose
+   `snapshot_date` is before the date. The cutoff is on the entry date,
+   because that is the plain reading of "rows of the past five years".
+   The stricter reading, a forest that has seen no price from the
+   period, is reached with an earlier date. The cutoff is recorded in
+   the bundle, in the ledger row's `fold` as `labeled_before_DATE`, and
+   in every prediction sidecar the bundle contributes to. It is not a
+   universe and not a row filter of the kind CLAUDE.md forbids. It
+   reads no label and no split tag, and it removes only the most recent
+   rows, as the backtest's year-end refits do. It exists in the
+   deployment path only, never in `vml-run`, `vml-eval` or the
+   backtest.
+2. Two cutoffs run on the candidate's forest. The first is 2021-01-01,
+   Carter's period taken at the entry date. The second is 2018-01-01,
+   under which no three-year window reaches into 2021.
+3. `scripts/compare_predictions.py` reports where two rankings differ:
+   shared picks, shared top rows, rank correlation and the largest
+   moves. Nothing in it is a performance claim. The deployed forest and
+   a cutoff forest are not chosen between on these numbers, because
+   no outcome stands behind them. Only paper trading both would
+   separate them.
+4. The candidate and the runbook are unchanged. Carter decides whether
+   the paper-traded list uses a cutoff, and which.
+
+*It rests on* the note
+[2026-11-25-training-cutoff.md](2026-11-25-training-cutoff.md). The
+result is that the cutoff-2021 list differs from the deployed list in
+one pick of ten and the cutoff-2018 list in two. The mean rank has a
+Spearman correlation of 0.998 with the deployed ranking under either
+cutoff. The backtest's year-end refits, which trained on no snapshot
+after late 2017 for the trades of 2021–2023, produced the shortfall
+against SPY. So the backtest does not support the taint as the cause
+of the shortfall.
+
+### 61. Session of 2026-11-25: the fallen-stock program, from Carter's value-investing question
+
+*Carter (2026-11-25):* The latest candidate beat SPY from 2005 to 2020,
+but it relies mostly on momentum. Carter is not ready to give up on a
+more principled value-investing model. Carter named one principle. A
+value investor finds stocks whose share price took a large hit that is
+disproportional to the adversity the company faces. The investor sees a
+long history of success and expects the company to come back two to
+three times over the next few years. Carter asked two questions. The
+first asked whether the models take full advantage of a stock's prior
+years. The second asked whether we could find all examples of a deep
+fall and identify which ones are most likely to recover. Carter asked
+me to explore this and related ideas, to try everything that needs no
+upstream change, and to document what does.
+
+*Facts checked first.* I read base rates on the walk-forward test rows
+of 2005 to 2020 inside the 100k floor on `dataset_v1.4.1`. This was a
+reading of label columns on walk-forward rows, with no model and no
+ledger row. I did not read the holdout rows. The reading is in
+docs/notes/2026-11-25-fallen-stocks.md. The main facts are these:
+
+| rows inside the 100k floor | rows | not a loser | doubled in 3 years | beat SPY | lost half or more | mean 3y CAGR |
+|---|---|---|---|---|---|---|
+| all | 200,472 | 0.409 | 0.135 | 0.381 | 0.191 | +0.004 |
+| within 10% of the 5-year high | 39,381 | 0.580 | 0.097 | 0.446 | 0.064 | +0.061 |
+| 50% or more below the 5-year high | 50,887 | 0.295 | 0.178 | 0.342 | 0.302 | −0.046 |
+| the same, cash flow from operations positive | 31,535 | 0.369 | 0.207 | 0.401 | 0.209 | +0.022 |
+| the same, dividends paid in each of the last 5 years or more | 7,990 | 0.419 | 0.237 | 0.423 | 0.170 | +0.059 |
+| the same, the larger half by market cap | 18,453 | 0.399 | 0.206 | 0.410 | 0.182 | +0.037 |
+
+Fallen stocks are a population with more doublers and far more losers
+than the rest. The recovery rate moves strongly with the year of entry.
+Fallen stocks bought in 2009 doubled 35% of the time. Those bought in
+2006, 2007, 2014 or 2017 doubled under 9% of the time. Quality, a
+dividend record and size each raise the recovery rate and cut the
+losers inside the population. The candidate's forest gives the 5-year
+drawdown rank 1.3% of its importance. It gives the 3-year reversal rank
+0.3%. Two volatility ranks take 32%. The models therefore read a
+stock's prior years mostly through its volatility.
+
+*Decided:*
+
+1. **The fallen universe.** `dist_5y_high <= -0.5` together with the
+   100k floor, written F50 here. It holds the liquid stocks that
+   trade 50% or more below their own 5-year high. The GLOSSARY gains
+   the term. A stock without a 5-year history has a NULL in the
+   column and is outside the universe. That fits the principle,
+   because a long history is required.
+2. **Four cells inside F50.** Cell C, not a loser. The recovery label
+   `fwd_3y_cagr >= 0.26`, which is doubling within 3 years. The label
+   `label_3y_beat_spy`. The label `fwd_3y_excess_cagr >= 0.1`, a big
+   winner against SPY. Each cell starts with zero trials.
+3. **The runs, in order.** The single-factor bars inside F50 for the
+   four cells, 12 factors each. The candidate's forest configuration
+   inside F50 on the four cells with three feature sets at seed 23,
+   with bundles saved. The LightGBM regression on 3-year CAGR and on
+   excess CAGR inside F50, with huber and two quantile objectives. The
+   candidate's own forest and blend evaluated inside F50 without
+   refitting, through `vml-eval` with the universe on the eval config.
+4. **I read the arms on the portfolio screen.** The screen takes the
+   top 10 per quarter and at most 2 per sector, with peers the
+   same-size fallen stocks. Then I read absolute outcomes against the
+   candidate blend's screen inside the 100k floor on v1.4.1. That
+   screen has a mean 3-year CAGR of 0.105 and losers at 0.208. Its
+   mean excess CAGR is +0.009. I read both halves separately.
+5. **I wrote the rule before the runs.** An arm goes to seeds 232 and
+   1776 when it meets either of two conditions in both halves:
+   - its screen's mean 3-year CAGR is at or above 0.105
+   - its lead over same-size fallen peers is 0.05 or more, with losers
+     at 0.30 or below
+
+   An arm goes to a backtest when all three seeds meet the same
+   condition. The backtest carries `dist_5y_high <= -0.5` as an
+   investability filter beside the rank floor. I read it by TWR
+   against the candidate's 11.76% on 2005–2020.
+6. **The lab branch** is `claude/lab-2026-11-25b`, created off
+   `claude/deploy-train-end` with the two earlier lab branches merged
+   in for their reports and ledger rows.
+
+*I wrote these predictions before the runs.*
+
+1. The lowest 36-month volatility and the conservative score will be
+   the two best bars on screen precision in cell C inside F50. They
+   were in every universe so far. Return on capital and the Altman score lead on the recovery
+   label.
+2. The forest on the 112 ranks inside F50 reaches these p@20 values:
+
+   | cell | base rate | predicted p@20 |
+   |---|---|---|
+   | C, not a loser | 0.30 | 0.55 to 0.70 |
+   | recovery, doubled in 3 years | 0.18 | 0.30 to 0.40 |
+
+3. The theory-led feature set is the ranks without the technical
+   family plus the 47 unranked columns. Inside F50 it comes within
+   0.03 of the 112 ranks on p@20. On all rows it was 0.12 behind. The
+   rival is that volatility matters as much among fallen stocks as
+   elsewhere, and the gap stays near 0.12.
+4. No arm's screen has a mean 3-year CAGR at or above 0.105 in both
+   halves. The forest's screen inside F50 leads same-size fallen peers
+   by 0.05 or more in both halves. Its losers are between 0.25 and
+   0.35.
+5. The candidate's own forest, evaluated inside F50, picks the calmest
+   fallen stocks. It has fewer losers than a forest trained inside F50
+   and a lower mean CAGR.
+
+*I amended this decision the same day, before any run completed.* The first launch
+failed at fold 2005 with "the universe leaves fold 2005 without train
+rows". The column `dist_5y_high` needs five years of prices, and the
+data start in 1998, so no row before 2002 is inside F50. Fold 2005
+trains on rows up to 2001. I counted the training rows inside F50 per
+fold:
+
+| fold | training rows inside F50 | effective size |
+|---|---|---|
+| 2005 | 0 | 0 |
+| 2006 | 11,936 | 351 |
+| 2007 | 24,811 | 729 |
+| 2008 | 38,203 | 1,126 |
+| 2020 | 155,184 | 4,626 |
+
+7. **I run the F50 sweeps on the 15 folds from 2006 to 2020.** The two
+   halves become 2006–12 and 2013–20. Fold 2006 is thin and its
+   numbers are read with that in mind. The two runs that failed before
+   I stopped the chain are in the ledger and count as trials in cell C
+   inside F50. The `vml-eval` runs of the candidate's bundles keep all
+   16 folds, because the bundles were trained on all rows.
+
+### 62. The fallen-stock program, round 2: the value investor's tests as universes, the depth of the fall, the 5-year horizon
+
+*Written on 2026-11-25 while the round-1 forest sweep was running, and
+before any of its results were read.* The base rates of decision 61
+showed that a few columns known at the snapshot separate the fallen
+stocks that recover from the rest. Round 2 asks whether a forest
+trained inside one of those populations picks better than one trained
+inside all of F50. It also asks how the answer moves with the depth of
+the fall and with the horizon.
+
+*Round 2 rests on these base rates.* They come from the same reading
+as decision 61, the walk-forward test rows of 2005 to 2020 inside the
+100k floor:
+
+| population | rows | not a loser | doubled in 3 years | lost half | mean 3y CAGR |
+|---|---|---|---|---|---|
+| F30, 30% or more below the 5-year high | 80,110 | 0.341 | 0.163 | 0.250 | −0.020 |
+| F50 | 50,887 | 0.295 | 0.178 | 0.302 | −0.046 |
+| F70, 70% or more below | 27,173 | 0.234 | 0.182 | 0.382 | −0.092 |
+| F50, operating cash flow positive | 31,535 | 0.369 | 0.207 | 0.209 | +0.022 |
+| F50, the larger half | 18,453 | 0.399 | 0.206 | 0.182 | +0.037 |
+| F50, dividends paid 5 years running or more | 7,990 | 0.419 | 0.237 | 0.170 | +0.059 |
+
+The dividend payers inside F50 are too few for a model. Its median
+quarter holds 27 rows inside F50 and its thinnest quarter holds one.
+It stays a bar and a possible filter, not a universe.
+
+*Decided:*
+
+1. **Two sub-universes get their own forests**, each on cell C and on
+   the recovery label. The forest is the candidate's configuration on
+   the 112 ranks at seed 23, on folds 2006 to 2020. The first is F50 with
+   `piotroski_cfo_positive == true`. The second is F50 with
+   `log_marketcap_rank >= 0.5`.
+2. **The depth of the fall gets a dose-response.** The same forest runs
+   inside F30 and inside F70, on the same two cells.
+3. **The 5-year horizon gets two cells inside F50**, doubled within
+   5 years, `fwd_5y_cagr >= 0.149`, and tripled, `fwd_5y_cagr >= 0.246`.
+   The 5-year folds that have training rows inside F50 are 2008 to
+   2018, so those are the folds.
+4. **The two round-1 forests inside F50 are combined** by worst rank
+   and by mean rank through `vml-eval`, without refitting. The worst
+   rank of a not-a-loser forest and a recovery forest is one list of
+   stocks that both forests rank high.
+5. **The single-factor bars run again** as
+   `baseline_factors_fallen50_3y_f06`, the copy of the round-1 file
+   with folds 2006 to 2020.
+6. Each config carries its prediction in its header. The rule of
+   decision 61.5 applies to every arm.
+
+*What would change the plan:* a round-1 result far above its base rate
+is read as leakage first. The universe code path was built on 2026-09-30 and has run in nine
+universes. `dist_5y_high` is a feature column of the manifest. So the
+risk is low. If round 1 shows
+the forest with no lead over same-size fallen peers, round 2 still
+runs, because the sub-universes ask a different question.
+
+### 63. The fallen-stock program, round 3: deeper trees, a second model family, and the recovery label learned on every row
+
+*Written on 2026-11-25 after the first nine runs of round 1 were read
+in the ledger and before round 2 ran.* The round-1 forest inside F50
+finds "not a loser" with a lead over same-size fallen peers of about
+5 points a year. It has almost no skill on the recovery label:
+
+| recovery label inside F50, forest on the 112 ranks | value |
+|---|---|
+| p@20 | 0.217 |
+| base rate | 0.156 |
+| screen precision | 0.185 |
+| screen precision of same-size peers | 0.170 |
+
+In cell C the theory-led feature set is 0.09 behind the 112 ranks on
+p@20. Prediction 3 of decision 61 therefore missed, and its rival held.
+
+*Decided:*
+
+1. **Deeper forests on the recovery label inside F50.** The candidate's
+   forest has depth 4. The two new sets have depth 6 and depth 8, with
+   smaller leaves. A recovery may need interactions a depth-4 tree
+   cannot express.
+2. **A modest path-free target inside F50**, `fwd_3y_cagr >= 0.1`, on
+   the same three forests. A value investor holds through the drawdown,
+   and cell C penalises a further 30% fall.
+3. **LightGBM classifiers inside F50** on cell C and on the recovery
+   label, with two parameter sets from `lgbm_candidate_sets_3y`.
+4. **The recovery label learned on every row and evaluated inside F50**,
+   through `universe_scope = "test"`. This asks whether the forest
+   learns recovery better with ten times the training rows.
+5. The predictions are in the config headers. In short, I expect no arm to reach a p@20 of 0.26 on the recovery
+   label. I expect the forest to learn the path-free target as calm,
+   like cell C.
+
+### 64. The fallen-stock program, round 4: the fresh fall, measured against the 52-week high
+
+*Written on 2026-11-25 while the round-1 regression sweep was running.*
+Carter's words were "a stock experiences a deep fall", an event. The
+5-year high measures a state, and a stock 50% below it may have sat
+there for years. `dist_52w_high` measures a fall within the last year.
+It needs one year of prices, so every fold has training rows and no
+fold restriction applies. I read its base rates on the same rows as
+decision 61:
+
+| population inside the 100k floor | rows | not a loser | doubled in 3 years | beat SPY | lost half | mean 3y CAGR |
+|---|---|---|---|---|---|---|
+| W40, 40% or more below the 52-week high | 40,886 | 0.237 | 0.187 | 0.327 | 0.362 | −0.076 |
+| W40, the larger half | 12,951 | 0.367 | 0.251 | 0.441 | 0.193 | +0.053 |
+| W40, operating cash flow positive, the larger half | 10,268 | 0.404 | 0.266 | 0.472 | 0.151 | +0.085 |
+| W40, 3-year return before the last year at or above zero, dividends 5 years running | 2,894 | 0.443 | 0.256 | 0.484 | 0.124 | +0.092 |
+| F50, operating cash flow positive, the larger half | 15,432 | 0.425 | 0.212 | 0.425 | 0.156 | +0.054 |
+
+The third row is the value investor's archetype as the dataset can
+state it. It is a large company that still earns cash and whose price
+fell 40% within the year. One in four of those doubled within 3 years. Two
+in three did not lose money. Its mean return is 8 points a year above
+the whole fallen population's. It still trails SPY by 3 points a year
+on average.
+
+*Decided:*
+
+1. **The fresh-fall universe W40** is `dist_52w_high <= -0.4` with the
+   100k floor. The GLOSSARY gains the term.
+2. **The candidate's forest configuration runs inside W40 and inside
+   W40 with the larger half**, cells C and recovery, all 16 folds.
+3. **The single-factor bars run inside W40** for the same two cells.
+4. **The candidate's own forest is evaluated without refitting** in
+   three universes:
+   - W40
+   - the W40 archetype, with cash flow positive and the larger half
+   - F50 with the same two filters
+ The blend is evaluated inside
+   the W40 archetype. These are reads of the deployed candidate under
+   a tighter investability filter, and need no new model.
+5. The predictions are in the config headers. In short, the forest learns calm in W40 as in F50, and the recovery
+   label stays unlearned. The archetype's screen earns 8% a year or
+   more with losers at 0.30 or below.
+6. **What would go to a backtest.** The candidate's forest inside
+   the archetype may meet the rule of decision 61.5 on the screen. Then
+   the backtest is the candidate's config with the three filters added
+   to its investability, on 2005–2020. I read it against the
+   candidate's 11.76%.
+   That tests a portfolio rule, not a new model, and it is the cheapest
+   path from this program to money.
+
+### 65. Rounds 2 and 4 read: the depth of the fall, the archetype's failure, and two backtests for the record
+
+*I wrote this on 2026-11-25 after the second chain finished, before I read round 3.* The tables are in
+[2026-11-25-fallen-stocks.md](2026-11-25-fallen-stocks.md).
+
+*What the runs showed.* The forest's lead over same-size fallen peers
+grows with the depth of the fall and the picks' own return falls with
+it. Inside F30 the lead is 0.039 and the mean CAGR +0.056. Inside F70
+the lead is 0.077 and the mean CAGR −0.005. The value investor's two filters are cash flow positive and the larger
+half. They change the forest's picks' return by under 0.01 a year. The recovery label is not learned in any
+universe or at any horizon. The fresh-fall forest leads its peers by 7 points a year in both
+halves, the largest lead of the program. Its picks earn under 2% a
+year. The archetype has no lead at all.
+
+*Why the base rates misled.* The archetype's rows earn +0.085 a year
+when every row counts once and −0.028 when every quarter counts once.
+Almost half of its rows come from 2008 and 2009. A portfolio that buys
+every quarter does not get the crash years' return. The attraction of
+the fallen population is mostly the attraction of buying in a crash.
+
+*Decided:*
+
+1. **No arm meets the rule of decision 61.5**, so none goes to seeds
+   as a candidate. The archetype backtest of decision 64.6 does not run.
+2. **Two backtests run for the record, not as a selection.** They answer Carter's question by final value and TWR: what does a
+   portfolio of fallen stocks chosen by the best model here earn? The first trades the
+   cell C forest trained inside F50, alone, inside F50 with Carter's
+   rank floor, 2006–2020. The second trades the cell C forest trained
+   inside F30 the same way inside F30. Each is read against the
+   candidate's 11.76% and against SPY's 9.58%. I predict for each a TWR under SPY's and a drawdown deeper than −50%.
+   I predict buys that lead same-size candidates by 3 points a year or
+   more. These two
+   backtests are the only money reading of the program, and I state
+   their count with every figure from them.
+3. **Round 3 runs as planned**, and its reading closes the program
+   unless it contradicts the pattern above.
+### 66. The writing check and the writing skill are withdrawn
+
+*What happened (2026-11-25):* Carter wrote that the session of
+2026-11-25 should not have been built on `claude/lab-2026-11-24`,
+because Carter does not like any of the writing-hook or writing-skill
+changes. Carter liked the experiments of November but could not follow
+their write-ups, and had intended to start over from `Claude` with the
+writing changes left out.
+
+*Decided:* decision 59 is nullified, and with it the "Writing" section
+that `claude/plain-writing` added to CLAUDE.md. The following are
+reverted, as `git revert` commits on `claude/revert-writing-check`,
+which sits on top of `claude/deploy-train-end`:
+
+1. `src/harness/writing.py`, the `vml-writing` entry point, its tests
+   and the `writing` extra in pyproject.toml and uv.lock;
+2. `.claude/skills/writing/SKILL.md`, the two hooks that preceded it in
+   `.claude/settings.json`, and `scripts/hooks/writing_hook.py`;
+3. `docs/writing_denylist.toml`;
+4. the gates in `vml-logbook add` and `vml-promote --note`;
+5. the rewrite of the standing docs (README, PLAN, TODO, CLAUDE.md,
+   docs/agents.md, backtesting, deployment, diagnostics, experiments,
+   workflow and paper-trading) that made them pass the check. They
+   return to their wording of 2026-11-24, with the decision-60 changes
+   kept.
+
+What stays: GLOSSARY.md, as a vocabulary list with no check behind it,
+and every dated record (the logbook, this log, the notes of 2026-11-24
+and 2026-11-25, findings.md and the TODO sections of those days) in the
+wording it had. The experiments, decisions 55 to 65 and their results
+are untouched. Pull request 21 (`claude/fix-docs`) is superseded by
+this branch and should be closed unmerged.
+
+*Open:* the write-ups of the November experiments still need a form
+Carter can follow. That is a separate task, and this decision does not
+choose the form.
+
+### 67. One results branch for November, and the branch list cut to four
+
+*What happened (2026-11-25):* Carter found the branch list unreadable.
+Twenty branches were on the remote. Every November topic branch was an
+ancestor of one tip, and `claude/lab-2026-11-25b` stood 198 commits
+ahead of `Claude` while carrying the history of every earlier lab branch,
+whose content pull requests 17 to 19 had already merged by copy.
+
+*Decided:*
+
+1. `claude/results-2026-11-25` is the one branch to merge into
+   `Claude`. It is `claude/revert-writing-check` plus the fallen-stock
+   program's records from the lab branch: the logbook entries, decisions
+   61 to 66, the note of 2026-11-25 and the ledger shard. It therefore
+   contains `worst-rank`, `blend-gate`, `calibration`,
+   `results-2026-11-23`, `dataset-provenance`, `results-2026-11-24`,
+   `plain-writing`, `writing-check`, `fix-docs`, `deploy-train-end` and
+   `revert-writing-check`. Those eleven branches are deleted, and pull
+   requests 20 and 21 are closed as superseded.
+2. The lab branches of 2026-09-28, 09-30, 10-01, 11-23, 11-24 and 11-25
+   are deleted. Each is an ancestor of `claude/lab-2026-11-25b`, so no
+   commit is lost. That branch stays as the lab archive of the autumn,
+   and the next session starts a fresh lab branch off `Claude`, as
+   docs/agents.md section 4 says.
+3. The lab branch's docs/paper-trading.md held the two sections of
+   2026-11-24 twice, from repeated merges. The results branch has them
+   once, and the lab branch takes the results branch's copy.
+
+No configs were promoted for the fallen-stock program. Its results are
+negative on the recovery label and a match for the forest on cell C, and
+the records carry them. Promotion is a separate decision.

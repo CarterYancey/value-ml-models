@@ -426,6 +426,11 @@ class ExperimentConfig:
     #: minimum pooled history rows before a fold gets calibrated;
     #: earlier folds report raw scores and are flagged in the report
     calibration_min_rows: int = DEFAULT_CALIBRATION_MIN_ROWS
+    #: reweight each fold's training rows so that every snapshot year
+    #: carries the pooled positive share (harness.dataset.
+    #: year_balanced_weights): the fit cannot take the market level of
+    #: past years as its prior. Binary labels only; hashed when set.
+    year_balance: bool = False
     #: report-only outcomes of the top-K picks (eval.picks): stored
     #: binary labels, label expressions (hit rate) or continuous outcome
     #: columns (mean and median), all from the manifest's `labels`
@@ -447,6 +452,14 @@ class ExperimentConfig:
     #: by an evaluation only, never read from a file: it is what makes a
     #: blended evaluation its own configuration in the trial ledger.
     blend: tuple[str, ...] = ()
+    #: how a blend combines the models' rank shares ("mean_rank" or
+    #: "worst_rank"); set by an evaluation only, and hashed only when
+    #: it is not the default, so earlier blends keep their hashes
+    blend_combine: str = "mean_rank"
+    #: gates an evaluation applied (harness.evaluate, `gate`): each a
+    #: (config hash of the gating bundle, "top"/"bottom", share). Set by
+    #: an evaluation only; hashed when present.
+    gate: tuple[tuple[str, str, float], ...] = ()
 
     @classmethod
     def from_file(cls, path: str | Path) -> "ExperimentConfig":
@@ -497,6 +510,7 @@ class ExperimentConfig:
             calibration_min_rows=int(
                 raw.get("calibration_min_rows", DEFAULT_CALIBRATION_MIN_ROWS)
             ),
+            year_balance=_parse_year_balance(raw, source),
             pick_outcomes=parse_pick_outcomes(
                 raw.get("pick_outcomes", ()), horizon, source
             ),
@@ -639,6 +653,8 @@ class ExperimentConfig:
         if self.calibration:
             raw["calibration"] = self.calibration
             raw["calibration_min_rows"] = self.calibration_min_rows
+        if self.year_balance:
+            raw["year_balance"] = True
         if self.pick_outcomes:
             raw["pick_outcomes"] = list(self.pick_outcomes)
         if self.universe:
@@ -693,6 +709,8 @@ class ExperimentConfig:
         if self.calibration:
             payload["calibration"] = self.calibration
             payload["calibration_min_rows"] = self.calibration_min_rows
+        if self.year_balance:
+            payload["year_balance"] = True
         if self.pick_outcomes:
             payload["pick_outcomes"] = list(self.pick_outcomes)
         if self.universe:
@@ -703,6 +721,12 @@ class ExperimentConfig:
             payload["pick_screen"] = self.pick_screen.to_table()
         if self.blend:
             payload["blend"] = list(self.blend)
+            if self.blend_combine != "mean_rank":
+                payload["blend_combine"] = self.blend_combine
+        if self.gate:
+            payload["gate"] = [
+                {"bundle": h, "keep": k, "share": s} for h, k, s in self.gate
+            ]
         return payload
 
     def canonical_json(self) -> str:
@@ -746,6 +770,15 @@ def _resolve_horizon(raw: dict, label: str, source: str) -> int:
     return inferred
 
 
+def _parse_year_balance(raw: dict, source: str) -> bool:
+    value = raw.get("year_balance", False)
+    if not isinstance(value, bool):
+        raise ConfigError(
+            f"config {source}: year_balance must be true or false, got {value!r}"
+        )
+    return value
+
+
 def _parse_blend(raw, source: str) -> tuple[str, ...]:
     if isinstance(raw, str) or not isinstance(raw, (list, tuple)):
         raise ConfigError(
@@ -758,10 +791,64 @@ def _parse_blend(raw, source: str) -> tuple[str, ...]:
     return paths
 
 
+@dataclass(frozen=True)
+class GateSpec:
+    """One `[[gate]]` of an eval config."""
+
+    bundle: str
+    keep: str  # "top" or "bottom"
+    share: float
+
+
+def _parse_gates(raw, source: str) -> tuple[GateSpec, ...]:
+    if isinstance(raw, dict) or not isinstance(raw, (list, tuple)):
+        raise ConfigError(
+            f"eval config {source}: gate must be an array of tables "
+            "([[gate]] bundle, keep, share)"
+        )
+    gates = []
+    for table in raw:
+        unknown = sorted(set(table) - {"bundle", "keep", "share"})
+        if unknown or "bundle" not in table:
+            raise ConfigError(
+                f"eval config {source}: a [[gate]] takes bundle, keep and "
+                f"share (unknown: {unknown})"
+            )
+        keep = table.get("keep", "top")
+        if keep not in ("top", "bottom"):
+            raise ConfigError(
+                f"eval config {source}: gate keep must be 'top' or "
+                f"'bottom', got {keep!r}"
+            )
+        share = float(table.get("share", 0.5))
+        if not 0 < share < 1:
+            raise ConfigError(
+                f"eval config {source}: gate share must be in (0, 1), "
+                f"got {share}"
+            )
+        gates.append(GateSpec(str(table["bundle"]), keep, share))
+    return tuple(gates)
+
+
+def _parse_blend_combine(raw: dict, source: str) -> str:
+    mode = raw.get("blend_combine", "mean_rank")
+    if mode not in ("mean_rank", "worst_rank"):
+        raise ConfigError(
+            f"eval config {source}: blend_combine {mode!r} not in "
+            "['mean_rank', 'worst_rank']"
+        )
+    if "blend_combine" in raw and not raw.get("blend"):
+        raise ConfigError(
+            f"eval config {source}: blend_combine is set without a blend"
+        )
+    return mode
+
+
 _EVAL_ALLOWED = frozenset(
     {
         "name", "top_k", "score_thresholds", "precision_targets",
         "pick_outcomes", "pick_screen", "universe", "blend",
+        "blend_combine", "gate",
     }
 )
 
@@ -800,6 +887,14 @@ class EvalConfig:
     #: rows, so a two-model candidate can be read on the screen before
     #: it is backtested
     blend: tuple[str, ...] = ()
+    #: how the blend combines rank shares: "mean_rank" (the default) or
+    #: "worst_rank" (the lowest share: in every model's top N)
+    blend_combine: str = "mean_rank"
+    #: `[[gate]]` tables: keep only test rows another bundle scores in
+    #: its top (or bottom) `share` of the test quarter; the rest drop to
+    #: the bottom of the ranking. A screen of one model by another
+    #: ("the regressor's picks, without the forest's worst half").
+    gate: tuple["GateSpec", ...] = ()
 
     @classmethod
     def from_file(cls, path: str | Path) -> "EvalConfig":
@@ -852,4 +947,6 @@ class EvalConfig:
             ),
             universe=parse_universe(raw.get("universe"), source),
             blend=_parse_blend(raw.get("blend", ()), source),
+            blend_combine=_parse_blend_combine(raw, source),
+            gate=_parse_gates(raw.get("gate", ()), source),
         )

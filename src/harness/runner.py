@@ -113,6 +113,7 @@ def run_experiment(
         eval_label = config.eval_label or config.label
         dataset = Dataset(Path(data_root) / config.dataset_version)
         config.check_dataset_version(dataset.version)
+        run_log.base_row["dataset_sha256"] = dataset.data_sha256
         feature_cols = config.resolve_feature_columns(dataset)
         # what the estimators see: a categorical feature is several
         # indicator columns (harness.dataset.feature_matrix)
@@ -132,6 +133,7 @@ def run_experiment(
         config_record = _write_config_record(
             Path(reports_dir) / f"{config.name}_config.json",
             config, run_id, sha, dataset.version, feature_cols,
+            dataset_sha256=dataset.data_sha256,
         )
         calib = None
         if config.calibration:
@@ -174,7 +176,7 @@ def run_experiment(
             train_rows, test_rows = universe_rows(dataset, config, split)
             fit = dataset.fit_data(
                 train_rows, config.label, feature_cols, config.horizon_years,
-                target=target,
+                target=target, year_balance=config.year_balance,
             )
             model = build_model(config.model_name, config.model_params, config.seed)
             model.fit(fit.X, fit.y, sample_weight=fit.sample_weight)
@@ -601,6 +603,7 @@ def _write_config_record(
     sha: str,
     dataset_version: str,
     feature_cols: list[str],
+    dataset_sha256: str = "",
 ) -> Path:
     """The run's own copy of what it ran, written next to its report
     before the first fold is fitted: the full config (the payload the
@@ -619,6 +622,7 @@ def _write_config_record(
         "config_hash": config.config_hash,
         "git_sha": sha,
         "dataset_version": dataset_version,
+        "dataset_sha256": dataset_sha256,
         "config": json.loads(config.canonical_json()),
         "n_feature_columns": len(feature_cols),
         "feature_columns": list(feature_cols),

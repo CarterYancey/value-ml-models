@@ -240,6 +240,32 @@ calibration. The blended bundles' config hashes are part of the
 evaluation's own hash, so every blend tried is a configuration in the
 cell's trial count.
 
+`blend_combine = "worst_rank"` takes the lowest share instead of the
+mean (ties broken by the mean): a row scores high only if every model
+ranks it high, the backtest's `combine = "worst_rank"`. The mode is
+part of the evaluation's hash; the default, `"mean_rank"`, leaves the
+hashes of earlier blends unchanged.
+
+### One model screened by another (`[[gate]]`)
+
+An eval config can keep only the test rows another walk-forward
+bundle scores in its top (or bottom) share of the test quarter, and
+rank those by the evaluated bundle:
+
+```toml
+name = "huber_without_forest_bottom"
+[[gate]]
+bundle = "experiments/models/forest_nonloser_dd30_3y_53ceedd93e6d"
+keep = "top"      # or "bottom" (e.g. a downside model's least likely)
+share = 0.5
+```
+
+Gated rows are moved below every kept row (in their own order), so
+top-K, the screen and the threshold tables pick from the kept rows; the
+report states the average share kept. Same checks as `blend` (dataset
+version, scheme, folds); the gates (bundle hash, keep, share) are part
+of the evaluation's hash. A ranking: no Brier, no calibration.
+
 ### Selection by score
 
 With `score_thresholds` and `pick_outcomes` both set, the report gains
@@ -252,6 +278,23 @@ mean is what an equal-weighted portfolio of those rows earns; the
 median is shown beside it. Read the years before the pooled row, and a
 threshold as a probability only on a calibrated run
 (`calibration = "isotonic"`).
+
+### Calibration across years (`mean_score`, `year_balance`)
+
+Every probabilistic run reports `mean_score` (the weighted mean score
+of a fold's test rows) beside `base_rate` in the era table, and in its
+pooled metrics `year_calib_corr` (the correlation across test years of
+the two) and `year_calib_mae` (their mean absolute gap). A threshold
+rule ("every stock over X") buys fewer stocks in a bad year only if
+`year_calib_corr` is well above zero; the ranks-only forests of cell C
+are near −0.6 (docs/notes/2026-11-23-calibration-plan.md).
+
+`year_balance = true` (a config field, hashed when set) reweights each
+fold's training rows so that every snapshot year carries the pooled
+positive share, each year keeping its total weight and the mandatory
+sample weights staying inside it: the model cannot take particular
+past years' market level as its prior. Binary labels only; applied in
+walk-forward fits, backtest refits and deployment refits alike.
 
 ## Universe: the rows a model is trained and evaluated on
 

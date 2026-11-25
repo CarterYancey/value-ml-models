@@ -44,6 +44,7 @@ FIELDS = [
     "config_hash",
     "config_path",
     "dataset_version",
+    "dataset_sha256",  # fingerprint of dataset.parquet; "" before decision 0021
     "git_sha",
     "seed",
     "scheme",
@@ -110,12 +111,40 @@ class ResultsStore:
             record["metrics_json"] = json.dumps(record["metrics_json"],
                                                 sort_keys=True)
         self.path.parent.mkdir(parents=True, exist_ok=True)
-        write_header = not self.path.exists()
+        header = self._existing_header()
+        if header is not None and header != FIELDS:
+            self._migrate_header(header)
+        write_header = header is None
         with open(self.path, "a", newline="") as fh:
             writer = csv.DictWriter(fh, fieldnames=FIELDS)
             if write_header:
                 writer.writeheader()
             writer.writerow(record)
+
+    def _existing_header(self) -> list[str] | None:
+        """The header row of this store's file, or None when the file
+        does not exist or is empty."""
+        if not self.path.exists():
+            return None
+        with open(self.path, newline="") as fh:
+            return next(csv.reader(fh), None)
+
+    def _migrate_header(self, header: list[str]) -> None:
+        """Rewrite a file written under an older header with the current
+        FIELDS: new columns empty, every row kept as it was. A file with
+        a column FIELDS does not know is left alone and refused."""
+        unknown = [c for c in header if c not in FIELDS]
+        if unknown:
+            raise ValueError(
+                f"{self.path} has columns not in FIELDS: {unknown}"
+            )
+        df = pd.read_csv(self.path, dtype=str, keep_default_na=False)
+        df = df.reindex(columns=FIELDS, fill_value="")
+        with open(self.path, "w", newline="") as fh:
+            writer = csv.DictWriter(fh, fieldnames=FIELDS)
+            writer.writeheader()
+            for record in df.to_dict(orient="records"):
+                writer.writerow(record)
 
     def ledger_files(self) -> list[Path]:
         """Every file this store reads, its own first (see the module
@@ -148,12 +177,18 @@ class ResultsStore:
             pd.read_csv(f, dtype=str, keep_default_na=False) for f in files
         ]
         if len(frames) == 1:
-            return frames[0]
-        # the same rows can sit in two files (a shard merged into a
-        # local ledger, a host ledger that was also fetched): once each
-        return pd.concat(frames, ignore_index=True).drop_duplicates(
-            ignore_index=True
-        )
+            df = frames[0]
+        else:
+            # the same rows can sit in two files (a shard merged into a
+            # local ledger, a host ledger that was also fetched): once
+            # each. Files written under an older header lack the newer
+            # columns; those cells read as "".
+            df = pd.concat(frames, ignore_index=True).fillna("")
+            df = df.drop_duplicates(ignore_index=True)
+        for field in FIELDS:  # a file written under an older header
+            if field not in df.columns:
+                df[field] = ""
+        return df
 
     def configurations_tried(
         self, dataset_version: str, scheme: str, horizon_years: int, label: str

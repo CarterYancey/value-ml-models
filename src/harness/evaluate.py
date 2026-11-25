@@ -45,21 +45,67 @@ from harness.runner import (
 )
 
 
-def blend_scores(score_arrays, periods) -> np.ndarray:
+BLEND_MODES = ("mean_rank", "worst_rank")
+
+#: weight of the mean share in a worst-rank blend: a tie-break only.
+#: Two different worst shares in a period differ by at least 1 / rows,
+#: far more than this times a mean share (at most 1).
+_WORST_RANK_TIEBREAK = 1e-6
+
+
+def blend_scores(score_arrays, periods, mode: str = "mean_rank") -> np.ndarray:
     """Several models' scores on the same rows as one ranking: within
     each period, every model's scores are ranked as a share of the
-    period's rows (the best at 1.0) and the shares averaged. This is
-    the backtest's `combine = "mean_rank"` on test rows: a row one model
-    has no score for (NaN) is ranked on the others alone, and ties share
-    the better rank. Shares, not rank numbers, so that periods of
-    different sizes give scores on one scale."""
+    period's rows (the best at 1.0), then combined. `mean_rank` averages
+    the shares; `worst_rank` takes the lowest share (the row's rank in
+    the model that likes it least: "in every model's top N" for every N
+    at once), ties broken by the mean share. These are the backtest's
+    `combine` modes of the same names on test rows: a row one model has
+    no score for (NaN) is ranked on the others alone, and ties share the
+    better rank. Shares, not rank numbers, so that periods of different
+    sizes give scores on one scale."""
+    if mode not in BLEND_MODES:
+        raise ConfigError(f"unknown blend mode {mode!r}; one of {list(BLEND_MODES)}")
     frame = pd.DataFrame(
         {i: np.asarray(s, dtype=float) for i, s in enumerate(score_arrays)}
     )
     shares = frame.groupby(np.asarray(periods), sort=False).rank(
         method="max", pct=True
     )
-    return shares.mean(axis=1, skipna=True).to_numpy(dtype=float)
+    mean = shares.mean(axis=1, skipna=True)
+    if mode == "mean_rank":
+        return mean.to_numpy(dtype=float)
+    worst = shares.min(axis=1, skipna=True)
+    return (worst + _WORST_RANK_TIEBREAK * mean).to_numpy(dtype=float)
+
+
+def gate_mask(gate_scores, periods, keep: str, share: float) -> np.ndarray:
+    """Which rows a gate keeps: within each period, the rows in the
+    gating model's top (`keep = "top"`) or bottom (`"bottom"`) `share`
+    of its scores, by rank share. A row the gate has no score for (NaN)
+    is not kept."""
+    s = pd.Series(np.asarray(gate_scores, dtype=float))
+    pct = s.groupby(np.asarray(periods), sort=False).rank(
+        method="max", pct=True, ascending=(keep == "top")
+    )
+    return ((pct > 1 - share) & s.notna()).to_numpy()
+
+
+def apply_gates(scores, masks) -> np.ndarray:
+    """`scores` with every row some gate refuses moved below every kept
+    row, keeping their order among themselves. Finite, so PR-AUC and the
+    threshold tables still compute; gated rows are never top-K picks
+    while enough rows pass."""
+    s = np.asarray(scores, dtype=float).copy()
+    if not masks or not len(s):
+        return s
+    keep = np.logical_and.reduce(masks)
+    finite = s[np.isfinite(s)]
+    if keep.all() or not len(finite):
+        return s
+    lo, hi = finite.min(), finite.max()
+    s[~keep] = s[~keep] - (hi - lo) - 1.0
+    return s
 
 
 def _load_blend(paths, bundle: ModelBundle) -> list[ModelBundle]:
@@ -110,6 +156,13 @@ def evaluate_bundle(
             "with one; a bundle's own universe is pinned"
         )
     blended = _load_blend(eval_config.blend, bundle)
+    gates = list(
+        zip(
+            eval_config.gate,
+            _load_blend([g.bundle for g in eval_config.gate], bundle),
+        )
+    )
+    gate_kept: list[float] = []
     if blended and train_config.calibration:
         raise ConfigError(
             "a blend is a ranking, not a probability; evaluate the "
@@ -117,7 +170,7 @@ def evaluate_bundle(
         )
     # a blended score is a mean rank share: nothing to read as a
     # probability, whatever the bundles are
-    probabilistic = bundle.probabilistic and not blended
+    probabilistic = bundle.probabilistic and not blended and not gates
     # the eval run's identity: the pinned train config with the eval's
     # metric parameters merged in — a distinct config hash per (bundle,
     # eval criteria), counted by the trial ledger
@@ -149,6 +202,10 @@ def evaluate_bundle(
             else {}
         ),
         blend=tuple(b.train_config.config_hash for b in blended),
+        blend_combine=eval_config.blend_combine if blended else "mean_rank",
+        gate=tuple(
+            (b.train_config.config_hash, g.keep, g.share) for g, b in gates
+        ),
     )
 
     store = ResultsStore(results_path)
@@ -177,6 +234,7 @@ def evaluate_bundle(
         # name); the manifest's own dataset_version field is a separate
         # build-identity string ("X.Y") and is not expected to match it.
         dataset = Dataset(Path(data_root) / train_config.dataset_version)
+        run_log.base_row["dataset_sha256"] = dataset.data_sha256
         declared = {
             c
             for group in ("features", "ranks", "sector_ranks")
@@ -205,6 +263,7 @@ def evaluate_bundle(
             dict.fromkeys(
                 list(bundle.feature_columns)
                 + [c for b in blended for c in b.feature_columns]
+                + [c for _, b in gates for c in b.feature_columns]
                 + [config.label]
                 + ([config.eval_label] if config.eval_label else [])
                 + list(config.pick_outcomes)
@@ -246,7 +305,23 @@ def evaluate_bundle(
                         for b in blended
                     ],
                     periods=(dates.dt.year * 4 + dates.dt.quarter).to_numpy(),
+                    mode=eval_config.blend_combine,
                 )
+            if gates:
+                rows = test_rows.loc[test_fit.X.index]
+                dates = pd.to_datetime(rows["snapshot_date"])
+                periods = (dates.dt.year * 4 + dates.dt.quarter).to_numpy()
+                masks = [
+                    gate_mask(
+                        b.fold_models[fold].predict_scores(
+                            feature_matrix(rows, b.feature_columns)
+                        ),
+                        periods, g.keep, g.share,
+                    )
+                    for g, b in gates
+                ]
+                scores = apply_gates(scores, masks)
+                gate_kept.append(float(np.logical_and.reduce(masks).mean()))
             metrics = compute_all(
                 test_fit.y,
                 scores,
@@ -328,6 +403,7 @@ def evaluate_bundle(
                 "source_bundle": Path(bundle_dir),
                 **(
                     {
+                        "blend_combine": eval_config.blend_combine,
                         "blend": [
                             f"{b.train_config.name} "
                             f"(`{b.train_config.config_hash}`, run "
@@ -336,6 +412,21 @@ def evaluate_bundle(
                         ]
                     }
                     if blended
+                    else {}
+                ),
+                **(
+                    {
+                        "gate": [
+                            f"{b.train_config.name} (`{b.train_config.config_hash}`, "
+                            f"run `{b.run_id}`): keep its {g.keep} "
+                            f"{g.share:.0%} of each test quarter"
+                            for g, b in gates
+                        ],
+                        "gate_kept": (
+                            float(np.mean(gate_kept)) if gate_kept else float("nan")
+                        ),
+                    }
+                    if gates
                     else {}
                 ),
                 **(

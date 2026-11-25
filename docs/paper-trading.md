@@ -32,9 +32,9 @@ the score is the column), so that the backtest, `vml-eval` and
 
 | leg | config | what it is | what it contributes |
 |---|---|---|---|
-| **the forest** | `experiments/forest_nonloser_dd30_3y.toml` | a random forest on the 112 rank columns, trained to predict "not a loser" (`fwd_3y_cagr >= 0 & fwd_3y_max_drawdown_from_entry < 0.3`) | few losers, shallow falls. Walk-forward p@20 0.79 against a base rate of 0.39; holdout (look 1 of 1) 0.65, top 50 0.73, against 0.38 |
-| **momentum** | `experiments/factor_mom_12_2_3y.toml` | the column `mom_12_2_rank`: the stock's return over the past twelve months leaving out the latest, ranked against the other stocks; highest first | the winners the forest gives up. Useless alone (the worst factor on the screen) |
-| **return on capital** | `experiments/factor_roc_greenblatt_3y.toml` | the column `roc_greenblatt_rank`: operating profit over the capital the business employs (Greenblatt's definition), ranked; highest first, a stock without one last | quality; and it is what moves the picks out of utilities and real estate (35% of the forest's own picks, 1% of the blend's) |
+| **the forest** | `experiments/forest_nonloser_dd30_3y_v141.toml` | a random forest on the 112 rank columns, trained to predict "not a loser" (`fwd_3y_cagr >= 0 & fwd_3y_max_drawdown_from_entry < 0.3`) | few losers, shallow falls. Walk-forward p@20 0.79 against a base rate of 0.39; holdout (look 1 of 1) 0.65, top 50 0.73, against 0.38 |
+| **momentum** | `experiments/factor_mom_12_2_3y_v141.toml` | the column `mom_12_2_rank`: the stock's return over the past twelve months leaving out the latest, ranked against the other stocks; highest first | the winners the forest gives up. Useless alone (the worst factor on the screen) |
+| **return on capital** | `experiments/factor_roc_greenblatt_3y_v141.toml` | the column `roc_greenblatt_rank`: operating profit over the capital the business employs (Greenblatt's definition), ranked; highest first, a stock without one last | quality; and it is what moves the picks out of utilities and real estate (35% of the forest's own picks, 1% of the blend's) |
 
 `vml-predict` given one bundle ranks today's stocks by that model, as
 it always has. Given several, it ranks the stocks on each and writes
@@ -57,15 +57,20 @@ A deployment bundle is the config's model refit on every labeled row
 the repository, so build them where the paper trading runs:
 
 ```sh
-uv run vml-train-deploy experiments/forest_nonloser_dd30_3y.toml     # about a minute
-uv run vml-train-deploy experiments/factor_mom_12_2_3y.toml          # seconds: nothing is fitted
-uv run vml-train-deploy experiments/factor_roc_greenblatt_3y.toml
+uv run vml-train-deploy experiments/forest_nonloser_dd30_3y_v141.toml     # about a minute
+uv run vml-train-deploy experiments/factor_mom_12_2_3y_v141.toml          # seconds: nothing is fitted
+uv run vml-train-deploy experiments/factor_roc_greenblatt_3y_v141.toml
 ```
 
 Each prints its bundle directory
 (`experiments/models/<name>_deployment_<run id>`). The forest is
-deterministic for its seed. Refit the forest when a new dataset
-version arrives, and at least once a year: the backtest's forest is
+deterministic for its seed. The runbook uses the full refit; docs/deployment.md
+describes a refit with a training cutoff (`--train-end`), and the November
+2026 lists under two cutoffs are in the
+[note of 2026-11-25](notes/2026-11-25-training-cutoff.md). Carter decides
+whether paper trading moves to a cutoff (decision 60). Refit the forest
+when a new dataset version arrives, and at least once a year: the
+backtest's forest is
 refit every year end, on the rows whose three-year outcome is known
 by then.
 
@@ -79,9 +84,9 @@ by then.
 
    ```sh
    uv run vml-predict \
-       experiments/models/forest_nonloser_dd30_3y_deployment_<id> \
-       experiments/models/factor_mom_12_2_3y_deployment_<id> \
-       experiments/models/factor_roc_greenblatt_3y_deployment_<id> \
+       experiments/models/forest_nonloser_dd30_3y_v141_deployment_<id> \
+       experiments/models/factor_mom_12_2_3y_v141_deployment_<id> \
+       experiments/models/factor_roc_greenblatt_3y_v141_deployment_<id> \
        data/datasets/inference_<date> \
        --filter "dollar_volume_3m_rank >= 0.2" --pick 10 --max-per-group 2
    ```
@@ -116,6 +121,32 @@ a side. Use fractional shares, or an amount per pick well above the
 share prices: with whole shares at 100 a pick the backtest filled
 only 64 to 87 of 120 orders a year after 2020 (it did not change the
 result, but it is a rule nobody chose).
+
+## The dataset of record (2026-11-24)
+
+The three configs above end in `_v141`: they are the October configs
+with `dataset_version = "dataset_v1.4.1"` and nothing else changed
+(decision 55). The October configs without the suffix trained on
+`dataset_v1.4`, a build that was replaced on 2026-11-23 and is no
+longer the dataset of record. When upstream ships a new version or
+patch, copy the three configs again with the new version and refit
+the bundles; never edit a config that has run.
+
+## Checked end to end (2026-11-24): the November 2026 list
+
+The three deployment bundles were refit on `dataset_v1.4.1`
+(1,395,705 labeled rows, effective size 48,281) and `vml-predict` ran
+with the flags above on `inference_2026-11-20` (3,716 rows, 15 with a
+stale price, 2,973 above the floor). The ten picks by mean rank, at
+most two per sector: RPRX, KO, EBAY, CHD, SAIC, V, HAS, NDSN, WAB, PSX.
+The full ranking and its sidecar are
+`predictions/inference_2026-11-20__multi__forest_nonloser_dd30_3y_v141__factor_mom_12_2_3y_v141__factor_roc_greenblatt_3y_v141.csv`
+and `.csv.meta.json` on the lab branch `claude/lab-2026-11-24`, and
+the list is in the session note
+([2026-11-24](notes/2026-11-24-v141-and-size-band.md), section 7).
+One of the ten (RPRX) was in the August dry run's top 10 and four were
+in its top 50; the August list came from a different quarter's
+snapshots and a forest trained on the old build.
 
 ## Checked end to end (2026-10-01)
 

@@ -8,6 +8,8 @@ invariants below are this repo's equivalents.
 
 ## Orientation
 
+- **GLOSSARY.md** — the shared vocabulary, one term per concept. Use
+  its terms; add to it when a concept is new.
 - **README.md** — overview + setup/usage only; extended explanations go
   in `docs/` (experiments, workflow, deployment, backtesting, diagnostics).
 - **PLAN.md** — architecture, design principles, phase roadmap.
@@ -18,7 +20,7 @@ invariants below are this repo's equivalents.
   failures included, before starting the next thing.
 - **docs/findings.md** — what is known now, by cell, the holdout
   record and the plan. Rewritten, not appended to, and kept under
-  about 150 lines: tables and reasoning go in a note under
+  about 250 lines: tables and reasoning go in a note under
   `docs/notes/` that the logbook entry links to.
 - **docs/agents.md** — how an unattended session works (the run queue,
   checkpoints, stop rules, lab branches) and what it needs set up.
@@ -80,8 +82,12 @@ invariants below are this repo's equivalents.
    consumed cell needs `--reopen "reason"` and is then counted: every
    report and the catalog say "holdout look k of N in this cell". Run it
    when you would act on the model, never to choose between candidates.
-3. **Every run is reproducible:** dataset version + config + git SHA + seed
-   are logged for every experiment, including abandoned ones.
+3. **Every run is reproducible:** dataset version + dataset fingerprint
+   (`dataset_sha256`, the manifest's sha256 of `dataset.parquet`; "" for
+   builds before upstream decision 0021) + config + git SHA + seed are
+   logged for every experiment, including abandoned ones. Two builds can
+   share a version label (decision 54): a comparison between runs checks
+   the fingerprint, not only the version string.
 4. **No feature engineering.** New features are upstream changes. This repo
    may select/subset columns, never derive new ones (prevents ad-hoc
    lookahead creeping in far from the point-in-time machinery).

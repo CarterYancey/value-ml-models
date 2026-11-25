@@ -1,0 +1,14 @@
+{
+  "name": "bt_nonloser_mom_roc_top10_cap2_rankfloor_v141_f2236a06a7cf9526",
+  "promoted_utc": "2026-11-24T09:36:18+00:00",
+  "source_report": "reports/backtest/bt_nonloser_mom_roc_top10_cap2_rankfloor_v141_f2236a06a7cf9526.md",
+  "run_id": "",
+  "config_hash": "",
+  "git_sha": "",
+  "dataset_version": "",
+  "config_path": "",
+  "note": "THE CANDIDATE on dataset_v1.4.1, 2005-2020 valued end 2023 (decision 55): TWR 11.76%, MWR 13.65%, final 932,471 on 192,000, drawdown -41.0%; SPY 9.58% / 11.62% / 732,110 / -52.9%. 1,741 buys; lead over same-size peers -0.002 / +0.020. Replaces the v1.4 run (11.90% on the rebuilt build).",
+  "files": [
+    "bt_nonloser_mom_roc_top10_cap2_rankfloor_v141_f2236a06a7cf9526.md"
+  ]
+}

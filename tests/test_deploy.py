@@ -770,3 +770,133 @@ def test_cli_filter_pick_and_cap(
         == 1
     )
     capsys.readouterr()
+
+
+# ---------------------------------------------------------------- --train-end
+
+
+def test_train_end_fits_only_rows_before_the_cutoff(data_root, dataset_dir, tmp_path):
+    results = tmp_path / "results.csv"
+    summary = train_deployment_model(
+        _config(),
+        data_root=data_root,
+        results_path=results,
+        models_dir=tmp_path / "models",
+        train_end="2016-01-01",
+    )
+    data = pd.read_parquet(dataset_dir / "dataset.parquet")
+    labeled = data[data[LABEL].notna()]
+    before = labeled[pd.to_datetime(labeled["snapshot_date"]) < "2016-01-01"]
+    assert 0 < len(before) < len(labeled)
+    # the cutoff is on the entry date only: every labeled row before it,
+    # all snapshot kinds, delistings included
+    assert summary["n_train_rows"] == len(before)
+    assert summary["effective_train_size"] == pytest.approx(before[WEIGHT].sum())
+    assert set(before["snapshot_kind"].unique()) == {"low", "median", "high"}
+    assert summary["train_end"] == "2016-01-01"
+    assert summary["last_snapshot_date"] == str(
+        pd.to_datetime(before["snapshot_date"]).max().date()
+    )
+    # the bundle and the ledger row both carry the cutoff
+    bundle = DeploymentBundle.load(summary["bundle_path"])
+    assert bundle.train_end == "2016-01-01"
+    assert bundle.last_snapshot_date == summary["last_snapshot_date"]
+    df = ResultsStore(results).load()
+    row = df[df["run_id"] == summary["run_id"]].iloc[0]
+    assert row["fold"] == "labeled_before_2016-01-01"
+    assert row["scheme"] == DEPLOYMENT_SCHEME
+
+
+def test_default_refit_records_no_cutoff(trained):
+    summary, _ = trained
+    assert summary["train_end"] is None
+    bundle = DeploymentBundle.load(summary["bundle_path"])
+    assert bundle.train_end is None
+    assert bundle.last_snapshot_date == summary["last_snapshot_date"]
+
+
+def test_train_end_with_no_rows_left_is_refused(data_root, tmp_path):
+    results = tmp_path / "results.csv"
+    with pytest.raises(DatasetValidationError, match="before 1990-01-01"):
+        train_deployment_model(
+            _config(),
+            data_root=data_root,
+            results_path=results,
+            models_dir=tmp_path / "models",
+            train_end="1990-01-01",
+        )
+    df = ResultsStore(results).load()
+    assert df.iloc[0]["status"] == "failed"
+    assert df.iloc[0]["fold"] == "labeled_before_1990-01-01"
+
+
+def test_train_end_must_be_a_date(data_root, tmp_path):
+    with pytest.raises(ConfigError, match="not a date"):
+        train_deployment_model(
+            _config(),
+            data_root=data_root,
+            results_path=tmp_path / "results.csv",
+            models_dir=tmp_path / "models",
+            train_end="last-year",
+        )
+
+
+def test_cli_train_end_reaches_bundle_and_sidecar(
+    data_root, inference_dir, tmp_path, capsys
+):
+    config = tmp_path / "deploy.toml"
+    config.write_text(
+        "\n".join(
+            [
+                'name = "cli_deploy_tree_cut"',
+                'dataset_version = "dataset_v0.0-test"',
+                'scheme = "walkforward"',
+                "horizon_years = 3",
+                f'label = "{LABEL}"',
+                'feature_groups = ["features", "ranks"]',
+                "[model]",
+                'name = "decision_tree"',
+                "max_depth = 3",
+            ]
+        )
+    )
+    results = tmp_path / "results.csv"
+    models = tmp_path / "models"
+    assert (
+        _main_train(
+            [
+                str(config),
+                "--data-root", str(data_root),
+                "--results", str(results),
+                "--models-dir", str(models),
+                "--train-end", "2016-01-01",
+            ]
+        )
+        == 0
+    )
+    assert "labeled rows before 2016-01-01" in capsys.readouterr().out
+    bundle_dir = next(models.iterdir())
+    out_csv = tmp_path / "ranking.csv"
+    assert (
+        _main_predict(
+            [str(bundle_dir), str(inference_dir),
+             "--output", str(out_csv), "--results", str(results)]
+        )
+        == 0
+    )
+    meta = json.loads((tmp_path / "ranking.csv.meta.json").read_text())
+    assert meta["train_end"] == "2016-01-01"
+    assert meta["last_snapshot_date"] < "2016-01-01"
+    assert "Training cutoff" in meta["note"]
+    # the combined sidecar carries it per model
+    out_multi = tmp_path / "multi.csv"
+    assert (
+        _main_predict(
+            [str(bundle_dir), str(bundle_dir), str(inference_dir),
+             "--output", str(out_multi), "--results", str(results)]
+        )
+        == 0
+    )
+    multi = json.loads((tmp_path / "multi.csv.meta.json").read_text())
+    assert all(m["train_end"] == "2016-01-01" for m in multi["models"])
+    assert "Training cutoff" in multi["note"]

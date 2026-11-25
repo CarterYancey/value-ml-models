@@ -1,0 +1,14 @@
+{
+  "name": "bt_nonloser_mom_roc_top10_cap2_rankfloor_s1776_v141_e1306d8eb51f7dec",
+  "promoted_utc": "2026-11-24T09:52:39+00:00",
+  "source_report": "reports/backtest/bt_nonloser_mom_roc_top10_cap2_rankfloor_s1776_v141_e1306d8eb51f7dec.md",
+  "run_id": "",
+  "config_hash": "",
+  "git_sha": "",
+  "dataset_version": "",
+  "config_path": "",
+  "note": "The candidate on seed 1776, dataset_v1.4.1, 2005-2020 (decision 57): TWR 12.18%, MWR 13.88%, final 959,232, drawdown -41.1%. The candidate's seed spread on v1.4.1: 0.42 points of TWR.",
+  "files": [
+    "bt_nonloser_mom_roc_top10_cap2_rankfloor_s1776_v141_e1306d8eb51f7dec.md"
+  ]
+}

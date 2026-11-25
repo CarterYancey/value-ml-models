@@ -1,0 +1,14 @@
+{
+  "name": "bt_nonloser_mom_roc_top10_cap2_rankfloor_largecap_v141_2f3b4fce9778c721",
+  "promoted_utc": "2026-11-24T09:36:23+00:00",
+  "source_report": "reports/backtest/bt_nonloser_mom_roc_top10_cap2_rankfloor_largecap_v141_2f3b4fce9778c721.md",
+  "run_id": "",
+  "config_hash": "",
+  "git_sha": "",
+  "dataset_version": "",
+  "config_path": "",
+  "note": "The candidate inside large caps (log_marketcap_rank >= 0.8), 2005-2020 on dataset_v1.4.1 (decision 57): TWR 12.06%, drawdown -40.2%; paired by year 0.00 against the candidate (se 0.97). Buys lead same-size peers by 1.5 points more (se 0.7, 12 of 16) and 3.9 points fewer lose money (se 1.6): the best selection for the same money. Not carried forward.",
+  "files": [
+    "bt_nonloser_mom_roc_top10_cap2_rankfloor_largecap_v141_2f3b4fce9778c721.md"
+  ]
+}

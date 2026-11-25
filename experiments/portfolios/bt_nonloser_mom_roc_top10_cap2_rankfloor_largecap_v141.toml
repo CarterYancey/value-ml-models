@@ -1,0 +1,61 @@
+# Decision 55 of docs/notes/2026-09-29-decisions.md (2026-11-24). Carter asked
+# for dataset_v1.4.1 (upstream decision 0021: the v1.4 code rebuilt on the
+# 2026-11-21 Sharadar snapshot, with a provenance block). A patch is a
+# different dataset for comparison, so the candidate is re-established on
+# it: the same three legs refit on v1.4.1 (forest_nonloser_dd30_3y_v141,
+# factor_mom_12_2_3y_v141, factor_roc_greenblatt_3y_v141), the same rule.
+#
+# This run, decision 55 item 3: the candidate restricted to large caps
+# (log_marketcap_rank >= 0.8, the universe of the large-caps note),
+# 2005-2020 valued end of 2023. Same reading and carry-forward rule as
+# the larger-half run. Prediction: TWR 1 to 3 points below the
+# candidate's: inside large caps the forest separates the worst quintile
+# and nothing above it (decision 34), and ten picks a month from a
+# fifth of the universe leave the sector cap little to choose from.
+# Rival: the band effect dominates and this run beats the candidate.
+# Backtest configurations on 2005-2020 after this: 41.
+
+name = "bt_nonloser_mom_roc_top10_cap2_rankfloor_largecap_v141"
+dataset_version = "dataset_v1.4.1"
+prices_version = "prices_v1.0"
+
+bundles = [
+    "experiments/models/forest_nonloser_dd30_3y_v141_f259c702a6a6",
+    "experiments/models/factor_mom_12_2_3y_v141_121349f6e682",
+    "experiments/models/factor_roc_greenblatt_3y_v141_4457ca01bcfb",
+]
+
+[signal]
+combine = "mean_rank"
+max_staleness_days = 200
+model_update = "refit"
+label_lag_days = 45
+
+[[investability]]
+column = "dollar_volume_3m_rank"
+op = ">="
+value = 0.2
+
+[[investability]]
+column = "log_marketcap_rank"
+op = ">="
+value = 0.8
+
+[portfolio]
+strategy = "buy_and_hold"
+top_k = 10
+weighting = "equal"
+monthly_cash = 1000.0
+max_per_group = 2
+group_column = "sector"
+
+[execution]
+cost_bps = 35.0
+benchmark_cost_bps = 0.0
+max_quote_age_days = 3
+delist_after_days = 30
+
+[window]
+start = 2005-01-01
+end = 2020-12-31
+valuation_end = 2023-12-29

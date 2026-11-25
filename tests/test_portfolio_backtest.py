@@ -151,6 +151,40 @@ def test_combine_modes():
     assert mean_rank.tolist() == pytest.approx([-1.5, -1.5])
 
 
+def test_worst_rank_is_every_models_top_n():
+    # ranks a: 4,1,2,3   b: 1,4,2,3  -> worst 4,4,2,3; mean 2.5,2.5,2,3
+    frame = pd.DataFrame(
+        {"score_a": [0.1, 0.9, 0.8, 0.5], "score_b": [0.9, 0.1, 0.8, 0.5]}
+    )
+    out = combine_scores(frame, ["score_a", "score_b"], "worst_rank")
+    order = out.sort_values(ascending=False).index.tolist()
+    # the row both models put second leads; the two rows one model
+    # loves and the other ranks last come after the row ranked third
+    # by both, although mean rank would put them ahead of it
+    assert order[:2] == [2, 3]
+    assert set(order[2:]) == {0, 1}
+    # the tie-break never reorders the worst rank
+    big = pd.DataFrame(
+        {"score_a": [0.2, 0.3, 0.1], "score_b": [0.3, 0.1, 0.2]}
+    )  # worst ranks 2,3,3; means 2,2,2.5
+    b = combine_scores(big, ["score_a", "score_b"], "worst_rank")
+    assert b.idxmax() == 0 and b[1] > b[2]
+
+
+def test_rank_combinations_refuse_score_weighting(tmp_path):
+    from portfolio.config import BacktestConfig
+
+    for combine in ("mean_rank", "worst_rank"):
+        with pytest.raises(ConfigError, match="ranks are not weights"):
+            BacktestConfig.from_dict(
+                {"name": "x", "dataset_version": DATASET,
+                 "prices_version": PRICES, "bundles": ["b"],
+                 "investability": "none", "execution": {"cost_bps": 1.0},
+                 "signal": {"combine": combine},
+                 "portfolio": {"weighting": "score"}},
+            )
+
+
 # ------------------------------------------------------------- end to end
 
 

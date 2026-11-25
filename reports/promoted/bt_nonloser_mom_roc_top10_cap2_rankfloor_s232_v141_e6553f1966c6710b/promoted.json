@@ -1,0 +1,14 @@
+{
+  "name": "bt_nonloser_mom_roc_top10_cap2_rankfloor_s232_v141_e6553f1966c6710b",
+  "promoted_utc": "2026-11-24T09:52:38+00:00",
+  "source_report": "reports/backtest/bt_nonloser_mom_roc_top10_cap2_rankfloor_s232_v141_e6553f1966c6710b.md",
+  "run_id": "",
+  "config_hash": "",
+  "git_sha": "",
+  "dataset_version": "",
+  "config_path": "",
+  "note": "The candidate on seed 232, dataset_v1.4.1, 2005-2020 (decision 57): TWR 11.86%, MWR 13.72%, final 940,636, drawdown -40.5%.",
+  "files": [
+    "bt_nonloser_mom_roc_top10_cap2_rankfloor_s232_v141_e6553f1966c6710b.md"
+  ]
+}

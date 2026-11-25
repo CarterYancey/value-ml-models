@@ -75,6 +75,7 @@ LEDGER_FIELDS = [
     "experiment",
     "config_hash",
     "dataset_version",
+    "dataset_sha256",
     "run_id",
     "git_sha",
     "logged_utc",
@@ -259,6 +260,7 @@ def run_final_eval(
         "experiment": config.name,
         "config_hash": config.config_hash,
         "dataset_version": config.dataset_version,
+        "dataset_sha256": dataset.data_sha256,
         "git_sha": git_sha(),
         "logged_utc": datetime.now(timezone.utc).isoformat(timespec="seconds"),
     }

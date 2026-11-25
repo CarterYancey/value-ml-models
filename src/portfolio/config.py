@@ -25,7 +25,9 @@ from harness.errors import ConfigError
 # it too (`[[universe]]`); re-exported here for backtest configs
 from harness.filters import FILTER_OPS, FilterSpec  # noqa: F401
 
-COMBINE_MODES = ("product", "mean", "min", "mean_rank")
+COMBINE_MODES = ("product", "mean", "min", "mean_rank", "worst_rank")
+#: combinations that rank, not score: nothing to size on or floor
+RANK_COMBINE_MODES = ("mean_rank", "worst_rank")
 #: how a rebalance's cash is split over the picks: by combined score,
 #: equally, or by market capitalization (`exp(log_marketcap)` of the
 #: snapshot, the cross-section's size column) — the last sizes picks
@@ -254,10 +256,10 @@ class BacktestConfig:
                 f"backtest config {source}: weighting {weighting!r} not in "
                 f"{list(WEIGHTINGS)}"
             )
-        if weighting == "score" and combine == "mean_rank":
+        if weighting == "score" and combine in RANK_COMBINE_MODES:
             raise ConfigError(
                 f"backtest config {source}: weighting = 'score' cannot size "
-                "on a mean_rank combination (ranks are not weights); use "
+                f"on a {combine} combination (ranks are not weights); use "
                 "weighting = 'equal'"
             )
         top_k = int(pf.get("top_k", 25))

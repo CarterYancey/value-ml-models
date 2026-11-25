@@ -71,6 +71,7 @@ from harness.calibration import (
     DEFAULT_CALIBRATION_MIN_ROWS,
 )
 from harness.config import (
+    _parse_year_balance,
     UNIVERSE_SCOPES,
     ExperimentConfig,
     FeatureSpec,
@@ -135,6 +136,7 @@ _SWEEP_ALLOWED = frozenset(
         "max_runs",
         "calibration",
         "calibration_min_rows",
+        "year_balance",
         "min_dataset_version",
         "pick_outcomes",
         "universe",
@@ -199,6 +201,9 @@ class SweepConfig:
     #: prequential calibration applied to every expanded run ("" = off)
     calibration: str = ""
     calibration_min_rows: int = DEFAULT_CALIBRATION_MIN_ROWS
+    #: reweight each fold's training rows to one positive share per
+    #: snapshot year (harness.dataset.year_balanced_weights)
+    year_balance: bool = False
     #: floor dataset version for every expanded run (see
     #: ExperimentConfig.min_dataset_version) — a sweep over columns a
     #: newer version introduced states it once, here
@@ -561,6 +566,7 @@ class SweepConfig:
             calibration_min_rows=int(
                 raw.get("calibration_min_rows", DEFAULT_CALIBRATION_MIN_ROWS)
             ),
+            year_balance=_parse_year_balance(raw, source),
             min_dataset_version=min_dataset_version,
             pick_outcomes=pick_outcomes,
             universe=parse_universe(raw.get("universe"), f"sweep {source}"),
@@ -659,6 +665,8 @@ class SweepConfig:
         if self.calibration:
             payload["calibration"] = self.calibration
             payload["calibration_min_rows"] = self.calibration_min_rows
+        if self.year_balance:
+            payload["year_balance"] = True
         if self.min_dataset_version:
             payload["min_dataset_version"] = self.min_dataset_version
         if self.pick_outcomes:
@@ -754,6 +762,7 @@ class SweepConfig:
                 precision_targets=self.precision_targets,
                 calibration=self.calibration,
                 calibration_min_rows=self.calibration_min_rows,
+                year_balance=self.year_balance,
                 min_dataset_version=self.min_dataset_version,
                 pick_outcomes=parse_pick_outcomes(
                     self.pick_outcomes, horizon, f"sweep {self.name}"

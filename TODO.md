@@ -682,7 +682,164 @@ in [PLAN.md](PLAN.md); check items off (and add new ones) as work proceeds.
       `n_estimators`) at full budget via a follow-up sweep file — no
       harness change needed, just two sweep configs.
 
-### Next, from Carter's direction of 2026-10-01 (decision 36)
+### Next, after 2026-11-25 (decision 60)
+
+Carter asked how the forecasts on `inference_2026-11-20` change when
+the deployable candidate does not train on the past five years. I
+added the training cutoff, `vml-train-deploy --train-end`, refit the
+candidate's forest with cutoffs 2021-01-01 and 2018-01-01, and
+compared the three November lists. The results are in
+docs/notes/2026-11-25-training-cutoff.md. The code is on
+`claude/deploy-train-end`, on top of `claude/fix-docs`.
+
+- [ ] **Carter decides on the training cutoff (decision 60).** The
+      cutoff-2021 list differs from the deployed list in one pick of
+      ten, PSX out and JNJ in. The cutoff-2018 list differs in two, HAS
+      and WAB out and JNJ and ADP in. Carter decides whether paper
+      trading uses the deployed forest or a cutoff forest, and which
+      date. A third paper portfolio with the cutoff-2021 list is one
+      option. If Carter chooses a cutoff, the runbook's refit command
+      gains `--train-end` and the monthly list is produced from the
+      cutoff bundle.
+- [ ] Each month, run `scripts/compare_predictions.py` on the deployed
+      and the cutoff lists beside the runbook, so that the record shows
+      how often the two lists differ. This costs one forest refit a
+      month and a minute of compute.
+- [ ] Merge order: `claude/results-2026-11-25` (decision 67) is the one
+      branch to merge. It includes the training cutoff, the fallen-stock
+      program's records and the withdrawal of the writing check
+      (decision 66), on top of every November branch before it.
+
+### Next, after 2026-11-24 (decisions 55-58)
+
+The dataset of record is `dataset_v1.4.1` (upstream decision 0021).
+Every run row now carries `dataset_sha256`. The candidate's legs,
+screens and backtests were rerun on it. The results are in
+docs/notes/2026-11-24-v141-and-size-band.md and findings.md. The
+November 2026 list was produced from the v1.4.1 deployment bundles.
+The writing check of CLAUDE.md "Writing" was added the same day, on
+`claude/writing-check`, and withdrawn on 2026-11-25 (decision 66).
+
+- [ ] **Carter merges `claude/results-2026-11-25`.** It includes
+      `claude/results-2026-11-24`, which includes
+      `claude/results-2026-11-23` (pull request 20) and
+      `claude/plain-writing`. Pull request 20 can then be closed.
+- [ ] **Carter decides on the November 2026 list.** It is in docs/paper-trading.md
+      under "Checked end to end (2026-11-24)": RPRX, KO, EBAY, CHD,
+      SAIC, V, HAS, NDSN, WAB and PSX. Carter decides what is bought.
+- [ ] **Carter decides on the larger-half filter (decision 58).** Adding
+      `log_marketcap_rank >= 0.5` to the candidate's investability
+      filter earned more on all three seeds. The gap in TWR was 0.32
+      to 0.75 points a year. Its mean was 0.59 against a candidate
+      seed spread of 0.42. The drawdown was 1.5 to 1.9 points
+      shallower. To 2026 the filter ends 6% behind SPY where the
+      candidate ends 13% behind. Carter confirms or declines. If
+      confirmed, the next steps are the backtest
+      `bt_..._rankfloor_largehalf_sell20_to2026` and a second
+      `--filter` in the runbook.
+- [ ] Large caps (`log_marketcap_rank >= 0.8`) earned the same final
+      value as the candidate. Four points fewer of its buys lost money,
+      and its lead over same-size peers was 1.5 points larger. Both
+      gaps are beyond two standard errors (decision 57). It was not
+      carried forward because the final value did not improve. It is
+      worth a look if the goal is ever restated as fewer losers at the
+      same return.
+- [ ] Seven failed runs were logged on 2026-11-24 from one chain-script
+      error, a copy that overwrote the `[model]` name. An earlier
+      error, a wrong config path, failed four backtests before they
+      reached the ledger. The seven count as trials in their cells
+      under the ledger's rule, and this note says why the counts are
+      higher.
+- [ ] Re-read `year_balance` against plain ranks on the screen under
+      decision 50. Both forests need refitting on v1.4.1. This is low
+      priority.
+- [ ] Upstream requests stand. They are market-state columns per
+      snapshot date and the peer-relative label, listed under "Upstream
+      request" in docs/notes/2026-11-23-calibration-plan.md. Upstream
+      has done patch versions and the provenance block (decision 0021).
+
+### Next, after the third round of 2026-11-23 (decisions 50-51)
+
+How results are judged (decision 50): picks against same-size peers,
+crash years included; arms carried forward on paired per-year gains
+beyond noise (about 2 se, ahead in 10+ of 16 years), then seeds, then a
+backtest. A bar set beforehand is a prediction, not a gate.
+
+- [x] (decision 54: the dataset_v1.4 rebuild of 2026-11-23) Trace why `bt_nonloser_mom_roc_top10_cap2_rankfloor` (config
+      `6005c9c0a2869bc9`) gives TWR 11.90% / 1,742 buys at git `cfa451c`
+      and 12.15% / 1,747 at `f96037d`. Until then, compare backtests only
+      at one git SHA.
+- [x] (decision 53: an equivalent, not a replacement) `label_3y_cagr_ge_0` (open, decision 51), if Carter agrees it fits
+      the thesis: forest seeds 232 and 1776, paired in the mean-rank blend;
+      if the gain holds, a backtest beside the candidate at the same SHA.
+- [x] (done on `dataset_v1.4.1` instead, decision 55) Rerun the candidate's to-2026 backtests (`*_rankfloor_to2026`,
+      `*_rankfloor_sell20_to2026`) on the rebuilt v1.4 so that findings'
+      table and new runs share a dataset build (decision 54).
+- [x] (upstream decision 0021, 2026-11-24: both; downstream logs
+      `dataset_sha256`, decision 55) Upstream: a content hash of dataset.parquet in the manifest, or a
+      new version number for any rebuild (decision 54).
+- [ ] Why worst rank selects better and earns less: smaller stocks,
+      holding past 3 years, or the 2008 fall (decision 51's hypotheses).
+      Low priority.
+- [x] (decision 56: top 5 and score weights re-read, decision 42 stands;
+      `year_balance` left, see the 2026-11-24 section) Re-read earlier arms closed by a fixed bar under decision 50's rule
+      (paired, with noise). Candidates: decision 41's top-5 and score
+      weights, and `year_balance` against plain ranks on the screen.
+
+### Next, after the second round of 2026-11-23 (decisions 43-49)
+
+Carter's three directions (decision 43) were followed to the end of
+what the data on disk can answer; nothing was carried forward and the
+candidate is unchanged. Results:
+docs/notes/2026-11-23-downside-gates-calibration.md and
+docs/notes/2026-11-23-calibration-plan.md.
+
+- [ ] **Carter: forward the upstream request** in the calibration plan
+      ("Upstream request"): market-state columns per snapshot date, and
+      the peer-relative label. Then rerun calibration step 3 with the
+      market-state columns under decision 44's rule.
+- [ ] **Carter: merge `claude/results-2026-11-23`** (now also
+      `year_balance`, `mean_score` / `year_calib_*`, `[[gate]]`).
+- [ ] Open, if a hedge or short leg is ever built: the huber
+      regressor's within-band selection among small stocks (+6.5 to
+      +6.8 points a year over same-size candidates, decision 49).
+- [ ] `[[gate]]` in `vml-backtest` (only `vml-eval` has it), if a gated
+      selection ever passes a screen.
+- [ ] Why this run's plain-ranks forest (`calib_levels_nonloser_plain_3y`
+      fs0) screens +0.036 / +0.024 and the candidate forest bundle
+      +0.030 / +0.027 with the same parameters: expand both configs and
+      compare hashes and fields before using either as a bar again.
+
+### Earlier: after the first round of 2026-11-23 (decisions 38-42)
+
+The session of 2026-11-23 ran the queue (over-priced stocks,
+continuous growth models), built `worst_rank`, blended the forest
+with the huber regressor, and measured the forest's confidence inside
+its top 200, with two backtests from it. Nothing was carried forward;
+the candidate is unchanged. Results:
+docs/notes/2026-11-23-crash-growth-worst-rank.md. What is left is
+Carter's or upstream's:
+
+- [ ] **Carter: merge `claude/results-2026-11-23`** (the `worst_rank`
+      code with tests, decisions 38-42, the note, logbook, findings,
+      the ledger shard).
+- [ ] **Upstream: the peer-relative label** ("beat stocks of the same
+      size band over 3 years"), the one target whose base rate does
+      not move with the market. It reopens calibration and confidence
+      sizing (closed for the forest by decision 42) and is the most
+      promising new cell: the screen already shows the forest's edge
+      is a same-size edge.
+- [ ] **Carter: the three rules for other model families** (below,
+      unchanged), then a logistic regression and an MLP on the ranks.
+- [ ] Optional, cheap: seeds 232 and 1776 of the huber regressors on
+      CAGR and on excess CAGR, to test whether their large difference
+      is chance (decision 39's open question). Not a candidate: they
+      fail on losers whatever the answer.
+- [ ] Upstream, after the label: market-state features (research plan
+      item 8). The count of a crash model's confident calls is not one
+      (decision 39).
+
+### Earlier: from Carter's direction of 2026-10-01 (decision 36)
 
 The working assumption is that 2021-26 is a bubble a value strategy
 trails through; the candidate goes to paper trading as it is; the
@@ -714,19 +871,22 @@ Carter's:
 
 Ready to run ("work the queue"; `vml-queue status`):
 
-- [ ] `baseline_factors_crash_dd50`, `forest_crash_dd50`: the
+- [x] `baseline_factors_crash_dd50`, `forest_crash_dd50` (run
+      2026-11-23; closed, decision 39): the
       over-priced-stock model, "fell 50% from entry" within one and
       three years inside the liquid half. Read on precision at the
       top by year, on what the calls went on to do, and on whether
       the count of high-confidence calls rises before 2008 and 2020
       or after (the market-state question).
-- [ ] `lgbm_regressor_growth_allrows_3y`: continuous models, LightGBM
+- [x] `lgbm_regressor_growth_allrows_3y` (run 2026-11-23; no arm
+      carried forward, decisions 39-40): continuous models, LightGBM
       on 3y CAGR and excess CAGR, huber and three quantiles, read
       against same-size peers.
 
 Small code, then a sweep (each on its own `claude/<topic>` branch):
 
-- [ ] **`combine = "worst_rank"`** in `vml-backtest` and in
+- [x] **`combine = "worst_rank"`** (built 2026-11-23,
+      `claude/worst-rank`; the screen fell short, decision 39) in `vml-backtest` and in
       `vml-eval`'s `blend`: rank by the worse of the models' ranks,
       which is "in every model's top N" for any N. Then the
       candidate's three legs by worst rank against by mean rank, on
@@ -734,13 +894,16 @@ Small code, then a sweep (each on its own `claude/<topic>` branch):
 - [ ] **`vml-predict --holdings <file>`**: mark which held stocks the
       rank sell rule would sell this month, so portfolio B's sells do
       not have to be read off the CSV by hand.
-- [ ] **A cash rule as a `Strategy`**, if `forest_crash_dd50` shows
+- [x] ~~**A cash rule as a `Strategy`**~~ (not built: the count did
+      not lead, decision 39), if `forest_crash_dd50` shows
       the count of high-confidence calls leading the market.
 - [ ] A position cap (carried from below; low priority).
 
 Sessions of their own (research plan, items 6 and 7):
 
-- [ ] **Calibration and confidence-weighted sizing.** Start by
+- [x] **Calibration and confidence-weighted sizing** (first step
+      done 2026-11-23: top 10 purer, top 5 and score weights do not
+      help; closed for the forest, decision 42). Start by
       measuring whether outcome rises with rank inside the forest's
       top 50 of a month at all; then the design of a target whose
       base rate does not move with the market (the peer-relative
@@ -748,7 +911,7 @@ Sessions of their own (research plan, items 6 and 7):
 - [ ] **Other model families**: a regularised logistic regression on
       the ranks, an MLP, a fold-internal clustering as an input; on
       the continuous and peer-relative targets first.
-- [ ] **A short leg**, only if `forest_crash_dd50` reaches a
+- [x] ~~**A short leg**~~ (closed, decision 39), only if `forest_crash_dd50` reaches a
       precision that justifies it: borrow costs, recalls and
       unbounded loss are not in the engine.
 
