@@ -14,6 +14,20 @@ read** stub; a correction is a new entry that names the old one.
 
 <!-- entries -->
 
+### 2026-11-25 · lgbm_fallen50_cells_3y
+4 runs · `dataset_v1.4.1` · 2 cells · git `6b0c28c` · [summary](../reports/sweeps/lgbm_fallen50_cells_3y/lgbm_fallen50_cells_3y_summary.md) · [note](notes/2026-11-25-fallen-stocks.md)
+- **Did:** I ran two LightGBM classifiers inside F50 on cell C and on the recovery label, at seed 23 on folds 2006 to 2020.
+- **Got:** On cell C the first set reached a p@20 of 0.527 against a base rate of 0.285. Its screen led same-size peers by 0.050 in the first half and 0.056 in the second, with losers at 0.352. On the recovery label the two sets reached p@20 values of 0.203 and 0.243. Their leads were within 0.011 of zero.
+- **Concluded:** A second model family matches the forest on cell C, within 0.01 of p@20 as predicted, and has no skill on the recovery label. The recovery of a fallen stock is not in these columns for any of the tree models.
+- **Next:** No further model family runs inside F50.
+
+### 2026-11-25 · forest_fallen50_deeper_3y
+6 runs · `dataset_v1.4.1` · 2 cells · git `6b0c28c` · [summary](../reports/sweeps/forest_fallen50_deeper_3y/forest_fallen50_deeper_3y_summary.md) · [note](notes/2026-11-25-fallen-stocks.md)
+- **Did:** I ran three forests inside F50 on the recovery label and on the path-free target fwd_3y_cagr >= 0.1. The deepest forest had depth 8, and the leaves shrank as the depth grew. The seed was 23 and the folds 2006 to 2020.
+- **Got:** On the recovery label the p@20 was 0.217 at depth 4. At depth 8 it was 0.207, against a base rate of 0.156. No depth led same-size peers in the second half. On the path-free target the p@20 reached 0.477 against a base rate of 0.320. Its screen's mean 3-year CAGR was at most 0.008. Its losers were at least 0.423.
+- **Concluded:** Deeper trees do not learn the recovery label, as predicted. The path-free target is learned a little and is learned as calm, and its picks earn nothing. The prediction that its screen's mean CAGR would exceed the cell C forest's 0.037 did not hold.
+- **Next:** The recovery label gets no further run. Decisions 65 and 66 say what the program found.
+
 ### 2026-11-25 · the candidate's bundles inside the fresh-fall universes, and the two F50 forests combined (eval_screen_fresh40_peers, eval_screen_fresh40_cfo_half_peers, eval_screen_fallen50_cfo_half_peers, blend_mom_roc_fresh40_cfo_half_peers, blend_fallen50_recovery_worst, blend_fallen50_recovery_mean)
 git `6ce512c` · [note](notes/2026-11-25-fallen-stocks.md)
 - **Did:** I evaluated the candidate's forest without refitting in three universes. They were W40, the archetype of W40 with cash flow positive and the larger half, and F50 with the same two filters. I evaluated the candidate's blend inside the archetype. I combined the two round-1 F50 forests by worst rank and by mean rank.

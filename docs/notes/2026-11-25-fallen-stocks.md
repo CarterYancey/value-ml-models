@@ -387,3 +387,34 @@ The attraction of "all examples of a deep fall" is therefore mostly the
 attraction of buying in a crash. That is market timing, and it is the
 market-state question this repository has asked upstream for since
 2026-11-23.
+
+### Round 3: deeper trees, LightGBM, and the recovery label learned on every row
+
+All runs are inside F50 on folds 2006 to 2020 at seed 23. The last row
+trains on every row and evaluates inside F50.
+
+| model | cell | p@20 | base rate | screen precision | peers | mean CAGR | peers | lead, first half | lead, second half | losers | peers |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| forest, depth 4, leaf 72 | recovery | 0.217 | 0.156 | 0.185 | 0.170 | −0.042 | −0.034 | +0.015 | −0.028 | 0.472 | 0.486 |
+| forest, depth 6, leaf 40 | recovery | 0.217 | 0.156 | 0.190 | 0.172 | −0.051 | −0.033 | −0.003 | −0.030 | 0.485 | 0.487 |
+| forest, depth 8, leaf 30 | recovery | 0.207 | 0.156 | 0.190 | 0.174 | −0.052 | −0.032 | −0.013 | −0.027 | 0.505 | 0.486 |
+| forest, depth 4, leaf 72 | `fwd_3y_cagr >= 0.1` | 0.437 | 0.320 | 0.388 | 0.362 | +0.008 | −0.017 | +0.014 | +0.036 | 0.423 | 0.466 |
+| forest, depth 6, leaf 40 | `fwd_3y_cagr >= 0.1` | 0.477 | 0.320 | 0.387 | 0.362 | −0.000 | −0.022 | +0.017 | +0.026 | 0.440 | 0.471 |
+| forest, depth 8, leaf 30 | `fwd_3y_cagr >= 0.1` | 0.463 | 0.320 | 0.410 | 0.363 | +0.004 | −0.024 | +0.033 | +0.024 | 0.432 | 0.476 |
+| LightGBM, 300 trees of 7 leaves | C | 0.527 | 0.285 | 0.470 | 0.317 | +0.028 | −0.025 | +0.050 | +0.056 | 0.352 | 0.480 |
+| LightGBM, 500 trees of 7 leaves, strong regularisation | C | 0.493 | 0.285 | 0.447 | 0.320 | +0.013 | −0.024 | +0.032 | +0.041 | 0.405 | 0.479 |
+| LightGBM, 300 trees of 7 leaves | recovery | 0.203 | 0.156 | 0.197 | 0.171 | −0.048 | −0.037 | −0.011 | −0.011 | 0.503 | 0.494 |
+| LightGBM, 500 trees, strong regularisation | recovery | 0.243 | 0.156 | 0.198 | 0.176 | −0.031 | −0.033 | +0.009 | −0.004 | 0.473 | 0.490 |
+| forest trained on every row, evaluated inside F50 | recovery | 0.210 | 0.156 | 0.213 | 0.168 | −0.006 | −0.072 | +0.106 | +0.032 | 0.465 | 0.549 |
+
+Deeper trees do not learn the recovery label, and neither does a second
+model family. The path-free target `fwd_3y_cagr >= 0.1` is learned a
+little, with a p@20 of 0.46 against 0.32. Its picks earn nothing and
+lose 43% of the time. The forest learns calm from it as from cell C,
+and the result is worse. LightGBM on cell C matches the forest, with
+fewer losers at 0.352 and a lower mean CAGR. The one surprise is the
+last row. The recovery forest trained on every row has no skill on its label
+inside F50. It still leads same-size peers by 0.106 in the first half. Its peers earn −0.072, which says it picks small fallen stocks,
+and its picks lose money 47% of the time. The lead falls to 0.032 in
+the second half. It is not carried forward, and it is recorded as an
+open oddity.
