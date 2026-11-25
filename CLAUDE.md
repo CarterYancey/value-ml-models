@@ -207,50 +207,6 @@ invariants below are this repo's equivalents.
   the resulting fit has no test set: `vml-predict` output is a ranking,
   never an evaluation result.
 
-## Writing: one vocabulary, checkable sentences
-
-Carter reads these records after weeks away. On 2026-11-24 Carter
-found findings.md and the logbook "almost unreadable". The cause was
-not jargon but compression: dropped subjects and verbs, shorthand in
-parentheses, numbers run together with slashes, and terms that each
-document used in its own way. Two instruments fix this, and both are
-mechanical enough to check.
-
-**The glossary.** [GLOSSARY.md](GLOSSARY.md) is the shared
-vocabulary: one term per concept, with the words to avoid. Use its
-terms exactly, in every doc, note, logbook entry, TODO item, config
-`note` and commit message. A technical term that is in the glossary
-beats a plain paraphrase: write "selection-biased", not "flatters the
-model". When a new concept appears, add its entry to the glossary in
-the same change, and do not define it again inline. Challenge a term
-that conflicts with the glossary rather than using both.
-
-**Sentence rules**, from ASD-STE100 (Simplified Technical English),
-structural rules only. Each can be checked by pointing at a word or a
-punctuation mark.
-
-- Keep the subject, the verb and the article in every sentence. No
-  fragments after a colon and no shorthand in parentheses:
-  "Carter reads this as a bubble", not "(Carter's reading)".
-- Active voice. Say who did what.
-- Record a person's view in their own terms, not in a mechanism you
-  substituted for it. Carter's view of 2021–26 is "a bubble that
-  deflates", not "the index's largest members stop leading". The
-  second is your explanation of the first, and the two are not the
-  same claim.
-- At most 25 words in a sentence. One idea per sentence.
-- No semicolons. Split the sentence instead.
-- No noun stacks of four or more words.
-- Numbers: one per sentence, or a table. Never
-  "+0.046 / +0.059 / −0.016 for 2005–12 / 2013–20 / 2021–23".
-- Keep every hedge and qualifier. A shorter sentence that turns "may"
-  into "is" states a different claim.
-- A sequence of three or more steps or conditions is a list.
-
-`docs/logbook.md` entries are never edited after the fact, so the old
-style stays there. Everything written from now on follows this
-section.
-
 ## Before writing a conclusion
 
 A conclusion in `docs/findings.md`, a promoted note or a TODO outlives

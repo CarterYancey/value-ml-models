@@ -2419,6 +2419,12 @@ which an agent invokes before writing documentation or a reply and at
 no other time. The skill's procedure runs `vml-writing` on the draft.
 The command gates in `vml-logbook add` and `vml-promote --note` stay.
 
+*Reversed on 2026-11-25 (decision 66):* Carter does not want any of
+the writing-check or writing-skill changes. The check, the skill, the
+denylist, the command gates and the "Writing" section of CLAUDE.md are
+reverted on `claude/revert-writing-check`. This entry stays as the
+record of what was tried.
+
 ### 60. A deployable candidate that does not train on the recent years: the training cutoff
 
 *What happened (2026-11-25):* Carter restated the record: the candidate
@@ -2466,3 +2472,40 @@ cutoff. The backtest's year-end refits, which trained on no snapshot
 after late 2017 for the trades of 2021–2023, produced the shortfall
 against SPY. So the backtest does not support the taint as the cause
 of the shortfall.
+
+### 66. The writing check and the writing skill are withdrawn
+
+*What happened (2026-11-25):* Carter wrote that the session of
+2026-11-25 should not have been built on `claude/lab-2026-11-24`,
+because Carter does not like any of the writing-hook or writing-skill
+changes. Carter liked the experiments of November but could not follow
+their write-ups, and had intended to start over from `Claude` with the
+writing changes left out.
+
+*Decided:* decision 59 is nullified, and with it the "Writing" section
+that `claude/plain-writing` added to CLAUDE.md. The following are
+reverted, as `git revert` commits on `claude/revert-writing-check`,
+which sits on top of `claude/deploy-train-end`:
+
+1. `src/harness/writing.py`, the `vml-writing` entry point, its tests
+   and the `writing` extra in pyproject.toml and uv.lock;
+2. `.claude/skills/writing/SKILL.md`, the two hooks that preceded it in
+   `.claude/settings.json`, and `scripts/hooks/writing_hook.py`;
+3. `docs/writing_denylist.toml`;
+4. the gates in `vml-logbook add` and `vml-promote --note`;
+5. the rewrite of the standing docs (README, PLAN, TODO, CLAUDE.md,
+   docs/agents.md, backtesting, deployment, diagnostics, experiments,
+   workflow and paper-trading) that made them pass the check. They
+   return to their wording of 2026-11-24, with the decision-60 changes
+   kept.
+
+What stays: GLOSSARY.md, as a vocabulary list with no check behind it,
+and every dated record (the logbook, this log, the notes of 2026-11-24
+and 2026-11-25, findings.md and the TODO sections of those days) in the
+wording it had. The experiments, decisions 55 to 65 and their results
+are untouched. Pull request 21 (`claude/fix-docs`) is superseded by
+this branch and should be closed unmerged.
+
+*Open:* the write-ups of the November experiments still need a form
+Carter can follow. That is a separate task, and this decision does not
+choose the form.
