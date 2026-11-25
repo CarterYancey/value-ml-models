@@ -24,19 +24,24 @@ build that no longer exists and is context only.
 
 ## Next session: start here
 
-1. The latest session was 2026-11-24. Its note is
-   [dataset_v1.4.1, the candidate's record on it, and the size band by final value](notes/2026-11-24-v141-and-size-band.md).
-   It wrote decisions 55 to 58 of the
-   [decision log](notes/2026-09-29-decisions.md). The session of
-   2026-11-23 wrote the notes that decisions 38 to 54 link to.
+1. The latest session was 2026-11-25. Its note is
+   [a deployable candidate that does not train on the recent years](notes/2026-11-25-training-cutoff.md),
+   decision 60 of the [decision log](notes/2026-09-29-decisions.md).
+   The session of 2026-11-24 wrote
+   [dataset_v1.4.1, the candidate's record on it, and the size band by final value](notes/2026-11-24-v141-and-size-band.md)
+   and decisions 55 to 59. The session of 2026-11-23 wrote the notes
+   that decisions 38 to 54 link to.
 2. TODO.md says what to do next, under "Next, after 2026-11-24". The
    candidate's runbook is [paper-trading.md](paper-trading.md).
-3. The branch `claude/writing-check` carries the writing check of
-   CLAUDE.md "Writing" on top of `claude/results-2026-11-24`. That
-   branch carries this session's code, docs, promoted results and the
-   ledger shard. It is built on `claude/results-2026-11-23`, which
-   pull request 20 still holds open. Configs and reports are on the
-   lab branch `claude/lab-2026-11-24`, which is not for merging.
+3. The branch `claude/deploy-train-end` carries the training cutoff
+   and this file, on top of `claude/fix-docs`, which is on top of
+   `claude/writing-check`. That branch carries the writing check on
+   top of `claude/results-2026-11-24`, which holds the November code,
+   docs, promoted results and ledger shard. It is built on
+   `claude/results-2026-11-23`, which pull request 20 still holds
+   open. Configs and reports are on the lab branches
+   `claude/lab-2026-11-24` and `claude/lab-2026-11-25`, which are not
+   for merging.
 
 ## State (2026-11-24)
 
@@ -194,6 +199,20 @@ below.
     2026-11-23 and the ledger could not tell (decision 54). Upstream
     now versions patches and writes a provenance block. Every record
     here carries `dataset_sha256` (decision 55).
+14. **Today's list barely depends on the snapshots of 2021–2023**
+    (decision 60). The deployed forest is refit on every labeled row,
+    and the labeled rows run to 2023-11-20. I refit it with a training
+    cutoff of 2021-01-01, and its November 2026 list differs from the
+    deployed list in one pick of ten. With a cutoff of 2018-01-01 the
+    list differs in two. The mean rank over 2,973 stocks has a
+    Spearman correlation of 0.998 with the deployed ranking under
+    either cutoff. For the trades of 2021–2023 the backtest's year-end
+    refits had trained on no snapshot after late 2017. They still
+    trailed SPY. So the backtest does not support recent training data
+    as the cause of the shortfall. These are deployment rankings on one day,
+    so they say which stocks differ and nothing about which forest
+    will do better. See the
+    [training cutoff note](notes/2026-11-25-training-cutoff.md).
 
 Earlier notes: [notes/](notes/), linked from the decision log.
 
@@ -246,13 +265,18 @@ of what the data on disk can answer. What is left:
    `log_marketcap_rank >= 0.5` as one more investability filter. If
    confirmed, the sell-discipline variant is backtested with it and the
    runbook's `vml-predict` gains a second `--filter`.
-3. **Upstream requests** are listed in the calibration plan under
+3. **The training cutoff** (decision 60): Carter decides whether paper
+   trading uses the deployed forest or a forest refit with
+   `--train-end`, and which date. A third paper portfolio with the
+   cutoff-2021 list is one option. Only paper trading both would show
+   which forest does better.
+4. **Upstream requests** are listed in the calibration plan under
    "Upstream request". They are market-state columns per snapshot
    date, which a threshold rule needs, and the peer-relative label.
-4. **Carter's rules** for other model families come next, as research
+5. **Carter's rules** for other model families come next, as research
    plan item 7 says. After them, a logistic regression and an MLP on
    the ranks are the first arms.
-5. New arms are judged on walk-forward 2005–2020 against same-size
+6. New arms are judged on walk-forward 2005–2020 against same-size
    peers, in both halves and on three seeds. The rule is written
    before the run. An arm is carried forward on paired per-year gains
    beyond noise (decision 50). The years 2021–26 are context only.

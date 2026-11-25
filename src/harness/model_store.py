@@ -153,9 +153,11 @@ _DEPLOYMENT_MODEL_FILE = "model.pkl"
 @dataclass(frozen=True)
 class DeploymentBundle:
     """One model refit on all labeled rows, for shipping (data/manual.md
-    §4 rule 7). Carries no folds and no test rows: nothing loaded from
-    here is ever an evaluation result — measurement stays with the
-    walk-forward `ModelBundle`s."""
+    §4 rule 7), or on the labeled rows before a training cutoff
+    (`train_end`, from ``vml-train-deploy --train-end``). Carries no
+    folds and no test rows: nothing loaded from here is ever an
+    evaluation result — measurement stays with the walk-forward
+    `ModelBundle`s."""
 
     train_config: ExperimentConfig
     run_id: str
@@ -166,6 +168,12 @@ class DeploymentBundle:
     n_train_rows: int
     #: Σ sample_weight_{H}y over the rows actually fit
     effective_train_size: float
+    #: the training cutoff, ISO date, when one was given: only labeled
+    #: rows with `snapshot_date` before it were fit. None means every
+    #: labeled row (the default deployment refit).
+    train_end: str | None = None
+    #: the latest `snapshot_date` among the rows actually fit
+    last_snapshot_date: str | None = None
 
     def save(self, models_dir: str | Path) -> Path:
         out = (
@@ -185,6 +193,8 @@ class DeploymentBundle:
             "train_config": self.train_config.to_raw_dict(),
             "n_train_rows": self.n_train_rows,
             "effective_train_size": self.effective_train_size,
+            "train_end": self.train_end,
+            "last_snapshot_date": self.last_snapshot_date,
         }
         (out / _META_FILE).write_text(json.dumps(meta, indent=2, sort_keys=True))
         with open(out / _DEPLOYMENT_MODEL_FILE, "wb") as fh:
@@ -236,4 +246,6 @@ class DeploymentBundle:
             model=model,
             n_train_rows=int(meta["n_train_rows"]),
             effective_train_size=float(meta["effective_train_size"]),
+            train_end=meta.get("train_end"),
+            last_snapshot_date=meta.get("last_snapshot_date"),
         )

@@ -2418,3 +2418,51 @@ rules live in the project skill `.claude/skills/writing/SKILL.md`,
 which an agent invokes before writing documentation or a reply and at
 no other time. The skill's procedure runs `vml-writing` on the draft.
 The command gates in `vml-logbook add` and `vml-promote --note` stay.
+
+### 60. A deployable candidate that does not train on the recent years: the training cutoff
+
+*What happened (2026-11-25):* Carter restated the record: the candidate
+beats SPY on 2005–2020 and loses from 2021 to 2026. Carter reads the
+recent years as market madness that cannot last. Carter's concern is
+that the deployed candidate, refit on every labeled row, is tainted by
+training on the past few years. Carter asked for a comparison on the
+current inference dataset. It sets the deployed candidate's forecasts
+against those of a deployable version that does not train on the past
+five years.
+
+*Decided:*
+
+1. `vml-train-deploy` gains `--train-end DATE`, the training cutoff. The
+   deployment refit then fits only the labeled rows whose
+   `snapshot_date` is before the date. The cutoff is on the entry date,
+   because that is the plain reading of "rows of the past five years".
+   The stricter reading, a forest that has seen no price from the
+   period, is reached with an earlier date. The cutoff is recorded in
+   the bundle, in the ledger row's `fold` as `labeled_before_DATE`, and
+   in every prediction sidecar the bundle contributes to. It is not a
+   universe and not a row filter of the kind CLAUDE.md forbids. It
+   reads no label and no split tag, and it removes only the most recent
+   rows, as the backtest's year-end refits do. It exists in the
+   deployment path only, never in `vml-run`, `vml-eval` or the
+   backtest.
+2. Two cutoffs run on the candidate's forest. The first is 2021-01-01,
+   Carter's period taken at the entry date. The second is 2018-01-01,
+   under which no three-year window reaches into 2021.
+3. `scripts/compare_predictions.py` reports where two rankings differ:
+   shared picks, shared top rows, rank correlation and the largest
+   moves. Nothing in it is a performance claim. The deployed forest and
+   a cutoff forest are not chosen between on these numbers, because
+   no outcome stands behind them. Only paper trading both would
+   separate them.
+4. The candidate and the runbook are unchanged. Carter decides whether
+   the paper-traded list uses a cutoff, and which.
+
+*It rests on* the note
+[2026-11-25-training-cutoff.md](2026-11-25-training-cutoff.md). The
+result is that the cutoff-2021 list differs from the deployed list in
+one pick of ten and the cutoff-2018 list in two. The mean rank has a
+Spearman correlation of 0.998 with the deployed ranking under either
+cutoff. The backtest's year-end refits, which trained on no snapshot
+after late 2017 for the trades of 2021–2023, produced the shortfall
+against SPY. So the backtest does not support the taint as the cause
+of the shortfall.

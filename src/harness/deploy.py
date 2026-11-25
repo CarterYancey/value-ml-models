@@ -17,7 +17,12 @@ Two entry points:
   labeled rows of its pinned dataset (the config's `scheme`/`folds` are
   measurement settings and are ignored here) and saves a single-model
   `DeploymentBundle`. The run is logged to the results store under scheme
-  ``deployment``.
+  ``deployment``. ``--train-end DATE`` keeps only the labeled rows whose
+  `snapshot_date` is before DATE: a deployable model that has not seen
+  the most recent years (decision 60). The cutoff is recorded in the
+  bundle, in the ledger row's `fold` (``labeled_before_DATE``) and in
+  every prediction sidecar the bundle contributes to, so a cutoff fit
+  can never be mistaken for the full refit.
 - ``vml-predict <bundle_dir>... <inference_data>`` scores an inference
   dataset — ``data/datasets/inference_{date}/`` with a `dataset.parquet`
   of today's stocks carrying the feature columns, no labels — writes the
@@ -109,10 +114,14 @@ def train_deployment_model(
     results_path: str | Path = DEFAULT_RESULTS,
     models_dir: str | Path = DEFAULT_MODELS,
     config_path: str = "",
+    train_end: str | None = None,
 ) -> dict:
     """Refit `config`'s model on every labeled row of its dataset (all
     snapshot kinds, no split filtering) and save a DeploymentBundle.
-    Returns a summary dict; raises after logging on failure."""
+    With `train_end` (an ISO date) only the labeled rows whose
+    `snapshot_date` is before it are fit; the cutoff travels in the
+    bundle and in the ledger row's `fold`. Returns a summary dict;
+    raises after logging on failure."""
     store = ResultsStore(results_path)
     run_id = new_run_id()
     sha = git_sha()
@@ -125,7 +134,10 @@ def train_deployment_model(
         "git_sha": sha,
         "seed": config.seed,
         "scheme": DEPLOYMENT_SCHEME,
-        "fold": "all_labeled",
+        "fold": (
+            "all_labeled" if train_end is None
+            else f"labeled_before_{train_end}"
+        ),
         "horizon_years": config.horizon_years,
         "label": config.label,
         "model": config.model_name,
@@ -133,6 +145,20 @@ def train_deployment_model(
 
     try:
         check_target_labels(config)
+        cutoff = None
+        if train_end is not None:
+            try:
+                cutoff = pd.Timestamp(train_end)
+            except (ValueError, TypeError) as exc:
+                raise ConfigError(
+                    f"--train-end {train_end!r} is not a date (use "
+                    "YYYY-MM-DD)"
+                ) from exc
+            if pd.isna(cutoff):
+                raise ConfigError(
+                    f"--train-end {train_end!r} is not a date (use "
+                    "YYYY-MM-DD)"
+                )
         if config.calibration:
             raise ConfigError(
                 "a deployment refit has no out-of-sample history to "
@@ -162,6 +188,14 @@ def train_deployment_model(
             # the deployed model learns from the rows the selected
             # config learned from: a universe is part of the model
             refit_frame = dataset.apply_universe(refit_frame, config.universe)
+        if cutoff is not None:
+            # the training cutoff: rows dated on or after it are left
+            # out of the fit, as the backtest's year-end refits leave
+            # out the rows whose window is not yet complete. Entry date
+            # only: a row before the cutoff keeps its label even when
+            # that label's window runs past the cutoff.
+            snapshot = pd.to_datetime(refit_frame["snapshot_date"])
+            refit_frame = refit_frame[(snapshot < cutoff).to_numpy()]
         fit = dataset.fit_data(
             refit_frame, config.label, feature_cols, config.horizon_years,
             target=model_target(config.model_name),
@@ -170,8 +204,14 @@ def train_deployment_model(
         if not len(fit.X):
             raise DatasetValidationError(
                 f"dataset {dataset.version} has no labeled rows for "
-                f"{config.label!r}; nothing to deploy"
+                f"{config.label!r}"
+                + (f" before {cutoff.date()}" if cutoff is not None else "")
+                + "; nothing to deploy"
             )
+        labeled_dates = pd.to_datetime(
+            refit_frame.loc[refit_frame[config.label].notna(), "snapshot_date"]
+        )
+        last_snapshot_date = str(labeled_dates.max().date())
         model = build_model(config.model_name, config.model_params, config.seed)
         model.fit(fit.X, fit.y, sample_weight=fit.sample_weight)
 
@@ -184,6 +224,8 @@ def train_deployment_model(
             model=model,
             n_train_rows=len(fit.X),
             effective_train_size=fit.effective_size,
+            train_end=str(cutoff.date()) if cutoff is not None else None,
+            last_snapshot_date=last_snapshot_date,
         ).save(models_dir)
 
         store.append(
@@ -199,6 +241,8 @@ def train_deployment_model(
             "status": "completed",
             "n_train_rows": len(fit.X),
             "effective_train_size": fit.effective_size,
+            "train_end": str(cutoff.date()) if cutoff is not None else None,
+            "last_snapshot_date": last_snapshot_date,
             "bundle_path": bundle_path,
         }
     except Exception as exc:
@@ -401,6 +445,42 @@ def _score_frame(bundle: DeploymentBundle, frame: pd.DataFrame):
     )
 
 
+def _training_window_meta(bundle: DeploymentBundle) -> dict:
+    """Sidecar fields that say what the bundle was fit on: the training
+    cutoff when one was given, and the last snapshot date fit."""
+    meta = {}
+    if bundle.train_end is not None:
+        meta["train_end"] = bundle.train_end
+    if bundle.last_snapshot_date is not None:
+        meta["last_snapshot_date"] = bundle.last_snapshot_date
+    return meta
+
+
+def _deployment_note(bundles: list[DeploymentBundle]) -> str:
+    plural = len(bundles) > 1
+    note = (
+        "Deployment scores: ranked by "
+        + ("models" if plural else "a model")
+        + " refit on all labeled data (data/manual.md §4 rule 7). No test "
+        + ("set exists for these fits" if plural else "set exists for this fit")
+        + " — never report these as performance."
+    )
+    if plural:
+        note += (
+            " Scores are per-model scales; compare models via the rank_* "
+            "columns."
+        )
+    cut = [b for b in bundles if b.train_end is not None]
+    if cut:
+        names = ", ".join(sorted({b.train_config.name for b in cut}))
+        note += (
+            f" Training cutoff: {names} fit only the labeled rows with "
+            "snapshot_date before train_end (vml-train-deploy "
+            "--train-end), not all labeled data."
+        )
+    return note
+
+
 def predict_with_bundle(
     bundle_dir: str | Path,
     inference_path: str | Path,
@@ -502,16 +582,11 @@ def predict_with_bundle(
                     "horizon_years": config.horizon_years,
                     "model": config.model_name,
                     "probabilistic": bundle.probabilistic,
+                    **_training_window_meta(bundle),
                     "inference_source": str(inference_path),
-                "inference_sha256": _inference_manifest_sha256(inference_path),
                     "inference_sha256": _inference_manifest_sha256(inference_path),
                     "n_rows_scored": len(out),
-                    "note": (
-                        "Deployment scores: ranked by a model refit on all "
-                        "labeled data (data/manual.md §4 rule 7). No test "
-                        "set exists for this fit — never report these as "
-                        "performance."
-                    ),
+                    "note": _deployment_note([bundle]),
                 },
                 indent=2,
                 sort_keys=True,
@@ -660,6 +735,7 @@ def predict_with_bundles(
                 "horizon_years": config.horizon_years,
                 "model": config.model_name,
                 "probabilistic": bundle.probabilistic,
+                **_training_window_meta(bundle),
             }
         )
 
@@ -709,13 +785,7 @@ def predict_with_bundles(
                 **selection_meta,
                 "n_rows_scored": len(out),
                 "models": per_model,
-                "note": (
-                    "Deployment scores: ranked by models refit on all "
-                    "labeled data (data/manual.md §4 rule 7). No test set "
-                    "exists for these fits — never report these as "
-                    "performance. Scores are per-model scales; compare "
-                    "models via the rank_* columns."
-                ),
+                "note": _deployment_note(bundles),
             },
             indent=2,
             sort_keys=True,
@@ -749,6 +819,13 @@ def _main_train(argv=None) -> int:
     parser.add_argument("--data-root", default=str(DEFAULT_DATA_ROOT))
     parser.add_argument("--results", default=str(DEFAULT_RESULTS))
     parser.add_argument("--models-dir", default=str(DEFAULT_MODELS))
+    parser.add_argument(
+        "--train-end", default=None, metavar="YYYY-MM-DD",
+        help="fit only the labeled rows whose snapshot_date is before "
+        "this date (a deployable model that has not seen the most recent "
+        "years); the cutoff is recorded in the bundle, the ledger row "
+        "and every prediction sidecar. Default: every labeled row.",
+    )
     args = parser.parse_args(argv)
     try:
         summary = train_deployment_model(
@@ -757,15 +834,21 @@ def _main_train(argv=None) -> int:
             results_path=args.results,
             models_dir=args.models_dir,
             config_path=str(args.config),
+            train_end=args.train_end,
         )
     except Exception:
         traceback.print_exc()
         print("deployment training FAILED (logged to the results store)")
         return 1
+    window = (
+        f"labeled rows before {summary['train_end']}"
+        if summary["train_end"] else "labeled rows"
+    )
     print(
         f"deployment training {summary['run_id']} completed: "
-        f"{summary['n_train_rows']} labeled rows "
-        f"(effective size {summary['effective_train_size']:.1f})"
+        f"{summary['n_train_rows']} {window} "
+        f"(effective size {summary['effective_train_size']:.1f}, "
+        f"last snapshot {summary['last_snapshot_date']})"
     )
     print(f"deployment bundle: {summary['bundle_path']} "
           "(score today's stocks with vml-predict)")

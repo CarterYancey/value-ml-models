@@ -72,7 +72,10 @@ uv run vml-train-deploy experiments/factor_roc_greenblatt_3y_v141.toml
 
 Each prints its bundle directory
 (`experiments/models/<name>_deployment_<run id>`). The forest is
-deterministic for its seed. Refit the forest when a new dataset
+deterministic for its seed. The runbook uses the full refit. docs/deployment.md describes a refit with a training cutoff,
+`--train-end`. The November 2026 lists under two cutoffs are in the
+[note of 2026-11-25](notes/2026-11-25-training-cutoff.md).
+Carter decides whether paper trading moves to a cutoff (decision 60). Refit the forest when a new dataset
 version arrives, and at least once a year. The backtest's forest is
 refit every year end, on the rows whose three-year outcome is known
 by then.

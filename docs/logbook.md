@@ -14,6 +14,13 @@ read** stub; a correction is a new entry that names the old one.
 
 <!-- entries -->
 
+### 2026-11-25 · the training cutoff: the candidate's forecasts without the recent years (decision 60)
+git `9f452a5` · [note](notes/2026-11-25-training-cutoff.md)
+- **Did:** Carter asked how the forecasts on inference_2026-11-20 change when the deployable candidate does not train on the past five years. I added vml-train-deploy --train-end, the training cutoff, with tests, and scripts/compare_predictions.py. I refit the candidate's forest on dataset_v1.4.1 with cutoffs 2021-01-01 and 2018-01-01 and ran the runbook's vml-predict with each beside the deployed forest.
+- **Got:** The deployed forest's run reproduces the November list exactly. The cutoff-2021 list differs in one pick of ten, PSX out and JNJ in. The cutoff-2018 list differs in two, HAS and WAB out and JNJ and ADP in. The mean rank over 2,973 stocks has a Spearman correlation of 0.998 with the deployed ranking under either cutoff. The forest alone shares 39 of its top 50 with the deployed forest under either cutoff.
+- **Concluded:** Today's list barely depends on the snapshots of 2021 to 2023. Two of the three legs fit nothing, and the forest itself moves little. For the trades of 2021 to 2023 the backtest's year-end refits had trained on no snapshot after late 2017 and still trailed SPY. So the backtest does not support recent training data as the cause of the shortfall. These are deployment rankings on one day and say nothing about which forest will do better.
+- **Next:** Carter decides whether paper trading uses the deployed forest or a cutoff forest, and which date. A third paper portfolio with the cutoff-2021 list is one option.
+
 ### 2026-11-24 · writing-check
 git `f56517f` · [note](notes/2026-09-29-decisions.md)
 - **Did:** Turned the writing rules of CLAUDE.md into a program, vml-writing, after Carter quoted seven phrases from the closing message as unreadable. Wired it into a Stop hook and a PostToolUse hook in .claude/settings.json, into vml-logbook add and into vml-promote --note. Seeded docs/writing_denylist.toml with every phrase Carter has quoted. Rewrote findings.md, paper-trading.md, the session note and the TODO section of 2026-11-24 until the check passed.

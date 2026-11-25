@@ -89,6 +89,48 @@ fold to test on. `vml-predict` ranks an inference cross-section fresh on one
 day, where the backtest ranks snapshots up to a quarter old. See
 docs/backtesting.md.
 
+## A deployment refit without the most recent years
+
+`--train-end DATE` sets a training cutoff (decision 60). The refit then
+fits only the labeled rows whose `snapshot_date` is before the date.
+Every snapshot kind and every delisted row before the date stays in,
+and no split tag is read. The cutoff is on the entry date, so a row
+before it keeps its label even when the label's window runs past the
+date. A forest that has seen no price from 2021 on therefore needs a
+cutoff three years earlier, 2018-01-01 for a three-year label.
+
+```sh
+uv run vml-train-deploy experiments/forest_nonloser_dd30_3y_v141.toml --train-end 2021-01-01
+```
+
+The bundle records `train_end` and `last_snapshot_date`. The ledger row
+has `labeled_before_2021-01-01` in its `fold` column where the full
+refit has `all_labeled`. Every sidecar that `vml-predict` writes from
+the bundle carries both fields and says so in its note. So a cutoff fit
+is never mistaken for the full refit. A rank factor fits nothing, so a
+cutoff changes nothing for it.
+
+`scripts/compare_predictions.py` compares two `vml-predict` rankings
+over the same inference dataset and the same flags:
+
+```sh
+python scripts/compare_predictions.py \
+    predictions/inference_2026-11-20__candidate_full_v141.csv \
+    predictions/inference_2026-11-20__candidate_pre2021_v141.csv \
+    --label-a full --label-b pre2021
+```
+
+It reports five things:
+
+- each ranking's picks, with their position under the other ranking
+- how many of the top 10 to 200 the two share, by mean rank and by each leg that differs
+- the Spearman correlation of the ranks
+- the largest moves of the leg that differs
+- the sector mix of the top 50
+
+It refuses two rankings over different rows. Both rankings are deployment scores, so
+the report says where they differ and nothing about which is better.
+
 ## Historical analogues: what today's picks resemble
 
 `vml-analogues` takes the same bundles, inference data and selection

@@ -788,6 +788,32 @@ off as work proceeds, and add new ones as they appear.
       `n_estimators`, at full budget through a follow-up sweep file. No
       harness change is needed, only two sweep configs.
 
+### Next, after 2026-11-25 (decision 60)
+
+Carter asked how the forecasts on `inference_2026-11-20` change when
+the deployable candidate does not train on the past five years. I
+added the training cutoff, `vml-train-deploy --train-end`, refit the
+candidate's forest with cutoffs 2021-01-01 and 2018-01-01, and
+compared the three November lists. The results are in
+docs/notes/2026-11-25-training-cutoff.md. The code is on
+`claude/deploy-train-end`, on top of `claude/fix-docs`.
+
+- [ ] **Carter decides on the training cutoff (decision 60).** The
+      cutoff-2021 list differs from the deployed list in one pick of
+      ten, PSX out and JNJ in. The cutoff-2018 list differs in two, HAS
+      and WAB out and JNJ and ADP in. Carter decides whether paper
+      trading uses the deployed forest or a cutoff forest, and which
+      date. A third paper portfolio with the cutoff-2021 list is one
+      option. If Carter chooses a cutoff, the runbook's refit command
+      gains `--train-end` and the monthly list is produced from the
+      cutoff bundle.
+- [ ] Each month, run `scripts/compare_predictions.py` on the deployed
+      and the cutoff lists beside the runbook, so that the record shows
+      how often the two lists differ. This costs one forest refit a
+      month and a minute of compute.
+- [ ] Merge order: `claude/deploy-train-end` includes `claude/fix-docs`,
+      `claude/writing-check` and `claude/results-2026-11-24`.
+
 ### Next, after 2026-11-24 (decisions 55-58)
 
 The dataset of record is `dataset_v1.4.1` (upstream decision 0021).

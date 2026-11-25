@@ -199,7 +199,13 @@ Phrases that the writing check refuses are listed in
   data with `vml-predict`, without money, as the out-of-sample
   evidence. Runbook: [docs/paper-trading.md](docs/paper-trading.md).
 - **Deployment bundle** — a model refit on all labeled rows for
-  `vml-predict`. Its scores are a ranking, never an evaluation.
+  `vml-predict`, or on the labeled rows before a training cutoff. Its
+  scores are a ranking, never an evaluation.
+- **Training cutoff** — a date given to `vml-train-deploy --train-end`.
+  The deployment refit then fits only the labeled rows whose
+  `snapshot_date` is before it. The cutoff is recorded in the bundle,
+  in the ledger row and in every prediction sidecar (decision 60).
+  _Avoid_: "pre-bubble model", "clean model", "untainted model".
 - **Lab branch** — a `claude/lab-*` branch that holds every config and
   report of a session. Never merged.
 
