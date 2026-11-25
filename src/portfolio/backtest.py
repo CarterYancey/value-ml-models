@@ -300,7 +300,7 @@ def run_backtest(
         # coverage sanity: a survivor-only or truncated panel would
         # quietly bias everything downstream of it
         dataset_pts = set(
-            int(p) for p in dataset.data["permaticker"].unique()
+            int(p) for p in dataset.frame(["permaticker"])["permaticker"].unique()
         )
         covered = len(dataset_pts & panel.permatickers)
         coverage = covered / len(dataset_pts) if dataset_pts else 0.0

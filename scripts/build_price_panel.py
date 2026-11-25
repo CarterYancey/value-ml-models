@@ -193,7 +193,7 @@ def build_price_panel(
         )
 
     dataset = Dataset(dataset_dir)
-    universe = {int(p) for p in dataset.data["permaticker"].unique()}
+    universe = {int(p) for p in dataset.frame(["permaticker"])["permaticker"].unique()}
 
     mapping, map_stats = load_ticker_map(raw_dir, universe)
     prices, price_stats = extract_prices(raw_dir, mapping, start)

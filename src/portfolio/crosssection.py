@@ -45,8 +45,12 @@ class CrossSectionBuilder:
         self.dataset = dataset
         self.max_staleness_days = int(max_staleness_days)
         columns = [c for g in self.GROUPS for c in dataset.columns(g)]
-        median = dataset.data.loc[
-            dataset.data["snapshot_kind"] == "median", columns
+        # a column projection, never the full frame: the 390-column
+        # dataset costs over 10 GB in pandas and the backtest ran at the
+        # edge of the sandbox's memory until 2026-11-25 (decision 68)
+        projected = dataset.frame(columns)
+        median = projected.loc[
+            projected["snapshot_kind"] == "median", columns
         ].copy()
         median["snapshot_date"] = pd.to_datetime(median["snapshot_date"])
         quarter = pd.to_datetime(median["quarter"])
