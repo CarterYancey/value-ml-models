@@ -1,0 +1,54 @@
+{
+  "filters": "dollar_volume_3m_rank >= 0.2",
+  "git_sha": "9f452a5545841664ae6fbed93a373b3851bc8fd5",
+  "inference_sha256": "",
+  "inference_source": "data/datasets/inference_2026-11-20",
+  "models": [
+    {
+      "bundle_dir": "experiments/models/forest_nonloser_dd30_3y_v141_deployment_1f8d8f9061c7",
+      "bundle_run_id": "1f8d8f9061c7",
+      "column_suffix": "forest_nonloser_dd30_3y_v141",
+      "config_hash": "0aeea637e84c41d9",
+      "horizon_years": 3,
+      "label": "fwd_3y_cagr >= 0.0 & fwd_3y_max_drawdown_from_entry < 0.3",
+      "model": "random_forest",
+      "probabilistic": true,
+      "run_id": "3fd658f892b5",
+      "trained_on": "dataset_v1.4.1"
+    },
+    {
+      "bundle_dir": "experiments/models/factor_mom_12_2_3y_v141_deployment_a91bf597bad3",
+      "bundle_run_id": "a91bf597bad3",
+      "column_suffix": "factor_mom_12_2_3y_v141",
+      "config_hash": "d74f9884a6361e2a",
+      "horizon_years": 3,
+      "label": "fwd_3y_cagr >= 0.0 & fwd_3y_max_drawdown_from_entry < 0.3",
+      "model": "rank_factor",
+      "probabilistic": false,
+      "run_id": "0783d96b0be4",
+      "trained_on": "dataset_v1.4.1"
+    },
+    {
+      "bundle_dir": "experiments/models/factor_roc_greenblatt_3y_v141_deployment_d181b5262ffe",
+      "bundle_run_id": "d181b5262ffe",
+      "column_suffix": "factor_roc_greenblatt_3y_v141",
+      "config_hash": "90bce6a3aa84aacf",
+      "horizon_years": 3,
+      "label": "fwd_3y_cagr >= 0.0 & fwd_3y_max_drawdown_from_entry < 0.3",
+      "model": "rank_factor",
+      "probabilistic": false,
+      "run_id": "15373d52a584",
+      "trained_on": "dataset_v1.4.1"
+    }
+  ],
+  "n_rows_filtered_out": 743,
+  "n_rows_scored": 2973,
+  "note": "Deployment scores: ranked by models refit on all labeled data (data/manual.md \u00a74 rule 7). No test set exists for these fits \u2014 never report these as performance. Scores are per-model scales; compare models via the rank_* columns.",
+  "scored_utc": "2026-11-25T05:31:19+00:00",
+  "selection": {
+    "group_column": "sector",
+    "max_per_group": 2,
+    "n_picked": 10,
+    "pick": 10
+  }
+}
