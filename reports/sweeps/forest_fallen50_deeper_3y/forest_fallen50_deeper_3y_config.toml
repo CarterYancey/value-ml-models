@@ -1,0 +1,79 @@
+# Decision 63 (2026-11-25): the fallen-stock program, round 3. Round 1
+# showed the candidate's forest (depth 4, 72 rows a leaf) has almost no
+# skill on the recovery label inside F50: p@20 0.217 against a base rate
+# of 0.156, screen precision 0.185 against same-size peers' 0.170. A
+# recovery may need interactions a depth-4 tree cannot express (quality
+# x valuation x depth of the fall). Deeper forests on two cells inside
+# F50: the recovery label, and a modest target that ignores the path,
+# fwd_3y_cagr >= 0.1 (a value investor who holds through the drawdown).
+#   set0  the candidate's forest (depth 4, leaf 72)
+#   set1  depth 6, leaf 40
+#   set2  depth 8, leaf 30
+# Prediction: on the recovery label no set reaches a p@20 of 0.26 or a
+# screen lead over peers of 0.02 in both halves (the label is the
+# market's year); on fwd_3y_cagr >= 0.1 (base about 0.33) the forest
+# reaches p@20 0.45 or more and a screen mean CAGR above the cell C
+# forest's 0.037, with more losers (above 0.40).
+# Run: vml-sweep experiments/sweeps/forest_fallen50_deeper_3y.toml --save-models
+name = "forest_fallen50_deeper_3y"
+dataset_version = "dataset_v1.4.1"
+min_dataset_version = "1.4"
+scheme = "walkforward"
+folds = [2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020]
+seeds = [23]
+top_k = [20, 50]
+score_thresholds = [0.5, 0.6, 0.7]
+precision_targets = [0.75, 0.9]
+rank_metric = "precision_at_20"
+pick_outcomes = [
+  "label_3y_beat_spy",
+  "fwd_3y_excess_cagr",
+  "fwd_3y_cagr",
+  "fwd_3y_max_drawdown_from_entry",
+  "fwd_3y_cagr < 0",
+  "fwd_3y_cagr < -0.1",
+  "fwd_3y_max_drawdown_from_entry >= 0.4",
+  "fwd_3y_cagr >= 0.15",
+  "fwd_3y_cagr >= 0.26",
+  "fwd_3y_excess_cagr >= 0.05",
+  "fwd_3y_excess_cagr >= 0.1",
+]
+
+sets = [
+  {criterion = "entropy", max_depth = 4, max_features = 0.205191, max_samples = 0.663781, min_samples_leaf = 72, n_estimators = 490},
+  {criterion = "entropy", max_depth = 6, max_features = 0.205191, max_samples = 0.663781, min_samples_leaf = 40, n_estimators = 490},
+  {criterion = "entropy", max_depth = 8, max_features = 0.205191, max_samples = 0.663781, min_samples_leaf = 30, n_estimators = 490},
+]
+
+[pick_screen]
+per = "quarter"
+top_k = 10
+max_per_group = 2
+group_column = "sector"
+peer_column = "log_marketcap_rank"
+peer_bins = 20
+
+[[universe]]
+column = "dist_5y_high"
+op = "<="
+value = -0.5
+
+[[universe]]
+column = "dollar_volume_3m"
+op = ">="
+value = 100000
+
+[[cells]]
+label = "fwd_3y_cagr >= 0.26"
+
+[[cells]]
+label = "fwd_3y_cagr >= 0.1"
+
+[[features]]
+groups = ["ranks"]
+
+[model]
+name = "random_forest"
+bootstrap = true
+class_weight = 1.0
+n_jobs = 8

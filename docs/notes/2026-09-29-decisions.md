@@ -2736,3 +2736,40 @@ on average.
    candidate's 11.76%.
    That tests a portfolio rule, not a new model, and it is the cheapest
    path from this program to money.
+
+### 65. Rounds 2 and 4 read: the depth of the fall, the archetype's failure, and two backtests for the record
+
+*I wrote this on 2026-11-25 after the second chain finished, before I read round 3.* The tables are in
+[2026-11-25-fallen-stocks.md](2026-11-25-fallen-stocks.md).
+
+*What the runs showed.* The forest's lead over same-size fallen peers
+grows with the depth of the fall and the picks' own return falls with
+it. Inside F30 the lead is 0.039 and the mean CAGR +0.056. Inside F70
+the lead is 0.077 and the mean CAGR −0.005. The value investor's two filters are cash flow positive and the larger
+half. They change the forest's picks' return by under 0.01 a year. The recovery label is not learned in any
+universe or at any horizon. The fresh-fall forest leads its peers by 7 points a year in both
+halves, the largest lead of the program. Its picks earn under 2% a
+year. The archetype has no lead at all.
+
+*Why the base rates misled.* The archetype's rows earn +0.085 a year
+when every row counts once and −0.028 when every quarter counts once.
+Almost half of its rows come from 2008 and 2009. A portfolio that buys
+every quarter does not get the crash years' return. The attraction of
+the fallen population is mostly the attraction of buying in a crash.
+
+*Decided:*
+
+1. **No arm meets the rule of decision 61.5**, so none goes to seeds
+   as a candidate. The archetype backtest of decision 64.6 does not run.
+2. **Two backtests run for the record, not as a selection.** They answer Carter's question by final value and TWR: what does a
+   portfolio of fallen stocks chosen by the best model here earn? The first trades the
+   cell C forest trained inside F50, alone, inside F50 with Carter's
+   rank floor, 2006–2020. The second trades the cell C forest trained
+   inside F30 the same way inside F30. Each is read against the
+   candidate's 11.76% and against SPY's 9.58%. I predict for each a TWR under SPY's and a drawdown deeper than −50%.
+   I predict buys that lead same-size candidates by 3 points a year or
+   more. These two
+   backtests are the only money reading of the program, and I state
+   their count with every figure from them.
+3. **Round 3 runs as planned**, and its reading closes the program
+   unless it contradicts the pattern above.

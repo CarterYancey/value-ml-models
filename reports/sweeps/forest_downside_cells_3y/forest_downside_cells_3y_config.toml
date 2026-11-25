@@ -1,0 +1,73 @@
+# Decision 43 (2026-11-23), Carter's direction 1. The candidate's
+# forest configuration on four downside cells (max drawdown from entry
+# >= 30% / >= 50% within 1 and 3 years), trained on every row, read
+# inside the 100k floor; models saved (--save-models) so each can
+# screen the huber regressor's picks (direction 2) and be read for
+# calibration (direction 3). Bars: baseline_factors_downside_cells.
+#
+# Judged as a filter, not on its own precision (decision 43). Read on
+# its own as well: PR-AUC against the best factor, precision at the
+# top by year, and the count of rows above each score by year.
+#
+# Predictions (2026-11-23):
+#   1. The forest beats the best factor's PR-AUC by 0.02 or more in
+#      both 3y cells and by under 0.02 in both 1y cells (decision 39:
+#      over one year a fall is volatility and the market's year).
+#   2. Its top 20 a year are right 0.80 or more in the 30% cells
+#      (base rates far higher than the 50% cells').
+#   3. As in decision 39, the count of rows at score >= 0.5 falls from
+#      2005 to 2020 in every cell and does not rise before 2008.
+name = "forest_downside_cells_3y"
+seeds = [23]
+sets = [
+  {criterion = "entropy", max_depth = 4, max_features = 0.205191, max_samples = 0.663781, min_samples_leaf = 72, n_estimators = 490},
+]
+dataset_version = "dataset_v1.4"
+min_dataset_version = "1.4"
+scheme = "walkforward"
+folds = [2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020]
+top_k = [20, 50, 100]
+score_thresholds = [0.3, 0.4, 0.5, 0.6, 0.7]
+precision_targets = [0.75, 0.9]
+rank_metric = "precision_at_20"
+universe_scope = "test"
+pick_outcomes = [
+  "fwd_1y_cagr",
+  "fwd_1y_excess_cagr",
+  "fwd_1y_max_drawdown_from_entry",
+  "fwd_1y_cagr < -0.3",
+  "fwd_1y_cagr >= 0.3",
+  "fwd_1y_max_drawdown_from_entry >= 0.3",
+]
+
+[pick_screen]
+per = "quarter"
+top_k = 10
+peer_column = "log_marketcap_rank"
+peer_bins = 20
+
+[[universe]]
+column = "dollar_volume_3m"
+op = ">="
+value = 100000
+
+[[cells]]
+label = "fwd_1y_max_drawdown_from_entry >= 0.3"
+
+[[cells]]
+label = "fwd_1y_max_drawdown_from_entry >= 0.5"
+
+[[cells]]
+label = "fwd_3y_max_drawdown_from_entry >= 0.3"
+
+[[cells]]
+label = "fwd_3y_max_drawdown_from_entry >= 0.5"
+
+[[features]]
+groups = ["ranks"]
+
+[model]
+name = "random_forest"
+bootstrap = true
+class_weight = 1.0
+n_jobs = 8

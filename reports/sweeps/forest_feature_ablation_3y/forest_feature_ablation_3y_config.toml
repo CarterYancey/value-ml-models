@@ -1,0 +1,94 @@
+# Why do the v1.1 forest winners score lower on v1.4? A feature
+# ablation on 3y beat_spy (docs/findings.md, "3y beat_spy on
+# dataset_v1.4: same spec, different columns, lower scores").
+#
+# What is known (verified 2026-09-28): the v1.4 runs used the same
+# parameters, feature spec and train/test rows as the v1.1 runs. The
+# spec resolved to 124 columns on v1.1 and 133 on v1.4: 13 added, 4
+# dropped (piotroski_f_rank, mohanram_g7_rank,
+# fundamentals_age_days_rank, ni_change_scaled_rank; 0.06% of the
+# importance in the v1.1 lead run). Fold-mean p@20 of the six
+# candidates: 0.58 on v1.1, 0.42 on v1.4.
+#
+# Run forest_v11_code_control_3y first: if today's code does not
+# reproduce the v1.1 numbers on v1.1 data, this sweep answers nothing.
+#
+#   fs0  the carry-forward spec minus the 13 columns v1.4 added: the
+#        v1.1 column set less the four dropped columns (120 columns).
+#        THE TEST. Prediction written before the run: if the added
+#        columns are the cause, fs0 returns to about 0.58 pooled and
+#        0.50 in 2013-20. If it stays near 0.43, the cause is in the
+#        shared columns' values or the four dropped columns.
+#   fs1  the carry-forward spec minus raw features/technical: do the
+#        raw price/risk columns drive the top of the ranking?
+#   fs2  fundamental ranks only (ranks minus technical and trend, no
+#        raw columns).
+#   fs3  the whole ranks group, the plain reference every other 3y
+#        sweep used.
+#
+# The reference arm (the carry-forward spec as run, 133 columns) is
+# forest_candidate_sets_3y itself: same cell, sets and seeds, so it is
+# not repeated here.
+#
+# Sets: set3 (top seed-mean p@20, 0.435) and set1 (smallest seed
+# spread, std 0.002) of forest_candidate_sets_3y; both run in ~4-5
+# minutes. set4 took ~78 minutes per run and is left out.
+#
+# Check each run's *_config.json for the resolved column count before
+# reading its numbers: fs0 must say 120.
+#
+# Selection bias: 31 configurations tried in this cell on v1.4 and 713
+# on v1.1 over the same test years. fs0 is a pre-stated test of one
+# hypothesis; fs1-fs3 are exploration, and an arm that wins among them
+# is a hypothesis, not a finalist for the 3y holdout.
+#
+# Expanded: 1 cell x 4 feature sets x 2 sets x 3 seeds = 24 runs.
+# Run: uv run vml-sweep experiments/sweeps/forest_feature_ablation_3y.toml
+name = "forest_feature_ablation_3y"
+dataset_version = "dataset_v1.4"
+min_dataset_version = "1.4"
+scheme = "walkforward"
+folds = "all"
+seeds = [23]
+top_k = [20, 50]
+precision_targets = [0.75, 0.9]
+rank_metric = "precision_at_20"
+
+sets = [
+  {criterion = "entropy", max_depth = 3, max_features = 0.504,    max_samples = 0.589,    min_samples_leaf = 38, n_estimators = 407},  # forest_candidate_sets_3y set3
+  {criterion = "entropy", max_depth = 4, max_features = 0.205191, max_samples = 0.663781, min_samples_leaf = 72, n_estimators = 490},  # forest_candidate_sets_3y set1
+]
+
+[[cells]]
+label = "label_3y_beat_spy"
+
+# fs0: carry-forward spec minus the v1.4 additions
+[[features]]
+groups = ["ranks"]
+exclude_families = ["ranks/technical", "ranks/trend", "ranks/relvalue"]
+families = ["features/trend", "features/technical"]
+exclude_columns = [
+  "mom_36_12", "max_ret_21d", "beta_12m", "dist_5y_high", "price_vs_5y_avg",
+  "ohlson_o_rank", "magic_formula_score_rank",
+]
+
+# fs1: carry-forward spec minus raw technicals
+[[features]]
+groups = ["ranks"]
+exclude_families = ["ranks/technical", "ranks/trend"]
+families = ["features/trend"]
+
+# fs2: fundamental ranks only
+[[features]]
+groups = ["ranks"]
+exclude_families = ["ranks/technical", "ranks/trend"]
+
+# fs3: all ranks
+[[features]]
+groups = ["ranks"]
+
+[model]
+name = "random_forest"
+bootstrap = true
+class_weight = 1.0
+n_jobs = 8

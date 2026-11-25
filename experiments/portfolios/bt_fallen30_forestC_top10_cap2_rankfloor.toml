@@ -1,0 +1,55 @@
+# Decision 65 (2026-11-25), the fallen-stock program: a backtest for the
+# record of the not-a-loser forest trained inside F30
+# (forest_fallen30_cells_3y, cell C, 112 ranks, seed 23), traded alone
+# inside dist_5y_high <= -0.3 with Carter's rank floor: top 10 a month,
+# at most 2 per sector, equal weights, 2006-2020 with year-end refits,
+# valued end of 2023. Comparison: the candidate on v1.4.1, TWR 11.76%,
+# drawdown -41.0%; SPY 9.58%. Prediction: TWR under SPY's, drawdown
+# deeper than -50%, buys lead same-size candidates by 3 points a year
+# or more. Not a selection: one of two money readings of the program.
+name = "bt_fallen30_forestC_top10_cap2_rankfloor"
+dataset_version = "dataset_v1.4.1"
+prices_version = "prices_v1.0"
+
+bundles = [
+    "experiments/models/forest_fallen30_cells_3y__label_3y_cagr_ge_0p0_and_3y_max_drawdown_from_entry_lt_0p3_9d3bb4134ab9",
+]
+
+[signal]
+max_staleness_days = 200
+model_update = "refit"
+label_lag_days = 45
+
+[[investability]]
+column = "dollar_volume_3m_rank"
+op = ">="
+value = 0.2
+
+[[investability]]
+column = "dist_5y_high"
+op = "<="
+value = -0.3
+
+[[investability]]
+column = "dollar_volume_3m"
+op = ">="
+value = 100000
+
+[portfolio]
+strategy = "buy_and_hold"
+top_k = 10
+weighting = "equal"
+monthly_cash = 1000.0
+max_per_group = 2
+group_column = "sector"
+
+[execution]
+cost_bps = 35.0
+benchmark_cost_bps = 0.0
+max_quote_age_days = 3
+delist_after_days = 30
+
+[window]
+start = 2006-01-01
+end = 2020-12-31
+valuation_end = 2023-12-29

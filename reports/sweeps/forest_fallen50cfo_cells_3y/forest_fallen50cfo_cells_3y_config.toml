@@ -1,0 +1,77 @@
+# Decision 62 (2026-11-25): the fallen-stock program, round 2. The
+# candidate's forest configuration inside the value-test sub-universe
+# F50 & piotroski_cfo_positive == true: fallen stocks whose business still
+# generates cash (31,535 test rows of 2005-2020; base rates: not a loser
+# 0.369, doubled 0.207, lost half 0.209, mean 3y CAGR +0.022 against
+# -0.046 in F50). Cells C and recovery, 112 ranks, seed 23, folds 2006-2020.
+# Prediction: the screen's mean 3y CAGR is 0.02 or more above the F50
+# forest's in both halves and losers are lower; the lead over same-size
+# peers inside this universe is smaller than inside F50 (the filter has
+# done part of the forest's work). Rival: the forest already finds the
+# cash-positive stocks inside F50 and the screens match within 0.01.
+# Run: vml-sweep experiments/sweeps/forest_fallen50cfo_cells_3y.toml --save-models
+name = "forest_fallen50cfo_cells_3y"
+dataset_version = "dataset_v1.4.1"
+min_dataset_version = "1.4"
+scheme = "walkforward"
+folds = [2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020]
+seeds = [23]
+top_k = [20, 50]
+score_thresholds = [0.5, 0.6, 0.7]
+precision_targets = [0.75, 0.9]
+rank_metric = "precision_at_20"
+pick_outcomes = [
+  "label_3y_beat_spy",
+  "fwd_3y_excess_cagr",
+  "fwd_3y_cagr",
+  "fwd_3y_max_drawdown_from_entry",
+  "fwd_3y_cagr < 0",
+  "fwd_3y_cagr < -0.1",
+  "fwd_3y_max_drawdown_from_entry >= 0.4",
+  "fwd_3y_cagr >= 0.15",
+  "fwd_3y_cagr >= 0.26",
+  "fwd_3y_excess_cagr >= 0.05",
+  "fwd_3y_excess_cagr >= 0.1",
+]
+
+sets = [
+  {criterion = "entropy", max_depth = 4, max_features = 0.205191, max_samples = 0.663781, min_samples_leaf = 72, n_estimators = 490},
+]
+
+[pick_screen]
+per = "quarter"
+top_k = 10
+max_per_group = 2
+group_column = "sector"
+peer_column = "log_marketcap_rank"
+peer_bins = 20
+
+[[universe]]
+column = "dist_5y_high"
+op = "<="
+value = -0.5
+
+[[universe]]
+column = "dollar_volume_3m"
+op = ">="
+value = 100000
+
+[[universe]]
+column = "piotroski_cfo_positive"
+op = "=="
+value = true
+
+[[cells]]
+label = "fwd_3y_cagr >= 0 & fwd_3y_max_drawdown_from_entry < 0.3"
+
+[[cells]]
+label = "fwd_3y_cagr >= 0.26"
+
+[[features]]
+groups = ["ranks"]
+
+[model]
+name = "random_forest"
+bootstrap = true
+class_weight = 1.0
+n_jobs = 8

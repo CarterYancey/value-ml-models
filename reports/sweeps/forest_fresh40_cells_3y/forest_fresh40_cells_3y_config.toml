@@ -1,0 +1,72 @@
+# Decision 64 (2026-11-25): the fallen-stock program, round 4, the fresh
+# fall. Universe W40: dist_52w_high <= -0.4 & dollar_volume_3m >= 100000,
+# liquid stocks 40% or more below their 52-week high (40,886 test rows of
+# 2005-2020; base rates: not a loser 0.237, doubled 0.187, lost half
+# 0.362, mean 3y CAGR -0.076). The 52-week high needs one year of prices,
+# so every fold has training rows and the sweep runs on all 16 folds.
+# The candidate's forest configuration, 112 ranks, seed 23, cells C and
+# recovery. Prediction: as inside F50, the forest learns calm (cell C
+# p@20 0.45 to 0.60 against 0.24; screen lead over same-size peers 0.04
+# or more in both halves) and has no skill on the recovery label (p@20
+# under 0.26 against 0.19; lead within 0.02 of zero).
+# Run: vml-sweep experiments/sweeps/forest_fresh40_cells_3y.toml --save-models
+name = "forest_fresh40_cells_3y"
+dataset_version = "dataset_v1.4.1"
+min_dataset_version = "1.4"
+scheme = "walkforward"
+folds = "all"
+seeds = [23]
+top_k = [20, 50]
+score_thresholds = [0.5, 0.6, 0.7]
+precision_targets = [0.75, 0.9]
+rank_metric = "precision_at_20"
+pick_outcomes = [
+  "label_3y_beat_spy",
+  "fwd_3y_excess_cagr",
+  "fwd_3y_cagr",
+  "fwd_3y_max_drawdown_from_entry",
+  "fwd_3y_cagr < 0",
+  "fwd_3y_cagr < -0.1",
+  "fwd_3y_max_drawdown_from_entry >= 0.4",
+  "fwd_3y_cagr >= 0.15",
+  "fwd_3y_cagr >= 0.26",
+  "fwd_3y_excess_cagr >= 0.05",
+  "fwd_3y_excess_cagr >= 0.1",
+]
+
+sets = [
+  {criterion = "entropy", max_depth = 4, max_features = 0.205191, max_samples = 0.663781, min_samples_leaf = 72, n_estimators = 490},
+]
+
+[pick_screen]
+per = "quarter"
+top_k = 10
+max_per_group = 2
+group_column = "sector"
+peer_column = "log_marketcap_rank"
+peer_bins = 20
+
+[[universe]]
+column = "dist_52w_high"
+op = "<="
+value = -0.4
+
+[[universe]]
+column = "dollar_volume_3m"
+op = ">="
+value = 100000
+
+[[cells]]
+label = "fwd_3y_cagr >= 0 & fwd_3y_max_drawdown_from_entry < 0.3"
+
+[[cells]]
+label = "fwd_3y_cagr >= 0.26"
+
+[[features]]
+groups = ["ranks"]
+
+[model]
+name = "random_forest"
+bootstrap = true
+class_weight = 1.0
+n_jobs = 8

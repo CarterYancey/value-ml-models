@@ -1,0 +1,74 @@
+# Decision 43 (2026-11-23), Carter's direction 2: the huber regressor
+# of lgbm_regressor_growth_allrows_3y (set0), seeds 232 and 1776 (seed
+# 23 is that sweep's), on both targets, models saved so that a gate
+# can be put on them. Everything but the seed and the name as there.
+#
+# Predictions (2026-11-23):
+#   1. Huber on CAGR leads same-size peers by +0.05 or more in both
+#      halves on both seeds (seed 23: +0.072 / +0.054), losers 0.35+.
+#   2. Huber on excess CAGR stays below it in 2013-20 on both seeds
+#      (seed 23: +0.009): the difference is not chance.
+#   Rival for 2: the excess arm's +0.009 was the seed, and the two
+#   targets land within 0.02 of each other on the new seeds.
+name = "lgbm_huber_seeds_3y"
+seeds = [232, 1776]
+sets = [
+  {objective = "huber"},
+]
+dataset_version = "dataset_v1.4"
+min_dataset_version = "1.4"
+scheme = "walkforward"
+folds = "all"
+top_k = [20, 50]
+precision_targets = [0.75, 0.9]
+rank_metric = "precision_at_20"
+universe_scope = "test"
+pick_outcomes = [
+  "label_3y_beat_spy",
+  "fwd_3y_excess_cagr",
+  "fwd_3y_cagr",
+  "fwd_3y_max_drawdown_from_entry",
+  "fwd_3y_cagr < 0",
+  "fwd_3y_cagr < -0.1",
+  "fwd_3y_max_drawdown_from_entry >= 0.4",
+  "fwd_3y_cagr >= 0.15",
+  "fwd_3y_cagr >= 0.25",
+  "fwd_3y_excess_cagr >= 0.05",
+]
+
+
+[pick_screen]
+per = "quarter"
+top_k = 10
+max_per_group = 2
+group_column = "sector"
+peer_column = "log_marketcap_rank"
+peer_bins = 20
+
+[[universe]]
+column = "dollar_volume_3m"
+op = ">="
+value = 100000
+
+[[cells]]
+label = "fwd_3y_cagr"
+eval_label = "label_3y_cagr_ge_10"
+
+[[cells]]
+label = "fwd_3y_excess_cagr"
+eval_label = "label_3y_beat_spy"
+
+[[features]]
+groups = ["ranks"]
+
+[model]
+name = "lightgbm_regressor"
+winsorize = 0.01
+n_estimators = 300
+learning_rate = 0.05
+num_leaves = 15
+min_child_samples = 60
+subsample = 0.8
+subsample_freq = 1
+colsample_bytree = 0.8
+reg_lambda = 1.0

@@ -267,3 +267,123 @@ The quantile arms lead the huber arm, as predicted. The best lead is
 0.043 and the best mean CAGR is 0.012, both below the cell C forest's.
 Predicting the size of a fallen stock's return adds nothing over
 predicting that it will not lose.
+
+### Round 2: the value investor's tests as universes, the depth of the fall, the 5-year horizon
+
+All runs use the candidate's forest configuration on the 112 ranks at
+seed 23. The 3-year cells run on folds 2006 to 2020 and the 5-year
+cells on folds 2008 to 2018. The screen columns are as in round 1.
+"F50 forest" is the round-1 forest for comparison.
+
+| universe | cell | p@20 | base rate | screen precision | peers | mean CAGR | peers | lead, first half | lead, second half | losers | peers |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| F30 | C | 0.553 | 0.341 | 0.492 | 0.391 | +0.056 | +0.017 | +0.040 | +0.039 | 0.327 | 0.419 |
+| F50 | C | 0.533 | 0.285 | 0.430 | 0.331 | +0.037 | −0.017 | +0.047 | +0.060 | 0.388 | 0.464 |
+| F70 | C | 0.447 | 0.222 | 0.348 | 0.244 | −0.005 | −0.083 | +0.044 | +0.106 | 0.433 | 0.544 |
+| F50, cash flow positive | C | 0.540 | 0.338 | 0.442 | 0.342 | +0.043 | −0.008 | +0.043 | +0.057 | 0.377 | 0.452 |
+| F50, the larger half | C | 0.550 | 0.352 | 0.437 | 0.336 | +0.035 | −0.010 | +0.038 | +0.051 | 0.393 | 0.455 |
+| F30 | recovery | 0.220 | 0.148 | 0.187 | 0.152 | +0.013 | −0.000 | +0.030 | −0.002 | 0.423 | 0.434 |
+| F70 | recovery | 0.230 | 0.157 | 0.205 | 0.182 | −0.074 | −0.078 | −0.026 | +0.029 | 0.530 | 0.546 |
+| F50, cash flow positive | recovery | 0.233 | 0.169 | 0.202 | 0.173 | −0.042 | −0.028 | −0.014 | −0.014 | 0.463 | 0.467 |
+| F50, the larger half | recovery | 0.213 | 0.163 | 0.195 | 0.162 | −0.008 | −0.028 | +0.020 | +0.019 | 0.440 | 0.476 |
+| F50 | doubled in 5 years | 0.336 | 0.222 | 0.298 | 0.259 | +0.002 | −0.023 | +0.054 | +0.000 | 0.386 | 0.429 |
+| F50 | tripled in 5 years | 0.159 | 0.115 | 0.145 | 0.127 | −0.013 | −0.030 | +0.064 | −0.023 | 0.384 | 0.443 |
+
+The next table combines the two round-1 forests inside F50 without
+refitting:
+
+| combination | screen precision | peers | mean CAGR | peers | lead, first half | lead, second half | losers | peers |
+|---|---|---|---|---|---|---|---|---|
+| worst rank of the cell C forest and the recovery forest | 0.350 | 0.319 | −0.002 | −0.022 | +0.005 | +0.033 | 0.433 | 0.473 |
+| mean rank of the two | 0.342 | 0.319 | −0.001 | −0.022 | +0.002 | +0.037 | 0.437 | 0.473 |
+
+Four readings follow. First, the depth of the fall gives a clean
+dose-response. The forest's lead over same-size peers grows with the
+depth, from 0.039 inside F30 to 0.077 inside F70. The picks' own return
+falls with it, from +0.056 to −0.005. The forest separates more where
+more is at stake, and the population drags every pick down with it.
+Second, the value investor's filters change nothing once the forest is
+in place. Inside the cash-positive half and inside the larger half the
+forest's picks earn what they earn inside all of F50, within 0.01 a
+year. The forest already finds the cash-positive, larger stocks on its
+own. Third, the recovery label is not learned in any universe, at any
+depth, and the 5-year versions are not learned either. The one lead on
+the 5-year cells sits in the first half and is zero in the second.
+Fourth, the recovery forest adds nothing to the cell C forest in a
+blend. Both combinations are below the cell C forest alone.
+
+### Round 2: the single-factor bars inside F50
+
+Sweep `baseline_factors_fallen50_3y_f06`, 12 factors, four cells, folds
+2006 to 2020. The table gives cell C, which is the only cell any factor
+has skill in. On the recovery label the best factor's screen precision
+is 0.193 against the peers' 0.162. That factor is the earnings yield
+against the stock's own 5-year median.
+
+| factor, cell C inside F50 | screen precision | peers | mean CAGR | lead, first half | lead, second half | losers |
+|---|---|---|---|---|---|---|
+| lowest 36-month volatility | 0.443 | 0.318 | +0.027 | +0.007 | +0.085 | 0.378 |
+| conservative score | 0.402 | 0.304 | +0.018 | +0.051 | +0.047 | 0.417 |
+| the least fallen of the fallen | 0.383 | 0.299 | +0.015 | +0.052 | +0.055 | 0.423 |
+| largest market cap | 0.365 | 0.336 | +0.017 | +0.005 | +0.026 | 0.437 |
+| earnings yield against own 5-year median | 0.288 | 0.270 | −0.030 | +0.050 | +0.017 | 0.505 |
+| return on capital | 0.258 | 0.278 | −0.054 | +0.006 | +0.012 | 0.523 |
+| momentum | 0.158 | 0.236 | −0.183 | −0.075 | −0.097 | 0.678 |
+| the deepest fallen | 0.057 | 0.116 | −0.435 | −0.188 | −0.108 | 0.848 |
+| the F50 forest, for comparison | 0.430 | 0.331 | +0.037 | +0.047 | +0.060 | 0.388 |
+
+Prediction 1 of decision 61 held on cell C: the two volatility bars
+lead on precision. It missed on the recovery label, where return on
+capital and the Altman score have no skill. The forest beats the best
+bar by 0.01 on mean CAGR and leads in both halves where the volatility
+bar leads only in the second. Momentum and the deepest fall are the
+worst ways to choose among fallen stocks. The deepest-fallen tenth lost
+money 85% of the time.
+
+### Round 4: the fresh fall
+
+W40 is `dist_52w_high <= -0.4` with the 100k floor. Every fold has
+training rows, so these runs use all 16 folds and the halves are
+2005–12 and 2013–20. "The archetype" is W40 with operating cash flow
+positive and the larger half.
+
+| model | universe | screen precision | peers | mean CAGR | peers | lead, first half | lead, second half | losers | peers |
+|---|---|---|---|---|---|---|---|---|---|
+| forest trained inside W40, cell C | W40 | 0.366 | 0.265 | +0.018 | −0.054 | +0.066 | +0.079 | 0.423 | 0.518 |
+| forest trained inside W40 and the larger half, cell C | W40, the larger half | 0.342 | 0.278 | −0.002 | −0.043 | +0.038 | +0.043 | 0.430 | 0.501 |
+| forest trained inside W40, recovery | W40 | 0.131 | 0.150 | −0.037 | −0.074 | +0.039 | +0.035 | 0.484 | 0.543 |
+| the candidate's forest, evaluated | W40 | 0.341 | 0.258 | −0.030 | −0.062 | +0.011 | +0.054 | 0.470 | 0.530 |
+| the candidate's forest, evaluated | the archetype | 0.338 | 0.298 | −0.024 | −0.023 | −0.024 | +0.021 | 0.450 | 0.473 |
+| the candidate's blend, evaluated | the archetype | 0.295 | 0.292 | −0.032 | −0.032 | −0.018 | +0.019 | 0.486 | 0.486 |
+| the candidate's forest, evaluated | F50, cash flow positive, the larger half | 0.439 | 0.345 | +0.029 | −0.001 | +0.025 | +0.035 | 0.411 | 0.447 |
+| lowest 36-month volatility, bar | W40 | 0.347 | 0.264 | −0.047 | −0.063 | −0.007 | +0.038 | 0.481 | 0.526 |
+
+Three readings follow. First, the forest trained inside the fresh-fall
+universe leads same-size peers by 7 points a year in both halves. That
+is the largest lead in the program, and twice the lead of the
+candidate's forest evaluated there. In a fresh fall, training inside
+the population does help. Its picks still earn under 2% a year. Second,
+the archetype fails. The candidate's forest inside it has no lead over
+same-size peers and its picks lose money 45% of the time. The archetype
+backtest of decision 64.6 does not run. Third, the base rates misled
+the predictions, and the reason matters. The archetype's rows earn
++0.085 a year when every row counts once. They earn −0.028 a year when
+every quarter counts once:
+
+| population | rows | share of rows from 2008–09 | mean 3y CAGR, every row once | mean 3y CAGR, every quarter once |
+|---|---|---|---|---|
+| all liquid stocks | 200,472 | 0.118 | +0.004 | +0.008 |
+| F50 | 50,887 | 0.192 | −0.046 | −0.076 |
+| W40 | 40,886 | 0.244 | −0.076 | −0.130 |
+| the archetype | 10,268 | 0.466 | +0.085 | −0.028 |
+| F50, cash flow positive, the larger half | 15,432 | 0.307 | +0.054 | −0.014 |
+| F50, dividends 5 years running | 7,990 | 0.287 | +0.059 | −0.045 |
+
+Almost half of the archetype's rows come from the two crash years, when
+large, cash-positive companies fell 40% and then recovered with the
+market. A portfolio that buys ten fallen stocks every quarter does not
+get that return. It buys the same number in 2007 and 2014 as in 2009.
+The attraction of "all examples of a deep fall" is therefore mostly the
+attraction of buying in a crash. That is market timing, and it is the
+market-state question this repository has asked upstream for since
+2026-11-23.

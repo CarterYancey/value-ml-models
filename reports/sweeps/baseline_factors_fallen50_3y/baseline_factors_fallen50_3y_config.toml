@@ -1,0 +1,96 @@
+# Decision 61 of docs/notes/2026-09-29-decisions.md (2026-11-25): the
+# fallen-stock program. Single-factor bars inside the fallen universe
+# F50 (dist_5y_high <= -0.5 & dollar_volume_3m >= 100000: liquid stocks
+# 50% or more below their own 5-year high) for four cells: not a loser,
+# doubled in 3 years, beat SPY, beat SPY by 10 points. A universe is its
+# own ledger cell and needs its own baselines. Deterministic.
+#
+#   set0   highest conservative_score_rank
+#   set1   lowest vol_36m_rank
+#   set2   highest roc_greenblatt_rank (quality)
+#   set3   highest mom_12_2_rank (momentum: has the fall turned)
+#   set4   highest earnings_yield_rank (value)
+#   set5   highest earnings_yield_vs_5y_median_rank (cheaper than its own norm)
+#   set6   highest altman_z_dd_rank (solvency)
+#   set7   highest ocf_yield_rank
+#   set8   highest dist_5y_high_rank (the least fallen of the fallen)
+#   set9   lowest dist_5y_high_rank (the deepest fallen)
+#   set10  highest log_marketcap_rank (size)
+#   set11  highest ret_6m_rank (the fall has stopped)
+#
+# Prediction 1 of decision 61: in cell C the lowest 36-month volatility
+# and the conservative score lead on screen precision; return on
+# capital and the Altman score lead on the recovery label.
+name = "baseline_factors_fallen50_3y"
+dataset_version = "dataset_v1.4.1"
+min_dataset_version = "1.4"
+scheme = "walkforward"
+folds = "all"
+seeds = [7]
+top_k = [20, 50]
+precision_targets = [0.75, 0.9]
+rank_metric = "precision_at_20"
+pick_outcomes = [
+  "label_3y_beat_spy",
+  "fwd_3y_excess_cagr",
+  "fwd_3y_cagr",
+  "fwd_3y_max_drawdown_from_entry",
+  "fwd_3y_cagr < 0",
+  "fwd_3y_cagr < -0.1",
+  "fwd_3y_max_drawdown_from_entry >= 0.4",
+  "fwd_3y_cagr >= 0.15",
+  "fwd_3y_cagr >= 0.26",
+  "fwd_3y_excess_cagr >= 0.05",
+  "fwd_3y_excess_cagr >= 0.1",
+]
+
+sets = [
+  {rank_column = "conservative_score_rank", higher_is_better = true},
+  {rank_column = "vol_36m_rank", higher_is_better = false},
+  {rank_column = "roc_greenblatt_rank", higher_is_better = true},
+  {rank_column = "mom_12_2_rank", higher_is_better = true},
+  {rank_column = "earnings_yield_rank", higher_is_better = true},
+  {rank_column = "earnings_yield_vs_5y_median_rank", higher_is_better = true},
+  {rank_column = "altman_z_dd_rank", higher_is_better = true},
+  {rank_column = "ocf_yield_rank", higher_is_better = true},
+  {rank_column = "dist_5y_high_rank", higher_is_better = true},
+  {rank_column = "dist_5y_high_rank", higher_is_better = false},
+  {rank_column = "log_marketcap_rank", higher_is_better = true},
+  {rank_column = "ret_6m_rank", higher_is_better = true},
+]
+
+[pick_screen]
+per = "quarter"
+top_k = 10
+max_per_group = 2
+group_column = "sector"
+peer_column = "log_marketcap_rank"
+peer_bins = 20
+
+[[universe]]
+column = "dist_5y_high"
+op = "<="
+value = -0.5
+
+[[universe]]
+column = "dollar_volume_3m"
+op = ">="
+value = 100000
+
+[[cells]]
+label = "fwd_3y_cagr >= 0 & fwd_3y_max_drawdown_from_entry < 0.3"
+
+[[cells]]
+label = "fwd_3y_cagr >= 0.26"
+
+[[cells]]
+label = "label_3y_beat_spy"
+
+[[cells]]
+label = "fwd_3y_excess_cagr >= 0.1"
+
+[[features]]
+groups = ["ranks"]
+
+[model]
+name = "rank_factor"
