@@ -2466,3 +2466,130 @@ cutoff. The backtest's year-end refits, which trained on no snapshot
 after late 2017 for the trades of 2021–2023, produced the shortfall
 against SPY. So the backtest does not support the taint as the cause
 of the shortfall.
+
+### 61. Session of 2026-11-25: the fallen-stock program, from Carter's value-investing question
+
+*Carter (2026-11-25):* The latest candidate beat SPY from 2005 to 2020,
+but it relies mostly on momentum. Carter is not ready to give up on a
+more principled value-investing model. Carter named one principle. A
+value investor finds stocks whose share price took a large hit that is
+disproportional to the adversity the company faces. The investor sees a
+long history of success and expects the company to come back two to
+three times over the next few years. Carter asked two questions. The
+first asked whether the models take full advantage of a stock's prior
+years. The second asked whether we could find all examples of a deep
+fall and identify which ones are most likely to recover. Carter asked
+me to explore this and related ideas, to try everything that needs no
+upstream change, and to document what does.
+
+*Facts checked first.* I read base rates on the walk-forward test rows
+of 2005 to 2020 inside the 100k floor on `dataset_v1.4.1`. This was a
+reading of label columns on walk-forward rows, with no model and no
+ledger row. I did not read the holdout rows. The reading is in
+docs/notes/2026-11-25-fallen-stocks.md. The main facts are these:
+
+| rows inside the 100k floor | rows | not a loser | doubled in 3 years | beat SPY | lost half or more | mean 3y CAGR |
+|---|---|---|---|---|---|---|
+| all | 200,472 | 0.409 | 0.135 | 0.381 | 0.191 | +0.004 |
+| within 10% of the 5-year high | 39,381 | 0.580 | 0.097 | 0.446 | 0.064 | +0.061 |
+| 50% or more below the 5-year high | 50,887 | 0.295 | 0.178 | 0.342 | 0.302 | −0.046 |
+| the same, cash flow from operations positive | 31,535 | 0.369 | 0.207 | 0.401 | 0.209 | +0.022 |
+| the same, dividends paid in each of the last 5 years or more | 7,990 | 0.419 | 0.237 | 0.423 | 0.170 | +0.059 |
+| the same, the larger half by market cap | 18,453 | 0.399 | 0.206 | 0.410 | 0.182 | +0.037 |
+
+Fallen stocks are a population with more doublers and far more losers
+than the rest. The recovery rate moves strongly with the year of entry.
+Fallen stocks bought in 2009 doubled 35% of the time. Those bought in
+2006, 2007, 2014 or 2017 doubled under 9% of the time. Quality, a
+dividend record and size each raise the recovery rate and cut the
+losers inside the population. The candidate's forest gives the 5-year
+drawdown rank 1.3% of its importance. It gives the 3-year reversal rank
+0.3%. Two volatility ranks take 32%. The models therefore read a
+stock's prior years mostly through its volatility.
+
+*Decided:*
+
+1. **The fallen universe.** `dist_5y_high <= -0.5` together with the
+   100k floor, written F50 here. It holds the liquid stocks that
+   trade 50% or more below their own 5-year high. The GLOSSARY gains
+   the term. A stock without a 5-year history has a NULL in the
+   column and is outside the universe. That fits the principle,
+   because a long history is required.
+2. **Four cells inside F50.** Cell C, not a loser. The recovery label
+   `fwd_3y_cagr >= 0.26`, which is doubling within 3 years. The label
+   `label_3y_beat_spy`. The label `fwd_3y_excess_cagr >= 0.1`, a big
+   winner against SPY. Each cell starts with zero trials.
+3. **The runs, in order.** The single-factor bars inside F50 for the
+   four cells, 12 factors each. The candidate's forest configuration
+   inside F50 on the four cells with three feature sets at seed 23,
+   with bundles saved. The LightGBM regression on 3-year CAGR and on
+   excess CAGR inside F50, with huber and two quantile objectives. The
+   candidate's own forest and blend evaluated inside F50 without
+   refitting, through `vml-eval` with the universe on the eval config.
+4. **I read the arms on the portfolio screen.** The screen takes the
+   top 10 per quarter and at most 2 per sector, with peers the
+   same-size fallen stocks. Then I read absolute outcomes against the
+   candidate blend's screen inside the 100k floor on v1.4.1. That
+   screen has a mean 3-year CAGR of 0.105 and losers at 0.208. Its
+   mean excess CAGR is +0.009. I read both halves separately.
+5. **I wrote the rule before the runs.** An arm goes to seeds 232 and
+   1776 when it meets either of two conditions in both halves:
+   - its screen's mean 3-year CAGR is at or above 0.105
+   - its lead over same-size fallen peers is 0.05 or more, with losers
+     at 0.30 or below
+
+   An arm goes to a backtest when all three seeds meet the same
+   condition. The backtest carries `dist_5y_high <= -0.5` as an
+   investability filter beside the rank floor. I read it by TWR
+   against the candidate's 11.76% on 2005–2020.
+6. **The lab branch** is `claude/lab-2026-11-25b`, created off
+   `claude/deploy-train-end` with the two earlier lab branches merged
+   in for their reports and ledger rows.
+
+*I wrote these predictions before the runs.*
+
+1. The lowest 36-month volatility and the conservative score will be
+   the two best bars on screen precision in cell C inside F50. They
+   were in every universe so far. Return on capital and the Altman score lead on the recovery
+   label.
+2. The forest on the 112 ranks inside F50 reaches these p@20 values:
+
+   | cell | base rate | predicted p@20 |
+   |---|---|---|
+   | C, not a loser | 0.30 | 0.55 to 0.70 |
+   | recovery, doubled in 3 years | 0.18 | 0.30 to 0.40 |
+
+3. The theory-led feature set is the ranks without the technical
+   family plus the 47 unranked columns. Inside F50 it comes within
+   0.03 of the 112 ranks on p@20. On all rows it was 0.12 behind. The
+   rival is that volatility matters as much among fallen stocks as
+   elsewhere, and the gap stays near 0.12.
+4. No arm's screen has a mean 3-year CAGR at or above 0.105 in both
+   halves. The forest's screen inside F50 leads same-size fallen peers
+   by 0.05 or more in both halves. Its losers are between 0.25 and
+   0.35.
+5. The candidate's own forest, evaluated inside F50, picks the calmest
+   fallen stocks. It has fewer losers than a forest trained inside F50
+   and a lower mean CAGR.
+
+*I amended this decision the same day, before any run completed.* The first launch
+failed at fold 2005 with "the universe leaves fold 2005 without train
+rows". The column `dist_5y_high` needs five years of prices, and the
+data start in 1998, so no row before 2002 is inside F50. Fold 2005
+trains on rows up to 2001. I counted the training rows inside F50 per
+fold:
+
+| fold | training rows inside F50 | effective size |
+|---|---|---|
+| 2005 | 0 | 0 |
+| 2006 | 11,936 | 351 |
+| 2007 | 24,811 | 729 |
+| 2008 | 38,203 | 1,126 |
+| 2020 | 155,184 | 4,626 |
+
+7. **I run the F50 sweeps on the 15 folds from 2006 to 2020.** The two
+   halves become 2006–12 and 2013–20. Fold 2006 is thin and its
+   numbers are read with that in mind. The two runs that failed before
+   I stopped the chain are in the ledger and count as trials in cell C
+   inside F50. The `vml-eval` runs of the candidate's bundles keep all
+   16 folds, because the bundles were trained on all rows.

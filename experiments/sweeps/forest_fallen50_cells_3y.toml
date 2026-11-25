@@ -1,0 +1,144 @@
+# Decision 61 of docs/notes/2026-09-29-decisions.md (2026-11-25): the
+# fallen-stock program. The candidate's forest configuration trained and
+# measured inside the fallen universe F50 (dist_5y_high <= -0.5 &
+# dollar_volume_3m >= 100000) on four cells, three feature sets, seed 23.
+#
+#   fs0  the ranks group, 112 columns: the reference
+#   fs1  ranks without the technical family plus the 47 unranked
+#        columns (the theory-led set fs2 of
+#        forest_features_nonloser_allrows_3y): the stock's own history
+#        in fundamentals, dividends and valuation, no price ranks
+#   fs2  the 112 ranks plus the 47 unranked columns, 159
+#
+# Read on the portfolio screen (top 10 per quarter, 2 per sector, peers
+# the same-size fallen stocks) and on absolute outcomes against the
+# candidate blend's screen inside the 100k floor (mean 3y CAGR 0.105,
+# losers 0.208, mean excess +0.009). Rule (decision 61.5): to seeds when
+# the screen's mean 3y CAGR >= 0.105 in both halves, or lead over peers
+# >= 0.05 in both halves with losers <= 0.30.
+#
+# Predictions (decision 61): fs0 p@20 0.55-0.70 in cell C (base 0.30),
+# 0.30-0.40 on the recovery label (base 0.18); fs1 within 0.03 of fs0 on
+# p@20 (rival: the gap stays near 0.12 as on all rows); no arm reaches a
+# screen mean CAGR of 0.105 in both halves; the forest leads same-size
+# fallen peers by 0.05 or more in both halves with losers 0.25-0.35.
+#
+# Expanded: 4 cells x 3 feature sets x 1 set x 1 seed = 12 runs.
+# Folds 2006-2020: fold 2005 has no train row inside F50 (dist_5y_high needs
+# five years of prices and the data start in 1998); fold 2006 trains on
+# 11,936 rows (effective size 351), fold 2007 on 24,811.
+# Run: vml-sweep experiments/sweeps/forest_fallen50_cells_3y.toml --save-models
+name = "forest_fallen50_cells_3y"
+dataset_version = "dataset_v1.4.1"
+min_dataset_version = "1.4"
+scheme = "walkforward"
+folds = [2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020]
+seeds = [23]
+top_k = [20, 50]
+score_thresholds = [0.5, 0.6, 0.7]
+precision_targets = [0.75, 0.9]
+rank_metric = "precision_at_20"
+pick_outcomes = [
+  "label_3y_beat_spy",
+  "fwd_3y_excess_cagr",
+  "fwd_3y_cagr",
+  "fwd_3y_max_drawdown_from_entry",
+  "fwd_3y_cagr < 0",
+  "fwd_3y_cagr < -0.1",
+  "fwd_3y_max_drawdown_from_entry >= 0.4",
+  "fwd_3y_cagr >= 0.15",
+  "fwd_3y_cagr >= 0.26",
+  "fwd_3y_excess_cagr >= 0.05",
+  "fwd_3y_excess_cagr >= 0.1",
+]
+
+sets = [
+  {criterion = "entropy", max_depth = 4, max_features = 0.205191, max_samples = 0.663781, min_samples_leaf = 72, n_estimators = 490},
+]
+
+[pick_screen]
+per = "quarter"
+top_k = 10
+max_per_group = 2
+group_column = "sector"
+peer_column = "log_marketcap_rank"
+peer_bins = 20
+
+[[universe]]
+column = "dist_5y_high"
+op = "<="
+value = -0.5
+
+[[universe]]
+column = "dollar_volume_3m"
+op = ">="
+value = 100000
+
+[[cells]]
+label = "fwd_3y_cagr >= 0 & fwd_3y_max_drawdown_from_entry < 0.3"
+
+[[cells]]
+label = "fwd_3y_cagr >= 0.26"
+
+[[cells]]
+label = "label_3y_beat_spy"
+
+[[cells]]
+label = "fwd_3y_excess_cagr >= 0.1"
+
+# fs0: the reference, 112 rank columns
+[[features]]
+groups = ["ranks"]
+
+# fs1: fundamentals as ranks plus the 47 unranked history columns, 144
+[[features]]
+groups = ["ranks"]
+exclude_families = ["ranks/technical"]
+columns = [
+  "fundamentals_age_days", "has_filing_183d", "has_filing_365d",
+  "negative_equity", "negative_ebitda", "negative_ev",
+  "revenue_up_frac_4q", "revenue_up_frac_8q", "revenue_up_frac_12q",
+  "revenue_up_frac_20q", "tangibles_up_frac_4q", "tangibles_up_frac_8q",
+  "tangibles_up_frac_12q", "tangibles_up_frac_20q", "ocf_up_frac_4q",
+  "ocf_up_frac_8q", "ocf_up_frac_12q", "ocf_up_frac_20q",
+  "ocf_positive_frac_4q", "ocf_positive_frac_8q",
+  "ocf_positive_frac_12q", "ocf_positive_frac_20q",
+  "fund_history_quarters", "div_years_paid_10y", "div_streak_10y",
+  "div_cuts_10y", "div_history_years_10y", "earnings_yield_5y_pctile",
+  "ocf_yield_5y_pctile", "fcf_yield_5y_pctile", "sales_yield_5y_pctile",
+  "book_to_market_5y_pctile", "tangible_book_to_market_5y_pctile",
+  "ni_change_scaled", "two_year_loss", "liab_gt_assets", "piotroski_f",
+  "piotroski_roa_positive", "piotroski_cfo_positive",
+  "piotroski_roa_up", "piotroski_cfo_gt_ni", "piotroski_leverage_down",
+  "piotroski_liquidity_up", "piotroski_no_issuance",
+  "piotroski_margin_up", "piotroski_turnover_up", "mohanram_g7",
+]
+
+# fs2: the 112 ranks plus the 47, 159
+[[features]]
+groups = ["ranks"]
+columns = [
+  "fundamentals_age_days", "has_filing_183d", "has_filing_365d",
+  "negative_equity", "negative_ebitda", "negative_ev",
+  "revenue_up_frac_4q", "revenue_up_frac_8q", "revenue_up_frac_12q",
+  "revenue_up_frac_20q", "tangibles_up_frac_4q", "tangibles_up_frac_8q",
+  "tangibles_up_frac_12q", "tangibles_up_frac_20q", "ocf_up_frac_4q",
+  "ocf_up_frac_8q", "ocf_up_frac_12q", "ocf_up_frac_20q",
+  "ocf_positive_frac_4q", "ocf_positive_frac_8q",
+  "ocf_positive_frac_12q", "ocf_positive_frac_20q",
+  "fund_history_quarters", "div_years_paid_10y", "div_streak_10y",
+  "div_cuts_10y", "div_history_years_10y", "earnings_yield_5y_pctile",
+  "ocf_yield_5y_pctile", "fcf_yield_5y_pctile", "sales_yield_5y_pctile",
+  "book_to_market_5y_pctile", "tangible_book_to_market_5y_pctile",
+  "ni_change_scaled", "two_year_loss", "liab_gt_assets", "piotroski_f",
+  "piotroski_roa_positive", "piotroski_cfo_positive",
+  "piotroski_roa_up", "piotroski_cfo_gt_ni", "piotroski_leverage_down",
+  "piotroski_liquidity_up", "piotroski_no_issuance",
+  "piotroski_margin_up", "piotroski_turnover_up", "mohanram_g7",
+]
+
+[model]
+name = "random_forest"
+bootstrap = true
+class_weight = 1.0
+n_jobs = 8

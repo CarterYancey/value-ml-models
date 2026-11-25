@@ -1,0 +1,40 @@
+# Decision 61 (2026-11-25): the candidate's forest, trained on all rows,
+# evaluated inside the fallen universe F50 without refitting. What does
+# the all-rows forest pick among stocks 50% or more below their 5-year
+# high, and what did those picks do? Prediction 5 of decision 61: it
+# picks the calmest fallen stocks, with fewer losers and a lower mean
+# CAGR than a forest trained inside F50.
+name = "screen_fallen50_peers"
+top_k = [20, 50]
+precision_targets = [0.75, 0.9]
+pick_outcomes = [
+  "label_3y_beat_spy",
+  "fwd_3y_excess_cagr",
+  "fwd_3y_cagr",
+  "fwd_3y_max_drawdown_from_entry",
+  "fwd_3y_cagr < 0",
+  "fwd_3y_cagr < -0.1",
+  "fwd_3y_max_drawdown_from_entry >= 0.4",
+  "fwd_3y_cagr >= 0.15",
+  "fwd_3y_cagr >= 0.26",
+  "fwd_3y_excess_cagr >= 0.05",
+  "fwd_3y_excess_cagr >= 0.1",
+]
+
+[pick_screen]
+per = "quarter"
+top_k = 10
+max_per_group = 2
+group_column = "sector"
+peer_column = "log_marketcap_rank"
+peer_bins = 20
+
+[[universe]]
+column = "dist_5y_high"
+op = "<="
+value = -0.5
+
+[[universe]]
+column = "dollar_volume_3m"
+op = ">="
+value = 100000

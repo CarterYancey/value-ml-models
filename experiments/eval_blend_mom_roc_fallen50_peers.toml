@@ -1,0 +1,40 @@
+# Decision 61 (2026-11-25): the candidate's mean-rank blend (forest,
+# momentum, return on capital) evaluated inside the fallen universe F50
+# without refitting, the screen read with same-size fallen peers.
+name = "blend_mom_roc_fallen50_peers"
+blend = [
+  "experiments/models/factor_mom_12_2_3y_v141_121349f6e682",
+  "experiments/models/factor_roc_greenblatt_3y_v141_4457ca01bcfb",
+]
+top_k = [20, 50]
+pick_outcomes = [
+  "label_3y_beat_spy",
+  "fwd_3y_excess_cagr",
+  "fwd_3y_cagr",
+  "fwd_3y_max_drawdown_from_entry",
+  "fwd_3y_cagr < 0",
+  "fwd_3y_cagr < -0.1",
+  "fwd_3y_max_drawdown_from_entry >= 0.4",
+  "fwd_3y_cagr >= 0.15",
+  "fwd_3y_cagr >= 0.26",
+  "fwd_3y_excess_cagr >= 0.05",
+  "fwd_3y_excess_cagr >= 0.1",
+]
+
+[pick_screen]
+per = "quarter"
+top_k = 10
+max_per_group = 2
+group_column = "sector"
+peer_column = "log_marketcap_rank"
+peer_bins = 20
+
+[[universe]]
+column = "dist_5y_high"
+op = "<="
+value = -0.5
+
+[[universe]]
+column = "dollar_volume_3m"
+op = ">="
+value = 100000
