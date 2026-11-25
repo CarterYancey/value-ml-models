@@ -175,10 +175,12 @@ invariant 4.
    number of earlier falls of 50% or more in the stock's history, with
    the share of them that recovered, which says whether the stock has
    done this before.
-3. **A 10-year record exists only for dividends.** Three counts would
-   extend it: the number of the last ten fiscal years with positive net
-   income, the number with positive operating cash flow, and the number
-   with revenue above the year before. The dividend columns carry the
+3. **A 10-year record exists only for dividends.** Three counts over the last ten
+   fiscal years would extend it:
+   - the years with positive net income
+   - the years with positive operating cash flow
+   - the years with revenue above the year before
+ The dividend columns carry the
    strongest conditioning of any column in the tables above.
 4. **The fall is not measured against the sector or the market.** Two
    columns would do that: the stock's `dist_5y_high` minus its sector's
@@ -187,14 +189,14 @@ invariant 4.
    different case from one that fell alone. The market's distance from
    its high is part of the market-state request of 2026-11-23.
 5. **A true recovery label is missing.** "The forward path reached the
-   entry-date 5-year high within H years" is row-wise, and it needs the
-   forward path's maximum, which the labels do not store. The dataset
+   entry-date 5-year high within H years" is a row-wise label. It needs
+   the forward path's maximum, which the labels do not store. The dataset
    stores only the terminal window's maximum. Such a label would say
    whether a stock came all the way back. The recovery label here says
    only that it doubled.
 6. **The peer-relative label of 2026-11-23 is still wanted.** Inside the
-   fallen universe the base rate of every label moves with the year of
-   entry, from 0.04 to 0.35. No model of a stock's own columns can be
+   fallen universe every label's base rate depends on the year of entry
+   and ranges from 0.04 to 0.35. No model of a stock's own columns can be
    calibrated to that.
 7. **The price history is short.** Sharadar's prices start in 1998, so
    `dist_5y_high` exists from 2002, and a 10-year high would exist from
