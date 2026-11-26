@@ -10,6 +10,7 @@ wherever it would name a stored `label_*` column:
     label = "fwd_3y_cagr >= 0.1 & fwd_3y_max_drawdown < 0.3"
     label = "fwd_3y_excess_cagr > 0 & fwd_1y_max_drawdown_from_entry < 0.1"
     label = "(fwd_3y_cagr >= 0.15 | fwd_3y_excess_cagr >= 0.05) & fwd_3y_max_drawdown < 0.4"
+    label = "fwd_3y_path_avg_return > fwd_3y_spy_path_avg_return"
 
 Grammar (deliberately tiny, parsed — never `eval`'d; `&` binds tighter
 than `|`, parentheses group):
@@ -17,12 +18,21 @@ than `|`, parentheses group):
     expr      := term ("|" term)*
     term      := atom ("&" atom)*
     atom      := "(" expr ")" | condition
-    condition := column op literal
+    condition := column op (literal | column)
     op        := ">=" | ">" | "<=" | "<" | "==" | "!="
     literal   := number | true | false
 
-- `column` must be declared in the manifest `labels` group (checked by
-  `Dataset.derived_label`) and carry a `{H}y` horizon token.
+- Every `column` must be declared in the manifest `labels` group (checked
+  by `Dataset.derived_label`) and carry a `{H}y` horizon token.
+- The right-hand side may be a second label column (v1.5, data/labels.md
+  "the full-path columns"): `fwd_3y_path_avg_return >
+  fwd_3y_spy_path_avg_return` is the endpoint-free "beat SPY", and
+  `fwd_3y_max_drawdown_from_entry <= fwd_3y_spy_max_drawdown_from_entry`
+  "fell no further than the market". Still a function of the row's own
+  outcome columns, so the purge and embargo cover it as they cover a
+  stored label; NULL on either side is unobservable. Arithmetic between
+  columns is not offered — a ratio or difference target is an upstream
+  label.
 - **Mixed horizons are allowed; the longest one governs.** Every
   horizon's window starts at `snapshot_date`, so a shorter window lies
   inside the longest and the union of the windows *is* the longest
@@ -70,12 +80,17 @@ from dataclasses import dataclass
 from harness.errors import ConfigError
 
 _OPS = (">=", "<=", "==", "!=", ">", "<")
+#: the same comparison read from the other side
+_MIRROR = {">=": "<=", "<=": ">=", ">": "<", "<": ">", "==": "==", "!=": "!="}
 _OP_SLUG = {">=": "ge", ">": "gt", "<=": "le", "<": "lt", "==": "eq", "!=": "ne"}
 _IDENT = r"[A-Za-z_][A-Za-z0-9_]*"
 _CONDITION = re.compile(
     rf"^\s*(?P<column>{_IDENT})"
     r"\s*(?P<op>>=|<=|==|!=|>|<)\s*(?P<literal>\S+)\s*$"
 )
+_IDENT_ONLY = re.compile(rf"^{_IDENT}$")
+#: identifiers float() would accept (inf, nan, infinity): literals, not columns
+_NUMBER_LIKE = re.compile(r"^(?:[+-]?)(?:inf|infinity|nan)$", re.IGNORECASE)
 _HORIZON = re.compile(r"(?:^|_)(\d+)y(?:_|$)")
 #: the expression tokens; anything between them is a condition
 _TOKEN = re.compile(r"\(|\)|&|\||[^()&|]+")
@@ -89,36 +104,55 @@ def is_derived_label(label: str) -> bool:
     return any(ch in _EXPRESSION_CHARS for ch in label)
 
 
+def _column_horizon(column: str) -> int:
+    m = _HORIZON.search(column)
+    if m is None:
+        raise ConfigError(
+            f"label expression: column {column!r} carries no "
+            "`{H}y` horizon token; derived labels are built from the "
+            "per-horizon outcome columns only"
+        )
+    return int(m.group(1))
+
+
 @dataclass(frozen=True)
 class Condition:
     column: str
     op: str
-    #: float for numeric comparisons, bool for boolean label columns
-    value: float | bool
+    #: float for numeric comparisons, bool for boolean label columns;
+    #: a str names a second label column the first is compared with
+    value: float | bool | str
+
+    @property
+    def other_column(self) -> str | None:
+        """The right-hand label column of a column-vs-column condition,
+        else None."""
+        return self.value if isinstance(self.value, str) else None
 
     @property
     def literal(self) -> str:
+        if isinstance(self.value, str):
+            return self.value
         if isinstance(self.value, bool):
             return "true" if self.value else "false"
         return repr(float(self.value))
 
     @property
+    def columns(self) -> tuple[str, ...]:
+        """Every label column the condition reads."""
+        other = self.other_column
+        return (self.column,) if other is None else (self.column, other)
+
+    @property
     def horizon_years(self) -> int:
-        m = _HORIZON.search(self.column)
-        if m is None:
-            raise ConfigError(
-                f"label expression: column {self.column!r} carries no "
-                "`{H}y` horizon token; derived labels are built from the "
-                "per-horizon outcome columns only"
-            )
-        return int(m.group(1))
+        return max(_column_horizon(c) for c in self.columns)
 
     def canonical(self) -> str:
         return f"{self.column} {self.op} {self.literal}"
 
     def slug(self) -> str:
         col = self.column.removeprefix("fwd_")
-        lit = self.literal.replace("-", "m").replace(".", "p")
+        lit = self.literal.removeprefix("fwd_").replace("-", "m").replace(".", "p")
         return f"{col}_{_OP_SLUG[self.op]}_{lit}"
 
 
@@ -149,12 +183,16 @@ class DerivedLabel:
 
     @property
     def source_columns(self) -> tuple[str, ...]:
-        return tuple(dict.fromkeys(c.column for c in self.conditions))
+        return tuple(
+            dict.fromkeys(col for c in self.conditions for col in c.columns)
+        )
 
     @property
     def horizons(self) -> tuple[int, ...]:
         """Every horizon the expression references, ascending."""
-        return tuple(sorted({c.horizon_years for c in self.conditions}))
+        return tuple(
+            sorted({_column_horizon(col) for col in self.source_columns})
+        )
 
     @property
     def horizon_years(self) -> int:
@@ -169,10 +207,18 @@ class DerivedLabel:
         )
 
 
-def _parse_literal(text: str, expr: str) -> float | bool:
+def _parse_literal(text: str, expr: str) -> float | bool | str:
     low = text.lower()
     if low in ("true", "false"):
         return low == "true"
+    if _IDENT_ONLY.match(text) and not _NUMBER_LIKE.match(text):
+        if _HORIZON.search(text) is None:
+            raise ConfigError(
+                f"label expression {expr!r}: {text!r} is not a number, "
+                "true/false, or a per-horizon label column (no `{H}y` "
+                "horizon token)"
+            )
+        return text  # a second label column
     try:
         value = float(text)
     except ValueError:
@@ -204,6 +250,14 @@ def _parse_condition(text: str, expr: str) -> Condition:
             f"label expression {expr!r}: true/false only compare with "
             "== or !="
         )
+    if isinstance(value, str):
+        if value == column:
+            raise ConfigError(
+                f"label expression {expr!r}: {column!r} compared with itself"
+            )
+        if value < column:  # one spelling per pair: `a > b` is `b < a`
+            column, value = value, column
+            op = _MIRROR[op]
     cond = Condition(column, op, value)
     cond.horizon_years  # a column without a horizon token fails here
     return cond

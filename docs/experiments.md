@@ -73,6 +73,16 @@ label = "(fwd_3y_cagr >= 0.15 | fwd_3y_excess_cagr >= 0.05) & fwd_3y_max_drawdow
   joined by `&` and `|` (`&` binds tighter; parentheses group);
   literals are numbers, or `true`/`false` for boolean columns. Parsed,
   never `eval`'d.
+- **A column may be compared with a second label column** (from
+  `dataset_v1.5`, whose full-path labels carry SPY's own path):
+  `fwd_3y_path_avg_return > fwd_3y_spy_path_avg_return` is the
+  endpoint-free "beat SPY" of data/labels.md, and
+  `fwd_3y_max_drawdown_from_entry <= fwd_3y_spy_max_drawdown_from_entry`
+  "fell no further than the market". Both columns must be numeric
+  label columns; a NULL on either side is unobservable; the two
+  spellings of one comparison (`a > b`, `b < a`) normalize to one
+  cell. Arithmetic between columns (a ratio, a difference) is not
+  offered: that target is an upstream label.
 - Columns must be in the manifest `labels` group (outcomes, never
   features). **Mixed horizons are allowed and the longest governs**:
   every window starts at the snapshot, so a `1y & 3y` label's window

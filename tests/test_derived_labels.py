@@ -278,3 +278,68 @@ def test_mixed_horizon_label_runs_under_the_longest_horizon(
     assert set(store["horizon_years"].astype(int)) == {3}
     report = (tmp_path / "reports" / "mixed.md").read_text()
     assert "Mixed horizons" in report and "sample_weight_3y" in report
+
+
+# ------------------------------------------- column-vs-column conditions
+
+
+def test_column_comparison_parses_and_normalizes_to_one_spelling():
+    a = parse_label_expression(
+        "fwd_3y_path_avg_return > fwd_3y_spy_path_avg_return"
+    )
+    b = parse_label_expression(
+        "fwd_3y_spy_path_avg_return < fwd_3y_path_avg_return"
+    )
+    assert a.name == b.name == (
+        "fwd_3y_path_avg_return > fwd_3y_spy_path_avg_return"
+    )
+    assert a.source_columns == (
+        "fwd_3y_path_avg_return", "fwd_3y_spy_path_avg_return",
+    )
+    assert a.horizon_years == 3
+    assert normalize_label(a.name) == a.name
+    (cond,) = a.conditions
+    assert cond.other_column == "fwd_3y_spy_path_avg_return"
+    slug = label_slug(a.name)
+    assert all(ch.isalnum() or ch in "_-" for ch in slug)
+    assert "spy_path_avg_return" in slug
+
+
+def test_column_comparison_takes_the_longest_horizon_of_both_sides():
+    spec = parse_label_expression("fwd_1y_cagr >= fwd_3y_cagr")
+    assert spec.horizons == (1, 3)
+    assert spec.horizon_years == 3
+    assert infer_horizon_years("fwd_1y_cagr >= fwd_3y_cagr") == 3
+
+
+@pytest.mark.parametrize(
+    "expr, match",
+    [
+        ("fwd_3y_cagr > fwd_3y_cagr", "compared with itself"),
+        ("fwd_3y_cagr > some_feature", "horizon token"),
+        ("fwd_3y_cagr == inf", "finite"),
+    ],
+)
+def test_malformed_column_comparisons_are_refused(expr, match):
+    with pytest.raises(ConfigError, match=match):
+        parse_label_expression(expr)
+
+
+def test_column_comparison_evaluates_row_wise_with_null_propagation(dataset_dir):
+    ds = Dataset(dataset_dir)
+    label = "fwd_1y_cagr >= fwd_3y_cagr"
+    frame = ds.frame(["fwd_1y_cagr", "fwd_3y_cagr", label])
+    a, b = frame["fwd_1y_cagr"], frame["fwd_3y_cagr"]
+    observed = a.notna() & b.notna()
+    assert frame[label].isna().equals(~observed)
+    expected = (a[observed] >= b[observed]).astype("boolean")
+    assert frame.loc[observed, label].equals(expected)
+    assert observed.any() and (~observed).any()
+
+
+def test_column_comparison_checks_both_columns_against_the_manifest(dataset_dir):
+    ds = Dataset(dataset_dir)
+    with pytest.raises(DatasetValidationError, match="not in the"):
+        ds.derived_label("fwd_3y_cagr > fwd_3y_spy_path_avg_return")
+    with pytest.raises(DatasetValidationError, match="boolean"):
+        ds.frame(["fwd_3y_cagr > label_3y_beat_spy"])

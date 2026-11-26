@@ -357,6 +357,24 @@ def evaluate_derived_label(label: DerivedLabel, data: pd.DataFrame) -> pd.Series
         col = data[cond.column]
         unobservable |= col.isna()
         observed = col.dropna()
+        if cond.other_column is not None:
+            other = data[cond.other_column]
+            unobservable |= other.isna()
+            for name, series in ((cond.column, observed),
+                                 (cond.other_column, other.dropna())):
+                if len(series) and _is_boolean_values(series):
+                    raise DatasetValidationError(
+                        f"label expression {label.name!r}: {name!r} is a "
+                        "boolean column; a column is compared with another "
+                        "column only when both are numeric"
+                    )
+            vals = pd.to_numeric(col, errors="raise").astype(float)
+            rhs = pd.to_numeric(other, errors="raise").astype(float)
+            hit = _COMPARE[cond.op](vals, rhs)
+            hits[cond.canonical()] = (
+                pd.Series(hit, index=data.index).fillna(False).astype(bool)
+            )
+            continue
         if isinstance(cond.value, bool):
             if not _is_boolean_values(observed):
                 raise DatasetValidationError(
