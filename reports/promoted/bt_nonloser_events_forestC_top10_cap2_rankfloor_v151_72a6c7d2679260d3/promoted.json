@@ -1,0 +1,14 @@
+{
+  "name": "bt_nonloser_events_forestC_top10_cap2_rankfloor_v151_72a6c7d2679260d3",
+  "promoted_utc": "2026-11-26T09:26:24+00:00",
+  "source_report": "reports/backtest/bt_nonloser_events_forestC_top10_cap2_rankfloor_v151_72a6c7d2679260d3.md",
+  "run_id": "",
+  "config_hash": "",
+  "git_sha": "",
+  "dataset_version": "",
+  "config_path": "",
+  "note": "the forest with the fourteen 8-K counts, alone, under the candidate's rule: 571,211, 5.1% less money than without them, with the buys a point further ahead of same-size peers; 7% ahead at end-2015, 4% behind at end-2020 (decision 77)",
+  "files": [
+    "bt_nonloser_events_forestC_top10_cap2_rankfloor_v151_72a6c7d2679260d3.md"
+  ]
+}

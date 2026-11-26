@@ -1,0 +1,14 @@
+{
+  "name": "bt_nonloser_forestC_top10_cap2_rankfloor_v151_a7158119062b9d6f",
+  "promoted_utc": "2026-11-26T09:26:22+00:00",
+  "source_report": "reports/backtest/bt_nonloser_forestC_top10_cap2_rankfloor_v151_a7158119062b9d6f.md",
+  "run_id": "",
+  "config_hash": "",
+  "git_sha": "",
+  "dataset_version": "",
+  "config_path": "",
+  "note": "the candidate's forest alone (112 old ranks) on dataset_v1.5.1 under the candidate's rule: 602,079 on 192,000 against SPY's 732,110, CAGR 9.97%, drawdown -48.3%; the control of the 8-K counts' money test (decision 77)",
+  "files": [
+    "bt_nonloser_forestC_top10_cap2_rankfloor_v151_a7158119062b9d6f.md"
+  ]
+}

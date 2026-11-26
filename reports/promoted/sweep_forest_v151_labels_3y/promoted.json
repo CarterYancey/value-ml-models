@@ -1,0 +1,14 @@
+{
+  "name": "sweep_forest_v151_labels_3y",
+  "promoted_utc": "2026-11-26T09:25:58+00:00",
+  "source_report": "reports/sweeps/forest_v151_labels_3y/forest_v151_labels_3y_summary.md",
+  "run_id": "",
+  "config_hash": "",
+  "git_sha": "",
+  "dataset_version": "dataset_v1.5.1",
+  "config_path": "experiments/sweeps/forest_v151_labels_3y.toml",
+  "note": "the full-path labels of v1.5.1 beside cell C: the path-positive 'not a loser' is the same arm; every market-relative label (against SPY's path or drawdown) is behind cell C on losers and below a single-factor bar on p@20 (decision 75)",
+  "files": [
+    "forest_v151_labels_3y_summary.md"
+  ]
+}
