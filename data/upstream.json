@@ -1,22 +1,22 @@
 {
   "upstream_repo": "https://github.com/CarterYancey/radarash-dataset",
   "upstream_root": "/home/carter/radarash-dataset",
-  "upstream_commit": "54b57fac532c58db9243ca3d72c352df8d620013",
-  "upstream_branch": "Claude",
+  "upstream_commit": "bec045cdcdb10c734b262f6cf5abe636ce43601e",
+  "upstream_branch": "claude/v1.5-path-labels-fundhist-events",
   "upstream_dirty": false,
-  "synced_utc": "2026-11-24T09:07:50+00:00",
+  "synced_utc": "2026-11-26T05:31:39+00:00",
   "files": {
     "manual.md": {
       "upstream_path": "docs/manual.md",
-      "sha256": "3b6fa60c616f64763afe21ae5a061d2d17a3ab3cdb040883acaf9b420f0b588b"
+      "sha256": "c92027207b2d2060e37c8ac5d602e8d5d645d0dd40f7b39d1040c8616b8fdcf7"
     },
     "dataset.md": {
       "upstream_path": "docs/dataset.md",
-      "sha256": "dd7acde4fb853628eddfac720d2a6f2815d5d531e87ba3d040f985c618de0570"
+      "sha256": "e881be2440d76a1822a3709b089b0d428693146517a95f074c5686a2030cbb57"
     },
     "labels.md": {
       "upstream_path": "docs/labels.md",
-      "sha256": "d3d8a9de109a008fa6ed8749b9ab4ce7608f5e684694b6027927c852022b4fe7"
+      "sha256": "1ea77112fc6e7b40cb7d2c78cb76bd39aae3ddb65fb2f12c7c143a3f1f674b7c"
     },
     "splits.md": {
       "upstream_path": "docs/splits.md",
@@ -24,7 +24,7 @@
     },
     "features.md": {
       "upstream_path": "docs/features.md",
-      "sha256": "e034f9b1afac5b0e3f00d6f0404f38e5aca5013bd5a6e4a2720dbcd35508cbff"
+      "sha256": "ff88f325552eebc8aeb173a220f471c5bb13f0e39297ae0968950134ab7a7bba"
     }
   }
 }
