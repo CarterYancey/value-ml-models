@@ -490,3 +490,152 @@ NULLs natively, so raw feature columns need no imputation.
 7. **Records.** Runs on `claude/lab-2026-11-26` (the same session); the
    results branch gets a second commit unless Carter has merged it by
    then, in which case a new results branch is cut off `Claude`.
+
+### 79. The rare-region program: emphasis weights, the region as a universe, subspace forests, the upper tail as a regression
+
+*What happened (2026-11-26, after sweep A of decision 78 was read).*
+Sweep A (`forest_fund_labels_3y`, 30 runs; tables in
+`docs/notes/2026-11-26-rare-region.md`) answered the feature-set half of
+Carter's request. No fundamentals-only arm passes rule 74.4 against the
+control (cell C × the 112 old ranks: lead +0.029 a year, losers 0.167).
+The raw fundamentals without any price column (fs1, 193) lose 0.091 of
+p@20, hold the lead within noise (−0.004, 7 of 16 years ahead) and take
+6.7 points more losers; the forest builds itself on operating cash flow
+instead of on the volatility ranks. The rank group without the technical
+family plus the 28 unranked history columns (fs2, 162) matches the
+control's lead exactly in cell C with 5.6 points more losers, and on the
+three harder cells it is the only set ahead of its fs0 twin. The compact
+own-history sets (fs3, fs4) are behind fs1 everywhere; the three fall
+columns add nothing. The run-up label with a 40% drawdown cap (`fwd_3y_max_runup
+>= 1.0 & fwd_3y_max_drawdown_from_entry < 0.4`) on fs0 is a one-month
+reversal forest with a lead of +0.081 a year over the control (t 5.3, 15
+of 16 years, both halves) and 38% losers against 17%; its picks' same-size
+peers lose money a third to a half of the time in every year after 2008,
+so the lead is over a bad neighbourhood, and it fails 74.4 on losers.
+
+Sweep A also sharpens Carter's concern: the dominating columns are the
+volatility ranks (a third of the importance in the control), and removing
+them costs losers, not lead. A model that finds the rare region has to
+keep the common structure (calm is good) and still split on what
+separates recoveries inside the region. That is what the pieces below
+try, in the order decision 78.6 set.
+
+*The region* is the same in every piece: training rows inside the 100k
+floor, 40% or more below their 5-year high (`dist_5y_high <= -0.4`), with
+operating cash flow positive in 18 of the last 20 quarters
+(`ocf_positive_frac_20q >= 0.9`). It is 16% of the liquid test rows
+(32,052), mean 3-year CAGR +0.034 against −0.032 for all fallen liquid
+rows and +0.004 for all liquid rows; 35% of its rows double, 38% lose
+half. Training rows inside it are thin early (fold 2006: 705 rows,
+effective size 20; fold 2012: 18,052 rows, effective size 520).
+
+*What was added to measure the predictions.* The harness did not say
+where a screen's picks come from, so `[pick_screen] region` was added
+on `claude/emphasis-weights`: a region of feature-column filters whose
+share among the picks, their peers and the top K the report carries as
+the binary pick outcome `in_region` (`screen_mean_in_region`,
+`screen_peer_mean_in_region`); a NULL counts as outside, a label can
+never be a region, the field is part of the config hash like the rest
+of the screen. Every sweep below declares the region there, and
+`forest_fund_control_region_3y` (1 run) re-runs the control with it so
+the control's share is known; its model-side numbers must reproduce
+sweep A's run to the digit, which is a reproducibility check for free.
+
+*The pieces, and what each one runs.* Each sweep uses the candidate's
+forest configuration (decision 24) unless it says otherwise, seed 23, the
+same 22 pick outcomes as sweep A, and is read inside the 100k floor on
+the same-size screen. Feature sets in each: fs0 the 112 old ranks (the
+control set), fs1 = sweep A's fs2 (162, ranks without the technical
+family plus the unranked history columns; replaces the raw set, which
+sweep A placed last), fs2 = sweep A's fs4 (77, the compact own-history
+set plus the price against its own past). The control for every arm is
+cell C × fs0 of sweep A, paired by test year; each arm is also read
+against the same cell × set without the piece's change (sweep A's run).
+
+1. **Emphasis weights** (`forest_emph3_fund_3y`, `forest_emph10_fund_3y`,
+   9 runs each): `[emphasis] factor = 3 | 10` on the region, cells C,
+   'doubled without a crash' (run-up ≥ 1.0 & dd < 0.4) and 'a real gain
+   without a crash' (cagr ≥ 0.15 & dd < 0.3). The code is on
+   `claude/emphasis-weights` (commit 340ded7, 19 tests, 564 in all): the
+   factor multiplies the mandatory sample weight of the training rows
+   inside the region after `year_balance`, test rows untouched, the
+   region's share of each fold's training weight disclosed in the
+   report, the field in the config hash and in bundles, so a deployment
+   refit carries it.
+2. **The region as a universe** (`forest_region_universe_3y`, 6 runs):
+   `universe_scope = "all"` on the region, folds 2008–20, cells C and
+   'doubled without a crash'. The starved version of piece 1: the model
+   never sees a row outside the region, and its peers are the same-size
+   rows inside it, so its lead is not comparable with the control's and
+   is read against the region's own base rates (cell C's inside the
+   region is reported per fold by the run).
+3. **Random-subspace forests** (`forest_subspace_fund_3y`, 12 runs):
+   `max_features = 0.05` (5–8 columns a split) at depth 8 with leaf 30,
+   and at the candidate's depth 4 with leaf 72; cells C and 'doubled
+   without a crash'. **LightGBM at `colsample_bytree = 0.1`**
+   (`lgbm_colsample_fund_3y`, 6 runs; the r13 parameters otherwise,
+   class weight 0.25).
+4. **The upper tail as a regression** (`lgbm_quantile_fund_3y`, 6 runs):
+   `lightgbm_regressor`, quantile objective at alpha 0.8 and 0.9 on
+   `fwd_3y_cagr`, evaluated on the cell `fwd_3y_cagr >= 0.2`, fs0, fs1,
+   fs2. The score is a predicted CAGR, not a probability: no Brier, no
+   calibration.
+5. `year_balance = true` on the best arm of piece 1, in its own decision,
+   if piece 1 produces an arm worth it.
+
+*Predictions, written before any of it runs.*
+
+- (a) Emphasis ×3 in cell C on fs0: lead within 0.01 of the control's,
+  losers within 2 points, and the share of its picks inside the region
+  (`screen_mean_in_region`) no more than 10 points above the control's
+  (the control's share is measured by `forest_fund_control_region_3y`
+  and is predicted below 0.15: the control buys calm stocks near their
+  highs). The rival, which is Carter's hypothesis: the region's columns
+  win splits they never won, the picks inside the region rise 10 points
+  or more above the control's share, and the lead is 0.01 or more above
+  the control's in both halves at the same losers. ×10 moves further in the
+  same direction as ×3 and costs losers (3 points or more), because at
+  ×10 the region is near half the training weight in the late folds and
+  the forest's prior becomes "fallen".
+- (b) On fs1 and fs2, emphasis changes the lead by less than its noise
+  (se ≈ 0.01) in cell C; in 'doubled without a crash' it lowers the
+  lead, because the reversal columns that carry that cell on fs0 are not
+  in those sets and the region adds fallen rows that do not recover.
+- (c) The universe arms: lead over in-region peers positive in 10 or
+  more of 13 years for cell C on fs0 (the fallen-stocks finding of
+  decision 63 on a different region), losers 0.30 or more, and nothing
+  on fs1 or fs2 ahead of fs0 inside the region. The emphasis arm of
+  the same cell has fewer losers than the universe arm in every year
+  they share.
+- (d) Subspace forests: p@20 falls 0.03–0.06 below the candidate's forest
+  on fs0 (the forced splits on weak columns dilute the volatility
+  signal); the lead is within noise of the control's and losers 2–4
+  points higher. Depth 8 beats depth 4 on p@20 and not on the screen.
+  Rival: the subspace forest finds the region's columns and its picks'
+  share inside the region is 10 points or more above the control's at
+  the same losers. LightGBM at colsample 0.1 behaves like
+  the subspace forests.
+- (e) Quantile regression at 0.8 and 0.9: screened on `cagr >= 0.2`, the
+  picks are high-volatility small stocks (realized volatility 0.5 or
+  more, like the run-up cell's), losers 0.35 or more, and the lead
+  over same-size peers is positive but no more than the run-up cell's;
+  alpha 0.9 is more extreme than 0.8 on every one of those. Not a
+  candidate for a portfolio; the question it answers is whether asking
+  for the tail finds different stocks than asking for calm, and the
+  prediction is yes.
+- (f) Over the whole program: no arm passes rule 74.4 against the
+  control on both outcomes. The arm most likely to come closest is
+  emphasis ×3 on fs0 in cell C. If an arm does pass, three seeds and a
+  backtest follow in a new decision; if none does, the program's
+  finding is that the rare region does not carry a 3-year edge that
+  the harness can find with weights, universes or subspaces, and the
+  next step belongs to the label (a recovery label measured inside the
+  region, decision 63's open question) or to upstream data.
+
+*Records.* `claude/emphasis-weights` is merged into the lab branch
+between chains (the main checkout's code is not changed while a sweep
+runs); the six configs and this decision are checkpointed before the
+chain starts; sweeps B and C of decision 78 are read when they finish
+and do not change this plan. What is not done: no label or weight read
+from a label column at training time beyond the target, no local feature
+derivation, no holdout look, no deployment change.
