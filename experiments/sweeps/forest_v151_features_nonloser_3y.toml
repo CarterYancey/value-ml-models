@@ -28,6 +28,7 @@
 # Expanded: 1 cell x 6 feature sets x 1 set x 1 seed = 6 runs.
 # Run: .venv/bin/vml-sweep experiments/sweeps/forest_v151_features_nonloser_3y.toml
 name = "forest_v151_features_nonloser_3y"
+note = "dataset_v1.5.1, cell C inside the 100k floor, the candidate's forest at seed 23: no new column set beats the 112 old ranks on both screen outcomes; the history and trend ranks add nothing to the lead and 2 points of losers; fs0 plus the 8-K counts leads by +0.010 a year with more losers (decisions 74, 75)"
 dataset_version = "dataset_v1.5.1"
 min_dataset_version = "1.5"
 scheme = "walkforward"

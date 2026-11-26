@@ -1,0 +1,14 @@
+{
+  "name": "sweep_lgbm_v151_tuned_nonloser_3y",
+  "promoted_utc": "2026-11-26T09:26:00+00:00",
+  "source_report": "reports/sweeps/lgbm_v151_tuned_nonloser_3y/lgbm_v151_tuned_nonloser_3y_summary.md",
+  "run_id": "",
+  "config_hash": "",
+  "git_sha": "",
+  "dataset_version": "dataset_v1.5.1",
+  "config_path": "experiments/sweeps/lgbm_v151_tuned_nonloser_3y.toml",
+  "note": "LightGBM with the best draws of the 2026-09 search on v1.5.1: the forest's p@20 (0.72-0.75) and PR-AUC, and a screen lead of -0.003 to +0.006 a year against the forest's +0.029; the model family sets the picks, not the top-20 precision (decision 76)",
+  "files": [
+    "lgbm_v151_tuned_nonloser_3y_summary.md"
+  ]
+}

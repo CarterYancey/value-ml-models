@@ -27,6 +27,7 @@
 # Expanded: 6 cells x 1 feature set x 1 set x 1 seed = 6 runs.
 # Run: .venv/bin/vml-sweep experiments/sweeps/forest_v151_labels_3y.toml
 name = "forest_v151_labels_3y"
+note = "the full-path labels of v1.5.1 beside cell C: the path-positive 'not a loser' is the same arm; every market-relative label (against SPY's path or drawdown) is behind cell C on losers and below a single-factor bar on p@20 (decision 75)"
 dataset_version = "dataset_v1.5.1"
 min_dataset_version = "1.5"
 scheme = "walkforward"

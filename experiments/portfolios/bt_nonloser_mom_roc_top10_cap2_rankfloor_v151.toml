@@ -1,0 +1,39 @@
+# Decision 76 of docs/notes/2026-11-26-decisions.md (2026-11-26), item 2:
+# the candidate's blend (forest, 12-month momentum, return on capital by
+# mean rank) with the fs0 forest (112 old ranks) on dataset_v1.5.1: the
+# control pair's blend. Carter's rank floor, top 10 a month, 2 per sector,
+# 35 bps; buys 2005-2020 valued 2023-12-29. Not compared with the v1.4.1
+# record. Prediction (76.3): within 2% on money of the fs5 blend.
+name = "bt_nonloser_mom_roc_top10_cap2_rankfloor_v151"
+dataset_version = "dataset_v1.5.1"
+prices_version = "prices_v1.0"
+bundles = [
+    "experiments/models/forest_nonloser_dd30_3y_v151_3ae9c4fdd685",
+    "experiments/models/factor_mom_12_2_3y_v151_14024723ce51",
+    "experiments/models/factor_roc_greenblatt_3y_v151_05dc2c455efc",
+]
+[signal]
+combine = "mean_rank"
+max_staleness_days = 200
+model_update = "refit"
+label_lag_days = 45
+[[investability]]
+column = "dollar_volume_3m_rank"
+op = ">="
+value = 0.2
+[portfolio]
+strategy = "buy_and_hold"
+top_k = 10
+weighting = "equal"
+monthly_cash = 1000.0
+max_per_group = 2
+group_column = "sector"
+[execution]
+cost_bps = 35.0
+benchmark_cost_bps = 0.0
+max_quote_age_days = 3
+delist_after_days = 30
+[window]
+start = 2005-01-01
+end = 2020-12-31
+valuation_end = 2023-12-29

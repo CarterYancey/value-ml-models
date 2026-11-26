@@ -19,6 +19,7 @@
 # fs5 of the parent sweep (the old ranks plus the 8-K counts).
 # Run: .venv/bin/vml-sweep experiments/sweeps/forest_v151_features_seeds_3y.toml
 name = "forest_v151_features_seeds_3y"
+note = "fs0, fs1 and fs5 at seeds 232 and 1776: the 8-K counts' lead over the control holds at +0.011 a year at three seeds (t 2.4, 13 of 16 years) with 1.4 points more losers; the full rank set's loser penalty is a first-half effect at 1.6 se (decision 76)"
 dataset_version = "dataset_v1.5.1"
 min_dataset_version = "1.5"
 scheme = "walkforward"

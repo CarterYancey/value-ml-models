@@ -682,6 +682,52 @@ in [PLAN.md](PLAN.md); check items off (and add new ones) as work proceeds.
       `n_estimators`) at full budget via a follow-up sweep file — no
       harness change needed, just two sweep configs.
 
+### Next, after 2026-11-26 (decisions 74 to 77)
+
+Upstream shipped `dataset_v1.5.1` (the fundamental-history family, a
+wider trend family, fourteen 8-K event counts, full-path labels). The
+program of decision 74 ran it through cell C with the candidate's
+forest, LightGBM and XGBoost, and through five new label cells, inside
+the 100k floor on the same-size screen (note
+docs/notes/2026-11-26-v151-program.md). No new column set, label or
+booster improves on the candidate's forest on the 112 old ranks. The
+one screen gain beyond noise, the 8-K counts (+0.011 a year over
+same-size peers at three seeds), ended with 5.1% less money alone and
+8.6% less in the candidate's blend (decision 77). The program is
+closed with no change to the candidate.
+
+- [ ] **Carter merges `claude/results-2026-11-26`.** It carries the
+      v1.5.1 support code (`claude/v151-support`: the `fundhist` and
+      `events` families, label expressions comparing two label columns,
+      the versions row), decisions 74 to 77, the program note and the
+      promoted records. After the merge, from any other branch, run
+      `uv run vml-queue archive-lab claude/lab-2026-11-26 --delete`.
+- [ ] **A backtest on `dataset_v1.5.1` peaks at 12.4 to 13.8 GB of the
+      sandbox's 14** (decision 77.4; 9.7 GB on v1.4.1). Before any
+      backtest chain runs unattended on this build, cut the backtest's
+      memory: it loads every feature column of the dataset where the
+      bundles' own columns would do. Until then, one backtest at a
+      time with nothing else in memory.
+- [ ] **The dataset of record for new work is `dataset_v1.5.1`.** The
+      candidate's blend on it reproduces the v1.4.1 record to the
+      dollar (932,471 on 192,000 to 2023-12-29), so the candidate's
+      legs are not refit and paper trading continues from the v1.4.1
+      bundles. A refit on v1.5.1 is due when upstream changes a column
+      the candidate reads.
+- [ ] Upstream observation (for the watch list): of the fourteen 8-K
+      counts, the forest used two (earnings releases and officer
+      changes in the trailing year); the other twelve had an importance
+      under 1e-3, and nine under 1e-4. The counts are an era marker
+      before 2005 (data/versions.md), which did not show in the screen.
+- [ ] The market-relative labels (beating SPY's path, a drawdown no
+      deeper than SPY's) are below a single-factor bar on precision
+      and behind cell C on losers. The peer-relative label stays an
+      upstream request (decision 73's list); nothing here is learnable
+      against SPY with these columns.
+- [ ] Carter's open decisions of 2026-11-25 stand unchanged (the
+      larger-half filter, the training cutoff, the F50 portfolio, the
+      price floor, the Foamex request).
+
 ### Next, after 2026-11-25, second session (decisions 61 to 73)
 
 The fallen-stock program (decisions 61 to 73, note

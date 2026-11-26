@@ -16,6 +16,7 @@
 # Expanded: 1 cell x 2 feature sets x 2 sets x 1 seed = 4 runs.
 # Run: .venv/bin/vml-sweep experiments/sweeps/lgbm_v151_tuned_nonloser_3y.toml
 name = "lgbm_v151_tuned_nonloser_3y"
+note = "LightGBM with the best draws of the 2026-09 search on v1.5.1: the forest's p@20 (0.72-0.75) and PR-AUC, and a screen lead of -0.003 to +0.006 a year against the forest's +0.029; the model family sets the picks, not the top-20 precision (decision 76)"
 dataset_version = "dataset_v1.5.1"
 min_dataset_version = "1.5"
 scheme = "walkforward"

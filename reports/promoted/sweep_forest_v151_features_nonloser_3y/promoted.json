@@ -1,0 +1,14 @@
+{
+  "name": "sweep_forest_v151_features_nonloser_3y",
+  "promoted_utc": "2026-11-26T09:25:56+00:00",
+  "source_report": "reports/sweeps/forest_v151_features_nonloser_3y/forest_v151_features_nonloser_3y_summary.md",
+  "run_id": "",
+  "config_hash": "",
+  "git_sha": "",
+  "dataset_version": "dataset_v1.5.1",
+  "config_path": "experiments/sweeps/forest_v151_features_nonloser_3y.toml",
+  "note": "dataset_v1.5.1, cell C inside the 100k floor, the candidate's forest at seed 23: no new column set beats the 112 old ranks on both screen outcomes; the history and trend ranks add nothing to the lead and 2 points of losers; fs0 plus the 8-K counts leads by +0.010 a year with more losers (decisions 74, 75)",
+  "files": [
+    "forest_v151_features_nonloser_3y_summary.md"
+  ]
+}

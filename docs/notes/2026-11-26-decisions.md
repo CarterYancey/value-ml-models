@@ -281,3 +281,70 @@ family sets the picks, not the top-20 precision.
 4. **Bundles** come from `vml-run` of four configs on v1.5.1: the two
    forests (`forest_nonloser_dd30_3y_v151`, `forest_nonloser_dd30_3y_events_v151`)
    and the two factor legs (`factor_mom_12_2_3y_v151`, `factor_roc_greenblatt_3y_v151`).
+
+### 77. The counts lose money in both arrangements: the v1.5.1 program closes
+
+*What happened (2026-11-26):* the four backtests of decision 76 ran
+(2.3 minutes each; **peak RSS 12.4 to 13.8 GB of the sandbox's 14**,
+the widest dataset yet). Seed 23, buys 2005–2020 on 192,000 of
+deposits, valued 2023-12-29, SPY on the same deposits 732,110 (TWR
+9.58%).
+
+| arrangement | forest | final value | CAGR | TWR | worst drawdown | buys | lost money over 3y | lead over same-size peers, 3y |
+|---|---|---|---|---|---|---|---|---|
+| forest alone | fs0 (112 ranks) | 602,079 | 9.97% | 9.38% | −48.3% | 1,850 | 0.185 | +2.6 points |
+| forest alone | fs5 (+ 8-K counts) | 571,211 | 9.52% | 9.17% | −45.8% | 1,858 | 0.197 | +3.6 points |
+| blend (candidate's rule) | fs0 | 932,471 | 13.65% | 11.76% | −41.0% | 1,741 | 0.215 | +5.2 points |
+| blend | fs5 | 851,928 | 12.89% | 11.24% | −40.2% | 1,760 | 0.212 | +5.2 points |
+
+The fs5 forest alone ends with 5.1% less money than fs0, the fs5 blend
+with 8.6% less. The equity curves say when: the forest-alone fs5
+portfolio was 7% ahead at the end of 2015 (271,229 against 253,112),
+level at the end of 2018 and 4% behind at the end of 2020 (474,028
+against 493,540); the blend with fs5 was behind from 2015 on (290,907
+against 299,156; 677,472 against 728,211 at the end of 2020). The
+buys' lead over same-size peers is a point higher with the counts in
+the forest-alone pair, as the screen said, and the same in the blend.
+
+The fs0 blend on `dataset_v1.5.1` ends with exactly the v1.4.1
+candidate's final value (932,471; 728,211 at the end of 2020). That
+is a measurement, not a comparison for a conclusion: the builds share
+the snapshot and the 112 rank columns' values (data/versions.md), so
+the same seed gives the same forest and the same trades. It says the
+v1.5.1 control is the candidate.
+
+*Predictions of 76.3.* Both contradicted, downward: the forest-alone
+pair is 5.1% apart, not within 3%, and the blend pair 8.6%, not within
+2%. The rival (fs5 5% or more above) is rejected. The pattern of
+decision 51 holds a third time, and more strongly: a lead over
+same-size peers on the screen, +1.1 points a year at three seeds, and
+a point more on the backtest's own buys, became less money. The lead
+was earned in 2011–2015, when the account was small; the holdings of
+2016–2020, when it was large, did worse. Why the counts' picks did
+worse then is open and not pursued: the counts are not carried.
+
+*Decided:*
+
+1. **The 8-K counts are not carried** into the candidate's forest, by
+   decision 74.6 (losers) and by the money (this decision). The arm is
+   closed; the record is the three-seed screen and these four runs.
+2. **The v1.5.1 program is closed.** On this build, in cell C: no new
+   column set, no new label and no booster improves on the candidate's
+   forest on the 112 old ranks. The path-average twin of cell C is an
+   equivalent label. The market-relative labels are not learnable by
+   the forest here (below a trivial bar). The dataset of record for new
+   work is `dataset_v1.5.1`, and the candidate's record on it is the
+   v1.4.1 record to the dollar; the candidate's legs are not refit.
+3. **Nothing is promoted as a candidate change.** Promoted for the
+   record: the feature sweep, the seeds sweep, the label sweep, the
+   tuned-LightGBM sweep and the four backtests.
+4. **A backtest on v1.5.1 peaks at 13.8 GB.** No backtest runs on this
+   build with anything else in memory, and no chain of them runs
+   unattended until the backtest's memory is cut (TODO). The runs
+   finished; a wider build would not.
+5. **What goes to Carter.** Nothing needs a decision from this program.
+   The open decisions of 2026-11-25 stand (the larger-half filter, the
+   training cutoff, the F50 portfolio, the price floor, the Foamex
+   request). One observation for the upstream list: the two counts the
+   forest used were earnings releases and officer changes in the
+   trailing year; the other twelve were idle.

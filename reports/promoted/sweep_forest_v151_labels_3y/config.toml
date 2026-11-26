@@ -1,0 +1,100 @@
+# Decision 74 of docs/notes/2026-11-26-decisions.md (2026-11-26), item 3:
+# the full-path labels of dataset_v1.5.1 as targets. The candidate's
+# forest (decision 24) on fs1 (every rank column, 149), seed 23,
+# trained on every row and read inside the 100k floor on the same-size
+# screen, with the path outcomes reported for every pick.
+#
+#   L0  cell C, 'not a loser' (the control cell)
+#   L1  the endpoint-free 'beat SPY': path-average return above SPY's
+#   L2  path-positive 'not a loser'
+#   L3  'upside without a crash': run-up of 50% reached, never 30% down
+#   L4  market-relative 'not a loser': made money, fell no further than SPY
+#   L5  beat SPY on the path without a crash
+#
+# Judged (decision 74.4) on the screen's lead over same-size peers on
+# the 3-year CAGR and the share of losers, never on precision.
+#
+# Predictions (decision 74.5), written before the run:
+#   (d) L1 and L2 pick the same stocks as label_3y_beat_spy and cell C
+#       would (screen precision on cell C within 0.03 of L0's, lead
+#       within 0.01). Rival: the endpoint's noise is what the forest
+#       cannot learn; then L2's p@20 lift over its base rate is 0.03 or
+#       more above L0's.
+#   (e) L3 is learned as calm: its picks' realized volatility is below
+#       L0's and their mean CAGR no higher.
+#   L4 and L5 behave as label_3y_beat_spy did (no lead after 2013).
+#
+# Expanded: 6 cells x 1 feature set x 1 set x 1 seed = 6 runs.
+# Run: .venv/bin/vml-sweep experiments/sweeps/forest_v151_labels_3y.toml
+name = "forest_v151_labels_3y"
+note = "the full-path labels of v1.5.1 beside cell C: the path-positive 'not a loser' is the same arm; every market-relative label (against SPY's path or drawdown) is behind cell C on losers and below a single-factor bar on p@20 (decision 75)"
+dataset_version = "dataset_v1.5.1"
+min_dataset_version = "1.5"
+scheme = "walkforward"
+folds = "all"
+seeds = [23]
+top_k = [20, 50]
+precision_targets = [0.75, 0.9]
+rank_metric = "precision_at_20"
+universe_scope = "test"
+pick_outcomes = [
+  "label_3y_beat_spy",
+  "fwd_3y_excess_cagr",
+  "fwd_3y_cagr",
+  "fwd_3y_max_drawdown_from_entry",
+  "fwd_3y_cagr < 0",
+  "fwd_3y_cagr < -0.1",
+  "fwd_3y_max_drawdown_from_entry >= 0.4",
+  "fwd_3y_cagr >= 0.15",
+  "fwd_3y_excess_cagr >= 0.05",
+  "fwd_3y_path_avg_return",
+  "fwd_3y_path_avg_return > fwd_3y_spy_path_avg_return",
+  "fwd_3y_max_runup",
+  "fwd_3y_realized_vol",
+  "fwd_3y_cagr >= 0 & fwd_3y_max_drawdown_from_entry < 0.3",
+]
+
+sets = [
+  {criterion = "entropy", max_depth = 4, max_features = 0.205191, max_samples = 0.663781, min_samples_leaf = 72, n_estimators = 490},  # the candidate's forest
+]
+
+[pick_screen]
+per = "quarter"
+top_k = 10
+max_per_group = 2
+group_column = "sector"
+peer_column = "log_marketcap_rank"
+peer_bins = 20
+
+[[universe]]
+column = "dollar_volume_3m"
+op = ">="
+value = 100000
+
+
+[[cells]]
+label = "fwd_3y_cagr >= 0 & fwd_3y_max_drawdown_from_entry < 0.3"
+
+[[cells]]
+label = "fwd_3y_path_avg_return > fwd_3y_spy_path_avg_return"
+
+[[cells]]
+label = "fwd_3y_path_avg_return >= 0 & fwd_3y_max_drawdown_from_entry < 0.3"
+
+[[cells]]
+label = "fwd_3y_max_runup >= 0.5 & fwd_3y_max_drawdown_from_entry < 0.3"
+
+[[cells]]
+label = "fwd_3y_cagr >= 0 & fwd_3y_max_drawdown_from_entry <= fwd_3y_spy_max_drawdown_from_entry"
+
+[[cells]]
+label = "fwd_3y_path_avg_return > fwd_3y_spy_path_avg_return & fwd_3y_max_drawdown_from_entry < 0.3"
+
+[[features]]
+groups = ["ranks"]
+
+[model]
+name = "random_forest"
+bootstrap = true
+class_weight = 1.0
+n_jobs = 8
