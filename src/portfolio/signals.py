@@ -368,6 +368,11 @@ def _refit_as_of_year(
         list(bundle.feature_columns)
         + [config.label, dataset.sample_weight_column(config.horizon_years)]
         + [f.column for f in config.universe]
+        + (
+            [f.column for f in config.emphasis.region]
+            if config.emphasis is not None
+            else []
+        )
     )
     if config.universe and config.universe_scope == "all":
         # a universe is part of the model: the refit learns from the
@@ -386,6 +391,7 @@ def _refit_as_of_year(
         list(bundle.feature_columns),
         config.horizon_years,
         year_balance=config.year_balance,
+        emphasis=config.emphasis,
     )
     if not len(fit.X):
         raise ConfigError(

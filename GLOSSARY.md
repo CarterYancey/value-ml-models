@@ -88,6 +88,12 @@ change. The format follows Matt Pocock's `domain-modeling` skill.
 - **Recovery label** — the label `fwd_3y_cagr >= 0.26`: the stock at
   least doubled within 3 years. Used inside the fallen universe.
   _Avoid_: doubler, 2x label.
+- **Emphasis** — a training-time weight: the rows inside a declared
+  region of feature columns carry `factor` times their mandatory
+  sample weight, every other row and every test row untouched
+  (`[emphasis]`, decision 78.6). Not a universe: every row stays in
+  the fit and the run is counted in its label's own cell. _Avoid_:
+  upweighting, oversampling (no row is duplicated or made up).
 - **Same-size peers** — the rows in the same 5% band of
   `log_marketcap_rank` in the same month as a pick. Every selection
   is read against them, because company size explains most of a lead
