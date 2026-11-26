@@ -378,3 +378,34 @@ def test_yearly_table_counts_a_month_in_the_year_it_starts_in():
     assert table.loc["2022 (rate-shock)", "excess"] == pytest.approx(
         (0.8 * 1.5) - (0.9 * 1.25)
     )
+
+
+def test_headline_leads_with_the_money_weighted_cagr():
+    """Decision 72: the headline's `cagr` is the XIRR of the deposits
+    into the final value and comes before the time-weighted `twr`."""
+    from portfolio.engine import SimulationResult
+    from portfolio.report import headline_table
+
+    t0, t1 = pd.Timestamp("2020-01-01"), pd.Timestamp("2021-01-01")
+    monthly = pd.DataFrame(
+        {
+            "date": [t0, t1],
+            "deposit": [1000.0, 0.0],
+            "twr_return": [None, 0.1],
+            "twr_index": [1.0, 1.1],
+        }
+    )
+    result = SimulationResult(
+        monthly=monthly,
+        trades=pd.DataFrame(),
+        rebalance_log=pd.DataFrame(),
+        total_deposits=1000.0,
+        total_costs=0.0,
+        final_value=1100.0,
+        cashflows=[(t0, -1000.0), (t1, 1100.0)],
+    )
+    table = headline_table(result, result)
+    cols = list(table.columns)
+    assert cols.index("cagr") < cols.index("twr")
+    assert cols.index("final_value") < cols.index("cagr")
+    assert table.loc[0, "cagr"] == pytest.approx(0.1, abs=1e-3)

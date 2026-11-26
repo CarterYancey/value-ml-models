@@ -75,6 +75,16 @@ change. The format follows Matt Pocock's `domain-modeling` skill.
   on top of the 100k floor: liquid stocks that fell 40% or more from
   their 52-week high. It measures a fall within the last year, where
   the fallen universe measures a state. Introduced in decision 64.
+- **F30, F70, W30, W50, W70** — the same two universes at other depths:
+  F followed by a number is `dist_5y_high <= -0.<number>` and W followed
+  by a number is `dist_52w_high <= -0.<number>`, each on top of the 100k
+  floor. Together with F50 and W40 they form the grid of decision 70.
+- **The 2020 window** — a backtest window with buys from 2006 to 2020
+  and the account valued on 2020-12-31, SPY on the same deposits. The
+  fallen-stock program's comparison window from decision 70, chosen
+  because Carter's working assumption is that the market since 2021 is
+  a bubble. The same buys valued at the end of 2023 are "the 2023
+  window". _Avoid_: pre-bubble window, early window.
 - **Recovery label** — the label `fwd_3y_cagr >= 0.26`: the stock at
   least doubled within 3 years. Used inside the fallen universe.
   _Avoid_: doubler, 2x label.
@@ -193,10 +203,12 @@ change. The format follows Matt Pocock's `domain-modeling` skill.
 - **Prediction** — an expected result written in the config or the
   decision log before a run, and marked afterwards as held, missed or
   half held.
-- **Decision** — a numbered entry in the
-  [decision log](docs/notes/2026-09-29-decisions.md) that records a
-  choice, who made it, and why. "Decision 36" is Carter's direction
-  of 2026-10-01.
+- **Decision** — a numbered entry in the decision log that records a
+  choice, who made it, and why. Decisions 1 to 72 are in
+  [the log of 2026-09-29](docs/notes/2026-09-29-decisions.md), which
+  is closed and not edited again; decision 73 onward are in
+  [the log of 2026-11-26](docs/notes/2026-11-26-decisions.md).
+  "Decision 36" is Carter's direction of 2026-10-01.
 - **Screen** — the report that applies the backtest's selection rule
   (top K per quarter, capped per sector) to a run's test rows and
   reads the picks' outcomes. Report-only, no costs, no cash. _Avoid_:
@@ -217,21 +229,38 @@ change. The format follows Matt Pocock's `domain-modeling` skill.
   `snapshot_date` is before it. The cutoff is recorded in the bundle,
   in the ledger row and in every prediction sidecar (decision 60).
   _Avoid_: "pre-bubble model", "clean model", "untainted model".
-- **Lab branch** — a `claude/lab-*` branch that holds every config and
-  report of a session. Never merged.
+- **Lab branch** — a branch named `claude/lab-<date>` that holds every
+  config and report of one session. `vml-queue new-lab` creates it from
+  `origin/Claude`. It is never created from another lab branch and never
+  merged anywhere. Once the session's results branch has merged,
+  `vml-queue archive-lab` tags the branch's last commit
+  `archive/lab-<date>` and deletes the branch (decision 68).
 
 ## Backtests
 
 - **Final value** — what the portfolio is worth at the end of a
   backtest, after deposits, costs and sells. It is the first number
-  read for a backtest, with TWR and MWR beside it (decision 53).
+  read for a backtest, with the CAGR beside it (decisions 53 and 72).
   _Avoid_: money, "in money", "on money".
+- **CAGR of a backtest** — the metric of record for a backtest
+  (decision 72): the annual rate at which the deposits compounded into
+  the final value, the internal rate of return of the dated deposits
+  and the final value (XIRR). It is `cagr` in the report's headline and
+  `mwr_annualized` in the ledger, where the column keeps its old name.
+  Both legs of a backtest get identical deposits, so the CAGR ranks
+  them as the final value does. A label's CAGR is a different thing:
+  the horizon return of one stock, `fwd_{H}y_cagr`. _Avoid_: MWR,
+  money-weighted return, which named this number before decision 72.
 - **TWR** — the time-weighted return, a year: the compound growth rate
   of one unit held from the first day to the last. Deposit timing does
-  not affect it. _Avoid_: CAGR for a portfolio, which is a label's
-  horizon return.
-- **MWR** — the money-weighted return, a year: the internal rate of
-  return of the deposits and the final value.
+  not affect it, so a month on a tiny early account counts as much as
+  a month on a full one; the W70 portfolio of decision 71 had the
+  program's highest TWR and its least money. It is not a metric of
+  record. It stays in the report after the drawdown and in the
+  per-year table, and is read only beside the final value, the CAGR
+  and the per-year table (decisions 71 and 72).
+- **MWR** — the old name of the CAGR of a backtest (before decision
+  72). Use CAGR; the ledger column is still `mwr_annualized`.
 - **Worst drawdown** — the largest fall from a peak to a later low in
   the portfolio's value over the run. _Avoid_: max drawdown, which
   names the label column `fwd_3y_max_drawdown_from_entry`.

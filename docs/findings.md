@@ -24,7 +24,15 @@ build that no longer exists and is context only.
 
 ## Next session: start here
 
-1. The latest session was 2026-11-25. Its note is
+1. The latest session was on 2026-11-26: Carter rejected the Foamex
+   price path behind round 6's W70 run as a data error, and
+   [an upstream request](notes/2026-11-26-upstream-foamex-price-check.md)
+   asks upstream to check it (decision 73, the first entry of
+   [the continued decision log](notes/2026-11-26-decisions.md); the
+   log of 2026-09-29 is closed at decision 72). The sessions of
+   2026-11-25 wrote
+   [the fallen-stock program](notes/2026-11-25-fallen-stocks.md),
+   decisions 61 to 72, and
    [a deployable candidate that does not train on the recent years](notes/2026-11-25-training-cutoff.md),
    decision 60 of the [decision log](notes/2026-09-29-decisions.md).
    The session of 2026-11-24 wrote
@@ -33,12 +41,11 @@ build that no longer exists and is context only.
    that decisions 38 to 54 link to.
 2. TODO.md says what to do next, under "Next, after 2026-11-24". The
    candidate's runbook is [paper-trading.md](paper-trading.md).
-3. The branch `claude/results-2026-11-25` carries this file, the
-   training cutoff, the fallen-stock program's records and the
-   withdrawal of the writing check (decisions 66 and 67). It contains
-   every November topic branch before it, so it is the one branch to
-   merge into `Claude`. Configs and reports are on the lab branch
-   `claude/lab-2026-11-25b`, which is not for merging.
+3. The branch `claude/results-2026-11-25b` carries this file, the
+   fallen-stock program's rounds 5 and 6 (decisions 69 to 71), the
+   lab-branch rule and the memory fix (decision 68). The configs and
+   reports are on the lab branch `claude/lab-2026-11-25b`. That branch
+   is never merged; it is archived as a tag once this branch merges.
 
 ## State (2026-11-24)
 
@@ -55,11 +62,40 @@ costs. It buys and deposits from 2005 to 2026-08-21 and refits the
 forest at each year end after 2020. All three legs were refit on
 `dataset_v1.4.1` on 2026-11-24, and these are the numbers of record:
 
-| | final value on 260,000 | TWR | MWR | worst drawdown |
+| | final value on 260,000 | CAGR | TWR | worst drawdown |
 |---|---|---|---|---|
-| SPY, same deposits | 1,326,084 | 10.9% | 13.2% | −52.9% |
-| **candidate, buy and hold** | 1,159,740 | 11.0% | 12.2% | −41.0% |
-| candidate, rank sell discipline | 1,294,414 | 11.5% | 13.0% | −41.3% |
+| SPY, same deposits | 1,326,084 | 13.2% | 10.9% | −52.9% |
+| **candidate, buy and hold** | 1,159,740 | 12.2% | 11.0% | −41.0% |
+| candidate, rank sell discipline | 1,294,414 | 13.0% | 11.5% | −41.3% |
+
+The CAGR is the money-weighted growth rate of the deposits into the
+final value, the metric of record since decision 72. The TWR is read
+only beside it.
+
+**The fallen-stock program ran six rounds and is closed (decisions 61
+to 73).** Carter asked whether a model can find the fallen stocks that
+recover. No tree model learns the recovery label, a stock doubling
+within three years, in any universe at any depth. The "not a loser"
+forest trained inside F50, the liquid stocks 50% or more below their
+5-year high, does find the fallen stocks that do not fall further: its
+picks lead same-size fallen peers by 5 points a year with a fifth fewer
+losers. A portfolio of those picks, 2006 to 2020, ends 2020 with 2.5%
+to 4.9% more money than SPY on the same deposits at three seeds, a
+CAGR of 12.9% to 13.1% against SPY's 12.6%, with a worst drawdown of
+−58% against −53%. On the same window the candidate holds 36% more than
+SPY, a CAGR of 15.2% against 11.9%, with a drawdown of −41%. Valued at the end of 2023 the F50 portfolio
+ends below SPY at two seeds of three, because SPY beat it in 2021 and
+2023 when the account was largest. Every universe defined by a deeper
+fall, at the 5-year or the 52-week horizon, ends behind SPY on both
+windows. The 2020 window is Carter's choice under the bubble
+assumption and is a standing risk (decision 70.1). Whether the F50
+portfolio is worth running beside the candidate is Carter's decision;
+nothing is promoted. The W70 portfolio had the program's highest TWR
+and least money, from one bankrupt stock bought at 1 cent in 2006 that
+the data has rising 451-fold in four months; Carter reads that as a
+data error, upstream is asked to check it, and the W70 run rests on an
+unverified price until it does (decision 73). The TWR left the
+headline and the CAGR is the metric of record (decision 72).
 
 **The candidate is not shown to beat SPY.** At the end of 2020 it was
 ahead of SPY by final value and by TWR. In August 2026 it is 13%

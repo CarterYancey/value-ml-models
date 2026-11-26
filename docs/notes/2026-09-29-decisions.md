@@ -2847,3 +2847,287 @@ whose content pull requests 17 to 19 had already merged by copy.
 No configs were promoted for the fallen-stock program. Its results are
 negative on the recovery label and a match for the forest on cell C, and
 the records carry them. Promotion is a separate decision.
+
+
+### 68. The sandbox died under a backtest; the ledger, the memory and the lab-branch rule
+
+*What happened (2026-11-25):* Carter found in the morning that the
+Claude Code tab had crashed and that the sandbox monitor showed an
+error, which was not noted. The evidence that survives inside the
+sandbox is this. The Claude Code transcript stops in the middle of a
+line at 02:55:29. The F50 backtest of decision 65 created its five
+report files at 02:55:48 and 02:55:49, all of them empty, and its
+ledger row ends in the middle of the quoted metrics. Files that were
+created but never written are the signature of a machine that died,
+not of a process that was killed. When I reran the sibling F30
+backtest, its peak memory was 11.58 GB on a machine with 14 GB and no
+swap. Three places in the backtest loaded the whole dataset frame, 390
+columns, to read one column or to check column names. No kernel log or
+memory counter survives a sandbox restart, so only the host's sandbox
+log can show the cause. The best explanation is that the machine ran
+out of memory.
+
+*Decided:*
+
+1. **The ledger is repaired.** The cut fragment of run 256a693ab845 is
+   removed, and the F50 and F30 backtests are rerun. Their failed first
+   attempts stay in the ledger. `ResultsStore.append` now flushes and
+   fsyncs each row, and `ResultsStore.load` raises `LedgerError` naming
+   the file when a row is cut, instead of failing inside pandas. The
+   F50 rerun reproduced the cut row's final value and drawdown exactly.
+2. **The backtest loads only the columns it needs.**
+   `dataset.frame(columns)` replaces `dataset.data` in the backtest's
+   coverage check, in the cross-section builder, in the bundle check
+   and in `scripts/build_price_panel.py`. The backtest's peak memory
+   fell from 11.58 GB to 9.74 GB and its wall time from 154 to 97
+   seconds. The rest of the memory goes to the yearly refits. One heavy
+   job at a time stays the rule.
+3. **A lab branch is created from `origin/Claude` and never from
+   another lab branch.** `vml-queue new-lab` creates it. `vml-queue
+   checkpoint` refuses a lab branch whose history contains another lab
+   branch's last commit, whether that branch is live or archived.
+   `vml-queue archive-lab <branch> --delete` tags a finished lab branch
+   `archive/lab-<date>` and deletes it once its results have merged.
+   The rule exists because `claude/lab-2026-11-25b` stood 198 commits
+   ahead of `Claude`: it carried every lab branch since 2026-09-28,
+   each created from the one before it.
+
+*What remains open:* the cause on the host side. Carter can read the
+sandbox daemon's log for 2026-11-25 between 02:55 and 03:00 local time.
+
+### 69. The fallen-stock program is closed
+
+*What happened (2026-11-25):* the two backtests of decision 65 ran.
+The note reads them under "Round 5".
+
+*Decided:* nothing from the program goes forward. The two backtests
+were the program's only reading in money, run for the record and not
+to choose between candidates. Inside F50 the "not a loser" forest's
+buys beat the stocks they were chosen from by 9 points a year, and
+same-size ones by 7; inside F30 by 7 and 4. Yet both portfolios end
+2023 with less money than SPY and far behind the candidate. The recovery label,
+a stock doubling within three years, was not learned by any tree model
+at any depth, whether trained inside the universe or on every row. The
+attraction of the fallen population is the attraction of buying in a
+crash, which is the market-state question already sent upstream. The
+configs, reports and model bundles stay on the lab branch, which is
+archived, and the ledger carries every trial.
+
+*Amended the same day:* Carter reopened the program for a sixth round
+(decision 70). This decision stands as the reading of rounds 1 to 5.
+
+### 70. The fallen-stock program reopens: a comparison window that ends in 2020, and a grid of falls measured from the 52-week and the 5-year high
+
+*What happened (2026-11-25):* Carter read pull request 23 and said it
+was not ready to merge. Carter asked for three things. First, the
+documents changed in the pull request should be rewritten so that a
+reader can follow them. Second, our findings regularly show a portfolio
+with a higher time-weighted return than SPY and a lower final value.
+Carter suspects the reason is that SPY keeps growing to the stop date
+while the portfolio stopped trading in the last years of the window.
+Since the working assumption of this project is that the market since
+2021 is a bubble that will deflate, Carter wants the strategies
+compared on the years before 2021. Carter called this a risky choice
+that must be documented and eventually challenged. Third, Carter
+wants sharper falls tested, such as a stock 30% below its 1-year high,
+and a grid over "fell X% from its h-year high".
+
+*What I checked before deciding.* The portfolio strategy in these
+backtests is buy and hold. It never sells, so after the last buy in
+December 2020 both the portfolio and the SPY leg hold their shares
+through 2023 with no further deposits. The portfolio did not go to
+cash. The gap in final value opened in 2021 and 2023, when the account
+was at its largest: SPY returned 31.3% and 26.7% in those years and the
+F50 portfolio 22.0% and 21.3%. Carter's reading is therefore right
+about the years and the size of the account, and wrong only about the
+mechanism. The valuation files of the two existing backtests give the
+values before 2021. On 2020-12-01 the F50 portfolio held 490,613
+against SPY's 487,467 on the same 180,000 of deposits, and the F30
+portfolio 472,380. On 2019-12-02 both portfolios were ahead of SPY,
+405,139 and 403,702 against 395,313. The dataset has two columns that
+measure the distance from a past high, `dist_52w_high` and
+`dist_5y_high`. A 2-year or 3-year high would be a new feature, which
+this repository may not build (invariant 4), so the grid has two
+horizons. The sweeps inside a universe take about one minute per cell
+and a backtest about two minutes, so the whole grid runs in under an
+hour.
+
+*Decided:*
+
+1. **The program's comparison window ends in 2020.** Every portfolio
+   in the program is read on buys from 2006 to 2020 valued on
+   2020-12-31, with SPY on the same deposits. I call this the 2020
+   window. The runs valued at the end of 2023 stay on the record
+   beside it. This is a risky choice for two reasons, and both are
+   written here so that the choice can be challenged. The window
+   drops the three years in which SPY was strongest, and it was chosen
+   after we saw that the portfolios lost ground in those years. The
+   challenge comes when the bubble question is answered: if the
+   market of 2021 to 2026 turns out to be ordinary, the 2023 window is
+   the honest one and the 2020 window flattered the portfolios.
+2. **The grid.** Seven universes, each the liquid stocks (the 100k
+   floor) a given share below a given past high: F30, F50 and F70 are
+   30%, 50% and 70% below the 5-year high, and W30, W40, W50 and W70
+   are 30%, 40%, 50% and 70% below the 52-week high. The cell C
+   forest, the candidate's forest configuration trained inside each
+   universe on the label "not a loser" (`fwd_3y_cagr >= 0 &
+   fwd_3y_max_drawdown_from_entry < 0.3`), already exists for F30,
+   F50, F70 and W40. Three new sweeps train it inside W30, W50 and W70,
+   with the recovery label beside it as in every earlier round. Then
+   each of the seven forests is backtested alone inside its own
+   universe with Carter's rank floor, on the 2020 window, and the five
+   that have no run to 2023 are run on that window too. That is twelve
+   backtests, which take the program's count from 2 to 14. All are for
+   the record, and none is a selection on the holdout.
+3. **How I read the grid.** One table with a row per universe and the
+   columns: final value against SPY's on the 2020 window, TWR against
+   SPY's, worst drawdown, the lead of the buys over same-size
+   candidates, and the share of buys that lost money over three years.
+   A portfolio is worth carrying forward to seeds 232 and 1776 if it
+   beats SPY on both money and TWR on the 2020 window and its buys
+   lead same-size candidates by 3 points a year or more.
+4. **Decision 69 is amended, not withdrawn.** It stands as the reading
+   of rounds 1 to 5. The program reopens for round 6 at Carter's
+   direction, with the window and the grid above.
+
+*I wrote these predictions before the runs.* The 52-week universes are
+worse populations than the 5-year ones at the same depth: W50 holds
+26,552 labeled rows of which 57% lost money over three years and the
+mean 3-year CAGR is −0.094, where F50 holds 50,887 rows with 51% losers
+and −0.046. So I predict:
+
+1. The forest's lead over same-size peers grows with the depth of the
+   fall at both horizons, as it did from F30 to F70, and the picks'
+   own return falls with it.
+2. On the 2020 window the F50 portfolio ends above SPY on money and on
+   TWR, and the F30 portfolio ends within 5% of SPY on money with a
+   higher TWR. These two are readings of the existing valuation files
+   and are run for the record, not predicted.
+3. Every 52-week portfolio ends below SPY on money on both windows, and
+   W50 and W70 are below SPY on TWR by 2 points or more. W30 is the
+   closest of them to SPY.
+4. Every portfolio's worst drawdown is deeper than −50% except F30's,
+   and the drawdown deepens with the depth of the fall.
+5. No portfolio meets the rule of item 3. The nearest is F50.
+
+*What held (written after the runs, 2026-11-25):* predictions 1 to 4
+held with two exceptions, and prediction 5 did not. The lead over
+same-size peers collapses at W70 instead of growing, and W50's TWR is
+0.9 points below SPY's, not 2. F50 meets the rule of item 3 at seed 23
+and, after the seed runs that decision 61.5 requires, at seeds 232 and
+1776 as well. The note's round 6 has the tables. Decision 71 reads
+them.
+
+*Amended 2026-11-25 (decision 72):* the rule of item 3 read "money and
+TWR". Under the metric of record adopted in decision 72, the CAGR, the
+rule reads "beats SPY on the CAGR", which with identical deposits is
+the same as beating it on money. F50 passes it at every seed (12.92%,
+12.86% and 13.14% against SPY's 12.58%). Prediction 3's "W50 and W70
+below SPY on TWR by 2 points or more" reads on the CAGR as 1.5 and 5.6
+points below.
+
+### 71. Round 6 read: the F50 portfolio beats SPY before 2021 at three seeds and stays far behind the candidate; the program closes again
+
+*What the runs showed (2026-11-25):* before 2021, the portfolio that
+buys the fallen stocks the "not a loser" forest ranks highest inside
+F50 ends with 2.5% to 4.9% more money than SPY on the same deposits at
+all three seeds, with a TWR 0.7 to 0.9 points above SPY's and a worst
+drawdown of −58% against SPY's −53%. On the same window the candidate
+holds 36% more than SPY with a drawdown of −41%. F30 and W30 end
+within 2% of SPY before 2021; every universe deeper than 50% ends
+behind SPY on both windows, by 5% to 37%. The W70 portfolio has the
+highest TWR in the program and the least money, because one 4-cent
+bankrupt stock bought in January 2006 reached 15 dollars by May and
+gave a 5,700-dollar account a +1,911% year.
+
+*Decided:*
+
+1. **The F50 portfolio is recorded, not promoted.** It is the one
+   portfolio of the program that beats SPY before 2021 at every seed,
+   and it is far behind the candidate on the same window. Whether it is
+   worth running as a second portfolio beside the candidate, for its
+   different population, is Carter's decision. The three seed bundles
+   and the eighteen backtests stay on the lab branch and in the ledger.
+2. **A time-weighted return is read only beside the final value, the
+   money-weighted return and the per-year table.** The W70 run is the
+   reason, and the round-5 reading of TWR against final value was the
+   first instance. This goes into GLOSSARY under TWR.
+3. **A price floor is a question for Carter.** The 100k dollar-volume
+   floor and the rank floor let a 4-cent bankrupt stock into W70. A
+   floor on price would be a new `[[investability]]` filter in the
+   backtest config, a config change and not a code change, and it
+   would change every backtest's universe, so it is not added here.
+4. **The program closes again.** Rounds 1 to 6 have answered Carter's
+   question as far as this dataset allows: the recovery label is not
+   learnable, the "not a loser" forest finds the fallen stocks that do
+   not fall further, and a portfolio of them keeps up with SPY before
+   2021 at a 50% fall and loses to it at every deeper fall. What would
+   reopen it is upstream: a 2-year or 3-year high, a market-state
+   column, or a price floor Carter wants tested.
+5. **The 2020 window stays a standing risk.** It is recorded in TODO.md
+   as a choice to challenge when the bubble question is answered.
+
+*Amended 2026-11-25 (decision 72):* item 2 is replaced by decision 72,
+which takes the TWR out of the headline and makes the CAGR the metric
+of record. Read on the CAGR, the F50 portfolio beats SPY before 2021
+by 0.3 to 0.6 points a year (12.86% to 13.14% against 12.58%), and the
+W70 portfolio is 5.6 points below SPY, in step with its final value.
+The figures above were read on TWR and stand as written.
+
+### 72. The CAGR replaces the TWR as the metric of record for a backtest; the Foamex move is real
+
+*What happened (2026-11-25):* Carter read decision 71 and doubted the
+W70 run's one 4-cent stock: no stock goes from 4 cents to 15 dollars in
+five months, so the move looked like an upstream error. He asked that
+the CAGR, not the TWR, be the metric.
+
+*What I checked.* The raw Sharadar record for Foamex International
+(permaticker 123699, ticker `FMXLQ`, with `FMXIQ` and `FMXI` as earlier
+tickers). The unadjusted close was 1 cent on 2006-01-03 and 4.51
+dollars on 2006-05-01; the price panel's 4 cents and 18 dollars are
+those prices multiplied by 4 for the 1-for-4 reverse split of May 2007.
+Sharadar's daily table has the company's market value going from 0.7
+million dollars in January 2006 to 80 million in April while the
+enterprise value stayed near 900 million: the debt was worth what it
+had been and the equity went from nothing to something. The reason is
+on the public record. Foamex filed for chapter 11 in September 2005;
+in 2006 its largest shareholders agreed to fund the plan with new
+equity; the rights offering of December 2006 sold shares at 2.25
+dollars; and the company left bankruptcy in February 2007 with the old
+shareholders keeping their stock. The move is real. What the data
+cannot give is the entry price to better than a factor of two:
+Sharadar records whole cents, and a stock quoted anywhere below 1.5
+cents is "1 cent". The 2006 return of the W70 run is a real gain on a
+position of 100 dollars, measured from a price known only to within a
+factor of two.
+
+*Decided:*
+
+1. **The CAGR is the metric of record for a backtest.** It is the
+   annual rate at which the deposits compounded into the final value:
+   the internal rate of return of the dated deposits and the final
+   value (XIRR). The report's headline names it `cagr`; the ledger
+   keeps the column name `mwr_annualized` so that earlier rows read
+   the same, and gains `benchmark_mwr_annualized`. Both legs of a
+   backtest get identical deposits, so the CAGR ranks them as the final
+   value does, and the disagreement between a TWR and a final value
+   that rounds 5 and 6 kept meeting cannot arise under it.
+2. **The TWR leaves the headline.** It stays in the report as `twr`,
+   after the drawdown, and in the per-year table, where a year's return
+   is a year's return and the headline CAGR does the weighting by
+   money. It is read only beside the final value, the CAGR and the
+   per-year table. Decision 71.2 said as much and is replaced by this.
+3. **What the change does to the round-6 reading.** Nothing changes
+   order: the CAGRs of the 2020 window stand in the order of the final
+   values. F50 beats SPY by 0.3 to 0.6 points of CAGR at three seeds
+   (12.86% to 13.14% against 12.58%), where the TWR had said 0.7 to
+   0.9. The candidate on the same window, from its valuation file,
+   has a CAGR of 15.2% against SPY's 11.9%. W70's CAGR of 7.0% is 5.6
+   points below SPY's. Round 5's
+   prediction of a return below SPY's, which did not hold on the TWR,
+   would have held on the CAGR (11.89% and 11.55% against 11.96%); the
+   note says so beside the original reading. No conclusion of decisions
+   69 to 71 changes.
+4. **The Foamex position stays in the record.** It is not an upstream
+   error and nothing is removed or rerun. The price-floor question of
+   decision 71.3 stands: the floors let a real 1-cent stock through.

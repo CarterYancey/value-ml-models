@@ -510,15 +510,25 @@ def _reference_lines(
 def headline_table(
     strategy: SimulationResult, benchmark: SimulationResult
 ) -> pd.DataFrame:
+    """The headline of a backtest, one row per leg.
+
+    `cagr` is the metric of record (decision 72): the money-weighted
+    annual growth rate of the deposits into the final value (XIRR; the
+    ledger column `mwr_annualized`). Both legs get identical deposits,
+    so it ranks them as the final value does. `twr` is the
+    time-weighted return, which gives a month on a tiny early account
+    the weight of a month on a full one; it stays for the per-year
+    table and is never read alone."""
+
     def row(name: str, result: SimulationResult) -> dict:
         return {
             "leg": name,
             "deposits": result.total_deposits,
             "final_value": result.final_value,
             "profit": result.final_value - result.total_deposits,
-            "mwr_annualized": xirr(result.cashflows),
-            "twr_cagr": twr_cagr(result.monthly),
+            "cagr": xirr(result.cashflows),
             "max_drawdown": max_drawdown(result.monthly["twr_index"]),
+            "twr": twr_cagr(result.monthly),
             "costs_paid": result.total_costs,
         }
 
@@ -603,7 +613,7 @@ def write_backtest_report(
 
     headline = headline_table(strategy_result, benchmark_result)
     headline_view = headline.copy()
-    for col in ("mwr_annualized", "twr_cagr", "max_drawdown"):
+    for col in ("cagr", "max_drawdown", "twr"):
         headline_view[col] = headline_view[col].map(_pct)
     for col in ("deposits", "final_value", "profit", "costs_paid"):
         headline_view[col] = headline_view[col].map(_money)
@@ -866,14 +876,23 @@ def write_backtest_report(
         "",
         _table(headline_view),
         "",
-        "Money-weighted (MWR/XIRR) is what the deposits earned; "
-        "time-weighted (TWR) is the strategy's per-period compounding "
-        "with deposits treated as external flows. Both legs get identical "
-        "deposit dates and accounting.",
+        "`cagr` is the money-weighted annual growth rate of the deposits "
+        "into the final value (XIRR), the metric of record: both legs get "
+        "identical deposit dates and accounting, so it ranks them as the "
+        "final value does. `twr` is the time-weighted return, the "
+        "compounding of one unit held from the first day to the last; it "
+        "gives a month on a tiny early account the weight of a month on a "
+        "full one, so it is read only beside the final value, the CAGR "
+        "and the per-year table (decision 72).",
         "",
         "## Per-year results (era slice)",
         "",
         _table(yearly_view),
+        "",
+        "Per-year returns are time-weighted within the year: a year's "
+        "return is the same whatever the account held, so an early year "
+        "on a small account reads like a late year on a full one. The "
+        "headline CAGR weights the years by the money invested.",
         "",
         f"**Defensive hypothesis:** {defensive}",
         "",

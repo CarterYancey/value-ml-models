@@ -10,8 +10,11 @@ from harness.lab import (
     STUB_MARK,
     _split_entries,
     add_entry,
+    archive_lab,
     checkpoint,
     checkpoint_paths,
+    lab_refs_in_history,
+    new_lab,
     load_queue,
     next_item,
     queue_states,
@@ -168,6 +171,53 @@ def test_checkpoint_refuses_integration_branches(lab):
     subprocess.run(["git", "checkout", "-q", "main"], check=True)
     with pytest.raises(ConfigError, match="claude/"):
         checkpoint("x", **lab)
+
+
+def _git(*args):
+    return subprocess.run(["git", *args], capture_output=True, text=True, check=True).stdout.strip()
+
+
+def test_checkpoint_refuses_a_lab_built_on_another_lab(lab, data_root):
+    run_next(data_root=data_root, **lab)
+    # the branch's own remote ref is not "another lab branch"
+    _git("update-ref", "refs/remotes/origin/claude/lab-test", "HEAD")
+    assert lab_refs_in_history("claude/lab-test") == []
+    checkpoint("fine", **lab)
+    # a new lab branch created off this one carries its history
+    _git("checkout", "-q", "-b", "claude/lab-next")
+    assert lab_refs_in_history("claude/lab-next") == ["origin/claude/lab-test"]
+    with pytest.raises(ConfigError, match="origin/claude/lab-test"):
+        checkpoint("x", **lab)
+    # an archived lab's tag counts the same way
+    _git("update-ref", "-d", "refs/remotes/origin/claude/lab-test")
+    _git("tag", "archive/lab-test", "HEAD")
+    with pytest.raises(ConfigError, match="archive/lab-test"):
+        checkpoint("x", **lab)
+
+
+def test_new_lab_branches_off_claude_and_never_reuses_a_name(lab):
+    _git("update-ref", "refs/remotes/origin/Claude", "main")
+    name = new_lab("2026-01-01", fetch=False)
+    assert name == "claude/lab-2026-01-01"
+    assert _git("rev-parse", "HEAD") == _git("rev-parse", "main")
+    assert new_lab("2026-01-01", fetch=False) == "claude/lab-2026-01-01b"
+    _git("add", ".gitignore")  # a staged change is an uncommitted change
+    with pytest.raises(ConfigError, match="uncommitted"):
+        new_lab("2026-01-02", fetch=False)
+
+
+def test_archive_lab_tags_the_branch_and_closes_it(lab, data_root):
+    run_next(data_root=data_root, **lab)
+    out = archive_lab(push=False)
+    assert out["tag"] == "archive/lab-test"
+    assert _git("rev-parse", "archive/lab-test") == _git("rev-parse", "claude/lab-test")
+    with pytest.raises(ConfigError, match="archive/lab-test"):
+        checkpoint("more", **lab)
+    with pytest.raises(ConfigError, match="check out another branch"):
+        archive_lab(push=False, delete=True)
+    _git("checkout", "-q", "main")
+    out = archive_lab("claude/lab-test", push=False, delete=True)
+    assert out["deleted"] and "claude/lab-test" not in _git("branch", "--list", "claude/*")
 
 
 def test_checkpoint_with_nothing_new_commits_nothing(lab, data_root):

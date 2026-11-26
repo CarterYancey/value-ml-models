@@ -122,3 +122,19 @@ def test_load_fills_the_new_column_for_older_shards(tmp_path, monkeypatch):
     df = local.load()
     assert len(df) == 2
     assert set(df["dataset_sha256"]) == {""}
+
+
+def test_a_truncated_row_is_named_not_swallowed(tmp_path):
+    """A machine that dies mid-write leaves a row cut inside its quoted
+    metrics_json (the sandbox on 2026-11-25). The reader says which file
+    and what to do instead of a pandas tokenizer traceback."""
+    import pytest
+
+    from harness.results import LedgerError
+
+    store = ResultsStore(tmp_path / "results.csv")
+    store.append({**_row("a"), "metrics_json": {"p_at_k": 0.5, "n": 3}})
+    text = (tmp_path / "results.csv").read_text()
+    (tmp_path / "results.csv").write_text(text[: text.rfind('""n""')])
+    with pytest.raises(LedgerError, match="results.csv does not parse"):
+        store.load()
