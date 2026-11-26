@@ -219,3 +219,120 @@ stocks a year). Paired by test year, 12 years, halves 2007–12 and 2013–18.
 - The compact own-history set with the fall columns (fs2) is the worst set
   at 5 years as at 3: the history columns beside a handful of fundamentals
   do not make a selection.
+
+## Decision 79: the rare-region program
+
+The region: inside the 100k floor, `dist_5y_high <= -0.4` and
+`ocf_positive_frac_20q >= 0.9`. `[pick_screen] region` reports the share
+of a selection inside it as the pick outcome `in_region`.
+
+### The control's share of the region (`forest_fund_control_region_3y`, 1 run)
+
+The control (cell C × fs0 of sweep A) re-run with the screen's region.
+Model side identical to sweep A's run on every fold (p@20, PR-AUC,
+screen CAGR, peers' CAGR, losers, distinct stocks; one Brier value
+differs in the 15th digit). Shares inside the region, by test year:
+
+| year | 05 | 06 | 07 | 08 | 09 | 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17 | 18 | 19 | 20 | mean |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| control's picks | 0 | 0 | 0 | .10 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | .006 |
+| their same-size peers | .11 | .08 | .06 | .23 | .39 | .20 | .14 | .15 | .06 | .02 | .06 | .09 | .06 | .08 | .09 | .10 | .120 |
+| all liquid test rows | .12 | .10 | .09 | .25 | .39 | .25 | .21 | .20 | .10 | .07 | .11 | .15 | .12 | .12 | .15 | .19 | .163 |
+
+The candidate's forest buys nothing from the region: four picks in 2008
+and none in any other year, while the region is 7–39% of the liquid rows
+and 2–39% of the picks' own size band. Prediction 79(a)'s baseline
+(control share below 0.15) held with room; the rival's bar for an
+emphasized arm is a picks' share of 0.10 or more.
+
+### Emphasis weights (`forest_emph3_fund_3y` and `forest_emph10_fund_3y`, 9 runs each)
+
+The candidate's forest, seed 23, trained on every row with the training
+rows inside the region (liquid, 40% or more below the 5-year high, cash
+flow positive in 18 of 20 quarters) carrying 3× or 10× their sample
+weight. The region is 0 of the training weight in fold 2005 (the
+columns need 5 years of history), 1.4% in 2006, 4.9% in 2012 and 7.6%
+in 2020, before the factor; so at ×3 it is at most a fifth of the
+weight and at ×10 at most 45%, in the late folds. Each arm is paired by
+test year with its unemphasized twin in sweep A (fs0 with fs0, fs1 with
+sweep A's fs2, fs2 with sweep A's fs4). Lead = picks' 3-year CAGR minus
+their same-size peers', fold mean; gain = lead minus the twin's; losers
+= share of picks with a negative CAGR; region = share of the picks
+inside the region.
+
+| cell | set | × | p@20 | lead | gain vs twin (t, ahead) | losers (twin) | picks' CAGR | region |
+|---|---|---|---|---|---|---|---|---|
+| C | fs0 | 3 | .772 | +.027 | −.002 (−0.9, 6/16) | .166 (.167) | .096 | .006 |
+| C | fs0 | 10 | .756 | +.023 | −.006 (−1.4, 7/16) | .161 (.167) | .093 | .006 |
+| C | fs1 | 3 | .700 | +.031 | +.001 (0.6, 9/16) | .206 (.223) | .084 | .061 |
+| C | fs1 | 10 | .700 | +.029 | −.001 (−0.1, 6/16) | .192 (.223) | .088 | .056 |
+| C | fs2 | 3 | .678 | +.019 | −.000 (−0.0, 6/16) | .252 (.238) | .062 | .030 |
+| C | fs2 | 10 | .678 | +.004 | −.015 (−1.8, 4/16) | .270 (.238) | .051 | .045 |
+| c15dd30 | fs0 | 3 | .259 | +.027 | +.004 (0.9, 7/16) | .230 (.247) | .081 | .044 |
+| c15dd30 | fs0 | 10 | .266 | +.017 | −.005 (−1.0, 6/16) | .238 (.247) | .077 | .050 |
+| c15dd30 | fs1 | 3 | .356 | +.033 | +.001 (0.2, 8/16) | .258 (.259) | .079 | .095 |
+| c15dd30 | fs1 | 10 | .334 | +.029 | −.003 (−0.6, 7/16) | .248 (.259) | .078 | .078 |
+| c15dd30 | fs2 | 3 | .169 | −.046 | +.001 (0.0, 8/16) | .436 (.439) | −.029 | .605 |
+| c15dd30 | fs2 | 10 | .175 | −.048 | −.001 (−0.1, 7/16) | .464 (.439) | −.030 | .667 |
+| ru100dd40 | fs0 | 3 | .219 | +.064 | −.046 (−5.6, 1/16) | .409 (.381) | .052 | .266 |
+| ru100dd40 | fs0 | 10 | .184 | +.031 | −.079 (−5.8, 1/16) | .361 (.381) | .056 | .141 |
+| ru100dd40 | fs1 | 3 | .259 | +.023 | +.003 (0.2, 10/16) | .414 (.452) | .036 | .438 |
+| ru100dd40 | fs1 | 10 | .278 | +.011 | −.009 (−0.5, 8/16) | .372 (.452) | .038 | .359 |
+| ru100dd40 | fs2 | 3 | .222 | −.059 | +.007 (0.8, 7/16) | .536 (.534) | −.091 | .838 |
+| ru100dd40 | fs2 | 10 | .262 | −.050 | +.016 (1.4, 10/16) | .538 (.534) | −.085 | .852 |
+
+Against the control (cell C × fs0 of sweep A, lead +.029, losers .167):
+×3 on fs0 in cell C is −.002 a year (t −0.9, ahead 6 of 16; −.001 in
+2005–12, −.003 in 2013–20), losers −0.2 points, and its picks' share
+inside the region is .006 — zero in every year but 2008 (.10), the
+control's pattern exactly. ×10 is −.006 (t −1.4, 7 of 16; −.011 and
+−.000 by half), losers −0.6 points, region .006.
+
+Importances: at ×3 the cell-C forest on fs0 is the control's to the
+third digit (`vol_12m_rank` .196 against .198, `vol_36m_rank` .131
+against .126, then `ocf_trend_4q_rank`, `conservative_score_rank`). At
+×10 `dist_5y_high_rank` (.078) and `price_vs_5y_avg_rank` (.065) move
+to third and fourth place — the region's own columns win splits they
+never won — and the picks' share inside the region is still .006. The
+'doubled without a crash' forest on fs0 keeps `ret_1m_rank` first
+(.122 against .128 unemphasized) and adds `price_vs_5y_avg_rank` (.046)
+and `dist_5y_high_rank` (.040). The compact-set forest on 'a real gain
+without a crash' at ×10 is `ocf_yield` (.156), `ocf_yield_5y_avg`
+(.129), `earnings_yield_5y_peak` (.064): the yields, no history z-score
+above .03.
+
+### Reading of the emphasis sweeps against decision 79
+
+- **79(a) held for ×3, and its rival failed.** Lead −.002, losers −0.2
+  points, region share +0.0 points against a rival bar of +10 points
+  and +.01 of lead. The region's columns did not win splits at ×3.
+  For ×10 the prediction was half right: the lead moved further the
+  same way (−.006), but losers fell 0.6 points instead of rising 3 or
+  more. With the region near 45% of the late folds' training weight,
+  the forest's prior did not become "fallen": it found the region's
+  columns and used them to say no. The picks' share inside the region
+  stayed at the control's .006.
+- **79(b) held in cell C and was right for the wrong reason in
+  'doubled without a crash'.** In cell C every change against the
+  twin is inside noise (|t| ≤ 1.8). In 'doubled without a crash' the
+  lead fell on fs0, not on fs1 or fs2: the one-month-reversal forest
+  loses .046 a year at ×3 and .079 at ×10 (t −5.6 and −5.8, ahead in 1
+  year of 16), while the fs1 and fs2 arms move inside noise. The
+  region's rows erode the reversal cell's lead on the set that has the
+  reversal columns, because the forest spends splits on the region's
+  own columns (`price_vs_5y_avg_rank`, `dist_5y_high_rank`) and buys
+  more of it (.27 of picks at ×3); its losers stay at 36–41%.
+- **Where the forest does buy the region, the region loses.** The
+  compact set on the two harder cells puts 60–85% of its picks inside
+  the region, with or without emphasis, and those arms are the worst
+  in the table: lead −.05 to −.06 a year, 44–54% losers, 39–58% of
+  picks lose half, picks' CAGR −.03 to −.09. Emphasis moves them by
+  less than noise. The arms that pick from the region are not finding
+  the stocks that recover; they are finding the region.
+- **Emphasis is not a lever here.** Across 18 arms, 16 move against
+  their twin by less than 2 se; the two that move are the reversal
+  forest, downward. No emphasis arm passes rule 74.4 against the
+  control. The closest is fs1 at ×3 in cell C: lead +.031 (+.002
+  against the control, ahead 8 of 16) with 3.9 points more losers.
+  What the universe sweep adds: whether the region's own rows, trained
+  on alone, carry any lead over in-region peers (79(c)).

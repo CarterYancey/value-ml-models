@@ -14,6 +14,20 @@ read** stub; a correction is a new entry that names the old one.
 
 <!-- entries -->
 
+### 2026-11-26 · forest_emph10_fund_3y
+9 runs · `dataset_v1.5.1` · 3 cells · git `83868cb` · [summary](../reports/sweeps/forest_emph10_fund_3y/forest_emph10_fund_3y_summary.md) · [note](notes/2026-11-26-rare-region.md)
+- **Did:** Decision 79 piece 1 at the stronger factor: the same 9 arms with the region's training rows at 10x their sample weight (the region is up to 45% of the late folds' training weight after the factor), read against the twins and the control.
+- **Got:** Cell C on fs0: lead +0.023 (-0.006 vs the control, t -1.4, ahead 7/16; -0.011 in 2005-12, -0.000 in 2013-20), losers 0.161 (-0.6 pts), picks inside the region 0.006. dist_5y_high_rank (0.078) and price_vs_5y_avg_rank (0.065) rise to 3rd and 4th importance, yet the forest buys nothing from the region. The reversal forest on fs0 falls to lead +0.031 (-0.079 vs its twin, t -5.8). fs1 in cell C: lead +0.029 (= control), losers 0.192 (-3.1 pts vs its twin, +2.5 vs the control). Compact-set arms on the harder cells: 67-85% of picks inside the region, lead -0.05, losers 46-54%.
+- **Concluded:** 79(a)'s x10 clause was half right: the lead moved further down but losers fell instead of rising 3+ points; at near half the training weight the region did not become the forest's prior, it became what the forest avoids. Emphasis is not a lever for the rare region: the region's columns, once learned, say no. No arm passes 74.4.
+- **Next:** Region-as-universe sweep (79(c)), then subspace forests, LightGBM colsample and quantile regression; decision 80 after the chain.
+
+### 2026-11-26 · forest_emph3_fund_3y
+9 runs · `dataset_v1.5.1` · 3 cells · git `83868cb` · [summary](../reports/sweeps/forest_emph3_fund_3y/forest_emph3_fund_3y_summary.md) · [note](notes/2026-11-26-rare-region.md)
+- **Did:** Decision 79 piece 1: the candidate's forest (seed 23) with training rows inside the region (liquid, 40%+ below the 5y high, OCF positive 18 of 20 quarters) at 3x their sample weight; 3 cells x 3 feature sets, read by year against the unemphasized twins of forest_fund_labels_3y and the control (cell C x fs0).
+- **Got:** Cell C on fs0: lead +0.027 (-0.002 vs the control, t -0.9, ahead 6/16), losers 0.166 (-0.2 pts), picks inside the region 0.006 = the control's share; importances the control's to 3 digits. 16 of 18 arms move against their twins by under 2 se. The one-month-reversal forest ('doubled without a crash' x fs0) loses 0.046/yr (t -5.6, ahead 1/16) and buys 27% of its picks from the region. Compact-set arms on the harder cells put 60-85% of picks inside the region and lose (lead -0.05, 44-54% losers), emphasized or not.
+- **Concluded:** Prediction 79(a) held and Carter's rival failed: at x3 the region's columns win no splits and the forest's picks stay outside the region. 79(b) held in cell C; in the reversal cell the lead fell on fs0 (not fs1/fs2 as predicted). Where a forest does buy the region, the region loses at 3 years. No arm passes 74.4.
+- **Next:** Read forest_emph10_fund_3y (same arms at x10), then the region-as-universe sweep (79(c)): whether in-region rows trained on alone carry a lead over in-region peers.
+
 ### 2026-11-26 · forest_fund_labels_5y
 12 runs · `dataset_v1.5.1` · 4 cells · git `940c764` · [summary](../reports/sweeps/forest_fund_labels_5y/forest_fund_labels_5y_summary.md) · [note](notes/2026-11-26-rare-region.md)
 - **Did:** Decision 78 sweep C: the 5-year horizon (folds 2007-18) for cell C's twin, cagr>=0.15 & dd<0.3, run-up>=1.0 & dd<0.4 and run-up>=1.0, on fs0 (112 old ranks), fs1 (193 raw fundamentals) and fs2 (the compact own-history set plus the fall columns, 77); the candidate's forest, seed 23, inside the 100k floor on the same-size screen; paired by year with cell C x fs0 at 5 years.
