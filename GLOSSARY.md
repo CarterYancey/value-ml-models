@@ -203,10 +203,12 @@ change. The format follows Matt Pocock's `domain-modeling` skill.
 - **Prediction** — an expected result written in the config or the
   decision log before a run, and marked afterwards as held, missed or
   half held.
-- **Decision** — a numbered entry in the
-  [decision log](docs/notes/2026-09-29-decisions.md) that records a
-  choice, who made it, and why. "Decision 36" is Carter's direction
-  of 2026-10-01.
+- **Decision** — a numbered entry in the decision log that records a
+  choice, who made it, and why. Decisions 1 to 72 are in
+  [the log of 2026-09-29](docs/notes/2026-09-29-decisions.md), which
+  is closed and not edited again; decision 73 onward are in
+  [the log of 2026-11-26](docs/notes/2026-11-26-decisions.md).
+  "Decision 36" is Carter's direction of 2026-10-01.
 - **Screen** — the report that applies the backtest's selection rule
   (top K per quarter, capped per sector) to a run's test rows and
   reads the picks' outcomes. Report-only, no costs, no cash. _Avoid_:

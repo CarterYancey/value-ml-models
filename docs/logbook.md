@@ -14,6 +14,13 @@ read** stub; a correction is a new entry that names the old one.
 
 <!-- entries -->
 
+### 2026-11-25 · Carter rejects the Foamex move; an upstream request; the decision log of 2026-09-29 is closed (decision 73)
+git `08fb005` · [note](notes/2026-11-26-upstream-foamex-price-check.md)
+- **Did:** Corrects the entry above (the CAGR replaces the TWR, decision 72), which called the Foamex move real. Carter read a 451-fold move in four months as a data error whatever the vendor's own tables say. Wrote an upstream request note with what was seen, what was checked and what upstream is asked to check; marked the W70 run of round 6 as resting on an unverified price in the note, findings and TODO; started the continued decision log at Carter's instruction.
+- **Got:** No new numbers. The check of decision 72 used three views of one vendor's data and a public record that is silent on the January 2006 price; no independent quote was checked.
+- **Concluded:** The W70 result is unverified until upstream answers. The CAGR stays the metric of record. The price-floor question gains a reason: a filter that admits a 1-cent stock admits the rows most likely to carry a data error.
+- **Next:** Carter forwards docs/notes/2026-11-26-upstream-foamex-price-check.md. Decisions go to docs/notes/2026-11-26-decisions.md from now on.
+
 ### 2026-11-25 · the CAGR replaces the TWR as the metric of record (decision 72)
 git `67704fa` · [note](notes/2026-11-25-fallen-stocks.md)
 - **Did:** Checked Carter's doubt about the Foamex move in the W70 run against the raw Sharadar prices, the daily market value and the bankruptcy record. Moved the backtest report's headline to the money-weighted CAGR (XIRR, the ledger's mwr_annualized, now with benchmark_mwr_annualized beside it) and put the TWR after the drawdown. Re-read round 6 on the CAGR from the 18 existing reports; nothing was rerun.

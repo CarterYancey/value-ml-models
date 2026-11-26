@@ -27,7 +27,9 @@ the merge into `Claude`**.
 ## A goal-directed session
 
 The goal is in findings.md ("State") and in the decision log
-([notes/2026-09-29-decisions.md](notes/2026-09-29-decisions.md)).
+([notes/2026-11-26-decisions.md](notes/2026-11-26-decisions.md),
+which continues [the log of 2026-09-29](notes/2026-09-29-decisions.md);
+that file is closed at decision 72 and is not edited again).
 The freedom is conditional on the record:
 
 1. **Every decision is logged before it is acted on**: a numbered
