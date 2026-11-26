@@ -1,0 +1,32 @@
+# Decision 76 (2026-11-26): the candidate's roc_greenblatt_rank leg refit on
+# dataset_v1.5.1 for the blend backtests of decision 76.2 (the same leg
+# as the _v141 config; a rank factor has no fit to speak of).
+name = "factor_roc_greenblatt_3y_v151"
+dataset_version = "dataset_v1.5.1"
+min_dataset_version = "1.4"
+scheme = "walkforward"
+folds = "all"
+horizon_years = 3
+label = "fwd_3y_cagr >= 0 & fwd_3y_max_drawdown_from_entry < 0.3"
+feature_groups = ["ranks"]
+seed = 7
+top_k = [20, 10, 5, 50, 100]
+pick_outcomes = [
+  "label_3y_beat_spy",
+  "fwd_3y_excess_cagr",
+  "fwd_3y_cagr",
+  "fwd_3y_max_drawdown_from_entry",
+  "fwd_3y_cagr < 0",
+  "fwd_3y_cagr < -0.1",
+  "fwd_3y_max_drawdown_from_entry >= 0.4",
+  "fwd_3y_cagr >= 0.15",
+  "fwd_3y_excess_cagr >= 0.05",
+  "fwd_3y_path_avg_return",
+  "fwd_3y_path_avg_return > fwd_3y_spy_path_avg_return",
+  "fwd_3y_realized_vol",
+]
+
+[model]
+name = "rank_factor"
+rank_column = "roc_greenblatt_rank"
+higher_is_better = true

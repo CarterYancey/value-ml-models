@@ -222,3 +222,62 @@ more than cell C's, but they are not calmer than cell C's picks.
 3. **The control at three seeds is the v1.5.1 reference** for any later
    arm in cell C inside the floor (the candidate's own numbers are a
    v1.4.1 record and are not compared).
+
+### 76. The 8-K counts hold at three seeds: the backtest that decision 75 said would follow
+
+*What happened (2026-11-26):* `forest_v151_features_seeds_3y` ran fs0,
+fs1 and fs5 at seeds 232 and 1776 (6 runs, 29 minutes). Three-seed
+means, paired by test year with the control's three-seed mean: fs5's
+gain in lead is +0.011 a year (se 0.005, t 2.4), ahead in 13 of 16
+years, +0.013 in 2005–12 and +0.009 in 2013–20, and its 2005–08 lead
+is not lower (0.040 against 0.034). The gain is +0.010, +0.011 and
++0.012 at the three seeds alone. Its losers are 0.187 against the
+control's 0.173 (gain −0.014, se 0.010, t −1.5; −0.021 in 2005–12,
+−0.007 in 2013–20). fs1: lead +0.002 (se 0.003), losers −0.015 (se
+0.012), the first half carrying the penalty (−0.028, se 0.018). p@20
+at three seeds: fs0 0.762, fs1 0.755, fs5 0.754.
+
+`lgbm_v151_tuned_nonloser_3y` (4 runs, 33 minutes): r13 and r19 on
+fs0 and fs1 reach p@20 0.719–0.747 (the forest's 0.747–0.753), with
+the forest's PR-AUC, and a screen lead of −0.003 to +0.006 a year
+against the forest's +0.029; losers 0.178–0.208 against 0.167–0.191;
+their picks' mean path return 0.11–0.13 against the peers' 0.17.
+
+*Predictions of 75.2.* (a) contradicted for fs5: the gain in lead did
+not shrink below +0.005, it held at +0.011 at every seed with the
+2005–08 lead no lower than the control's. The rival stands: the two
+counts the forest used (earnings releases and officer changes in the
+trailing year) carry information the 112 ranks do not. The loser
+penalty of the new columns held for fs1 in the first half only, at
+1.6 standard errors over all 16 years; it is noise or small. (b) held
+and its rival rejected: a LightGBM of the 2026-09 size matches the
+forest's p@20 and its picks have no lead over their peers. The model
+family sets the picks, not the top-20 precision.
+
+*Decided:*
+
+1. **fs5 is not carried into the candidate** (74.4 needs both
+   outcomes; 74.6 bars a carry of the counts while losers are worse).
+   The question 75.2a reserved for Carter is answered with a
+   measurement instead of a screen number: **the backtest runs now**,
+   on the arrangement of record, because the gain in lead is beyond
+   noise at three seeds, the era-marker prediction that was the reason
+   for 74.6's bar failed, and a screen gain is not a money gain
+   (decision 51). Nothing is promoted on the screen alone.
+2. **Four backtests, seed 23, `dataset_v1.5.1`, buys 2005–2020 valued
+   2023-12-29, Carter's rank floor, top 10 a month, 2 per sector, 35
+   bps:** the candidate's blend (forest, momentum, return on capital by
+   mean rank) with the fs0 forest and with the fs5 forest; and the
+   forest alone, fs0 and fs5, under the same rule. The v1.4.1 record
+   is not compared; the fs0 pair is the v1.5.1 control.
+3. **Predictions.** The forest-alone fs5 portfolio ends within 3% of
+   the fs0 portfolio on money, with a drawdown within 2 points: the
+   screen's +1.1 points a year on the picks' 3-year CAGR does not carry
+   into a monthly portfolio with costs (decision 51's pattern). Rival:
+   it ends 5% or more above with the drawdown within 2 points; then the
+   counts go to Carter as a change to the candidate's forest, with the
+   blend's own pair saying how much of it survives the two factors.
+   The blend pair is predicted to be within 2% of each other on money.
+4. **Bundles** come from `vml-run` of four configs on v1.5.1: the two
+   forests (`forest_nonloser_dd30_3y_v151`, `forest_nonloser_dd30_3y_events_v151`)
+   and the two factor legs (`factor_mom_12_2_3y_v151`, `factor_roc_greenblatt_3y_v151`).
