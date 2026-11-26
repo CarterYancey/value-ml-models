@@ -468,6 +468,15 @@ def write_report(
                 if getattr(screen, "peer_column", None) is not None
                 else ""
             )
+            + (
+                " `in_region` is the share of rows inside the screen's "
+                f"region (`{describe_filters(screen.region)}`), read from "
+                "the test rows as of the snapshot like the peer column; a "
+                "NULL in a region column counts as outside. It says where "
+                "a selection comes from, not what it earned."
+                if getattr(screen, "region", ())
+                else ""
+            )
         )
         lines.append("")
         lines.append(_table(_screen_view(table)))

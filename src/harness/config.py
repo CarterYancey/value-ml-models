@@ -129,7 +129,8 @@ UNIVERSE_SCOPES = ("all", "test")
 
 SCREEN_PERIODS = ("quarter", "year")
 _SCREEN_KEYS = frozenset(
-    {"per", "top_k", "max_per_group", "group_column", "peer_column", "peer_bins"}
+    {"per", "top_k", "max_per_group", "group_column", "peer_column",
+     "peer_bins", "region"}
 )
 
 
@@ -157,6 +158,29 @@ def parse_universe(raw, source: str) -> tuple[FilterSpec, ...]:
     if len(set(canon)) != len(canon):
         raise ConfigError(f"config {source}: [[universe]] repeats a filter")
     return tuple(sorted(specs, key=lambda sp: sp.canonical()))
+
+
+def parse_region(raw, source: str, where: str) -> tuple[FilterSpec, ...]:
+    """A region of feature-column filters as a config writes it: a
+    non-empty list of `column op value` strings or column/op/value
+    tables, ANDed, no filter repeated. Used by `[emphasis]` and by the
+    screen's `region`; the columns are checked against the manifest when
+    the dataset is open."""
+    if isinstance(raw, (str, dict)) or not isinstance(raw, (list, tuple)) or not raw:
+        raise ConfigError(
+            f"config {source}: {where} must be a non-empty list of filters "
+            "(`column op value` strings or column/op/value tables)"
+        )
+    filters = []
+    for entry in raw:
+        if isinstance(entry, str):
+            filters.append(FilterSpec.parse(entry, where))
+        else:
+            filters.append(FilterSpec.from_table(entry, source, where))
+    canon = [f.canonical() for f in filters]
+    if len(set(canon)) != len(canon):
+        raise ConfigError(f"config {source}: {where} repeats a filter")
+    return tuple(filters)
 
 
 @dataclass(frozen=True)
@@ -219,29 +243,8 @@ class EmphasisSpec:
                 f"config {source}: [emphasis] factor 1 changes nothing; "
                 "drop the table instead"
             )
-        region_raw = table["region"]
-        if isinstance(region_raw, (str, dict)) or not isinstance(
-            region_raw, (list, tuple)
-        ) or not region_raw:
-            raise ConfigError(
-                f"config {source}: [emphasis] region must be a non-empty "
-                "list of filters (`column op value` strings or "
-                "column/op/value tables)"
-            )
-        filters = []
-        for entry in region_raw:
-            if isinstance(entry, str):
-                filters.append(FilterSpec.parse(entry, "[emphasis] region"))
-            else:
-                filters.append(
-                    FilterSpec.from_table(entry, source, "[emphasis] region")
-                )
-        canon = [f.canonical() for f in filters]
-        if len(set(canon)) != len(canon):
-            raise ConfigError(
-                f"config {source}: [emphasis] region repeats a filter"
-            )
-        return cls(region=tuple(filters), factor=float(factor))
+        filters = parse_region(table["region"], source, "[emphasis] region")
+        return cls(region=filters, factor=float(factor))
 
     def to_table(self) -> dict:
         return {
@@ -308,6 +311,12 @@ class PickScreen:
     #: model). None = no peer reference.
     peer_column: str | None = None
     peer_bins: int = 20
+    #: a region of feature-column filters (`[[universe]]` spelling) whose
+    #: share among the picks, their peers and the top K the report
+    #: carries as the binary pick outcome `in_region`: what part of a
+    #: selection comes from, say, the stocks 40% below their 5-year
+    #: high. Report-only; a NULL in a region column counts as outside.
+    region: tuple[FilterSpec, ...] = ()
 
     @classmethod
     def from_table(cls, table, source: str) -> "PickScreen":
@@ -356,6 +365,11 @@ class PickScreen:
                 f"config {source}: [pick_screen] peer_bins must be an "
                 f"integer of 2 or more, got {peer_bins!r}"
             )
+        region = (
+            parse_region(table["region"], source, "[pick_screen] region")
+            if "region" in table
+            else ()
+        )
         return cls(
             per=per,
             top_k=int(top_k),
@@ -363,6 +377,7 @@ class PickScreen:
             group_column=str(table.get("group_column", "sector")),
             peer_column=None if peer_column is None else str(peer_column),
             peer_bins=int(peer_bins),
+            region=region,
         )
 
     def to_table(self) -> dict:
@@ -374,6 +389,9 @@ class PickScreen:
         if self.peer_column is not None:
             table["peer_column"] = self.peer_column
             table["peer_bins"] = self.peer_bins
+        if self.region:
+            # canonical and order-free, so one region is one hash
+            table["region"] = sorted(f.canonical() for f in self.region)
         return table
 
     def describe(self) -> str:
@@ -386,6 +404,10 @@ class PickScreen:
             text += (
                 f"; peers: the test rows of the same {self.per} in the "
                 f"same of {self.peer_bins} bands of `{self.peer_column}`"
+            )
+        if self.region:
+            text += (
+                f"; `in_region` = inside `{describe_filters(self.region)}`"
             )
         return text
 

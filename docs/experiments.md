@@ -196,6 +196,30 @@ Report-only and part of the config hash when set, like
 screen: equal weights, no costs, entry at the snapshot, held to the
 horizon.
 
+**Where the picks come from.** A screen may name a region of
+feature-column filters (the `[[universe]]` spelling) and the report
+then carries the binary pick outcome `in_region`: the share of the
+picks, of their peers and of the top K that sit inside it, for
+instance the stocks 40% or more below their 5-year high with a long
+record of positive operating cash flow:
+
+```toml
+[pick_screen]
+per = "quarter"
+top_k = 10
+max_per_group = 2
+peer_column = "log_marketcap_rank"
+region = ["dist_5y_high <= -0.4", "ocf_positive_frac_20q >= 0.9"]
+```
+
+Logged as `screen_mean_in_region`, `screen_peer_mean_in_region` and the
+top-K `mean_in_region` columns; the region's filters are ANDed, a NULL
+counts as outside, the columns must be feature columns of the manifest
+(a label can never be a region), and the region is part of the config
+hash like the rest of the screen. It says where a selection comes
+from, not what it earned: a model that is asked to emphasize a region
+(`[emphasis]`) is read on whether its picks moved into it.
+
 **Same-size peers.** The all-rows reference beside every pick outcome
 is the average test row, and the average test row is a small company.
 Against a capitalization-weighted benchmark small stocks trail by a

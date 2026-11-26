@@ -27,9 +27,11 @@ from eval.era import (
 )
 from eval.metrics import compute_all, regression_diagnostics
 from eval.picks import (
+    REGION_OUTCOME,
     has_pick_outcomes,
     has_screen_columns,
     peer_bands,
+    outcome_column,
     pick_outcome_metrics,
     pick_outcome_table,
     screen_group_table,
@@ -44,7 +46,7 @@ from harness.calibration import PrequentialCalibration
 from harness.config import ExperimentConfig
 from harness.dataset import Dataset, SplitAccess, model_input_columns
 from harness.errors import ConfigError, DatasetValidationError
-from harness.filters import FILTERABLE_GROUPS
+from harness.filters import FILTERABLE_GROUPS, filter_mask, validate_filter_columns
 from harness.model_store import ModelBundle
 from harness.report import write_report
 from harness.results import (
@@ -385,6 +387,8 @@ def selection_columns(config) -> list[str]:
         cols.append(screen.group_column)
     if screen is not None and screen.peer_column is not None:
         cols.append(screen.peer_column)
+    if screen is not None:
+        cols += [f.column for f in screen.region]
     return cols
 
 
@@ -394,6 +398,8 @@ def check_pick_screen(dataset: Dataset, screen) -> None:
     snapshot, never on an outcome."""
     if screen is None:
         return
+    if screen.region:
+        validate_filter_columns(screen.region, dataset, "[pick_screen] region")
     if screen.peer_column is not None:
         # a rank (0..1) known at the snapshot: the bands are cut on it
         ranks = {
@@ -471,6 +477,14 @@ def _pick_outcome_columns(dataset: Dataset, config, test, test_fit) -> dict:
                 rows[screen.peer_column].to_numpy(dtype=float),
                 screen.peer_bins,
             )
+        if screen.region:
+            # the region as a binary pick outcome: its share among the
+            # picks, their peers and the top K comes out of the same
+            # statistics as every other outcome; NULL counts as outside
+            inside = filter_mask(rows, screen.region).to_numpy(dtype=float)
+            out.setdefault("pick_outcomes", {})[
+                outcome_column(REGION_OUTCOME, True)
+            ] = inside
     return out
 
 
