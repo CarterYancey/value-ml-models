@@ -72,6 +72,8 @@ from harness.calibration import (
 )
 from harness.config import (
     _parse_year_balance,
+    EmphasisSpec,
+    parse_emphasis,
     UNIVERSE_SCOPES,
     ExperimentConfig,
     FeatureSpec,
@@ -141,6 +143,7 @@ _SWEEP_ALLOWED = frozenset(
         "pick_outcomes",
         "universe",
         "universe_scope",
+        "emphasis",
         "pick_screen",
         # the one-line conclusion `vml-promote --note` writes into a
         # config; not part of the sweep's identity or of any run's hash
@@ -218,6 +221,9 @@ class SweepConfig:
     universe: tuple[FilterSpec, ...] = ()
     universe_scope: str = "all"
     pick_screen: PickScreen | None = None
+    #: the training-row emphasis of every run (ExperimentConfig.emphasis);
+    #: one per sweep file, like the universe
+    emphasis: EmphasisSpec | None = None
 
     @classmethod
     def from_file(cls, path: str | Path) -> "SweepConfig":
@@ -571,6 +577,7 @@ class SweepConfig:
             pick_outcomes=pick_outcomes,
             universe=parse_universe(raw.get("universe"), f"sweep {source}"),
             universe_scope=str(raw.get("universe_scope", "all")),
+            emphasis=parse_emphasis(raw.get("emphasis"), f"sweep {source}"),
             pick_screen=(
                 PickScreen.from_table(raw["pick_screen"], f"sweep {source}")
                 if "pick_screen" in raw
@@ -671,6 +678,8 @@ class SweepConfig:
             payload["min_dataset_version"] = self.min_dataset_version
         if self.pick_outcomes:
             payload["pick_outcomes"] = list(self.pick_outcomes)
+        if self.emphasis is not None:
+            payload["emphasis"] = self.emphasis.identity()
         if self.universe:
             payload["universe"] = [f.to_table() for f in self.universe]
             if self.universe_scope != "all":
@@ -769,6 +778,7 @@ class SweepConfig:
                 ),
                 universe=self.universe,
                 universe_scope=self.universe_scope,
+                emphasis=self.emphasis,
                 pick_screen=self.pick_screen,
             )
             candidate, name = self._run_names(

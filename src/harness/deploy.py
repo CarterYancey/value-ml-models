@@ -176,6 +176,7 @@ def train_deployment_model(
         # Column-projected: the refit needs features + label + weight,
         # not the full-width (string-heavy) frame.
         dataset.check_universe(config.universe)
+        dataset.check_emphasis(config.emphasis)
         refit_frame = dataset.frame(
             list(feature_cols)
             + [
@@ -183,6 +184,11 @@ def train_deployment_model(
                 dataset.sample_weight_column(config.horizon_years),
             ]
             + [f.column for f in config.universe]
+            + (
+                [f.column for f in config.emphasis.region]
+                if config.emphasis is not None
+                else []
+            )
         )
         if config.universe and config.universe_scope == "all":
             # the deployed model learns from the rows the selected
@@ -200,6 +206,7 @@ def train_deployment_model(
             refit_frame, config.label, feature_cols, config.horizon_years,
             target=model_target(config.model_name),
             year_balance=config.year_balance,
+            emphasis=config.emphasis,
         )
         if not len(fit.X):
             raise DatasetValidationError(

@@ -119,6 +119,7 @@ def run_experiment(
         # indicator columns (harness.dataset.feature_matrix)
         input_cols = model_input_columns(feature_cols)
         dataset.check_universe(config.universe)
+        dataset.check_emphasis(config.emphasis)
         check_pick_screen(dataset, config.pick_screen)
         folds = (
             dataset.folds(config.scheme, config.horizon_years)
@@ -177,6 +178,7 @@ def run_experiment(
             fit = dataset.fit_data(
                 train_rows, config.label, feature_cols, config.horizon_years,
                 target=target, year_balance=config.year_balance,
+                emphasis=config.emphasis,
             )
             model = build_model(config.model_name, config.model_params, config.seed)
             model.fit(fit.X, fit.y, sample_weight=fit.sample_weight)
@@ -229,6 +231,10 @@ def run_experiment(
                 # what the universe left out, for the report's appendix
                 fr["n_train_rows_all"] = len(split.train)
                 fr["n_test_rows_all"] = len(split.test)
+            if fit.emphasis_share is not None:
+                # the region's share of the training weight before the
+                # factor, for the report's disclosure
+                fr["emphasis_train_share"] = fit.emphasis_share
             fold_results.append(fr)
             probabilistic = model.probabilistic
             fold_models[fold] = model
@@ -371,6 +377,9 @@ def selection_columns(config) -> list[str]:
     """Columns a run reads besides its features, label and weight: the
     universe's filter columns and the portfolio screen's group column."""
     cols = [f.column for f in config.universe]
+    emphasis = getattr(config, "emphasis", None)
+    if emphasis is not None:
+        cols += [f.column for f in emphasis.region]
     screen = config.pick_screen
     if screen is not None and screen.max_per_group is not None:
         cols.append(screen.group_column)

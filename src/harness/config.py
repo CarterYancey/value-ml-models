@@ -159,6 +159,115 @@ def parse_universe(raw, source: str) -> tuple[FilterSpec, ...]:
     return tuple(sorted(specs, key=lambda sp: sp.canonical()))
 
 
+@dataclass(frozen=True)
+class EmphasisSpec:
+    """`[emphasis]`: the training rows inside a region of feature
+    columns carry `factor` times their mandatory sample weight; every
+    other training row, and every test row, is untouched.
+
+    Why: a forest given every row chooses its splits where the gain is
+    largest over the whole population, and the columns that separate a
+    small region (stocks with a strong record that have fallen hard)
+    never win a split. A universe restricted to the region starves the
+    fit in the early folds. Emphasis keeps every row and the common
+    structure, and lets the region decide more of the splits. A
+    sample-weight scheme like `year_balance`: the uniqueness weights stay
+    inside it, it changes no row's label or features, it reads feature
+    columns only (labels and weights are structurally out of reach, as
+    for a universe), and it is part of the config's identity.
+
+    ```toml
+    [emphasis]
+    factor = 3.0
+    region = ["dist_5y_high <= -0.4", "ocf_positive_frac_20q >= 0.9"]
+    ```
+    The region's filters are ANDed; a NULL fails a filter, so a row with
+    a NULL in a region column is not emphasized.
+    """
+
+    region: tuple[FilterSpec, ...]
+    factor: float
+
+    @classmethod
+    def from_table(cls, table, source: str) -> "EmphasisSpec":
+        if not isinstance(table, dict):
+            raise ConfigError(
+                f"config {source}: [emphasis] must be a table with factor "
+                "and region"
+            )
+        unknown = sorted(set(table) - {"factor", "region"})
+        if unknown:
+            raise ConfigError(
+                f"config {source}: unknown [emphasis] keys {unknown}; "
+                "expected factor, region"
+            )
+        missing = [k for k in ("factor", "region") if k not in table]
+        if missing:
+            raise ConfigError(f"config {source}: [emphasis] lacks {missing}")
+        factor = table["factor"]
+        if (
+            isinstance(factor, bool)
+            or not isinstance(factor, (int, float))
+            or not factor > 0
+        ):
+            raise ConfigError(
+                f"config {source}: [emphasis] factor must be a positive "
+                f"number, got {factor!r}"
+            )
+        if float(factor) == 1.0:
+            raise ConfigError(
+                f"config {source}: [emphasis] factor 1 changes nothing; "
+                "drop the table instead"
+            )
+        region_raw = table["region"]
+        if isinstance(region_raw, (str, dict)) or not isinstance(
+            region_raw, (list, tuple)
+        ) or not region_raw:
+            raise ConfigError(
+                f"config {source}: [emphasis] region must be a non-empty "
+                "list of filters (`column op value` strings or "
+                "column/op/value tables)"
+            )
+        filters = []
+        for entry in region_raw:
+            if isinstance(entry, str):
+                filters.append(FilterSpec.parse(entry, "[emphasis] region"))
+            else:
+                filters.append(
+                    FilterSpec.from_table(entry, source, "[emphasis] region")
+                )
+        canon = [f.canonical() for f in filters]
+        if len(set(canon)) != len(canon):
+            raise ConfigError(
+                f"config {source}: [emphasis] region repeats a filter"
+            )
+        return cls(region=tuple(filters), factor=float(factor))
+
+    def to_table(self) -> dict:
+        return {
+            "factor": self.factor,
+            "region": [f.describe() for f in self.region],
+        }
+
+    def identity(self) -> dict:
+        """What the config hash sees: the factor and the region's filters
+        in canonical spelling, order-free."""
+        return {
+            "factor": self.factor,
+            "region": sorted(f.canonical() for f in self.region),
+        }
+
+    def describe(self) -> str:
+        return f"{describe_filters(self.region)} x {self.factor:g}"
+
+
+def parse_emphasis(raw, source: str) -> "EmphasisSpec | None":
+    """The optional `[emphasis]` table of a config (None when absent)."""
+    if raw is None:
+        return None
+    return EmphasisSpec.from_table(raw, source)
+
+
 def universe_qualifier(universe: tuple[FilterSpec, ...]) -> str:
     """The text a universe adds to a ledger cell's label ("" for none)."""
     if not universe:
@@ -445,6 +554,10 @@ class ExperimentConfig:
     #: "all": train and test rows are filtered; "test": only test rows
     #: (train on everything, evaluate inside the universe)
     universe_scope: str = "all"
+    #: `[emphasis]` (EmphasisSpec): training rows inside a region of
+    #: feature columns carry `factor` times their mandatory weight; test
+    #: rows are untouched. Hashed when set.
+    emphasis: EmphasisSpec | None = None
     #: the portfolio screen (`[pick_screen]`, see `PickScreen`)
     pick_screen: PickScreen | None = None
     #: config hashes of the bundles whose scores `vml-eval` combined
@@ -516,6 +629,7 @@ class ExperimentConfig:
             ),
             universe=parse_universe(raw.get("universe"), source),
             universe_scope=str(raw.get("universe_scope", "all")),
+            emphasis=parse_emphasis(raw.get("emphasis"), source),
             pick_screen=(
                 PickScreen.from_table(raw["pick_screen"], source)
                 if "pick_screen" in raw
@@ -661,6 +775,8 @@ class ExperimentConfig:
             raw["universe"] = [f.to_table() for f in self.universe]
             if self.universe_scope != "all":
                 raw["universe_scope"] = self.universe_scope
+        if self.emphasis is not None:
+            raw["emphasis"] = self.emphasis.to_table()
         if self.pick_screen is not None:
             raw["pick_screen"] = self.pick_screen.to_table()
         if self.features is not None:
@@ -717,6 +833,8 @@ class ExperimentConfig:
             payload["universe"] = [f.to_table() for f in self.universe]
             if self.universe_scope != "all":
                 payload["universe_scope"] = self.universe_scope
+        if self.emphasis is not None:
+            payload["emphasis"] = self.emphasis.identity()
         if self.pick_screen is not None:
             payload["pick_screen"] = self.pick_screen.to_table()
         if self.blend:

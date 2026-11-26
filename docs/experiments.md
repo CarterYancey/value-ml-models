@@ -357,6 +357,52 @@ What it is and is not:
 - One universe per sweep file (top-level `[[universe]]`), so a sweep's
   runs are compared inside one population.
 
+## Emphasis: a region of the training rows counted more
+
+```toml
+[emphasis]
+factor = 3.0
+region = ["dist_5y_high <= -0.4", "ocf_positive_frac_20q >= 0.9"]
+```
+
+An `[emphasis]` multiplies the mandatory sample weights of the training
+rows inside a region by `factor`. The region is a list of filters over
+feature columns, in the universe's spelling (`column op value` as one
+string, or a `column`/`op`/`value` table), ANDed; a NULL fails, so a
+row with a NULL in a region column is not emphasized. Introduced in
+decision 78.6 for the rare region Carter described: stocks with a
+strong record that have fallen hard. A forest given every row chooses
+its splits where the gain is largest over the whole population, and
+the columns that separate a small region never win a split; a
+universe restricted to the region starves the fit in the early folds
+(fold 2006 of the fallen universe has an effective size of 20).
+Emphasis keeps every row and the common structure, and lets the region
+decide more of the splits.
+
+What it is and is not:
+
+- **A weight, not a filter.** Every training row stays in the fit; no
+  row's label or features change. The uniqueness weights keep their
+  ratios inside and outside the region, and a `year_balance` is
+  applied first. The effective sample size reported is Σ of the
+  mandatory weights, unchanged; the report states the region's share
+  of each fold's training weight before the factor
+  (`emphasis_train_share`).
+- **Training only.** Test rows are never reweighted, so every metric
+  is measured exactly as without emphasis. A region may read feature
+  columns the manifest declares, never a label or a weight (the same
+  rule as a universe: the weight a row gets depends on what was known
+  at the snapshot, never on its outcome).
+- **Part of the model.** It is in the config hash and the bundle;
+  `vml-train-deploy` and the backtest's year-end refits apply it. A
+  factor of 1 is refused (drop the table instead).
+- **Not a universe and not a cell.** The run is counted in its label's
+  cell like any run over all rows, and its numbers are comparable with
+  one; the same cell with `universe_scope = "all"` on the region is the
+  starved version of the same idea.
+- One emphasis per sweep file (top-level `[emphasis]`), like the
+  universe; sweep over factors with one file per factor.
+
 ## Boolean feature columns
 
 The upstream flags (`negative_equity`, `two_year_loss`, the nine
