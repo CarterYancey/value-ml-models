@@ -682,9 +682,9 @@ in [PLAN.md](PLAN.md); check items off (and add new ones) as work proceeds.
       `n_estimators`) at full budget via a follow-up sweep file — no
       harness change needed, just two sweep configs.
 
-### Next, after 2026-11-25, second session (decisions 61 to 72)
+### Next, after 2026-11-25, second session (decisions 61 to 73)
 
-The fallen-stock program (decisions 61 to 72, note
+The fallen-stock program (decisions 61 to 73, note
 docs/notes/2026-11-25-fallen-stocks.md) asked whether a model can find
 the stocks that recover after a deep fall. It cannot, with these
 columns. The "not a loser" forest inside F50 gives a portfolio of fallen
@@ -699,8 +699,15 @@ Also on 2026-11-25 the sandbox died while a backtest was writing its
 ledger row. The ledger was repaired, the backtest's memory use was cut,
 and a command now enforces the lab-branch rule (decision 68).
 
+- [ ] **Carter: forward the upstream request on the Foamex price
+      path** (decision 73,
+      docs/notes/2026-11-26-upstream-foamex-price-check.md). The W70
+      run of round 6 rests on a 1-cent price that rises 451-fold in
+      four months; until upstream answers it is read as unverified.
 - [ ] **Carter merges `claude/results-2026-11-25b`.** It also carries
-      the report change of decision 72 (`cagr` in the headline). After the merge,
+      the report change of decision 72 (`cagr` in the headline) and
+      the continued decision log, docs/notes/2026-11-26-decisions.md
+      (the log of 2026-09-29 is closed and not edited again). After the merge,
       from any other branch, run
       `uv run vml-queue archive-lab claude/lab-2026-11-25b --delete`.
       The next session starts with `uv run vml-queue new-lab`.
@@ -714,9 +721,9 @@ and a command now enforces the lab-branch rule (decision 68).
       17 points shallower. Nothing is promoted until Carter decides.
 - [ ] **Carter decides whether to add a price floor** to the backtest's
       investability filter (decision 71.3). A bankrupt stock at 1 cent,
-      a real price (decision 72), passed the 100k dollar-volume floor
-      and the rank floor in 2006. The filter would change every
-      backtest's universe.
+      a price upstream is asked to check (decision 73), passed the 100k
+      dollar-volume floor and the rank floor in 2006. The filter would
+      change every backtest's universe.
 - [ ] **The 2020 comparison window is a standing risk** (decision 70.1).
       It drops the years in which SPY was strongest and was chosen after
       the portfolios lost ground in them. Challenge it when the bubble

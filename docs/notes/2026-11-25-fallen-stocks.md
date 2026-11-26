@@ -591,6 +591,10 @@ all the backtests the program has run: fourteen, all for the record.
 | W50 | 441,845 | 11.13% | 8.80% | −60.2% | 558,797 | 10.41% | +8.4 points | 0.457 |
 | W70 | 312,884 | 7.00% | 16.99% | −92.9% | 349,663 | 6.17% | +4.7 points | 0.621 |
 
+The W70 row rests on one price path that Carter reads as a data error
+and upstream is asked to check (decision 73); it is unverified until
+then.
+
 The configs are `bt_fallen{30,50,70}_forestC_top10_cap2_rankfloor` and
 `bt_fresh{30,40,50,70}_forestC_top10_cap2_rankfloor`, each with a
 `_to2020` twin; the config hashes are in the ledger and in the logbook
@@ -619,16 +623,20 @@ small the account was. Its CAGR of 7.0% against SPY's 12.58% and its
 final value say what the deposits earned. Decision 71 made a reading
 rule of it, and decision 72 the same day went further: the TWR left the
 headline and the CAGR became the metric of record. Carter doubted the
-Foamex move itself. Decision 72 records the check: the raw Sharadar
-prices (1 cent to 4.51 dollars unadjusted, times 4 for a later reverse
-split), the daily market value (0.7 million to 80 million dollars with
-the enterprise value unchanged) and the bankruptcy record (equity kept
-at the February 2007 emergence after a rights offering at 2.25 dollars)
-agree that the move was real, from an entry price known only to within
-a factor of two. The same run shows a hole in the investability
-filter: the 100k dollar-volume floor and Carter's rank floor let a
-real 1-cent bankrupt stock through. Whether to add a price floor is
-Carter's call, and it is a config change, not a code change.
+Foamex move itself. Decision 72 recorded a check against the vendor's
+own tables (unadjusted close 1 cent to 4.51 dollars, times 4 for a
+later reverse split; market value 0.7 million to 80 million dollars
+with the enterprise value unchanged; equity kept at the February 2007
+emergence after a rights offering at 2.25 dollars) and called the move
+real. Carter rejected that reading on 2026-11-26: a 451-fold move in
+four months does not happen, and the three price-level facts come from
+one vendor. The move is recorded as unverified, upstream is asked to
+check it ([the request](2026-11-26-upstream-foamex-price-check.md)),
+and the W70 run rests on it until upstream answers (decision 73). The
+same run shows a hole in the investability filter: the 100k
+dollar-volume floor and Carter's rank floor let a 1-cent bankrupt stock
+through. Whether to add a price floor is Carter's call, and it is a
+config change, not a code change.
 
 Third, the depth of the fall. Money falls with the depth at both
 horizons, with F70's 2023 value as the one exception, and the worst

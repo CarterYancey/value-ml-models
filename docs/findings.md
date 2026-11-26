@@ -24,7 +24,13 @@ build that no longer exists and is context only.
 
 ## Next session: start here
 
-1. The latest sessions were on 2026-11-25. Their notes are
+1. The latest session was on 2026-11-26: Carter rejected the Foamex
+   price path behind round 6's W70 run as a data error, and
+   [an upstream request](notes/2026-11-26-upstream-foamex-price-check.md)
+   asks upstream to check it (decision 73, the first entry of
+   [the continued decision log](notes/2026-11-26-decisions.md); the
+   log of 2026-09-29 is closed at decision 72). The sessions of
+   2026-11-25 wrote
    [the fallen-stock program](notes/2026-11-25-fallen-stocks.md),
    decisions 61 to 72, and
    [a deployable candidate that does not train on the recent years](notes/2026-11-25-training-cutoff.md),
@@ -67,7 +73,7 @@ final value, the metric of record since decision 72. The TWR is read
 only beside it.
 
 **The fallen-stock program ran six rounds and is closed (decisions 61
-to 72).** Carter asked whether a model can find the fallen stocks that
+to 73).** Carter asked whether a model can find the fallen stocks that
 recover. No tree model learns the recovery label, a stock doubling
 within three years, in any universe at any depth. The "not a loser"
 forest trained inside F50, the liquid stocks 50% or more below their
@@ -85,9 +91,11 @@ windows. The 2020 window is Carter's choice under the bubble
 assumption and is a standing risk (decision 70.1). Whether the F50
 portfolio is worth running beside the candidate is Carter's decision;
 nothing is promoted. The W70 portfolio had the program's highest TWR
-and least money, from one real 1-cent bankrupt stock bought in 2006,
-so the TWR left the headline and the CAGR is the metric of record
-(decision 72).
+and least money, from one bankrupt stock bought at 1 cent in 2006 that
+the data has rising 451-fold in four months; Carter reads that as a
+data error, upstream is asked to check it, and the W70 run rests on an
+unverified price until it does (decision 73). The TWR left the
+headline and the CAGR is the metric of record (decision 72).
 
 **The candidate is not shown to beat SPY.** At the end of 2020 it was
 ahead of SPY by final value and by TWR. In August 2026 it is 13%
