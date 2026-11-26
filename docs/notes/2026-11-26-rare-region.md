@@ -336,3 +336,92 @@ above .03.
   against the control, ahead 8 of 16) with 3.9 points more losers.
   What the universe sweep adds: whether the region's own rows, trained
   on alone, carry any lead over in-region peers (79(c)).
+
+### The region as a universe (`forest_region_universe_3y`, 6 runs, folds 2008–2020)
+
+The candidate's forest trained and read on the region's rows alone
+(`[[universe]]`: the 100k floor, `dist_5y_high <= -0.4`,
+`ocf_positive_frac_20q >= 0.9`). Peers are now in-region stocks of the
+same size. Training weight inside the region: 588 (fold 2008) to 2,810
+(fold 2020), against 12,692–37,097 for the whole liquid set; 900–4,350
+test rows a year. The same forest configuration, so leaves of 72 are
+large against these fits.
+
+What the region's rows did, all of them, against all liquid rows
+(test-row means, 2008–2020):
+
+| rows | n/yr | cell C rate | CAGR mean | CAGR median | losers | lost half | doubled | run-up ≥100% | vol |
+|---|---|---|---|---|---|---|---|---|---|
+| region | 2,144 | .405 | .019 | .048 | .407 | .403 | .185 | .335 | .552 |
+| all liquid | 12,217 | .457 | .034 | .063 | .371 | .338 | .159 | .298 | .497 |
+
+By year the region's mean CAGR is .090, .184, .095, .106, .096 in
+2008–2012, then −.078, −.117, −.042, −.024, −.186, −.051 in 2013–2018,
+.021 in 2019 and .147 in 2020; the liquid set's is −.042 to +.145 and
+never below −.042 after 2007. The region has more doublers and more
+losers than the market: wider tails, lower mean. It pays after a crash
+(2009, 2020) and loses through the long rise (2013–2018). It is a bet
+on the market's recovery, not a pool of mispriced survivors.
+
+| cell | set | p@20 (base) | lead over in-region peers (ahead) | losers (peers) | picks' CAGR (peers') | doubled (peers) | stocks/yr |
+|---|---|---|---|---|---|---|---|
+| C | fs0 | .650 (.405) | +.040 (10/13) | .331 (.403) | .062 (.022) | .117 (.145) | 30.5 |
+| C | fs1 | .569 | +.044 (fs1 − fs0 +.004, t 0.2, 8/13) | .331 (.396) | .071 (.027) | .152 (.151) | 28.7 |
+| C | fs2 | .527 | −.011 (−.051 vs fs0, t −3.5, 2/13) | .387 (.400) | .018 (.029) | .092 (.149) | 25.0 |
+| ru100dd40 | fs0 | .296 (.237) | +.051 (9/13) | .344 (.411) | .062 (.011) | .200 (.173) | 31.7 |
+| ru100dd40 | fs1 | .323 | +.039 (−.002 vs fs0, 8/13) | .350 (.411) | .054 (.016) | .192 (.173) | 29.0 |
+| ru100dd40 | fs2 | .285 | −.070 (−.110 vs fs0, t −2.5) | .527 (.461) | −.087 (−.017) | .194 (.187) | 26.2 |
+
+Cell C on fs0 by year: lead +.010, −.010, +.020, +.092, +.049, +.102,
++.038, +.091, +.029, +.139, +.059, −.016, −.078 (2008–2020); losers .30,
+.23, .18, .13, .18, .30, .63, .35, .35, .58, .53, .35, .23. The lead is
+largest in the years the region lost most (2013, 2015, 2017: the forest
+picks the in-region stocks that fall least), and the picks still lose
+money in 2014 and 2017.
+
+Against the control's picks (cell C × fs0 on all liquid rows, same 13
+years): the control's picks earn .121 a year with 11% losers; the
+in-region forest's earn .062 (−.059, t −3.4, ahead in 2 of 13) with 33%
+losers (+22 points, t 5.0). The in-region picks double more often (.117
+against .063) and so do their peers (.145 against .136): the doublers
+are the region's, not the forest's.
+
+Importances inside the region: fs0 `dist_5y_high_rank` .161,
+`price_vs_5y_avg_rank` .095, `vol_12m_rank` .072, `vol_36m_rank` .062,
+`dist_52w_high_rank` .055 — how far fallen, then how calm. fs1
+`sales_yield_vs_5y_median_rank` .073,
+`tangible_book_to_market_vs_5y_median_rank` .065,
+`earnings_yield_5y_peak_rank` .039, `ocf_yield_5y_avg_rank` .029: the
+valuation-against-own-history columns Carter asked about lead the
+forest inside the region, and that forest's lead matches fs0's (+.044
+against +.040) at the same losers with a lower p@20 (.569 against .650).
+
+### Reading of the universe sweep against decision 79
+
+- **79(c) held on every count but a tie.** Lead over in-region peers
+  positive in 10 of 13 years for cell C on fs0 (the bar was 10), losers
+  .331 (bar .30 or more), fs1 and fs2 not ahead of fs0 (fs1 +.004 of
+  lead inside noise with a lower p@20; fs2 −.051, t −3.5). The emphasis
+  arm (×3, fs0, cell C) has fewer losers than the universe arm in 12 of
+  the 13 shared years and the same share (.225) in 2020.
+- **The region's forest is decision 63's fallen-stocks finding again, on
+  a different region.** Inside a pool of fallen stocks the forest finds
+  the ones that fall least, by how far they have fallen and how calm
+  they are, and leads its in-region peers by 4 points a year; the pool
+  itself earns 2% a year with 40% losers, so the picks earn 6% with 33%
+  losers — half the control's return with three times its losers. Trained
+  inside the region the forest does not find the doublers: its picks
+  double less often than their peers.
+- **The own-history valuation columns are real inside the region and
+  not enough.** On fs1 they are the top splits and carry fs0's lead.
+  That is the first place in this program where the history columns
+  lead a forest to the same lead as the price columns. It is a lead
+  over a losing peer group.
+- **What the region is.** Its rows' mean 3-year CAGR is .019 against
+  .034 for all liquid rows, with more losers, more halvings and more
+  doublers; it earns in 2009–2012 and 2020 and loses every year from
+  2013 to 2018. "Strong history, steep fall, recovers" describes the
+  region's good years, not its rows: the recovery is the market's.
+  Whether a model can tell the recovering rows from the rest within the
+  region is what the subspace, colsample and quantile arms test next,
+  on all rows.

@@ -14,6 +14,13 @@ read** stub; a correction is a new entry that names the old one.
 
 <!-- entries -->
 
+### 2026-11-26 · forest_region_universe_3y
+6 runs · `dataset_v1.5.1` · 2 cells · git `23fc541` · [summary](../reports/sweeps/forest_region_universe_3y/forest_region_universe_3y_summary.md) · [note](notes/2026-11-26-rare-region.md)
+- **Did:** Decision 79 piece 2: the candidate's forest trained and read on the region's rows alone (liquid, 40%+ below the 5y high, OCF positive 18/20 quarters; 588-2,810 training weight, 900-4,350 test rows a year), folds 2008-2020, cells C and 'doubled without a crash', fs0/fs1/fs2; peers are in-region same-size stocks.
+- **Got:** Region rows 2008-20: mean CAGR 0.019 vs 0.034 for all liquid rows, losers 0.407 vs 0.371, lost half 0.403 vs 0.338, doubled 0.185 vs 0.159; the region earns in 2009-12 and 2020 and loses every year 2013-18. Cell C x fs0 inside it: p@20 0.650 (base 0.405), lead over in-region peers +0.040 (10/13 years), losers 0.331 (peers 0.403), picks' CAGR 0.062 vs the control's picks 0.121 (-0.059, t -3.4, ahead 2/13; losers +22 pts, t 5.0); picks double less often than their peers (0.117 vs 0.145). fs1 (own-history valuation ranks as top splits: sales_yield_vs_5y_median, tangible_book_to_market_vs_5y_median) matches fs0's lead (+0.044, t 0.2) at the same losers with p@20 0.569; fs2 -0.051 of lead (t -3.5).
+- **Concluded:** 79(c) held (lead positive 10/13, losers >= 0.30, fs1/fs2 not ahead; emphasis arm fewer losers in 12/13 years, one tie). Decision 63 again on a new region: inside a pool of fallen stocks the forest finds the ones that fall least, not the ones that recover; the pool is a bet on the market's recovery (wider tails, lower mean), not mispriced survivors. The own-history valuation columns lead inside the region and are not enough.
+- **Next:** Subspace forests and LightGBM colsample 0.1 (79(d)), quantile regression (79(e)); then decision 80.
+
 ### 2026-11-26 · forest_emph10_fund_3y
 9 runs · `dataset_v1.5.1` · 3 cells · git `83868cb` · [summary](../reports/sweeps/forest_emph10_fund_3y/forest_emph10_fund_3y_summary.md) · [note](notes/2026-11-26-rare-region.md)
 - **Did:** Decision 79 piece 1 at the stronger factor: the same 9 arms with the region's training rows at 10x their sample weight (the region is up to 45% of the late folds' training weight after the factor), read against the twins and the control.
