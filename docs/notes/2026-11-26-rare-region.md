@@ -425,3 +425,71 @@ against +.040) at the same losers with a lower p@20 (.569 against .650).
   Whether a model can tell the recovering rows from the rest within the
   region is what the subspace, colsample and quantile arms test next,
   on all rows.
+
+### Subspace forests (`forest_subspace_fund_3y`, 12 runs)
+
+Forests that see 5% of the columns at each split (`max_features` 0.05:
+5 of 112, 8 of 162, 3 of 77) instead of the candidate's 20%, so that a
+weak column must be used when the strong ones are absent. Two shapes:
+set0 depth 8, leaves of 30; set1 the candidate's depth 4, leaves of 72.
+Trained on every row, read on the same-size screen, paired by year
+with the control (cell C × fs0 of sweep A) and, in the reversal cell,
+with the sweep A twin of the same set.
+
+| cell | set | shape | p@20 | lead | gain vs control (t, ahead) | losers (+ vs control) | region | picks' CAGR |
+|---|---|---|---|---|---|---|---|---|
+| C | fs0 | depth 8 | .722 | +.028 | −.001 (−0.2, 7/16) | .189 (+2.2) | .009 | .092 |
+| C | fs0 | depth 4 | .634 | +.021 | −.008 (−1.3, 7/16) | .194 (+2.7) | .022 | .087 |
+| C | fs1 | depth 8 | .681 | +.023 | −.006 (−0.8, 7/16) | .238 (+7.0) | .058 | .077 |
+| C | fs1 | depth 4 | .578 | +.024 | −.005 (−0.5, 4/16) | .228 (+6.1) | .072 | .077 |
+| C | fs2 | depth 8 | .650 | +.007 | −.022 (−2.4, 3/16) | .244 (+7.7) | .033 | .056 |
+| C | fs2 | depth 4 | .622 | +.010 | −.019 (−2.8, 5/16) | .252 (+8.4) | .030 | .059 |
+| ru100dd40 | fs0 | depth 8 | .244 | +.106 | +.077 (3.8, 15/16) | .412 (+24.5) | .339 | .055 |
+| ru100dd40 | fs0 | depth 4 | .244 | +.101 | +.072 (4.8, 15/16) | .398 (+23.1) | .344 | .056 |
+| ru100dd40 | fs1 | depth 8 | .303 | +.055 | +.026 (1.0, 10/16) | .419 (+25.2) | .459 | .041 |
+| ru100dd40 | fs1 | depth 4 | .316 | +.053 | +.024 (0.9, 9/16) | .420 (+25.3) | .522 | .041 |
+| ru100dd40 | fs2 | depth 8 | .231 | −.042 | −.071 (−2.0, 4/16) | .523 (+35.6) | .831 | −.073 |
+| ru100dd40 | fs2 | depth 4 | .234 | −.069 | −.098 (−2.7, 4/16) | .538 (+37.0) | .859 | −.098 |
+
+Against the sweep A twins in the reversal cell: fs0 depth 8 −.004 of
+lead (t −0.5, 8/16; the twin's lead is +.110) with 3 points more losers
+and a third of its picks inside the region; fs1 +.035 and +.033 (t 3.3
+and 3.5, ahead 14 and 13 of 16) over its twin's +.020, with 42% losers
+(the twin 45%) and half its picks inside the region; fs2 depth 8 +.024
+(t 2.5) over a twin at −.066.
+
+Importances flatten as designed: in cell C on fs0 the top column is
+`vol_12m_rank` at .060 (depth 8) and .070 (depth 4), against .198 in
+the control, and the order is the control's (`vol_36m_rank`,
+`max_ret_21d_rank`, `conservative_score_rank`, `ocf_trend_4q_rank`,
+`ocf_consistency_4q_rank`). On fs1 the top columns are
+`ocf_consistency_4q_rank` .028, `ocf_consistency_8q_rank` .024,
+`ocf_trend_4q_rank` .021, `operating_margin_rank` .020: cash-flow
+consistency, no history z-score or own-history yield above .02. In the
+reversal cell on fs0, `ret_1m_rank` .039, `dist_52w_high_rank` .025,
+`max_ret_21d_rank` .020, `ret_6m_rank` .020: the one-month reversal
+again, found through 5 columns at a time.
+
+### Reading of the subspace sweep against decision 79
+
+- **79(d) held in substance, with the p@20 clause split.** Depth 8 lost
+  .025 of p@20 (the bar was .03–.06) and depth 4 lost .113; the lead is
+  inside noise of the control's (−.001 and −.008); losers are 2.2 and
+  2.7 points higher (bar 2–4). Depth 8 beats depth 4 on p@20 and not on
+  the screen. The rival failed: the picks' share inside the region is
+  .009 and .022 against a bar of +10 points.
+- **Forcing weak columns into the splits does not change what the
+  forest buys.** The same columns lead, each with a third of its former
+  weight; the picks are the control's kind of stock at a slightly higher
+  loser rate. A column that discriminates in a rare region would have
+  shown up here, where the volatility ranks are absent from 19 of 20
+  splits; none did.
+- **The reversal cell on fs1 is the one arm a subspace forest improved.**
+  +.035 a year over its sweep A twin at 3 points fewer losers, picks
+  half inside the region. It is still a 42%-losers arm whose picks earn
+  4% a year, behind the control's 10%: not a candidate, and it says the
+  "doubled without a crash" label has more to learn on fs1 than the
+  candidate's forest shape gets at (an aside for the record, not a
+  lead to follow in this program).
+- No subspace arm passes rule 74.4 against the control on both
+  outcomes.

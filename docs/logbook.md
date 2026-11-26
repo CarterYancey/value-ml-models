@@ -14,6 +14,13 @@ read** stub; a correction is a new entry that names the old one.
 
 <!-- entries -->
 
+### 2026-11-26 · forest_subspace_fund_3y
+12 runs · `dataset_v1.5.1` · 2 cells · git `5d241df` · [summary](../reports/sweeps/forest_subspace_fund_3y/forest_subspace_fund_3y_summary.md) · [note](notes/2026-11-26-rare-region.md)
+- **Did:** Decision 79 piece 3: forests seeing 5% of the columns per split (5 of 112, 8 of 162, 3 of 77) at depth 8/leaf 30 and depth 4/leaf 72, seed 23, cells C and 'doubled without a crash', fs0/fs1/fs2; paired by year with the control (cell C x fs0 of forest_fund_labels_3y) and the sweep A twins.
+- **Got:** Cell C on fs0: p@20 0.722 (depth 8) and 0.634 (depth 4) vs 0.747; lead +0.028/+0.021 (-0.001/-0.008 vs the control, |t| <= 1.3); losers +2.2/+2.7 pts; picks inside the region 0.009/0.022 (control 0.006). Top columns the control's at a third of the weight (vol_12m_rank 0.060 vs 0.198). fs1/fs2 in C: lead -0.005 to -0.022, losers +6 to +8 pts. Reversal cell on fs0 matches its twin (lead +0.106 vs +0.110, 41% losers, a third of picks in the region); on fs1 it beats its twin by +0.035 (t 3.3, 14/16) at 42% losers and 4%/yr picks' CAGR.
+- **Concluded:** 79(d) held: the lead stays inside noise, losers rise 2-3 pts, depth 8 beats depth 4 on p@20 only; the rival (region share +10 pts) failed. With the volatility ranks absent from 19 of 20 splits no column emerged that discriminates in the rare region: the forest buys the same stocks less sharply. No arm passes 74.4.
+- **Next:** LightGBM at colsample 0.1 (the boosted twin of this sweep), the quantile-regression arms, then decision 80.
+
 ### 2026-11-26 · forest_region_universe_3y
 6 runs · `dataset_v1.5.1` · 2 cells · git `23fc541` · [summary](../reports/sweeps/forest_region_universe_3y/forest_region_universe_3y_summary.md) · [note](notes/2026-11-26-rare-region.md)
 - **Did:** Decision 79 piece 2: the candidate's forest trained and read on the region's rows alone (liquid, 40%+ below the 5y high, OCF positive 18/20 quarters; 588-2,810 training weight, 900-4,350 test rows a year), folds 2008-2020, cells C and 'doubled without a crash', fs0/fs1/fs2; peers are in-region same-size stocks.
