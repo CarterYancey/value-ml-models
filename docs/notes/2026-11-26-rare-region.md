@@ -493,3 +493,48 @@ again, found through 5 columns at a time.
   lead to follow in this program).
 - No subspace arm passes rule 74.4 against the control on both
   outcomes.
+
+### LightGBM at colsample 0.1 (`lgbm_colsample_fund_3y`, 6 runs)
+
+The best LightGBM draw of decision 76 (373 trees, 60 leaves, class
+weight 0.25) with `colsample_bytree` 0.1 instead of its 0.806: each
+tree sees a tenth of the columns. Cells C and 'doubled without a
+crash', fs0/fs1/fs2, read against the control and, on fs0, against the
+same draw at colsample 0.806 (`lgbm_v151_tuned_nonloser_3y` set0,
+decision 76: lead −.003, losers .183, p@20 .719).
+
+| cell | set | p@20 | lead | gain vs control (t, ahead) | losers (+ vs control) | region | picks' CAGR |
+|---|---|---|---|---|---|---|---|
+| C | fs0 | .669 | +.007 | −.022 (−2.6, 4/16) | .180 (+1.2) | .020 | .059 |
+| C | fs1 | .716 | +.027 | −.002 (−0.3, 6/16) | .191 (+2.3) | .059 | .082 |
+| C | fs2 | .631 | +.023 | −.006 (−0.7, 6/16) | .222 (+5.5) | .073 | .076 |
+| ru100dd40 | fs0 | .234 | +.027 | −.002 (−0.1, 7/16) | .411 (+24.4) | .280 | .034 |
+| ru100dd40 | fs1 | .175 | +.006 | −.023 (−0.9, 4/16) | .438 (+27.0) | .359 | .018 |
+| ru100dd40 | fs2 | .253 | −.001 | −.029 (−1.0, 4/16) | .473 (+30.6) | .566 | .475 |
+
+Importances: cell C on fs0 `conservative_score_rank` .080,
+`dist_52w_high_rank` .049, `vol_36m_rank` .047, `vol_12m_rank` .041; on
+fs1 `earnings_yield_5y_avg_rank` .035, `ocf_trend_4q_rank` .033,
+`marketcap_to_liabilities_rank` .022, `roa_variability_3y_rank` .022 —
+the first model in this program with a fundamentals-history column at
+the top. In the reversal cell on fs0 `ret_1m_rank` .035,
+`dist_52w_high_rank` .032: the reversal, found weakly (lead +.027
+against the forest's +.110 on the same set).
+
+### Reading of the colsample sweep against decision 79
+
+- **79(d)'s LightGBM clause held on fs1 and fs2, not on fs0.** On fs1
+  the lead is the control's (+.027, −.002, inside noise) with 2.3 points
+  more losers, the subspace forests' pattern; on fs2 the same with 5.5
+  points. On fs0 the lead is −.022 below the control's (t −2.6): a tenth
+  of the columns lifts this draw's lead from −.003 (at colsample 0.806)
+  to +.007 and no further. The rival failed everywhere: picks inside the
+  region .02–.07.
+- **A boosted model that sees a tenth of the columns puts a history
+  column first and still buys the control's stocks.** On fs1 the
+  5-year average earnings yield is the top split, the lead matches the
+  control's and losers are 2 points higher; the picks' share inside the
+  region is .059. This is the best LightGBM lead on dataset_v1.5.1
+  (decision 76's draws ran −.003 to +.006), and it fails rule 74.4 on
+  both outcomes (gain −.002, losers +2.3).
+- No colsample arm passes rule 74.4.

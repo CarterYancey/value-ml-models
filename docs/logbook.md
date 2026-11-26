@@ -14,6 +14,13 @@ read** stub; a correction is a new entry that names the old one.
 
 <!-- entries -->
 
+### 2026-11-26 · lgbm_colsample_fund_3y
+6 runs · `dataset_v1.5.1` · 2 cells · git `217be92` · [summary](../reports/sweeps/lgbm_colsample_fund_3y/lgbm_colsample_fund_3y_summary.md) · [note](notes/2026-11-26-rare-region.md)
+- **Did:** Decision 79 piece 4: decision 76's best LightGBM draw (373 trees, 60 leaves, class weight 0.25) with colsample_bytree 0.1 instead of 0.806, cells C and 'doubled without a crash', fs0/fs1/fs2; read by year against the control (cell C x fs0 forest) and the colsample-0.806 twin.
+- **Got:** Cell C: fs0 lead +0.007 (-0.022 vs the control, t -2.6, 4/16; the 0.806 twin had -0.003), losers 0.180, p@20 0.669; fs1 lead +0.027 (-0.002, t -0.3, 6/16), losers 0.191 (+2.3 pts), p@20 0.716, earnings_yield_5y_avg_rank the top split (0.035), picks inside the region 0.059; fs2 lead +0.023, losers +5.5 pts. Reversal cell on fs0: lead +0.027 vs the forest's +0.110 on the same set, 41% losers.
+- **Concluded:** 79(d)'s LightGBM clause held on fs1/fs2 (lead inside noise of the control's, losers +2-6 pts) and not on fs0 (-0.022). The rival failed (region share 0.02-0.07). The best LightGBM lead on v1.5.1, with a history column first, and it fails 74.4 on both outcomes. No arm passes.
+- **Next:** Quantile regression at alpha 0.8/0.9 (79(e)), then decision 80 and the records.
+
 ### 2026-11-26 · forest_subspace_fund_3y
 12 runs · `dataset_v1.5.1` · 2 cells · git `5d241df` · [summary](../reports/sweeps/forest_subspace_fund_3y/forest_subspace_fund_3y_summary.md) · [note](notes/2026-11-26-rare-region.md)
 - **Did:** Decision 79 piece 3: forests seeing 5% of the columns per split (5 of 112, 8 of 162, 3 of 77) at depth 8/leaf 30 and depth 4/leaf 72, seed 23, cells C and 'doubled without a crash', fs0/fs1/fs2; paired by year with the control (cell C x fs0 of forest_fund_labels_3y) and the sweep A twins.
