@@ -132,3 +132,93 @@ within 0.05 of `label_3y_beat_spy` in every year.
    backtest before an arm has passed item 4 at three seeds. Nothing
    with the 8-K counts is carried forward unless it passes item 4 with
    its 2005–08 lead no lower than its parent's.
+
+### 75. The first reading of decision 74's sweeps, and two follow-ups before the records are written
+
+*What happened (2026-11-26):* the five sweeps of decision 74 ran (68
+runs, 101 minutes, peak 10.3 GB). Read from the ledger per test year,
+2005–2020, paired with the control (fs0: the candidate's forest on the
+112 old ranks, on `dataset_v1.5.1`, inside the 100k floor on the
+same-size screen). The control: p@20 0.747, screen lead over same-size
+peers +0.029 a year, losers 0.167 against the peers' 0.300.
+
+*Feature arms (the forest, seed 23).* Mean yearly gain over fs0 in
+lead / in losers (a negative loser figure is more losers), with the
+standard error and the years ahead: fs1 +0.000 (0.004) 6/16 / −0.023
+(0.012) 2/16; fs2 −0.001 (0.005) 6/16 / −0.022 (0.011) 3/16; fs3
++0.001 (0.004) 8/16 / −0.019 (0.011) 4/16; fs4 −0.005 (0.006) 4/16 /
+−0.030 (0.015) 5/16; fs5 +0.010 (0.005, t 1.9) 10/16, positive in both
+halves (+0.014, +0.007) / −0.017 (0.009) 3/16. Every arm that adds new
+columns has 1.7 to 3.0 points more losers than the control and holds
+fewer distinct stocks a year (21 to 23 against 25). In fs5 the forest
+used two of the fourteen counts (`events_earnings_release_12m` 20th of
+126 columns by importance, `events_officer_change_12m` 31st); nine of
+the fourteen have an importance under 1e-4.
+
+*Label arms (the forest on all 149 ranks).* Paired with cell C on the
+same screen: the path-positive "not a loser" is the same arm (lead
++0.001 (0.003), losers +0.009 (0.012)); "upside without a crash" lead
++0.006 (0.007) 11/16, losers −0.025 (0.027), its picks' realized
+volatility 0.317 against cell C's 0.254 and the peers' 0.401; the
+endpoint-free "beat SPY" lead +0.002 (0.008), losers −0.052 (0.034),
+2013–20 losers 0.284 against cell C's 0.156; the market-relative "not
+a loser" (drawdown no deeper than SPY's) lead −0.004 (0.006), losers
+−0.025 (0.020); "beat SPY on the path without a crash" lead −0.004
+(0.006), losers −0.067 (0.027, t −2.5), 2013–20 losers 0.294. On
+precision the four relative or run-up cells are below a single-factor
+bar: path-beat 0.522 against the `log_marketcap` bar's 0.566 (base
+0.410); run-up 0.466 against 0.528 (0.305); path-beat without a crash
+0.409 against 0.503 (0.301); drawdown no deeper than SPY's 0.353
+against the `vol_36m` bar's 0.475 (0.176). Cell C 0.753 and the
+path-positive cell 0.772 are above every bar (0.741, 0.747).
+
+*Boosters.* LightGBM with the two F50 sets: p@20 0.634–0.659, lead
++0.001 to +0.014, losers 0.184–0.220; XGBoost set1: 0.681 (fs0) and
+0.650 (fs1), lead 0.014 and 0.011, losers 0.206 and 0.220.
+
+*Predictions of 74.5.* (a) held: fs1 is within 0.006 on p@20 and
+within 0.001 on the lead; the rival (fs1 and fs3 ahead by 0.01 in both
+halves) is rejected. (b) held for fs4; contradicted for fs5 on the
+lead, which is higher and higher in 2005–08 too (0.045 against 0.037 a
+year); fs5's losers are worse, so it fails 74.4 all the same. (c)
+contradicted: LightGBM is 0.09 to 0.11 below the forest on p@20, not
+within 0.01. The F50 match did not carry to the full universe; the
+2026-09 random search on v1.4 is the precedent (its best draws matched
+the forest's p@20 and their picks were worse on every outcome), and
+the F50 sets are small (7 leaves) where the 2026-09 draws were not.
+XGBoost is below the forest in 2013–20 as predicted, but not below
+LightGBM. (d) held: the path-average twin of cell C has the same picks
+within 0.015 on screen precision and 0.001 on lead; the rival (a lift
+over base 0.03 above cell C's) is rejected (0.330 against 0.325). (e)
+half held: the run-up label's picks are calmer than peers and earn no
+more than cell C's, but they are not calmer than cell C's picks.
+
+*Decided:*
+
+1. **No arm is carried under 74.4.** None is ahead of the control on
+   both outcomes. The new columns bought nothing in cell C at seed 23,
+   and every market-relative label is behind cell C on losers and
+   below a trivial bar on precision: the forest on these columns learns
+   an absolute floor (a positive endpoint without a 30% drawdown), not
+   a comparison with SPY. That reading is a hypothesis until the seeds
+   below are read.
+2. **Two cheap follow-ups run before the records are written** (36 and
+   12 minutes). (a) `forest_v151_features_seeds_3y`: fs0, fs1 and fs5
+   at seeds 232 and 1776, to separate seed noise from the two
+   patterns of seed 23 — fs5's lead and the loser penalty of the new
+   columns. Prediction: fs5's three-seed mean gain in lead is under
+   +0.005 and its losers stay above fs0's; fs1's loser penalty stays at
+   0.01 or more. Rival: fs5's gain holds at +0.008 or more with its
+   2005–08 lead no lower than fs0's; then the two counts carry
+   information and the arm goes to Carter as a backtest question (an
+   off-thesis trade: more return with more losers; 74.6 still bars a
+   carry while its losers are worse). (b) `lgbm_v151_tuned_nonloser_3y`:
+   LightGBM with r13 and r19 of the 2026-09 search (about 60 leaves,
+   class weight 0.25) on fs0 and fs1. Prediction: p@20 within 0.02 of
+   the forest's, the screen lead 0.01 or more below the forest's and
+   more losers, as in 2026-09. Rival: a booster of this size matches
+   the forest on the screen; then the model family is not what sets
+   the picks.
+3. **The control at three seeds is the v1.5.1 reference** for any later
+   arm in cell C inside the floor (the candidate's own numbers are a
+   v1.4.1 record and are not compared).
