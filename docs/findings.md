@@ -25,59 +25,68 @@ to a build that no longer exists and is context only.
 
 ## Where the project stands
 
-Carter asked on 2026-11-27 why models with precision far above the base
-rate have not beaten the market. The answer, measured in
-[why not the market](notes/2026-11-27-why-not-the-market.md) (decision
-81), is this. The project has not failed to find skill. It has built a
-low-beta, equal-weighted portfolio of calm, profitable, mostly large
-stocks with 4 to 5 points a year of real selection skill against
-same-size peers, and asked it to beat a cap-weighted index. That works
-when the index falls often and fails when a few giants carry the index,
-and the model has no input that tells it which kind of period it is in.
+On 2026-11-27 Carter asked why models whose precision is far above the
+base rate have not beaten the market. The answer is measured in
+[why not the market](notes/2026-11-27-why-not-the-market.md) and
+recorded as decision 81. In short, the project has not failed to find
+skill. It has built a low-beta, equal-weighted portfolio of calm,
+profitable, mostly large stocks. Against stocks of the same size, that
+portfolio's picks show 4 to 5 points a year of real selection skill.
+The project then asked it to beat a cap-weighted index. That works when
+the index falls often. It fails when a few giant stocks carry the
+index, and the model has no input that tells it which kind of period it
+is in.
 
 Three things could change the outcome. They lead the plan, in the
 order of how much evidence supports them (decision 85).
 
-1. **Put the skill inside the index's own structure.** Cap-weight the
-   book, so that the gap between a size-broad equal-weighted band and
-   the index disappears and the loser-avoidance is all that remains.
-   The first instance is E11, the candidate's blend choosing the top 50
-   large caps with an earnings yield of 5% or more, cap-weighted: 12.1%
-   a year against SPY's 10.9% over 2005 to 2026, drawdown −37% against
-   −53%, the same at three seeds. Next: three seeds on
-   `dataset_v1.5.1`, then its pick list beside the candidate's.
+1. **Put the skill inside the index's own structure.** Weight the book
+   by market capitalization. Then the gap between a size-broad,
+   equal-weighted band of stocks and the index disappears, and what
+   remains is the model's avoidance of losers. The first instance is
+   the portfolio called E11: the candidate's three-way ranking chooses
+   the 50 highest-ranked large caps with an earnings yield of 5% or
+   more, weighted by market capitalization. Over 2005 to 2026 it earned
+   12.1% a year time-weighted against SPY's 10.9%, with a worst
+   drawdown of −37% against −53%, and three seeds agree. Next come its
+   three seeds on `dataset_v1.5.1`, then its pick list beside the
+   candidate's.
 2. **Give the portfolio a reason to buy less when the market is dear.**
-   That needs either a market-state column from upstream or a row-level
-   valuation floor. The earnings-yield floor is the stand-in that
-   worked, and it recovered 1.6 of the 2.6 points E10 lacked in 2021 to
-   2026. A floor tight enough to hold cash has not been tried.
+   That needs either a market-state column from upstream or a valuation
+   floor applied to each row. The earnings-yield floor is the stand-in
+   that worked. It recovered 1.6 of the 2.6 points a year that the same
+   book without the floor lacked in 2021 to 2026. A floor tight enough
+   to make the portfolio hold cash has not been tried.
 3. **Raise the picks' upside without raising their losers.** Every
-   attempt so far (regressions, run-up labels, one rare region) has
-   failed. The search for a region reopens (decision 85.3): a steep
-   recent fall as the region, and a model trained inside it to separate
-   the market's over-reactions from justified sell-offs.
+   attempt so far has failed: regressions on returns, labels for
+   run-ups, and one region of fallen stocks. The search for a region
+   reopens (decision 85.3). The next region is a steep recent fall, and
+   a model is trained inside it to separate the market's over-reactions
+   from justified sell-offs.
 
-**How a portfolio is judged** (decision 83, amended by 85). A portfolio
-is compared with SPY over the walk-forward years, 2005 to 2020, on
-three things: its time-weighted return, its worst fall from a peak, and
-how often its buys lost money against same-size peers. It is carried to
-three seeds and proposed to Carter when it beats SPY on the first two
-and its buys pass the screen rule (decision 74.4) against the control.
-The years 2021 to 2026 are reported beside, as context: Carter expects
-the strategies this project looks for to trail in those years. The
+**How a portfolio is judged** (decision 83, amended by decision 85). A
+portfolio is compared with SPY over the walk-forward years, 2005 to
+2020, on three things: its time-weighted return, its worst fall from a
+peak, and how often its buys lost money compared with stocks of the
+same size. It is carried to three seeds and proposed to Carter when it
+beats SPY on the first two and its buys pass the screen rule of
+decision 74.4, which is defined in the State section below. The years
+2021 to 2026 are reported beside, as context, because Carter expects
+the strategies this project looks for to trail in those years. Every
 final value is read beside the table of five deposit schedules that
-every report now carries (decision 84), because the deposit schedule
-alone moves the candidate from 13% behind SPY to 1% ahead. More money
-than SPY over the long run stays the goal in principle; 20% a year is
-the stretch target, and the deep-value stock is the direction.
+each report now carries (decision 84). The deposit schedule alone moves
+the candidate from 13% behind SPY to 1% ahead. More money than SPY over
+the long run stays the goal in principle. The stretch target is 20% a
+year, and deep-value stocks are the direction.
 
 ## Next session: start here
 
-1. Read the section above, then
-   [the decision log](notes/2026-11-26-decisions.md), decisions 81 to
-   85 (the answer; E11 at three seeds; the goal; the backtest's realism,
-   [its note](notes/2026-11-27-backtest-realism.md); Carter's review).
-   Before those, the same sessions wrote
+1. Read the section above, then decisions 81 to 85 of
+   [the decision log](notes/2026-11-26-decisions.md). They record the
+   answer to Carter's question, E11 at three seeds, the goal, the
+   backtest's realism (with
+   [its own note](notes/2026-11-27-backtest-realism.md)) and Carter's
+   review. Before those, the same sessions wrote
    [the rare-region program](notes/2026-11-26-rare-region.md)
    (decisions 78 to 80) and
    [the v1.5.1 program](notes/2026-11-26-v151-program.md) (decisions 74
@@ -133,31 +142,39 @@ period, and this must hold for both outcomes. A model that passes goes
 on to three seeds and then a backtest.
 
 **Why the candidate has not beaten the market (decisions 81, 82).**
-The four measured causes are at the top of this file. The numbers: the
-candidate beat SPY by 3 points a year over 2005 to 2020 (time-weighted
-12.4% against 9.4%) and trailed by 8 over 2021 to 2026 (7.1% against
-15.3%). A cap-weighted book of the top-decile large caps with no model
-ended with 7% more money than SPY and a drawdown of −46% against −53%;
-it is a home-made large-cap index, and it is the control that puts the
-recent gap on the structure. E11, the best portfolio on record, holds
-at three seeds: 12.1% to 12.3% a year against 10.9%, drawdown −37%,
-beta 0.77, 4% less final money under flat deposits and 25% more under a
-lump sum. The rank sell discipline destroys it through turnover.
+The four measured causes are stated at the top of this file. These are
+the numbers. The candidate beat SPY by 3 points a year over 2005 to
+2020, 12.4% against 9.4% time-weighted, and trailed by 8 points a year
+over 2021 to 2026, 7.1% against 15.3%. A book of the top-decile large
+caps weighted by market capitalization, with no model at all, ended
+with 7% more money than SPY and a worst drawdown of −46% against SPY's
+−53%. That book is a home-made large-cap index. It is the control that
+shows the recent gap belongs to the structure of the portfolio, not to
+the model. E11, the best portfolio on record, is the candidate's
+ranking choosing the top 50 large caps with an earnings yield of 5% or
+more, weighted by market capitalization. It holds at three seeds: 12.1%
+to 12.3% a year against SPY's 10.9%, a worst drawdown of −37%, and a
+beta of 0.77. Under flat monthly deposits it ends with 4% less money
+than SPY. With all the money invested at the start it ends with 25%
+more. The rank sell discipline destroys it, because selling and
+rebuying a 50-stock book every month costs half the deposits.
 
 **The rare-region program measured one region (decisions 78 to 80) and
 reopens (decision 85).** Carter asked whether a model can learn the
-rare case: a strong record, a steep fall, a recovery. The region tried
-(liquid stocks 40% or more below their five-year high with positive
-operating cash flow in 18 of 20 quarters, 16% of liquid rows) earns
-1.9% a year against 3.4% for all liquid rows with 41% losers, wins in
-2009 to 2012 and 2020 and loses every year from 2013 to 2018. Five
-methods across 49 runs (training weights, the region as a universe,
-forests seeing 5% of the columns a split, LightGBM with a tenth of the
-columns, quantile regression) found no arm that passes the screen rule:
-the more of a selection sat inside the region, the more of it lost
-money. Of Carter's labels, "doubled without a crash" became a
-one-month-reversal forest and "a run-up of 75%" was learned as
-volatility. The next region is a steep recent fall.
+rare case: a company with a strong record whose stock falls steeply and
+then recovers. One region was tried: liquid stocks 40% or more below
+their five-year high, with positive operating cash flow in 18 of the
+last 20 quarters. It holds 16% of liquid rows. Its stocks earned 1.9% a
+year against 3.4% for all liquid rows, and 41% of them lost money. The
+region wins in 2009 to 2012 and in 2020 and loses in every year from
+2013 to 2018. Five methods were tried across 49 runs: training weights,
+the region as a universe, forests that see 5% of the columns at each
+split, LightGBM with a tenth of the columns, and quantile regression.
+No arm passed the screen rule. The more of a selection sat inside the
+region, the more of it lost money. Of Carter's labels, "doubled without
+a crash" became a forest that bets on one-month reversals, and "a
+run-up of 75%" was learned as volatility. The next region to try is a
+steep recent fall.
 
 **`dataset_v1.5.1` adds nothing to the candidate (decisions 74 to
 77).** Every set with the new history, trend or event columns had the
@@ -319,53 +336,61 @@ yet show whether the buys of 2021 to 2023 recover.
 
 Decision 36 stands: the bubble reading is the working assumption, the
 candidate is paper-traded as it is, and the search continues. The three
-remedies at the top of this file lead the plan; this is the order of
+remedies at the top of this file lead the plan. This is the order of
 work (decision 85).
 
-1. **The skill inside the cap-weighted structure.** E11 on
-   `dataset_v1.5.1` at the forest's three seeds (two forest bundles need
-   training first; one v1.5.1 backtest at a time, about 14 GB). Then a
-   paper-trading list for E11 beside the candidate's, as a second
-   portfolio. A dry run of that list already exists: on
-   `inference_2026-11-20`, `vml-predict` with E11's filters and
-   `--weighting marketcap` (decision 85.4) chose 50 of the 120
-   top-decile large caps whose earnings yield was 5% or more (of 372
-   above the liquidity floor). Energy is 39% of the weight and
-   technology 26%; the largest positions are MU 12.8%, XOM 12.4% and
-   CVX 7.8%. The floor does most of the choosing on that day: the model
-   cuts 120 names to 50. That is a fact about the list, not a reason to
-   change the rule before the seeds run.
-2. **A reason to buy less when the market is dear.** The upstream
-   market-state columns (the request of decision 46, now also the rare
-   region's open question) would let a model learn it. Until then, a
-   valuation floor tight enough to hold cash on the equal-weighted
-   candidate: the 5% and 8% floors held none, because ten stocks always
-   cleared them (decision 81); E6's 12.6% a year in 2021 to 2026 is the
-   reason to look, its 8% less final money the reason for caution.
+1. **The skill inside the cap-weighted structure.** Run E11 on
+   `dataset_v1.5.1` at the forest's three seeds. Two forest bundles
+   must be trained first, and a v1.5.1 backtest needs about 14 GB, so
+   only one runs at a time. Then produce a paper-trading list for E11
+   beside the candidate's, as a second portfolio. A dry run of that
+   list exists. On the inference set of 2026-11-20, `vml-predict` with
+   E11's filters and market-cap weights (decision 85.4) found 372 large
+   caps above the liquidity floor, 120 of them with an earnings yield
+   of 5% or more, and chose 50. Energy holds 39% of the weight and
+   technology 26%. The largest positions are MU at 12.8%, XOM at 12.4%
+   and CVX at 7.8%. On that day the valuation floor does most of the
+   choosing, and the model only cuts 120 names to 50. That is a fact
+   about the list, not a reason to change the rule before the seeds
+   run.
+2. **A reason to buy less when the market is dear.** The market-state
+   columns requested from upstream (decision 46, and now also the rare
+   region's open question) would let a model learn when to buy less.
+   Until they arrive, the alternative is a valuation floor on the
+   equal-weighted candidate tight enough to hold cash. The floors of 5%
+   and 8% held no cash, because ten stocks always cleared them
+   (decision 81). The 8% floor earned 12.6% a year in 2021 to 2026,
+   which is the reason to look, and ended with 8% less money, which is
+   the reason for caution.
 3. **Upside without losers: the region search reopens** (decision
-   85.3). The next decision writes the regions (first, 30% or more
-   below the one-year high) and the predictions, then trains the
-   candidate's forest inside each region as a universe and as an
-   emphasis, and reads its picks on the control's outcomes: lead over
-   same-size peers, losers and doublers, inside the region and across
-   the universe. Then the deep-value floors and universes of decision
-   83.5: net current asset value, tangible book and the earnings yield,
-   with the forest as the gate and the five-year horizon as the outcome.
+   85.3). The next decision writes down the regions and the
+   predictions. The first region is stocks 30% or more below their
+   one-year high. The candidate's forest is then trained inside each
+   region, once with the region as a universe and once with the region
+   emphasized, and its picks are read on the control's outcomes: the
+   lead over same-size peers, the share that lost money and the share
+   that doubled, both inside the region and across the universe. After
+   that come the deep-value floors and universes of decision 83.5: net
+   current asset value, tangible book value and the earnings yield,
+   each against market capitalization, with the forest as the gate and
+   the five-year horizon as the outcome.
 4. **Paper trading** of the candidate follows
    [paper-trading.md](paper-trading.md). The November 2026 list came
    from the v1.4.1 bundles on 2026-11-24. The v1.5.1 build gives the
    same forest, so nothing is refit.
-5. **Carter's other open decisions:** the larger-half filter (58), the
-   training cutoff (60), the F50 portfolio (71), the price floor (71.3)
-   and the Foamex request (73). **Upstream requests:** the market-state
-   columns, a peer-relative label, a recovery label measured inside a
-   region, and the Foamex price check. New columns arrive as a dataset
-   version and run through decision 74's program.
-6. **Later:** the rest of the realism audit (a cost model by size and
-   era, taxes, market impact; none blocks the next step); Carter's rules
-   for other model families (a logistic regression and an MLP on the
-   ranks, judged on the screen first); the engine gaps (selling at the
-   horizon, quarterly buys, a rank gate).
+5. **Carter's other open decisions** are the larger-half filter (58),
+   the training cutoff (60), the F50 portfolio (71), the price floor
+   (71.3) and the Foamex request (73). **The upstream requests** are
+   the market-state columns, a label relative to peers, a recovery
+   label measured inside a region, and the Foamex price check. New
+   columns arrive as a dataset version and run through the program of
+   decision 74.
+6. **Later.** The rest of the realism audit: a cost model by size and
+   era, taxes, and market impact. None of these blocks the next step.
+   Carter's rules for other model families: a logistic regression and
+   a multilayer perceptron on the ranks, judged on the screen first.
+   The engine's gaps: selling at the horizon, quarterly buys, and
+   gating one model's candidates by another's rank.
 
 ## Sealed holdout record
 
