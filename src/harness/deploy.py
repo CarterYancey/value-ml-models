@@ -47,6 +47,7 @@ import traceback
 from datetime import datetime, timezone
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
 
 from harness.config import ExperimentConfig
@@ -342,14 +343,26 @@ def screen_rows(
     }
 
 
+WEIGHTINGS = ("equal", "marketcap")
+
+
 def _check_selection(
-    pick: int | None, max_per_group: int | None, group_column: str
+    pick: int | None,
+    max_per_group: int | None,
+    group_column: str,
+    weighting: str | None = None,
 ) -> None:
+    if weighting is not None and weighting not in WEIGHTINGS:
+        raise ConfigError(
+            f"--weighting must be one of {list(WEIGHTINGS)}, got {weighting!r}"
+        )
     if pick is None:
         if max_per_group is not None:
             raise ConfigError(
                 "--max-per-group caps the picks: it needs --pick K"
             )
+        if weighting is not None:
+            raise ConfigError("--weighting weights the picks: it needs --pick K")
         return
     if pick < 1:
         raise ConfigError(f"--pick must be 1 or more, got {pick}")
@@ -367,6 +380,7 @@ def mark_picks(
     pick: int | None,
     max_per_group: int | None,
     group_column: str,
+    weighting: str | None = None,
 ) -> tuple[pd.DataFrame, dict]:
     """Add a `pick` column to a ranking (best first, sharing `frame`'s
     index): 1..K down the first K rows, skipping a row once
@@ -374,7 +388,13 @@ def mark_picks(
     the backtest's (`portfolio.strategy.capped_top_k`), so a NULL group
     counts as one group and fewer than K picks come back when the
     groups run out. With a cap the group column is carried into the
-    ranking. Without `pick` the ranking is returned unchanged."""
+    ranking. With `weighting` a `weight` column says how a backtest's
+    portfolio with that `weighting` would split one month's cash over
+    the picks: `equal` gives each pick the same share; `marketcap`
+    gives each pick its share of the picks' market capitalization,
+    `exp(log_marketcap)`, as `portfolio.strategy.BuyAndHoldTopK` does
+    (a pick without a market cap gets 0). Without `pick` the ranking is
+    returned unchanged."""
     if pick is None:
         return ranked, {}
     # imported here: portfolio builds on harness, not the reverse
@@ -396,14 +416,37 @@ def mark_picks(
     out["pick"] = pd.Series(
         range(1, len(chosen) + 1), index=chosen, dtype="Int64"
     ).reindex(out.index)
+    if weighting is not None:
+        out["weight"] = _pick_weights(frame, chosen, weighting).reindex(
+            out.index
+        )
     return out, {
         "selection": {
             "pick": int(pick),
             "max_per_group": max_per_group,
             "group_column": group_column if max_per_group else None,
+            "weighting": weighting,
             "n_picked": int(len(chosen)),
         }
     }
+
+
+def _pick_weights(
+    frame: pd.DataFrame, chosen: pd.Index, weighting: str
+) -> pd.Series:
+    """The share of one month's cash each chosen row gets under the
+    backtest's `weighting`, summing to 1 over the picks (or to 0 when
+    no pick has a market cap)."""
+    if weighting == "equal":
+        return pd.Series(1.0 / len(chosen), index=chosen)
+    if "log_marketcap" not in frame.columns:
+        raise DatasetValidationError(
+            "--weighting marketcap needs `log_marketcap` in the inference data"
+        )
+    raw = np.exp(frame.loc[chosen, "log_marketcap"].to_numpy(dtype=float))
+    raw = np.where(np.isfinite(raw) & (raw > 0), raw, 0.0)
+    total = raw.sum()
+    return pd.Series(raw / total if total > 0 else raw, index=chosen)
 
 
 def _inside_universe(bundles, frame: pd.DataFrame) -> tuple[pd.DataFrame, dict]:
@@ -494,6 +537,7 @@ def predict_with_bundle(
     pick: int | None = None,
     max_per_group: int | None = None,
     group_column: str = "sector",
+    weighting: str | None = None,
 ) -> dict:
     """Score an inference dataset with a deployment bundle. Writes the
     full ranking (score-descending, 1-based `rank`) to CSV plus a
@@ -504,7 +548,7 @@ def predict_with_bundle(
     (`screen_rows`); `pick`, `max_per_group` and `group_column` mark the
     rows a backtest with the same rule would buy (`mark_picks`), which
     the summary returns as `picks`. Raises after logging on failure."""
-    _check_selection(pick, max_per_group, group_column)
+    _check_selection(pick, max_per_group, group_column, weighting)
     bundle = DeploymentBundle.load(bundle_dir)
     config = bundle.train_config
     store = ResultsStore(results_path)
@@ -538,12 +582,12 @@ def predict_with_bundle(
             ["score", "permaticker"], ascending=[False, True], kind="mergesort"
         )
         out, selection_meta = mark_picks(
-            out, frame, pick, max_per_group, group_column
+            out, frame, pick, max_per_group, group_column, weighting
         )
         out = out.reset_index(drop=True)
         out.insert(0, "rank", range(1, len(out) + 1))
         selection_cols = [
-            c for c in ("pick", group_column)
+            c for c in ("pick", "weight", group_column)
             if c in out.columns and c not in id_cols + extra
         ] if pick is not None else []
         out = out[["rank"] + selection_cols + id_cols + ["score"] + extra]
@@ -649,6 +693,7 @@ def predict_with_bundles(
     pick: int | None = None,
     max_per_group: int | None = None,
     group_column: str = "sector",
+    weighting: str | None = None,
 ) -> dict:
     """Score one inference dataset with several deployment bundles and
     write a single combined CSV: the id columns, `mean_rank` across
@@ -661,7 +706,7 @@ def predict_with_bundles(
     investable rows; `pick`, `max_per_group` and `group_column` mark
     the rows such a backtest would buy (`mark_picks`), returned as
     `picks`. Returns a summary dict with the top `top_n` rows."""
-    _check_selection(pick, max_per_group, group_column)
+    _check_selection(pick, max_per_group, group_column, weighting)
     bundles = [DeploymentBundle.load(d) for d in bundle_dirs]
     names = _bundle_column_names(bundles)
     store = ResultsStore(results_path)
@@ -744,12 +789,12 @@ def predict_with_bundles(
         ["mean_rank", "permaticker"], ascending=[True, True], kind="mergesort"
     )
     out, selection_meta = mark_picks(
-        out, frame, pick, max_per_group, group_column
+        out, frame, pick, max_per_group, group_column, weighting
     )
     out = out.reset_index(drop=True)
     id_cols = [c for c in _ID_COLUMNS if c in out.columns]
     selection_cols = [
-        c for c in ("pick", group_column)
+        c for c in ("pick", "weight", group_column)
         if c in out.columns and c not in id_cols + extra
     ] if pick is not None else []
     out = out[
@@ -914,6 +959,12 @@ def _main_predict(argv=None) -> int:
         "--group-column", default="sector",
         help="the column --max-per-group counts (default: sector)",
     )
+    parser.add_argument(
+        "--weighting", choices=WEIGHTINGS, default=None,
+        help="with --pick: add a `weight` column over the picks, the share "
+        "of one month's cash each gets under the backtest's [portfolio] "
+        "weighting (equal shares, or by market cap as exp(log_marketcap))",
+    )
     args = parser.parse_args(argv)
     extra_columns = TREND_COLUMNS if args.trends else ()
     try:
@@ -924,6 +975,7 @@ def _main_predict(argv=None) -> int:
             "pick": args.pick,
             "max_per_group": args.max_per_group,
             "group_column": args.group_column,
+            "weighting": args.weighting,
         }
         if len(args.bundles) == 1:
             summary = predict_with_bundle(
@@ -965,7 +1017,10 @@ def _main_predict(argv=None) -> int:
             if args.max_per_group is not None
             else ""
         )
-        print(f"\n{len(picks)} picks by {order}{cap}:\n")
+        weighted = (
+            f", weighted by {args.weighting}" if args.weighting else ""
+        )
+        print(f"\n{len(picks)} picks by {order}{cap}{weighted}:\n")
         print(picks.to_string(index=False))
         return 0
     print(f"\ntop {len(top)} by {order}:\n")

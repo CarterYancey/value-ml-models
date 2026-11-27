@@ -93,7 +93,10 @@ by then.
 
    It prints the ten picks and writes the full ranking to
    `predictions/` with a `pick` column (1 to 10), the sector, and each
-   leg's rank and score. The sidecar `.meta.json` records the bundles,
+   leg's rank and score. The candidate buys equal amounts, so no
+   weights are needed; a portfolio that weights its picks adds
+   `--weighting equal|marketcap` for a `weight` column
+   (docs/deployment.md). The sidecar `.meta.json` records the bundles,
    the filter and the rule.
 3. **Portfolio A:** buy the ten, equal amounts, on the next trading
    day. Keep the CSV: it is the record of what was chosen and why.

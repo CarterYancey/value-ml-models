@@ -10,6 +10,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
 import pytest
 
@@ -695,7 +696,7 @@ def test_pick_walks_the_ranking_with_a_group_cap(
     )
     assert meta["selection"] == {
         "pick": 5, "max_per_group": 2, "group_column": "sector",
-        "n_picked": len(picks),
+        "weighting": None, "n_picked": len(picks),
     }
 
     # without a cap: the first K rows, no group column carried
@@ -900,3 +901,114 @@ def test_cli_train_end_reaches_bundle_and_sidecar(
     multi = json.loads((tmp_path / "multi.csv.meta.json").read_text())
     assert all(m["train_end"] == "2016-01-01" for m in multi["models"])
     assert "Training cutoff" in multi["note"]
+
+
+# ------------------------------------------------------------------ --weighting
+
+
+@pytest.fixture
+def inference_caps(inference_sectors, tmp_path) -> Path:
+    """The sector inference parquet with a `log_marketcap` column: one
+    row in seven has none, the rest a spread of sizes."""
+    frame = pd.read_parquet(inference_sectors)
+    frame["log_marketcap"] = [
+        None if i % 7 == 3 else 18.0 + (i % 11) * 0.5 for i in range(len(frame))
+    ]
+    out = tmp_path / "inference_caps.parquet"
+    frame.to_parquet(out)
+    return out
+
+
+def test_weighting_splits_the_cash_as_the_backtest_would(
+    trained_pair, inference_caps, tmp_path
+):
+    """`weighting` adds a `weight` column over the picks: equal shares,
+    or each pick's share of the picks' market cap (`exp(log_marketcap)`),
+    a pick without a market cap getting 0; the rows not picked have no
+    weight, and the ranking is otherwise the same."""
+    (first, second), results = trained_pair
+    kwargs = dict(results_path=results, predictions_dir=tmp_path / "p")
+    # the three runs share the default output stem, so each names its own
+    plain = predict_with_bundles(
+        [first["bundle_path"], second["bundle_path"]], inference_caps,
+        output_path=tmp_path / "plain.csv", pick=6, max_per_group=3, **kwargs,
+    )
+    equal = predict_with_bundles(
+        [first["bundle_path"], second["bundle_path"]], inference_caps,
+        output_path=tmp_path / "equal.csv", pick=6, max_per_group=3,
+        weighting="equal", **kwargs,
+    )
+    caps = predict_with_bundles(
+        [first["bundle_path"], second["bundle_path"]], inference_caps,
+        output_path=tmp_path / "caps.csv", pick=6, max_per_group=3,
+        weighting="marketcap", **kwargs,
+    )
+    base = pd.read_csv(plain["output_path"])
+    eq = pd.read_csv(equal["output_path"])
+    mc = pd.read_csv(caps["output_path"])
+    assert "weight" not in base.columns
+    assert list(eq.columns[:3]) == ["pick", "weight", "sector"]
+    for weighted in (eq, mc):
+        assert list(weighted["permaticker"]) == list(base["permaticker"])
+        assert weighted["weight"].notna().equals(weighted["pick"].notna())
+    picks = eq[eq["pick"].notna()]
+    assert len(picks) == 6
+    assert picks["weight"].tolist() == pytest.approx([1 / 6] * 6)
+    frame = pd.read_parquet(inference_caps).set_index("permaticker")
+    basis = np.exp(frame.loc[picks["permaticker"], "log_marketcap"]).fillna(0.0)
+    expected = (basis / basis.sum()).to_numpy()
+    got = mc[mc["pick"].notna()]["weight"].to_numpy()
+    assert got == pytest.approx(expected)
+    assert got.sum() == pytest.approx(1.0)
+    assert (got == 0).sum() == basis.eq(0).sum() >= 0
+    assert caps["picks"]["weight"].tolist() == pytest.approx(list(got))
+    meta = json.loads(Path(str(caps["output_path"]) + ".meta.json").read_text())
+    assert meta["selection"]["weighting"] == "marketcap"
+    assert json.loads(
+        Path(str(plain["output_path"]) + ".meta.json").read_text()
+    )["selection"]["weighting"] is None
+
+
+def test_weighting_is_checked(trained, inference_dir, inference_sectors, tmp_path):
+    summary, results = trained
+    kwargs = dict(results_path=results, predictions_dir=tmp_path / "p")
+    with pytest.raises(ConfigError, match="needs --pick"):
+        predict_with_bundle(
+            summary["bundle_path"], inference_dir, weighting="equal", **kwargs
+        )
+    with pytest.raises(ConfigError, match="--weighting must be one of"):
+        predict_with_bundle(
+            summary["bundle_path"], inference_dir, pick=2, weighting="score",
+            **kwargs,
+        )
+    # market-cap weights need the column; equal weights do not
+    with pytest.raises(DatasetValidationError, match="log_marketcap"):
+        predict_with_bundle(
+            summary["bundle_path"], inference_sectors, pick=2,
+            weighting="marketcap", **kwargs,
+        )
+    out = predict_with_bundle(
+        summary["bundle_path"], inference_sectors, pick=2, weighting="equal",
+        **kwargs,
+    )
+    assert pd.read_csv(out["output_path"])["weight"].dropna().tolist() == [0.5, 0.5]
+
+
+def test_cli_weighting_flag(trained, inference_caps, tmp_path, capsys):
+    summary, results = trained
+    out_csv = tmp_path / "weighted.csv"
+    assert (
+        _main_predict(
+            [
+                str(summary["bundle_path"]), str(inference_caps),
+                "--output", str(out_csv), "--results", str(results),
+                "--pick", "4", "--weighting", "marketcap",
+            ]
+        )
+        == 0
+    )
+    printed = capsys.readouterr().out
+    assert "4 picks by score, weighted by marketcap" in printed
+    assert "weight" in printed
+    weights = pd.read_csv(out_csv)["weight"].dropna()
+    assert len(weights) == 4 and weights.sum() == pytest.approx(1.0)
