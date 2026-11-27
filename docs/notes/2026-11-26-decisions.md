@@ -1126,3 +1126,86 @@ two clauses of the rule of 81.2 and failed the final-value clause.
    the upstream market-state columns. Records: the five configs in
    `experiments/KEEP`; section 12 of the note; one logbook entry;
    findings and TODO updated; the results branch gets a further commit.
+
+### 83. Carter's answer on the goal: return per unit of risk for now, more money than SPY in the end, and a realistic backtest before either is judged
+
+*What happened (2026-11-27).* Carter answered the question of decision
+81. In principle the goal is more money than SPY. In practice he does
+not accept the current shortfall as the verdict, for two reasons. First,
+he is willing to bet that the present period is one in which a value
+approach is expected to underperform: valuations are at unprecedented
+levels and a few large, volatile stocks dominate returns. He expects a
+correction and wants a portfolio that will resist it. Second, the final
+value of a 21-year simulation is sensitive to its parameters: how much
+is deposited and when, what is paid in fees and taxes. Before decisions
+rest on backtested performance, the backtest should be made realistic.
+So the goal for now is Meaning B of decision 81: a better return for
+the risk taken, judged on the yearly return, the worst fall from a peak
+and how often a buy loses money. The model work does not stop: 12% a
+year with a shallower drawdown is good, the stretch target is the 20% a
+year Buffett earned in his prime, and the deep-value "cigar butt" that
+Graham and Buffett showed can pay well if identified properly is a
+direction to keep working.
+
+*Decided:*
+
+1. **The goal of record.** A portfolio is judged first on return per
+   unit of risk: time-weighted return against SPY's, worst drawdown
+   against SPY's, and the share of buys that lose money against their
+   same-size peers', over the whole backtest window and in each of its
+   halves. Final money against SPY stays the long-run goal and is
+   reported beside those, with the caveat of decision 81.8 that it
+   weights the recent years by the size of the account. The rule of
+   81.2 is replaced: an arm is carried when it beats SPY on the
+   time-weighted return and on drawdown over the whole window, is no
+   worse than SPY on return in either half by more than its noise, and
+   passes the screen rule of 74.4 against the control on the buys.
+   Under this rule E11 passes, and the candidate passes on 2005 to 2020
+   and fails on 2021 to 2026.
+2. **Backtest realism comes first.** Before E11 or anything else is
+   paper-traded on the strength of a backtest, the backtest's
+   assumptions are audited against what an investor would actually
+   face, and each gap is either closed in code or stated as a known
+   bias with its direction. The audit covers at least: the deposit
+   schedule (a flat 1,000 a month for 21 years against contributions
+   that grow with income); whether the benchmark's return includes
+   SPY's dividends as the stocks' adjusted closes include theirs; costs
+   (35 basis points a side, no commission model, no market impact for
+   cap-weighted buys of the largest names); taxes on sales and on
+   dividends, which favour holding to the horizon over any sell
+   discipline; the timing of each buy against the snapshot date and
+   the price used; and how delistings are paid out. Its findings go in
+   a note and a decision (84), with code changes on a topic branch with
+   tests.
+3. **E11 on `dataset_v1.5.1`** at the forest's three seeds, after the
+   audit, with the candidate's legs refit on that build (the forest
+   bundle at seed 23 exists; seeds 232 and 1776 need `vml-run`); then a
+   paper-trading list for E11 beside the candidate's, as decision 82.4
+   said, as a second portfolio and not a replacement.
+4. **Carter's bet is testable in part.** The record holds one earlier
+   stretch of the same shape, 1999 to 2004 (decision 35), where a
+   stand-in for the candidate trailed in 1999 and led by 9 points a
+   year for the buys of 2000 to 2002. The question "how does E11 behave
+   through a correction" can be read on 2000 to 2003 and 2007 to 2009
+   inside the existing window (E11's drawdown of −37% against SPY's
+   −53% in 2008 to 2009 is the first reading), and the upstream
+   market-state columns would let a model learn it rather than have it
+   imposed.
+5. **The model work continues, aimed at the deep-value stock.** What
+   the record says so far: a deep fall alone is a bet on the market's
+   recovery (decision 80); the earnings-yield ranking alone has 57%
+   losers (sweep B); the forest trained inside fallen stocks finds the
+   ones that fall least, not the ones that recover (decisions 63, 80);
+   but an absolute valuation floor inside the safe set recovered most of
+   the recent gap (E11). The next model experiments, each with its own
+   decision and predictions, start from the columns Graham used: net
+   current asset value against market cap (`ncav_to_marketcap`),
+   tangible book against market cap, and the earnings yield, as floors
+   and as universes, with the forest's loser-avoidance as the gate and
+   the five-year horizon as the outcome, judged under the rule of 83.1.
+   The stretch target of 20% a year is recorded as a target, not a
+   prediction.
+6. **Records.** This decision; findings and TODO updated with the goal
+   of record and the order of work; the results branch gets a further
+   commit; the memory of the direction is kept. What is not done: no
+   change to the candidate, no deployment change, no holdout look.
