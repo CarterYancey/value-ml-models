@@ -1104,3 +1104,25 @@ two clauses of the rule of 81.2 and failed the final-value clause.
    the note holds the tables; one logbook entry; findings and TODO
    updated; the results branch gets a further commit. What is not done:
    no holdout look, no deployment change, no change to the candidate.
+
+6. **Verdict (2026-11-27, after the five runs).** Prediction (a) held:
+   E11 at seeds 232 and 1776 has a time-weighted return of 12.25% and
+   12.16% against seed 23's 12.08%, the same drawdown (−36.7%, −36.8%)
+   and a final value within 0.7% of seed 23's; the three-seed mean,
+   1,271,432, is 4.2% below SPY's, so E11 fails the final-value clause
+   at every seed and passes the other two at every seed. Prediction (b)
+   failed: the rank sell discipline sold about 5,800 times, paid 130,000
+   to 136,000 in costs on 260,000 of deposits, cut the 2021 to 2026 beta
+   to about 0.48 and ended with 60% to 63% of SPY's money. In a
+   cap-weighted book of 50 names from 450 candidates the selling line
+   (the top 90) sits just below the buying line, and the rule churns.
+   The sell discipline belongs to equal-weighted books with many
+   holdings. No book passes the rule of 81.2. E11 held to the horizon
+   stands as the program's best portfolio: 1.2 points a year above SPY
+   time-weighted, 16 points shallower in drawdown, beta 0.77, 4.2% short
+   of SPY's final money. The next step is Carter's answer on the goal
+   (decision 81, section 11 of the note); after it, either three seeds
+   of E11 on `dataset_v1.5.1` and paper trading beside the candidate, or
+   the upstream market-state columns. Records: the five configs in
+   `experiments/KEEP`; section 12 of the note; one logbook entry;
+   findings and TODO updated; the results branch gets a further commit.

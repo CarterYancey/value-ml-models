@@ -99,3 +99,9 @@ experiments/portfolios/bt_lc90_blend_mcap_top100_v141.toml
 experiments/portfolios/bt_lc90_mcap_all_v141.toml
 experiments/portfolios/bt_lc90_blend_mcap_top50_v141.toml
 experiments/portfolios/bt_lc90_blend_mcap_top50_ey5_v141.toml
+# Decision 82 (2026-11-27): E11 at three seeds and with the rank sell discipline; read in docs/notes/2026-11-27-why-not-the-market.md section 12.
+experiments/portfolios/bt_lc90_blend_mcap_top50_ey5_s232_v141.toml
+experiments/portfolios/bt_lc90_blend_mcap_top50_ey5_s1776_v141.toml
+experiments/portfolios/bt_lc90_blend_mcap_top50_ey5_sell20_s23_v141.toml
+experiments/portfolios/bt_lc90_blend_mcap_top50_ey5_sell20_s232_v141.toml
+experiments/portfolios/bt_lc90_blend_mcap_top50_ey5_sell20_s1776_v141.toml
