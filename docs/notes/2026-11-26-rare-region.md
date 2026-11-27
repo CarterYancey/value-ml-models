@@ -510,7 +510,7 @@ decision 76: lead −.003, losers .183, p@20 .719).
 | C | fs2 | .631 | +.023 | −.006 (−0.7, 6/16) | .222 (+5.5) | .073 | .076 |
 | ru100dd40 | fs0 | .234 | +.027 | −.002 (−0.1, 7/16) | .411 (+24.4) | .280 | .034 |
 | ru100dd40 | fs1 | .175 | +.006 | −.023 (−0.9, 4/16) | .438 (+27.0) | .359 | .018 |
-| ru100dd40 | fs2 | .253 | −.001 | −.029 (−1.0, 4/16) | .473 (+30.6) | .566 | .475 |
+| ru100dd40 | fs2 | .253 | −.001 | −.029 (−1.0, 4/16) | .473 (+30.6) | .566 | −.012 |
 
 Importances: cell C on fs0 `conservative_score_rank` .080,
 `dist_52w_high_rank` .049, `vol_36m_rank` .047, `vol_12m_rank` .041; on
@@ -538,3 +538,73 @@ against the forest's +.110 on the same set).
   (decision 76's draws ran −.003 to +.006), and it fails rule 74.4 on
   both outcomes (gain −.002, losers +2.3).
 - No colsample arm passes rule 74.4.
+
+### The upper tail as a regression (`lgbm_quantile_fund_3y`, 6 runs)
+
+LightGBM quantile regression on `fwd_3y_cagr` at alpha 0.8 and 0.9
+(400 trees, 15 leaves, learning rate 0.05): the score is the predicted
+80th or 90th percentile of the 3-year CAGR, so the model is asked where
+the upside is, not where the average is. Evaluated on the cell 'earned
+20% a year' (`eval_label`, base rate .198), read inside the 100k floor
+on the same-size screen. Paired by year with the control.
+
+| set | alpha | p@20 (base .198) | lead | gain vs control (t, ahead) | losers | lost half | doubled | vol | picks' CAGR (peers') | region |
+|---|---|---|---|---|---|---|---|---|---|---|
+| fs0 | 0.8 | .234 | −.001 | −.030 (−1.2, 7/16) | .523 | .553 | .200 | .707 | −.043 (−.042) | .584 |
+| fs0 | 0.9 | .272 | −.010 | −.039 (−1.1, 4/16) | .542 | .592 | .219 | .791 | −.065 (−.055) | .641 |
+| fs1 | 0.8 | .297 | +.025 | −.004 (−0.1, 7/16) | .480 | .527 | .216 | .706 | −.013 (−.038) | .530 |
+| fs1 | 0.9 | .281 | −.018 | −.047 (−1.4, 5/16) | .522 | .562 | .205 | .830 | −.077 (−.059) | .473 |
+| fs2 | 0.8 | .281 | −.068 | −.097 (−1.8, 5/16) | .597 | .650 | .205 | .953 | −.148 (−.080) | .662 |
+| fs2 | 0.9 | .250 | −.062 | −.091 (−1.5, 5/16) | .611 | .667 | .205 | 1.032 | −.171 (−.109) | .627 |
+
+The control's picks: losers .167, lost half .077, doubled .052,
+realized volatility .248, CAGR .096.
+
+Importances: fs0 at 0.8 `ret_1m_rank` .065, `max_ret_21d_rank` .052,
+`dist_52w_high_rank` .033, `vol_36m_rank` .029 (the one-month reversal
+again); at 0.9 `log_marketcap_rank` .055 first, then the same. fs1 at
+0.8 `book_to_market_5y_pctile` .078, `log_assets_rank` .043,
+`book_to_market_vs_5y_median_rank` .032, `tangible_book_to_market_rank`
+.028, `earnings_yield_5y_peak_rank` .028: book value against the
+stock's own history leads the upper-tail model. fs2 at 0.8
+`earnings_yield_5y_peak` .084, `book_to_market` .075, `ocf_yield` .070,
+`log_assets` .051.
+
+### Reading of the quantile sweep against decision 79
+
+- **79(e) held on volatility, losers and the comparison with the
+  run-up cell, and failed on the sign of the lead.** Realized volatility
+  .71 to 1.03 (bar .5), losers .48 to .61 (bar .35), every lead at or
+  below the run-up cells' (+.110 and +.026). The lead was predicted
+  positive: it is −.001 and −.010 on fs0, +.025 and −.018 on fs1,
+  −.068 and −.062 on fs2. Alpha 0.9 is more extreme than 0.8 on
+  volatility and losers on every set and on the lead on fs0 and fs1
+  (fs2's leads are both deep negatives).
+- **Asking for the tail finds different stocks, and they are the
+  region's.** Half to two thirds of the quantile picks are inside the
+  region (the control: .006), they double four times as often as the
+  control's picks (.20–.22 against .05) and more than half of them lose
+  money; their same-size peers lose money too (−.04 to −.11 a year).
+  The upper tail of the 3-year CAGR, as a boosted regression sees it in
+  these columns, is small, volatile, fallen stocks: the lottery, not
+  the mispriced survivor.
+- **The own-history valuation columns lead the tail model on fs1, and
+  that arm is the only one without a negative lead** (+.025, −.004
+  against the control, ahead 7 of 16, with 48% losers). The same
+  columns led inside the region's universe. They say where the upside
+  is scattered; they do not pick it out.
+- No quantile arm passes rule 74.4, and none was expected to (79(e)).
+
+## Decision 80: the verdict on the rare-region program
+
+Written as decision 80 in [the decision log](2026-11-26-decisions.md).
+Across the program's 49 runs (the control's re-run, 18 emphasis arms,
+6 universe arms, 12 subspace forests, 6 colsample boosters, 6 quantile
+regressions) no arm passes rule 74.4 against the control on both
+outcomes. The arms that lead the control on the 3-year CAGR (the
+reversal forests, +.07 to +.08 a year) carry 38–41% losers; the arms
+within two points of the control's losers carry its lead or less. The
+region's share of a selection and that selection's share of losers
+rise together in every sweep: .006 → 17% losers (the control), .06 →
+19–21% (fs1 arms), .27–.34 → 36–41% (the reversal forests), .47–.86 →
+44–61% (the compact-set, universe and quantile arms).

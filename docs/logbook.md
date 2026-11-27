@@ -14,6 +14,13 @@ read** stub; a correction is a new entry that names the old one.
 
 <!-- entries -->
 
+### 2026-11-26 · lgbm_quantile_fund_3y
+6 runs · `dataset_v1.5.1` · `fwd_3y_cagr` · git `2fcad7a` · [summary](../reports/sweeps/lgbm_quantile_fund_3y/lgbm_quantile_fund_3y_summary.md) · [note](notes/2026-11-26-rare-region.md)
+- **Did:** Decision 79 piece 4b: LightGBM quantile regression on fwd_3y_cagr at alpha 0.8 and 0.9 (400 trees, 15 leaves), evaluated on 'earned 20% a year', fs0/fs1/fs2, read inside the 100k floor on the same-size screen against the control.
+- **Got:** Realized volatility of the picks 0.71-1.03 (control 0.25), losers 0.48-0.61 (0.17), lost half 0.53-0.67, doubled 0.20-0.22 (0.05); lead -0.068 to +0.025 (only fs1 at 0.8 non-negative: -0.004 vs the control, 7/16); picks' CAGR -0.01 to -0.17 and their same-size peers lose too; 47-66% of picks inside the region. Alpha 0.9 more extreme than 0.8 on volatility and losers on every set. fs0 top splits ret_1m_rank/max_ret_21d_rank (0.8) and log_marketcap_rank (0.9); fs1 book_to_market_5y_pctile 0.078 first.
+- **Concluded:** 79(e) held on volatility, losers and the run-up comparison and failed on the sign of the lead. Asking for the tail finds the region's small volatile fallen stocks: four times the doublers and more than half losers, the lottery not the mispriced survivor. Closes decision 79's chain: no arm of 49 passes 74.4 (decision 80).
+- **Next:** Decision 80: program closed on 3y; findings.md rewritten, records promoted, results branch second commit for Carter's PR.
+
 ### 2026-11-26 · lgbm_colsample_fund_3y
 6 runs · `dataset_v1.5.1` · 2 cells · git `217be92` · [summary](../reports/sweeps/lgbm_colsample_fund_3y/lgbm_colsample_fund_3y_summary.md) · [note](notes/2026-11-26-rare-region.md)
 - **Did:** Decision 79 piece 4: decision 76's best LightGBM draw (373 trees, 60 leaves, class weight 0.25) with colsample_bytree 0.1 instead of 0.806, cells C and 'doubled without a crash', fs0/fs1/fs2; read by year against the control (cell C x fs0 forest) and the colsample-0.806 twin.

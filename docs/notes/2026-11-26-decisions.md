@@ -639,3 +639,117 @@ chain starts; sweeps B and C of decision 78 are read when they finish
 and do not change this plan. What is not done: no label or weight read
 from a label column at training time beyond the target, no local feature
 derivation, no holdout look, no deployment change.
+
+### 80. The rare-region program's verdict: the region is the market's recovery, and every model that buys it loses
+
+*2026-11-27.* Chain 2 of decision 79 finished at 04:30 UTC: 49 runs in
+seven sweeps, read against the control (cell C × the 112 old ranks,
+the candidate's forest at seed 23: lead over same-size peers +.029 a
+year, losers .167, p@20 .747) and, where a twin exists, against the
+unemphasized arm of sweep A. Tables and per-sweep readings are in
+[the rare-region note](2026-11-26-rare-region.md).
+
+*Predictions of 79.* (a) held and Carter's rival failed: emphasis ×3 in
+cell C on fs0 moves the lead −.002, losers −0.2 points and the picks'
+share inside the region not at all (.006, the control's). The ×10
+clause was half right: the lead fell further (−.006) but losers fell
+0.6 points instead of rising 3; with the region near half the late
+folds' training weight the forest put `dist_5y_high_rank` and
+`price_vs_5y_avg_rank` third and fourth and used them to avoid the
+region. (b) held in cell C (every change inside noise) and was right
+for the wrong reason in 'doubled without a crash': the lead fell on
+fs0 (−.046 and −.079, t −5.6 and −5.8), the set with the reversal
+columns, not on fs1 or fs2. (c) held on every count but a tie: inside
+the region the forest leads in-region peers in 10 of 13 years, losers
+.331, fs1 and fs2 not ahead of fs0, and the emphasis arm has fewer
+losers than the universe arm in 12 of 13 shared years (equal in 2020).
+(d) held in substance: subspace forests keep the lead inside noise and
+add 2–3 points of losers; depth 8 beats depth 4 on p@20 only (depth 8
+lost .025 of p@20, under the predicted .03–.06; depth 4 lost .113,
+over it); LightGBM at colsample 0.1 behaved alike on fs1 and fs2 and
+not on fs0 (−.022). The rival failed everywhere: no arm's share inside
+the region rose 10 points at the control's losers. (e) held on
+volatility (.71–1.03), losers (.48–.61) and the comparison with the
+run-up cells, and failed on the sign of the lead (−.068 to +.025, five
+of six at or below zero). (f) held: no arm passes rule 74.4.
+
+1. **The verdict.** No arm of the program passes rule 74.4 against the
+   control on both outcomes, so no seeds and no backtest follow. The
+   program's finding, as 79(f) framed it: the rare region — liquid,
+   40% or more below its 5-year high, cash flow positive in 18 of 20
+   quarters, 16% of the liquid rows — does not carry a 3-year edge
+   that the harness can find with training weights, a universe,
+   subspace forests, column sub-sampling or an upper-tail regression.
+2. **What the region is** (measured on every test row 2008–2020, the
+   folds where its columns exist). Its rows earn a mean 3-year CAGR of
+   .019 against .034 for all liquid rows, with 41% losers against 37%,
+   40% halvings against 34%, and 18.5% doublers against 15.9%: wider
+   tails, lower mean. By year it earns .09–.18 in 2008–2012 and .15 in
+   2020 and loses in every year from 2013 to 2018 (−.02 to −.19). The
+   region pays when the market recovers from a crash and loses through
+   a long rise. "Strong history, steep fall, recovers" describes the
+   region's good years; the recovery is the market's, and the thing
+   that separates 2009 from 2014 inside the region is not in the row.
+3. **Every selection that buys the region loses, and every selection
+   that leads avoids it.** The picks' share inside the region and
+   their share of losers rise together in all 49 runs: .006 and 17%
+   (the control), .05–.07 and 19–21% (the fs1 arms), .27–.34 and
+   36–41% (the reversal forests), .47–.86 and 44–61% (the compact-set,
+   universe and quantile arms). Inside the region the forest does what
+   it did inside F50 (decision 63): it finds the fallen stocks that
+   fall least (`dist_5y_high_rank`, `price_vs_5y_avg_rank`, the
+   volatility ranks), leads in-region peers by 4 points a year, and
+   its picks earn .062 against the control's picks' .121 with three
+   times the losers; they double less often than their peers (.117
+   against .145).
+4. **Given the region's columns and more of its weight, the forest
+   learns to avoid it.** This is the answer to Carter's concern that
+   dominant columns hide the region's columns. At emphasis ×10 the
+   region's own columns rose to third and fourth importance in cell C
+   and the picks' share inside the region stayed at .006; with the
+   volatility ranks absent from 19 of 20 splits (subspace) no column
+   emerged that discriminates inside the region, and the same columns
+   led at a third of the weight. The forest was never failing to see
+   the region; the region's label rate for 'not a loser' is below the
+   rest of the data's, and the forest reads it correctly.
+5. **The own-history valuation columns are real and are not a
+   selection.** `sales_yield_vs_5y_median_rank`,
+   `tangible_book_to_market_vs_5y_median_rank`,
+   `earnings_yield_5y_peak_rank`, `book_to_market_5y_pctile` and
+   `earnings_yield_5y_avg_rank` are the top splits wherever the
+   price-based columns are absent or the question is the upper tail
+   (the universe on fs1, LightGBM at colsample 0.1 on fs1, the quantile
+   model on fs1). In every such arm the lead is at best the control's
+   (+.027 to +.044) with 2 to 31 points more losers. They say where the
+   upside is scattered; they do not pick it out at 3 years.
+6. **What is not run.** Piece 5 of decision 79 (`year_balance`) was
+   conditional on piece 1 yielding an arm; it did not, so it is not
+   built. Three seeds and a backtest are not run for any arm. The
+   reversal forest ('doubled without a crash' on the 112 ranks,
+   +.081 a year over the control, 38% losers, peers losing money in
+   half the years after 2008) is recorded as a bad-neighbourhood arm,
+   not followed.
+7. **What follows.** The program is closed on the 3-year horizon. The
+   evidence points upstream, not at the model: the region's good and
+   bad years are the market's, so the column that would separate them
+   is a market-state column per snapshot date (already on the upstream
+   list, decision 73 and findings plan item 3), and the label that
+   would name a recovery is a peer- or market-relative one measured
+   inside the region (decision 63's open question, also upstream). A
+   recovery label at 5 years inside the region is the one local
+   experiment left; it is not run here because the region's rows
+   before 2013 are too few to train on alone (effective size 588–1,231)
+   and the 5-year folds end in 2018.
+
+*Records.* Logbook entries for all seven sweeps; the rare-region note
+holds every table; `forest_fund_labels_3y` (sweep A),
+`forest_region_universe_3y` and `forest_emph3_fund_3y` are promoted as
+the program's records (the sets, the region's own numbers, the
+emphasis negative); the other configs of decisions 78 and 79 go into
+`experiments/KEEP`. findings.md is rewritten; TODO.md gets a "Next,
+after 2026-11-27" section. The results branch
+`claude/results-2026-11-26` receives a second commit with the
+emphasis and region code (`claude/emphasis-weights`), decisions 78 to
+80, the notes and the records; Carter opens the pull request. What is
+not done: no holdout look, no deployment change, no edit to a config
+that has run.
