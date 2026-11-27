@@ -113,47 +113,32 @@ of 5% or more, cap-weighted: 12.1% a year against SPY's 10.9% over
 behind SPY in 2021 to 2026, and 3.9% less final money. At three seeds
 it holds (decision 82): 12.1% to 12.3% against 10.9%, drawdown −37%,
 4.2% less final money; the rank sell discipline destroys it through
-turnover. The
-thesis held for sixteen years that held two crashes and failed in a
-six-year stretch carried by the stocks a loser-avoiding model declines
-to hold.
+turnover. The thesis held for sixteen years that held two crashes and
+failed in a six-year stretch carried by the stocks a loser-avoiding
+model declines to hold.
 
 **The rare-region program is closed (decisions 78 to 80).** Carter
-asked whether a model can learn the rare case: a stock with a strong
-record that has fallen hard and then recovers. The region was defined
-as liquid stocks 40% or more below their five-year high whose operating
-cash flow was positive in 18 of the last 20 quarters; it is 16% of the
-liquid rows. Its rows earn a mean three-year CAGR of 1.9% against 3.4%
-for all liquid rows, with 41% losers against 37% and 18.5% doublers
-against 15.9%. It earns in 2009 to 2012 and in 2020, and loses in every
-year from 2013 to 2018. Five methods were tried across 49 runs: weighting
-the region's rows three and ten times in training, training on the
-region alone, forests that see 5% of the columns at each split, LightGBM
-with a tenth of the columns per tree, and quantile regression for the
-upper tail of returns. No arm passes the screen rule. In every sweep,
-the more of a selection sat inside the region, the more of it lost
-money, from 0.6% inside and 17% losers for the control to 47% to 86%
-inside and 44% to 61% losers for the arms that bought the region. Given
-the region's columns and more of its weight, the forest scored the
-region's rows lower, not higher. Of Carter's labels, "doubled without a
-crash" on the old ranks became a one-month-reversal forest: a lead of
-+0.081 a year over the control, 38% losers, and peers that lost money
-half the years after 2008. "A run-up of 75%" was learned as volatility.
-Of the feature sets, the rank columns without the technical family plus
-the 28 unranked history columns (162 columns) matched the control's
-lead with 5.6 points more losers; the compact own-history sets were
-worst everywhere.
+asked whether a model can learn the rare case: a strong record, a steep
+fall, a recovery. The region (liquid stocks 40% or more below their
+five-year high with positive operating cash flow in 18 of 20 quarters,
+16% of liquid rows) earns 1.9% a year against 3.4% for all liquid rows
+with 41% losers, wins in 2009 to 2012 and 2020 and loses every year
+from 2013 to 2018. Five methods across 49 runs (training weights, the
+region as a universe, forests seeing 5% of the columns a split, LightGBM
+with a tenth of the columns, quantile regression) found no arm that
+passes the screen rule. The more of a selection sat inside the region,
+the more of it lost money, and given the region's columns and weight
+the forest scored its rows lower. Of Carter's labels, "doubled without a
+crash" became a one-month-reversal forest (+0.081 a year over the
+control, 38% losers) and "a run-up of 75%" was learned as volatility.
 
 **`dataset_v1.5.1` adds nothing to the candidate (decisions 74 to
-77).** Every set that included the new history, trend or event columns
-had the control's lead and about two points more losers. The one gain
-beyond noise, from the 8-K filing counts (+0.011 a year at three seeds),
-ended with 5.1% less money on its own and 8.6% less in the blend. The
-path-average twin of cell C picks the same stocks. Every label defined
-against the S&P 500's path or drawdown is behind cell C on losers.
-LightGBM at the 2026-09 size reaches the forest's p@20 with no lead
-over peers. The blend on v1.5.1 ends 2005 to 2020 with exactly the
-v1.4.1 final value, so the legs are not refit.
+77).** Every set with the new history, trend or event columns had the
+control's lead and about two points more losers; the 8-K counts' gain
+on the screen (+0.011 a year at three seeds) became 5% to 9% less money.
+Labels defined against the S&P 500's path or drawdown are behind cell C
+on losers. The blend on v1.5.1 reproduces the v1.4.1 final value to the
+dollar, so the legs are not refit.
 
 **The fallen-stock program is closed (decisions 61 to 73).** No tree
 model learns the recovery label in any universe. The "not a loser"
@@ -308,16 +293,22 @@ candidate is paper-traded as it is, and the search continues.
 1. **Paper trading** follows [paper-trading.md](paper-trading.md). The
    November 2026 list came from the v1.4.1 bundles on 2026-11-24. The
    v1.5.1 build gives the same forest, so nothing is refit.
-2. **Carter's open decisions:** the goal itself (final money against
-   SPY by a date, or return per unit of risk; decision 81), the
-   larger-half filter (58), the training cutoff (60), the F50 portfolio
-   (71), the price floor (71.3) and the Foamex request (73).
-2a. **The best portfolio on record is not yet proposed.** Decision 82
+2. **The goal of record (decision 83):** return per unit of risk for
+   now, judged on the time-weighted return, the worst drawdown and the
+   share of losing buys against SPY and same-size peers, with more
+   final money than SPY as the long-run goal. Every final value is read
+   beside the deposit-schedule table that decision 84 added to the
+   reports. Carter's other open decisions: the larger-half filter (58),
+   the training cutoff (60), the F50 portfolio (71), the price floor
+   (71.3) and the Foamex request (73).
+2a. **The best portfolio on record is next to be proposed.** Decision 82
    ran E11 at three seeds: 12.1% to 12.3% a year time-weighted against
    SPY's 10.9%, drawdown −37% against −53%, beta 0.77, and 4.2% less
    final money at the three-seed mean. The rank sell discipline destroys
    it (5,800 sales, costs of half the deposits), so it is held to the
-   horizon. What happens to it depends on item 2's first question.
+   horizon. Under the goal of record (item 2) it passes. Next: three
+   seeds on `dataset_v1.5.1`, then a paper-trading list beside the
+   candidate's.
 3. **Upstream requests:** market-state columns per snapshot date (now
    also the rare region's open question), a peer-relative label, a
    recovery label measured inside a region, and the Foamex price check.
