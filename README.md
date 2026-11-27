@@ -9,8 +9,9 @@ It trains **interpretable, calibrated** classifiers that predict, from
 point-in-time fundamentals, whether a stock will meet return criteria over
 1/2/3/5-year horizons (e.g. "≥ 5% CAGR over the next 3 years", "beats SPY over
 the next year"), and turns ranked probabilities into portfolios — evaluated
-honestly (walk-forward, purged, era-sliced). Status and roadmap:
-[PLAN.md](PLAN.md), [TODO.md](TODO.md).
+honestly (walk-forward, purged, era-sliced). Where the project stands:
+[docs/findings.md](docs/findings.md); what comes next:
+[docs/next-steps.md](docs/next-steps.md).
 
 ## Setup
 
@@ -80,15 +81,19 @@ uv run pytest
 
 | file | contents |
 |---|---|
-| [docs/findings.md](docs/findings.md) | **what the experiments have shown so far** (lab notebook: read first, log each session) |
-| [docs/experiments.md](docs/experiments.md) | config format, feature selection, derived label expressions, models, sweeps |
-| [docs/workflow.md](docs/workflow.md) | what is tracked, promotion, the experiment catalog, the sealed final eval |
+| [docs/findings.md](docs/findings.md) | **what the experiments have shown so far**, and where the project stands |
+| [docs/next-steps.md](docs/next-steps.md) | what to work on next, and what is waiting on Carter |
+| [docs/decisions.md](docs/decisions.md) | the decisions in force, linked to the numbered decision log in `docs/notes/` |
+| [docs/logbook.md](docs/logbook.md) | what was done, run by run, newest first |
+| [docs/experiments.md](docs/experiments.md) | config format, feature selection, derived label expressions, models, sweeps, the sealed holdout |
+| [docs/agents.md](docs/agents.md) | how an agent session runs: the records, the run queue, promotion and the catalog, lab branches |
+| [docs/setup.md](docs/setup.md) | setting up a sandbox for agent sessions, and bringing results into `Claude` |
 | [docs/deployment.md](docs/deployment.md) | deployment refits and `vml-predict` |
 | [docs/backtesting.md](docs/backtesting.md) | portfolio configs, strategies, the price panel |
 | [docs/paper-trading.md](docs/paper-trading.md) | **the candidate carried to paper trading**: its three models, the monthly procedure, what it has shown |
 | [docs/diagnostics.md](docs/diagnostics.md) | registered diagnostics (era probe) |
 | [PLAN.md](PLAN.md) | architecture, design principles, phase roadmap, evaluation methodology |
-| [TODO.md](TODO.md) | development tasks, in order |
+| [TODO.md](TODO.md) | code and tooling still to build; outstanding upstream requests |
 | [CLAUDE.md](CLAUDE.md) | invariants and conventions for AI-assisted development |
 | [data/manual.md](data/manual.md) | **the dataset contract** — read before touching modeling code |
 | [data/dataset.md](data/dataset.md), [labels.md](data/labels.md), [splits.md](data/splits.md), [features.md](data/features.md) | dataset layout, label matrix, split schemes, feature registry (synced from upstream via `scripts/sync_data_docs.py`) |

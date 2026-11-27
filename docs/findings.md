@@ -1,411 +1,240 @@
 # Findings
 
-This file says what we know now, label by label, and what is planned.
-It is rewritten each time rather than appended to, and it stays under
-about 250 lines. Terms such as *cell*, *look*, *p@20*, *base rate*,
-*lead* and *same-size peers* are defined once, in
-[GLOSSARY.md](../GLOSSARY.md).
+What the project knows now, and where it stands. Terms such as *cell*,
+*look*, *p@20*, *base rate*, *lead* and *same-size peers* are defined
+in [GLOSSARY.md](../GLOSSARY.md).
 
-- [logbook.md](logbook.md) records what was done, in order. Read it
-  first.
-- Each conclusion below links to a note in [notes/](notes/) that holds
-  the tables, checks and reasoning. [agents.md](agents.md) describes
-  how an unattended session works.
+## What belongs in this file
+
+- **It holds conclusions, not plans.** What to do next is in
+  [next-steps.md](next-steps.md). The rules and criteria in force are in
+  [decisions.md](decisions.md). What was done, run by run, is in
+  [logbook.md](logbook.md).
+- **Each conclusion is a measurement first**, with its numbers, dataset
+  version and trial count, and then what it might mean, marked as a
+  hypothesis until a run has tested it (CLAUDE.md, "Before writing a
+  conclusion"). It links to the note that holds the tables.
+- **A conclusion is a few sentences.** Tables longer than a few rows go
+  in a note under [notes/](notes/).
+- **It is rewritten, not appended to.** When a new result includes an
+  older one, merge them. When a line of research closes, its conclusion
+  shrinks to one row of the table "Lines of research" and one line in
+  decisions.md, "Closed lines of research".
+- **It changes when a conclusion changes**, not when a sweep ends.
 
 **How to read the numbers.** Unless a line says otherwise, a number is
 an average over the 16 walk-forward test years, 2005 to 2020, as
 `split_folds.parquet` of the named dataset version defines them. Each
 number is the best of the trials counted beside it, so it is
-selection-biased. None is a result of record. Numbers from different
-dataset versions, or from different universes, are never compared.
-**New work uses `dataset_v1.5.1`** (decision 77). The candidate's record
-is on `dataset_v1.4.1` (decision 55), and the v1.5.1 build reproduces
-it to the dollar. Every v1.4 number in notes before 2026-11-24 belongs
-to a build that no longer exists and is context only.
+selection-biased; none is a result of record. Numbers from different
+dataset versions, or from different universes, are never compared. New
+work uses `dataset_v1.5.1`. The candidate's record is on
+`dataset_v1.4.1`, and the v1.5.1 build reproduces it to the dollar.
+Every v1.4 number in notes written before 2026-11-24 belongs to a build
+that no longer exists and is context only.
 
-## Where the project stands
+## Where the project stands (2026-11-27)
 
-On 2026-11-27 Carter asked why models whose precision is far above the
-base rate have not beaten the market. The answer is measured in
-[why not the market](notes/2026-11-27-why-not-the-market.md) and
-recorded as decision 81. In short, the project has not failed to find
-skill. It has built a low-beta, equal-weighted portfolio of calm,
-profitable, mostly large stocks. Against stocks of the same size, that
-portfolio's picks show 4 to 5 points a year of real selection skill.
-The project then asked it to beat a cap-weighted index. That works when
-the index falls often. It fails when a few giant stocks carry the
-index, and the model has no input that tells it which kind of period it
-is in.
+The project has not failed to find skill. It has built a low-beta,
+equal-weighted portfolio of calm, profitable, mostly large stocks,
+whose picks beat stocks of the same size by 4 to 5 points a year. That
+portfolio beat SPY by 3 points a year from 2005 to 2020 and trailed it
+by 8 points a year from 2021 to 2026. The gap comes from the
+portfolio's structure, not from the model: an equal-weighted portfolio
+cannot keep pace with a cap-weighted index carried by a few giant
+stocks, and the model has no input that tells it what kind of market it
+is in (decision 81,
+[why not the market](notes/2026-11-27-why-not-the-market.md)).
 
-Three things could change the outcome. They lead the plan, in the
-order of how much evidence supports them (decision 85).
+The best portfolio on record, E11, puts the model's skill inside the
+index's own structure. It takes the candidate's ranking, chooses the 50
+highest-ranked large caps with an earnings yield of 5% or more, and
+weights them by market capitalization. At three seeds on
+`dataset_v1.4.1` it earned 12.1% to 12.3% a year time-weighted against
+SPY's 10.9%, with a worst drawdown of −37% against −53% and a beta of
+0.77. It has not yet run on `dataset_v1.5.1`.
 
-1. **Put the skill inside the index's own structure.** Weight the book
-   by market capitalization. Then the gap between a size-broad,
-   equal-weighted band of stocks and the index disappears, and what
-   remains is the model's avoidance of losers. The first instance is
-   the portfolio called E11: the candidate's three-way ranking chooses
-   the 50 highest-ranked large caps with an earnings yield of 5% or
-   more, weighted by market capitalization. Over 2005 to 2026 it earned
-   12.1% a year time-weighted against SPY's 10.9%, with a worst
-   drawdown of −37% against −53%, and three seeds agree. Next come its
-   three seeds on `dataset_v1.5.1`, then its pick list beside the
-   candidate's.
-2. **Give the portfolio a reason to buy less when the market is dear.**
-   That needs either a market-state column from upstream or a valuation
-   floor applied to each row. The earnings-yield floor is the stand-in
-   that worked. It recovered 1.6 of the 2.6 points a year that the same
-   book without the floor lacked in 2021 to 2026. A floor tight enough
-   to make the portfolio hold cash has not been tried.
-3. **Raise the picks' upside without raising their losers.** Every
-   attempt so far has failed: regressions on returns, labels for
-   run-ups, and one region of fallen stocks. The search for a region
-   reopens (decision 85.3). The next region is a steep recent fall, and
-   a model is trained inside it to separate the market's over-reactions
-   from justified sell-offs.
+Under the portfolio rule of decision 85.1 (beat SPY over 2005 to 2020
+on time-weighted return and worst drawdown, with buys that pass the
+screen rule), the candidate, E10 and E11 all pass. None is shown to
+beat SPY over the whole window to 2026.
 
-**How a portfolio is judged** (decision 83, amended by decision 85). A
-portfolio is compared with SPY over the walk-forward years, 2005 to
-2020, on three things: its time-weighted return, its worst fall from a
-peak, and how often its buys lost money compared with stocks of the
-same size. It is carried to three seeds and proposed to Carter when it
-beats SPY on the first two and its buys pass the screen rule of
-decision 74.4, which is defined in the State section below. The years
-2021 to 2026 are reported beside, as context, because Carter expects
-the strategies this project looks for to trail in those years. Every
-final value is read beside the table of five deposit schedules that
-each report now carries (decision 84). The deposit schedule alone moves
-the candidate from 13% behind SPY to 1% ahead. More money than SPY over
-the long run stays the goal in principle. The stretch target is 20% a
-year, and deep-value stocks are the direction.
+## The portfolios of record
 
-## Next session: start here
+**The candidate** is defined in [decisions.md](decisions.md), "The
+candidate and paper trading". These are its numbers of record, on
+`dataset_v1.4.1`, with 35 basis points a side, buys and deposits from
+2005 to 2026-08-21, and the forest refit at each year end after 2020:
 
-1. Read the section above, then decisions 81 to 85 of
-   [the decision log](notes/2026-11-26-decisions.md). They record the
-   answer to Carter's question, E11 at three seeds, the goal, the
-   backtest's realism (with
-   [its own note](notes/2026-11-27-backtest-realism.md)) and Carter's
-   review. Before those, the same sessions wrote
-   [the rare-region program](notes/2026-11-26-rare-region.md)
-   (decisions 78 to 80) and
-   [the v1.5.1 program](notes/2026-11-26-v151-program.md) (decisions 74
-   to 77). The sessions of 2026-11-25 wrote
-   [the fallen-stock program](notes/2026-11-25-fallen-stocks.md)
-   (decisions 61 to 72) and
-   [the training cutoff](notes/2026-11-25-training-cutoff.md)
-   (decision 60).
-2. TODO.md says what to do next, under "Next, after 2026-11-27, third
-   part". The candidate's runbook is [paper-trading.md](paper-trading.md).
-3. The branch `claude/results-2026-11-26` carries this file, the code
-   of these sessions and the promoted records. The configs and reports
-   are on the lab branch `claude/lab-2026-11-26`, archived as a tag once
-   the results branch merges.
-
-## State (2026-11-27)
-
-Carter's goal is a manageable number of high-precision, low-risk
-selections with upside. They are judged first on what a portfolio of
-the picks went on to do, and second on precision.
-
-**The candidate** (decision 24, unchanged since 2026-09-30) is a forest
-trained on cell C, the label "not a loser" (a three-year CAGR of zero
-or more, never 30% below the entry price). Its score is combined by
-mean rank with 12-month momentum and return on capital. The portfolio
-buys the ten highest-ranked stocks each month, at most two per sector,
-with equal weights, inside Carter's liquidity floor
-(`dollar_volume_3m_rank >= 0.2`). The backtest charges 35 basis points
-a side, buys and deposits from 2005 to 2026-08-21, and refits the
-forest at each year end after 2020. All three legs were refit on
-`dataset_v1.4.1` on 2026-11-24. These are the numbers of record:
-
-| | final value on 260,000 | CAGR | TWR | worst drawdown |
+| | final value on 260,000 | CAGR | time-weighted | worst drawdown |
 |---|---|---|---|---|
 | SPY, same deposits | 1,326,084 | 13.2% | 10.9% | −52.9% |
 | **candidate, buy and hold** | 1,159,740 | 12.2% | 11.0% | −41.0% |
 | candidate, rank sell discipline | 1,294,414 | 13.0% | 11.5% | −41.3% |
 
-The CAGR is the money-weighted growth rate of the deposits into the
-final value. It has been the metric of record since decision 72.
+Over 2005 to 2020 the candidate earned 12.4% a year time-weighted
+against SPY's 9.4%, with a worst drawdown of −41% against −53%. In
+August 2026 it is 13% behind SPY, having trailed in every year since
+2021 except 2022, by 3.9 to 14.5 points. The buys of 2021 trailed SPY
+by 14.6 points a year over three years, and 72% of them lost money.
 
-**The screen rule** (decision 74.4) decides whether a new model beats
-the candidate's. Each model's picks are compared with stocks of the
-same size on two outcomes: the lead, which is the picks' mean
-three-year CAGR minus their peers', and the share of picks that lost
-money. The comparison is paired by test year with the control, which is
-the candidate's forest in cell C on the 112 old rank columns inside the
-100k liquidity floor: p@20 0.75, a lead of +0.029 a year, and 17%
-losers against 30% for its peers. To pass, a model's gain over the
-control must be positive at about two standard errors, ahead in ten or
-more of the sixteen years, no worse than noise in either half of the
-period, and this must hold for both outcomes. A model that passes goes
-on to three seeds and then a backtest.
+**E11**, at three seeds on `dataset_v1.4.1` (decision 82): 12.1% to
+12.3% a year time-weighted, worst drawdown −37%, beta 0.77. Under flat
+monthly deposits it ends with 4.2% less money than SPY (three-seed
+mean); with all the money invested at the start it ends with 25% more.
+The deposit schedule alone moves the candidate from 13% behind SPY to
+1% ahead
+([backtest realism](notes/2026-11-27-backtest-realism.md)).
 
-**Why the candidate has not beaten the market (decisions 81, 82).**
-The four measured causes are stated at the top of this file. These are
-the numbers. The candidate beat SPY by 3 points a year over 2005 to
-2020, 12.4% against 9.4% time-weighted, and trailed by 8 points a year
-over 2021 to 2026, 7.1% against 15.3%. A book of the top-decile large
-caps weighted by market capitalization, with no model at all, ended
-with 7% more money than SPY and a worst drawdown of −46% against SPY's
-−53%. That book is a home-made large-cap index. It is the control that
-shows the recent gap belongs to the structure of the portfolio, not to
-the model. E11, the best portfolio on record, is the candidate's
-ranking choosing the top 50 large caps with an earnings yield of 5% or
-more, weighted by market capitalization. It holds at three seeds: 12.1%
-to 12.3% a year against SPY's 10.9%, a worst drawdown of −37%, and a
-beta of 0.77. Under flat monthly deposits it ends with 4% less money
-than SPY. With all the money invested at the start it ends with 25%
-more. The rank sell discipline destroys it, because selling and
-rebuying a 50-stock book every month costs half the deposits.
-
-**The rare-region program measured one region (decisions 78 to 80) and
-reopens (decision 85).** Carter asked whether a model can learn the
-rare case: a company with a strong record whose stock falls steeply and
-then recovers. One region was tried: liquid stocks 40% or more below
-their five-year high, with positive operating cash flow in 18 of the
-last 20 quarters. It holds 16% of liquid rows. Its stocks earned 1.9% a
-year against 3.4% for all liquid rows, and 41% of them lost money. The
-region wins in 2009 to 2012 and in 2020 and loses in every year from
-2013 to 2018. Five methods were tried across 49 runs: training weights,
-the region as a universe, forests that see 5% of the columns at each
-split, LightGBM with a tenth of the columns, and quantile regression.
-No arm passed the screen rule. The more of a selection sat inside the
-region, the more of it lost money. Of Carter's labels, "doubled without
-a crash" became a forest that bets on one-month reversals, and "a
-run-up of 75%" was learned as volatility. The next region to try is a
-steep recent fall.
-
-**`dataset_v1.5.1` adds nothing to the candidate (decisions 74 to
-77).** Every set with the new history, trend or event columns had the
-control's lead and about two points more losers; the 8-K counts' gain
-on the screen (+0.011 a year at three seeds) became 5% to 9% less money.
-Labels defined against the S&P 500's path or drawdown are behind cell C
-on losers. The blend on v1.5.1 reproduces the v1.4.1 final value to the
-dollar, so the legs are not refit.
-
-**The fallen-stock program is closed (decisions 61 to 73).** No tree
-model learns the recovery label in any universe. The "not a loser"
-forest trained inside F50 (stocks 50% or more below their five-year
-high) finds the fallen stocks that do not fall further. Its portfolio
-ends 2020 with 2.5% to 4.9% more money than SPY at three seeds, and
-below SPY at two seeds of three when valued at the end of 2023. Whether
-it runs beside the candidate is Carter's decision.
-
-**The candidate is not shown to beat SPY.** At the end of 2020 it was
-ahead by final value and by TWR. In August 2026 it is 13% behind, having
-trailed SPY in every year since 2021 except 2022, by 3.9 to 14.5 points.
-The buys of 2021 trailed SPY by 14.6 points a year over three years and
-72% of them lost money. In all, 49 backtest configurations have
+The findings of 2026-11-26 counted 49 backtest configurations
 completed on 2005 to 2020 (38 on v1.4, 7 on v1.4.1, 4 on v1.5.1), plus
-seven failed runs of 2026-11-24.
-
-| cell (three-year horizon, `dataset_v1.5.1` inside the 100k floor unless said) | trials | best result | status |
-|---|---|---|---|
-| C, "not a loser" | 62 | the control: p@20 0.75, lead +0.029, losers 0.17. No arm ahead on both outcomes | **closed: the candidate's forest stands** |
-| "doubled without a crash" (run-up of 100%, never 40% down) | 22 | old ranks: lead +0.110, losers 0.38; a reversal forest among stocks that lose | closed: not a leg |
-| "a real gain without a crash"; "a run-up of 75%"; CAGR of 20% or a drawdown no deeper than SPY's; the five full-path labels | 5 to 18 each | lead at most the control's; learned as volatility; a calmer, poorer cell C; cell C's twin | closed |
-| C inside the rare region (folds 2008 to 2020); "earned 20% a year" by quantile regression | 3; 6 | lead over in-region peers +0.040, losers 0.33; lead at most +0.025, losers 0.48 to 0.61 | one region measured; the search reopens (85) |
-| C, five-year horizon (folds 2007 to 2018) | 12 | old ranks: lead +0.032, losers 0.09; the three-year ordering repeats | closed |
-| C, `dataset_v1.4.1`, all rows | 3 legs and the seeds of decision 57 | PR-AUC 0.585, p@20 0.75 against a base rate of 0.39 | **the candidate's forest** |
-| C on `dataset_v1.4` (retired build) | 96; 38 in the floor; 14 in large caps | p@20 0.79 against 0.39 | **holdout look 1 of 1**: p@20 0.65, top 50 0.73, base rate 0.38 |
-| `label_3y_beat_spy`; excess CAGR ≥ 0 with drawdown < 0.3; "fell 50%"; regressions on CAGR; `cagr_ge_0`; the one-year labels; the recovery label (v1.4) | see the notes | no lead after 2013; no short leg (decision 39); closed as a leg (40, 49); an equivalent label (53) | closed |
+seven failed runs of 2026-11-24. That count has not been checked
+against the ledger since: the sandbox's ledger shard holds 46 completed
+backtests on v1.4.1, including those of decisions 81 and 82, so the
+count needs restating before it is cited.
 
 ## Conclusions that stand
 
-1. **The forest predicts "not a loser" on data it was never chosen on.**
-   Carter took the one holdout look in cell C on 2026-10-01, on the old
-   v1.4 build. Of the top 20 picks a year, 65% met the label, and of the
-   top 50, 73%, against a base rate of 38%. Of the 60 top-20 picks (20
-   a year for 2021, 2022 and 2023), 17 lost money over three years,
-   against 54% of all rows
-   ([out-of-sample note](notes/2026-10-01-out-of-sample.md)).
-2. **Company size decides more than any model, so every selection is
-   read against same-size peers.** Over three years the smaller half of
-   investable stocks trailed SPY by 12 to 33 points a year, and the
-   largest 5% by 0 to 6.5 points. Against same-size stocks the
-   candidate's picks led in 13 of the 16 years from 2005 to 2020, by 3.0
-   points a year in the first half and 5.3 in the second. The buys of
-   2021 trailed their peers by 6.4 points; the buys of 2022 led by 3.5
-   and those of 2023 by 6.0. In 2021 to 2026 SPY beat equal-weighted
-   portfolios of stocks of every size.
-3. **The larger half of the candidate's picks adds a little** (decision
-   57): +0.72 points a year at a standard error of 0.61, ahead in 11 of
-   16 years, on every seed. This filter is proposed to Carter (decision
-   58).
-4. **Selection is by rank within the period, not by confidence.** Every
+1. **The forest predicts "not a loser" on data it was never chosen
+   on.** In the one holdout look in cell C (2026-10-01, the old v1.4
+   build), 65% of the top 20 picks a year met the label, and 73% of the
+   top 50, against a base rate of 38%. Of the 60 top-20 picks over 2021
+   to 2023, 17 lost money over three years, against 54% of all rows
+   ([out of sample](notes/2026-10-01-out-of-sample.md)).
+2. **Company size decides more than any model.** Over three years the
+   smaller half of investable stocks trailed SPY by 12 to 33 points a
+   year, and the largest 5% by 0 to 6.5 points. Against same-size
+   stocks the candidate's picks led in 13 of the 16 years from 2005 to
+   2020, by 3.0 points a year in the first half and 5.3 in the second.
+   In 2021 to 2026 SPY beat equal-weighted portfolios of stocks of
+   every size ([large caps](notes/2026-10-01-large-caps.md)).
+3. **The structure explains the recent gap to SPY; the model explains
+   none of it.** A cap-weighted book of the top-decile large caps with
+   no model ended with 7% more money than SPY and a worst drawdown of
+   −46% (decision 81). The same names equal-weighted cost 2.9 points a
+   year in 2021 to 2026 and gained 1.5 in 2005 to 2020.
+4. **Inside the cap-weighted structure, avoiding predicted losers
+   trades return for safety.** Every cut by the model lowered both the
+   2021 to 2026 return and the drawdown, more so the deeper the cut. The
+   forest alone pays more for the same safety than the blend, because it
+   buys utilities, REITs and staples. An absolute earnings-yield floor
+   inside the safe set recovered 1.6 of the 2.6 points a year that the
+   same book without it lacked in 2021 to 2026 (decision 81).
+5. **The model's skill is loser-avoidance, and downside is mostly past
+   volatility.** The 12-month volatility rank alone predicts a fall of
+   30% or 50% within a year as well as a forest does (decision 45). The
+   volatility ranks are what keep the losers down; removing them costs
+   losers, not lead (decisions 74, 78). In 2007 and 2008 the forest's
+   picks fell 0.46 and 0.33 against their peers' 0.57 and 0.49.
+6. **Selection is by rank within the period, not by confidence.** Every
    forest's score level is highest at market tops (decision 46). A
-   rank-based sell discipline adds 12% to the final value over 21
-   years. Return on capital as a second ranking removes the forest's
-   utilities and REITs.
-5. **Downside is mostly past volatility.** The 12-month volatility rank
-   alone predicts a 30% or 50% fall within a year as well as a forest
-   does, so there is no short leg (decision 45). The picks are judged
-   against their peers, not the market (decision 50): in 2007 and 2008
-   the forest's picks fell 0.46 and 0.33 against their peers' 0.57 and
-   0.49.
-6. **A screen gain is not a money gain.** This has happened three times
-   (decisions 51, 77). The 8-K counts' forest led by 1.1 points a year
-   at three seeds and ended with 5% to 9% less money. An arm goes from
-   the screen to a backtest, never straight into the candidate.
-7. **Two builds can share a version label** (decision 54), so every
-   record carries `dataset_sha256`. The v1.5.1 control reproduces the
-   v1.4.1 candidate to the dollar (decision 77). Today's list barely
-   depends on the snapshots of 2021 to 2023 (decision 60).
-8. **The forest learns an absolute floor, not a comparison with SPY**
-   (decision 75). A peer-relative target is a question for upstream.
-9. **Top-20 precision does not say what a portfolio does; the model
-   family does** (decision 76). LightGBM matches the forest's p@20 and
+   rank-based sell discipline adds 12% to the candidate's final value
+   over 21 years. Return on capital as a second ranking removes the
+   forest's utilities and REITs.
+7. **A screen gain is not a money gain.** It has happened three times
+   (decisions 51, 77). The 8-K counts' forest led its peers by 1.1
+   points a year at three seeds and ended with 5% to 9% less money.
+8. **Top-20 precision does not say what a portfolio does; the model
+   family does** (decision 76). LightGBM matches the forest's p@20, and
    its picks have no lead over their peers.
-10. **The stock's own history buys nothing in cell C** (decisions 74,
-    78). The history and trend ranks, the raw fundamentals and the
-    compact own-history sets give the control's lead or less with 2 to 7
-    points more losers. The volatility ranks are what keep the losers
-    down. Removing them costs losers, not lead.
-11. **The one rare region measured so far, stocks 40% or more below
-    their five-year high with a strong cash-flow record, is the market's
-    recovery, not a pool of mispriced survivors** (decisions 79, 80).
-    Its rows have wider tails and a lower mean than the market. They win
-    after crashes and lose through the long rise. Every selection that
-    buys the region loses more often, and every selection that leads
-    avoids it. Inside the region, as inside F50 (decision 63), the
-    forest finds the stocks that fall least, not the ones that recover.
-    This is a measurement of one region, not a verdict on the idea: the
-    search for a better region, with a model trained inside it, is open
-    again (decision 85.3).
-12. **The own-history valuation columns are real and are not a
-    selection** (decision 80.5). Where the price columns are absent, or
-    where the question is the upper tail of returns, the sales yield and
-    tangible book value against the five-year median, the earnings yield
-    at the five-year peak and the book-to-market percentile are the top
-    splits. The arm then has at best the control's lead with more
-    losers.
-13. **Emphasis weights, subspace forests and column sub-sampling do not
+9. **The forest learns an absolute floor, not a comparison with SPY**
+   (decision 75). Labels defined against SPY's path or drawdown are
+   below a single-factor bar on precision. A label relative to same-size
+   peers would have to come from upstream.
+10. **The larger half of the candidate's picks adds a little** (decision
+    57): +0.72 points a year at a standard error of 0.61, ahead in 11 of
+    16 years, on every seed. Large caps alone (`log_marketcap_rank >=
+    0.8`) earned the same final value as the candidate with four points
+    fewer losing buys and a lead over peers 1.5 points larger.
+11. **The one rare region measured is the market's recovery, not a pool
+    of mispriced survivors** (decisions 79, 80;
+    [rare region](notes/2026-11-26-rare-region.md)). Stocks 40% or more
+    below their five-year high with a strong cash-flow record earned
+    1.9% a year against 3.4% for all liquid rows, with 41% losers. They
+    win in 2009 to 2012 and in 2020 and lose in every year from 2013 to
+    2018. Every selection that buys the region loses more often. Inside
+    the region, as inside F50, the forest finds the stocks that fall
+    least, not the ones that recover. This measures one region, not the
+    idea.
+12. **Emphasis weights, subspace forests and column sub-sampling do not
     change what a forest buys** (decision 80.4). Sixteen of the 18
     emphasized arms and every subspace arm sit within two standard
-    errors of their unemphasized counterparts, and the same columns lead
-    at a third of the weight.
-14. **The structure explains the recent gap to SPY; the model explains
-    none of it** (decision 81). A cap-weighted book of the top-decile
-    large caps with no model kept pace with SPY in 2021 to 2026 and beat
-    it over the whole window with a shallower drawdown. An
-    equal-weighted book of the same names cost 2.9 points a year in 2021
-    to 2026 and gained 1.5 in 2005 to 2020.
-15. **Inside the index's own structure, avoiding the predicted losers
-    trades return for safety** (decision 81). Every cut by the model
-    lowered the 2021 to 2026 return and the drawdown together, the
-    deeper the cut the more of both; the forest alone pays more for the
-    same safety than the blend, because it buys utilities, REITs and
-    staples. Over 2005 to 2020 the blend's top 50 beat SPY by 2.2 points
-    a year with 15 points less drawdown. An absolute earnings-yield floor
-    inside the safe set recovered most of the 2021 to 2026 shortfall.
+    errors of their unemphasized counterparts.
+13. **The own-history valuation columns are real but are not a
+    selection** (decision 80.5). Where the price columns are absent, the
+    sales yield and tangible book value against their five-year median,
+    the earnings yield at the five-year peak and the book-to-market
+    percentile are the top splits; the arm then has at best the
+    control's lead, with more losers.
+14. **Today's list barely depends on the most recent years.** A forest
+    trained without the snapshots after 2021 changes one of the ten
+    November picks, and one trained without those after 2018 changes two
+    (decision 60, [training cutoff](notes/2026-11-25-training-cutoff.md)).
+
+## Lines of research
+
+Three-year horizon, `dataset_v1.5.1` inside the 100k floor, unless the
+row says otherwise. Closed lines are also listed in decisions.md.
+
+| line | trials | best result | status |
+|---|---|---|---|
+| Cell C, "not a loser" | 62 | the control: p@20 0.75, lead +0.029, losers 0.17; no arm ahead on both outcomes | **the candidate's forest stands** |
+| Cell C, `dataset_v1.4.1`, all rows | 3 legs and the seeds of decision 57 | PR-AUC 0.585, p@20 0.75 against a base rate of 0.39 | **the candidate's forest** |
+| Cell C on `dataset_v1.4` (retired build) | 96; 38 in the floor; 14 in large caps | p@20 0.79 against 0.39 | holdout look 1 of 1: p@20 0.65 |
+| Portfolio structure: cap-weighted books and valuation floors (`dataset_v1.4.1`) | the 12 backtests of decision 81 and the 5 of decision 82 | E11 at three seeds: 12.1% to 12.3% time-weighted, drawdown −37% | **open: E11 on v1.5.1 next** |
+| "Doubled without a crash" | 22 | old ranks: lead +0.110, losers 0.38; a reversal forest among stocks that lose | closed |
+| "A real gain without a crash"; "a run-up of 75%"; CAGR of 20% or a drawdown no deeper than SPY's; the five full-path labels | 5 to 18 each | lead at most the control's; learned as volatility | closed |
+| Cell C inside the rare region (folds 2008 to 2020); "earned 20% a year" by quantile regression | 3; 6 | lead over in-region peers +0.040, losers 0.33; lead at most +0.025, losers 0.48 to 0.61 | one region closed; the search is open (85.3) |
+| Cell C, five-year horizon (folds 2007 to 2018) | 12 | old ranks: lead +0.032, losers 0.09 | closed |
+| The fallen-stock program (F and W universes, `dataset_v1.4.1`) | see the note | F50 forest portfolio beats SPY before 2021 by 2.5% to 4.9% in money at three seeds; W30 within 2% of SPY | closed; F50 portfolio waiting on Carter (71.1) |
+| `label_3y_beat_spy`; excess CAGR ≥ 0 with drawdown < 0.3; "fell 50%"; regressions on CAGR; `cagr_ge_0`; the one-year labels; the recovery label (v1.4) | see the notes | no lead after 2013; no short leg; an equivalent label (`cagr_ge_0`) | closed |
 
 ## The thesis, and the working assumption
 
-The thesis is that high precision on a modest target is achievable. It
-held out of sample: the candidate bought fewer losers and suffered
-shallower falls. What it did not do is earn the index's return in 2021
-to 2026, years in which the index beat every size of stock.
+The thesis is that high precision on a modest target is achievable and
+beats the market by avoiding losers. The precision held out of sample:
+the candidate bought fewer losers and suffered shallower falls. What it
+did not do is earn the index's return in 2021 to 2026, years in which
+the index beat stocks of every size.
 
-**Carter's working assumption (decision 36)** is that 2021 to 2026 is a
-bubble led by stocks that fail a value investor's test. A value
-strategy trails through such a period, leads again during and after the
-correction, and should be waited out. Conclusion 2 supports this, and
-so does the one precedent in the data, 1999 to 2004. The record cannot
-yet show whether the buys of 2021 to 2023 recover.
+The working assumption (decision 36) is that 2021 to 2026 is a bubble
+that a value strategy trails through and then waits out. Conclusion 2
+is consistent with it, and so is the one precedent in the data: on 1999
+to 2004 a stand-in for the candidate trailed in the last year of the
+run-up and led by about 9 points a year for the buys of 2000 to 2002.
+The record cannot yet show whether the buys of 2021 to 2023 recover.
 
 ## Open questions
 
+Questions the evidence does not yet answer. The experiments that would
+answer them are in next-steps.md.
+
 - Is 2021 to 2026 a bubble, and does the candidate lead again when it
   deflates? Only paper trading and time can answer.
-- What separates the rare region's good years (2009 to 2012, 2020) from
-  its bad ones (2013 to 2018)? Nothing in the row. The state of the
-  market at the snapshot date would, and that is an upstream column.
 - Does a model trained inside a region of steep recent falls separate
   the market's over-reactions from justified sell-offs better than the
-  same model does across the whole universe? Carter's hypothesis
-  (decision 85.3); the first region to try is 30% or more below the
-  one-year high.
-- Can information outside prices and financial statements rank upside?
-  Insider and institutional transactions and the state of the market
-  are the examples. They would be built upstream.
+  same model does across the universe? (Carter's hypothesis, 85.3.)
+- What separates the rare region's good years from its bad ones?
+  Nothing in the row; the state of the market at the snapshot date
+  might, and that is an upstream column.
+- Can information outside prices and financial statements, such as
+  insider and institutional transactions, rank upside?
 - Why do huber regressions on CAGR and on excess CAGR rank stocks so
-  differently (decision 45)? Unexplained.
-
-## Plan
-
-Decision 36 stands: the bubble reading is the working assumption, the
-candidate is paper-traded as it is, and the search continues. The three
-remedies at the top of this file lead the plan. This is the order of
-work (decision 85).
-
-1. **The skill inside the cap-weighted structure.** Run E11 on
-   `dataset_v1.5.1` at the forest's three seeds. Two forest bundles
-   must be trained first, and a v1.5.1 backtest needs about 14 GB, so
-   only one runs at a time. Then produce a paper-trading list for E11
-   beside the candidate's, as a second portfolio. A dry run of that
-   list exists. On the inference set of 2026-11-20, `vml-predict` with
-   E11's filters and market-cap weights (decision 85.4) found 372 large
-   caps above the liquidity floor, 120 of them with an earnings yield
-   of 5% or more, and chose 50. Energy holds 39% of the weight and
-   technology 26%. The largest positions are MU at 12.8%, XOM at 12.4%
-   and CVX at 7.8%. On that day the valuation floor does most of the
-   choosing, and the model only cuts 120 names to 50. That is a fact
-   about the list, not a reason to change the rule before the seeds
-   run.
-2. **A reason to buy less when the market is dear.** The market-state
-   columns requested from upstream (decision 46, and now also the rare
-   region's open question) would let a model learn when to buy less.
-   Until they arrive, the alternative is a valuation floor on the
-   equal-weighted candidate tight enough to hold cash. The floors of 5%
-   and 8% held no cash, because ten stocks always cleared them
-   (decision 81). The 8% floor earned 12.6% a year in 2021 to 2026,
-   which is the reason to look, and ended with 8% less money, which is
-   the reason for caution.
-3. **Upside without losers: the region search reopens** (decision
-   85.3). The next decision writes down the regions and the
-   predictions. The first region is stocks 30% or more below their
-   one-year high. The candidate's forest is then trained inside each
-   region, once with the region as a universe and once with the region
-   emphasized, and its picks are read on the control's outcomes: the
-   lead over same-size peers, the share that lost money and the share
-   that doubled, both inside the region and across the universe. After
-   that come the deep-value floors and universes of decision 83.5: net
-   current asset value, tangible book value and the earnings yield,
-   each against market capitalization, with the forest as the gate and
-   the five-year horizon as the outcome.
-4. **Paper trading** of the candidate follows
-   [paper-trading.md](paper-trading.md). The November 2026 list came
-   from the v1.4.1 bundles on 2026-11-24. The v1.5.1 build gives the
-   same forest, so nothing is refit.
-5. **Carter's other open decisions** are the larger-half filter (58),
-   the training cutoff (60), the F50 portfolio (71), the price floor
-   (71.3) and the Foamex request (73). **The upstream requests** are
-   the market-state columns, a label relative to peers, a recovery
-   label measured inside a region, and the Foamex price check. New
-   columns arrive as a dataset version and run through the program of
-   decision 74.
-6. **Later.** The rest of the realism audit: a cost model by size and
-   era, taxes, and market impact. None of these blocks the next step.
-   Carter's rules for other model families: a logistic regression and
-   a multilayer perceptron on the ranks, judged on the screen first.
-   The engine's gaps: selling at the horizon, quarterly buys, and
-   gating one model's candidates by another's rank.
+  differently (decision 45)?
 
 ## Sealed holdout record
 
 `reports/final_evals.csv` records 20 looks at the sealed holdout. The
-look count is part of every holdout number: a cell looked at twice is
-no longer a clean test. No look has been taken on `dataset_v1.4.1` or
+look count is part of every holdout number: a cell looked at twice is no
+longer a clean test. No look has been taken on `dataset_v1.4.1` or
 `dataset_v1.5.1`.
 
 | cell | looks | what the looks showed |
 |---|---|---|
-| **3y C, "not a loser" (v1.4 [2021–23], old build)** | **1** | **p@20 0.65, top 50 0.73, base rate 0.38; PR-AUC 0.56; picks −0.09 a year against SPY, all rows −0.25** |
-| 1y, 2y, 5y cells on v1.0 and v1.1 | 1 to 5 each | cagr_ge_0: PR-AUC 0.59–0.68 against about 0.5; beat_spy: none to barely any skill. See `reports/final_evals.csv` |
+| **3y cell C, "not a loser" (v1.4, 2021 to 2023, old build)** | **1** | **p@20 0.65, top 50 0.73, base rate 0.38; PR-AUC 0.56; picks −0.09 a year against SPY, all rows −0.25** |
+| 1y, 2y, 5y cells on v1.0 and v1.1 | 1 to 5 each | `cagr_ge_0`: PR-AUC 0.59 to 0.68 against about 0.5; `beat_spy`: little or no skill. See `reports/final_evals.csv` |
 
-A look inside a universe uses up the whole label's cell. The one look
-in cell C has no baselines computed on the holdout rows. Computing one
-would be a second look, and that look is Carter's to take. Process
-rules are in CLAUDE.md. Incidents are in
-[notes/process-issues.md](notes/process-issues.md).
+A look inside a universe uses up the whole label's cell. The one look in
+cell C has no baselines computed on the holdout rows; computing one
+would be a second look, and that is Carter's to take. Process incidents
+are in [notes/process-issues.md](notes/process-issues.md).

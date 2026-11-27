@@ -7,7 +7,7 @@ term again inline. It links here once, at the top, and uses the term.
 
 Each entry says what the thing *is*, in one or two sentences, and
 lists the words to avoid for it. How the code implements a thing is in
-`docs/experiments.md`, `docs/backtesting.md` and `docs/workflow.md`,
+`docs/experiments.md`, `docs/backtesting.md` and `docs/agents.md`,
 not here. Add a term the first time a document needs it, in the same
 change. The format follows Matt Pocock's `domain-modeling` skill.
 
@@ -214,6 +214,8 @@ change. The format follows Matt Pocock's `domain-modeling` skill.
   [the log of 2026-09-29](docs/notes/2026-09-29-decisions.md), which
   is closed and not edited again; decision 73 onward are in
   [the log of 2026-11-26](docs/notes/2026-11-26-decisions.md).
+  [docs/decisions.md](docs/decisions.md) lists the decisions still in
+  force.
   "Decision 36" is Carter's direction of 2026-10-01.
 - **Screen** — the report that applies the backtest's selection rule
   (top K per quarter, capped per sector) to a run's test rows and

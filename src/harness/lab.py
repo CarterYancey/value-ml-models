@@ -458,7 +458,13 @@ def checkpoint_paths(
     # the local ledger stays local; shards are what travels
     if results_path.parent.name == "ledger" and results_path.exists():
         paths.append(results_path)
-    for p in (Path(queue_path), Path(logbook), Path("docs/findings.md")):
+    for p in (
+        Path(queue_path),
+        Path(logbook),
+        Path("docs/findings.md"),
+        Path("docs/decisions.md"),
+        Path("docs/next-steps.md"),
+    ):
         if p.exists():
             paths.append(p)
     if NOTES_DIR.is_dir():

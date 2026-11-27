@@ -256,3 +256,18 @@ def test_broken_config_stops_the_queue(lab, data_root, tmp_path):
     assert states[0].state == "broken"
     with pytest.raises(ConfigError, match="do not load"):
         run_next(data_root=data_root, **lab)
+
+
+def test_checkpoint_carries_the_session_records(lab, tmp_path):
+    """findings, decisions in force and next steps travel with a
+    checkpoint, like the logbook (docs/agents.md, "Git")."""
+    docs = tmp_path / "docs"
+    docs.mkdir(exist_ok=True)
+    for name in ("findings.md", "decisions.md", "next-steps.md"):
+        (docs / name).write_text("# x\n")
+    paths = {str(p) for p in checkpoint_paths(
+        results_path=lab["results_path"], reports_dir=lab["reports_dir"],
+        queue_path=lab["queue_path"], logbook=lab["logbook"],
+    )}
+    for name in ("findings.md", "decisions.md", "next-steps.md"):
+        assert f"docs/{name}" in paths
