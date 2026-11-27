@@ -974,3 +974,26 @@ failed to do and which is left for later.
    change, no edit to a config that has run, no local feature
    derivation (the valuation floor is a declared filter on a manifest
    column, like the liquidity floor).
+
+6. **Second round (2026-11-27, after the six runs were read).** The
+   first round's E2 and E3 were mis-sized. The decision counted the
+   large-cap universe from January snapshots alone (about 100 names);
+   the backtest's monthly cross-section holds every stock with a
+   snapshot inside 200 days, about 450 names in the top decile. So E2's
+   top 50 was the top 11%, not half, and E3's top 25 the top 5%. Both
+   also used the forest alone, whose preference for utilities, REITs and
+   staples the candidate's return-on-capital leg removes (findings
+   conclusion 4). E2's buys were 24% consumer staples, 23% utilities and
+   8% REITs. Four more runs correct the design: E7
+   `bt_lc90_mcap_top340_v141` (the forest's worst quarter left out), E8
+   `bt_lc90_mcap_top225_v141` (the worst half), E9
+   `bt_lc90_blend_mcap_top225_v141` (the worst half by the candidate's
+   three-leg blend) and E10 `bt_lc90_blend_mcap_top50_v141` (E2 with
+   the blend). Predictions: (h) E7 within 0.5 points a year of E1 on
+   the time-weighted return and within 2 points on drawdown, its buys
+   losing 2 to 4 points less often than E1's; rival: 0.5 or more above
+   E1 in both periods. (i) E8 0 to 1 point below E1, beta between E1's
+   0.93 and E2's 0.73. (j) E9 within 0.5 of E1 and 0.5 or more above E8,
+   with a sector mix close to E1's; rival: 0.5 or more above E1 in both
+   periods at a shallower drawdown. (k) E10 at least 2 points a year
+   above E2 and still below E1. The rule of 81.2 applies unchanged.
