@@ -682,6 +682,59 @@ in [PLAN.md](PLAN.md); check items off (and add new ones) as work proceeds.
       `n_estimators`) at full budget via a follow-up sweep file — no
       harness change needed, just two sweep configs.
 
+### Next, after 2026-11-27, third part (decision 85: Carter's review)
+
+Carter read the records of decisions 78 to 84 and set the order of work.
+The three remedies of decision 81 lead; the judging rule is now read
+through 2020 (85.1); the rare-region search is open again (85.3);
+`vml-predict --weighting` writes the picks' weights (85.4).
+
+- [ ] **Remedy 1, the skill inside the cap-weighted structure.** E11 on
+      `dataset_v1.5.1` at the forest's three seeds (seeds 232 and 1776
+      need `vml-run` on v1.5.1; the seed-23 bundle and the factor legs
+      exist; one v1.5.1 backtest at a time, about 14 GB). Then the
+      paper-trading list for E11 beside the candidate's (83.3). A dry run
+      exists on `inference_2026-11-20`
+      (`predictions/inference_2026-11-20__e11_blend_mcap_top50_ey5.csv`
+      and its sidecar, on the lab branch): 50 of the 120 large caps at an
+      earnings yield of 5% or more, energy 39% of the weight, technology
+      26%, MU and XOM about 12.5% each. Read that list against the
+      backtest's holdings in 2025 and 2026 before anything is traded on
+      it.
+- [ ] **Remedy 2, a reason to buy less when the market is dear.** The
+      upstream market-state columns (decision 46's request). Until they
+      arrive, a floor tight enough to hold cash on the equal-weighted
+      candidate: the 5% and 8% floors held none (81); E6's 2021 to 2026
+      return of 12.6% is the reason to look, its 8% less final money the
+      reason for caution. Decision and predictions first.
+- [ ] **Remedy 3, upside without losers: the region search.** A new
+      decision writes the regions and the predictions before any run.
+      Carter's first region: 30% or more below the one-year high
+      (`dist_52w_high <= -0.3`), inside the liquidity floor. For each
+      region, the candidate's forest trained inside it as a `[[universe]]`
+      (its own cell, in-region peers, small early folds) and as an
+      `[emphasis]` (every row, the region's weight times a factor; the
+      factor is a parameter to sweep, one file per factor). The question
+      is whether the in-region model separates the big winners better than
+      the same model across the universe, so its picks are read on the
+      control's outcomes (lead over same-size peers, losers, doublers)
+      both inside the region and against the control's picks. The one
+      region measured so far (40% below the five-year high with a strong
+      cash-flow record) was the market's recovery (80); a steep recent
+      fall is a different population and the measurement starts again.
+- [ ] **Deep value** (83.5), after or beside remedy 3: `ncav_to_marketcap`,
+      tangible book against market cap and the earnings yield as floors
+      and as universes, the forest as the gate, the five-year horizon as
+      the outcome.
+- [x] **`vml-predict --weighting equal|marketcap`** adds a `weight`
+      column over the picks, computed as the backtest's portfolio computes
+      it (85.4). Branch `claude/predict-weights`, merged into the lab and
+      results branches; docs/deployment.md says how.
+- [x] **Records corrected** (85.5): "28% of the top 20 lost money" is 17
+      of 60 picks over three holdout years; `dist_5y_high` is the price
+      over the five-year high minus one, so `<= -0.4` is 40% below the
+      high; the findings open with the answer of decision 81.
+
 ### Next, after 2026-11-27, second part (decision 81: why not the market)
 
 Carter asked why models with precision far above the base rate have not
@@ -734,7 +787,8 @@ final money, one run at one seed.
       matter only for selling rules; a market-impact model for small
       caps. None blocks the next step.
 - [ ] **E11 on `dataset_v1.5.1` at three seeds**, then a paper-trading
-      list for it beside the candidate's (decisions 82.4, 83.3). The
+      list for it beside the candidate's (decisions 82.4, 83.3). Carried
+      into the third part as remedy 1; the list's dry run exists. The
       forest bundle at seed 23 exists on v1.5.1
       (`forest_nonloser_dd30_3y_v151`); seeds 232 and 1776 need
       `vml-run`; the factor legs exist. A v1.5.1 backtest peaks near 14
