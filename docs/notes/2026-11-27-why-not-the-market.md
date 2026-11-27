@@ -279,3 +279,76 @@ minus SPY's, in points a year; and the share that lost money):
   without a model, which is the point. The structure can be fixed. What
   the forest adds inside the fixed structure is the second round's
   question.
+
+## 9. The second round: the cut at a quarter and a half, with and without the blend (E7 to E10)
+
+The first round's cut was mis-sized (section 8). These four runs leave
+out the worst quarter and the worst half of the roughly 450 large caps
+in the monthly cross-section, scored by the forest alone (E7, E8) and by
+the candidate's three-leg blend of forest, momentum and return on
+capital (E9), and repeat E2's top 50 with the blend (E10). All are
+cap-weighted books of the top-decile large caps, like E1.
+
+| portfolio | final value | ratio to SPY | TWR | TWR 2005 to 2020 (SPY 9.4%) | TWR 2021 to 2026 (SPY 15.3%) | beta | worst drawdown | buys that lost | buys' lead over same-size peers |
+|---|---|---|---|---|---|---|---|---|---|
+| E1: all large caps, cap-weighted | 1,421,189 | 1.071 | 11.87% | 10.5% | 15.6% | 0.93 | −45.9% | 29.9% | 0.0 |
+| E7: minus the forest's worst quarter | 1,289,146 | 0.972 | 11.32% | 10.2% | 14.4% | 0.88 | −44.3% | 27.1% | +0.5 |
+| E8: minus the forest's worst half | 1,212,377 | 0.914 | 11.12% | 10.4% | 13.1% | 0.81 | −41.9% | 23.2% | +1.3 |
+| E9: minus the blend's worst half | 1,325,097 | 0.999 | 11.59% | 10.7% | 13.9% | 0.86 | −42.5% | 24.4% | +1.3 |
+| E10: the blend's top 50 | 1,255,864 | 0.947 | 11.88% | 11.6% | 12.7% | 0.79 | −37.4% | 19.9% | +2.6 |
+| E2: the forest's top 50 (first round) | 892,693 | 0.673 | 9.25% | 8.7% | 10.6% | 0.62 | −45.0% | 19.9% | +0.4 |
+| SPY | 1,326,614 | 1.000 | 10.94% | 9.4% | 15.3% | 1.00 | −52.9% | | |
+
+The betas are the mean of the two periods' monthly betas. The sector
+mix: E1's largest sectors were technology 17%, industrials 14%,
+healthcare 13% and consumer cyclicals 12%; E9's were industrials 18%,
+technology 15%, healthcare 14% and consumer staples 13%; E10's were
+staples 23%, industrials 23%, technology 16% and healthcare 15%; E2's
+were staples 24% and utilities 23%.
+
+The recent cohorts, over three years (return minus SPY's in points a
+year, and the share of buys that lost money):
+
+| cohort | E1 | E7 | E8 | E9 | E10 |
+|---|---|---|---|---|---|
+| 2021 | −7.6 (39%) | −4.9 (33%) | −4.6 (31%) | −5.2 (32%) | −4.5 (29%) |
+| 2022 | −8.7 (35%) | −8.3 (32%) | −9.0 (31%) | −8.4 (31%) | −7.9 (31%) |
+| 2023 (partial) | −10.3 (29%) | −10.2 (26%) | −11.5 (25%) | −10.1 (24%) | −12.3 (27%) |
+| all buys | −2.6 (30%) | −2.1 (27%) | −1.3 (23%) | −1.3 (24%) | +0.1 (20%) |
+
+### What the second round showed, against the predictions of 81.6
+
+- **(h) missed its bound narrowly, and its rival failed.** Leaving out
+  the forest's worst quarter cost 0.55 points a year against E1, just
+  outside the predicted 0.5, with a drawdown 1.6 points shallower and
+  2.8 points fewer losing buys, inside the predicted 2 to 4. The
+  stocks the forest scores lowest among large caps include enough
+  winners that removing them costs more than the losers they carry.
+- **(i) held.** The worst half cost 0.75 points a year, inside the
+  predicted 0 to 1, at a beta of 0.81 between E1's and E2's.
+- **(j) held, and its rival failed.** The blend's worst half cost 0.28
+  points a year against E1, inside 0.5, and recovered 0.47 of E8's
+  loss, so the return-on-capital leg does remove the forest's sector
+  tilt inside a cap-weighted book, as it does in the candidate. E9
+  ended with SPY's final value to within 0.1%, 7% behind E1. It was not
+  ahead of E1 in both periods: 0.2 ahead in 2005 to 2020 and 1.7 behind
+  in 2021 to 2026.
+- **(k) held.** With the blend, the top 50 earned 2.6 points a year more
+  than the forest's top 50 and matched E1's time-weighted return
+  exactly: 11.6% against 10.5% in 2005 to 2020, 12.7% against 15.6% in
+  2021 to 2026. It ended with 12% less money than E1 because its
+  shortfall fell in the years the account was largest, and 5% less than
+  SPY. Its drawdown was −37.4% against SPY's −52.9%, its beta 0.79, and
+  one buy in five lost money against one in three for E1.
+- **The shape of the result.** Inside the index's own structure, every
+  cut by the model trades return in 2021 to 2026 for fewer losers and a
+  shallower drawdown, and the deeper the cut the larger both sides of
+  the trade. The forest alone pays more for the same safety than the
+  blend, because it buys defensives. Over 2005 to 2020 the blend's top
+  50 beat E1 by 1.1 points a year and SPY by 2.2 with 15 points less
+  drawdown, which is the thesis working for sixteen years in the
+  cap-weighted structure; in 2021 to 2026 the same book trailed by 2.6
+  to 2.9 points because the stocks it leaves out, the volatile large
+  growth names, were the ones that carried the index.
+- No arm with a model passes the rule of 81.2. E1, with no model,
+  passes it.
