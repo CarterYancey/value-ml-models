@@ -1052,3 +1052,55 @@ failed to do and which is left for later.
    one logbook entry for the twelve; findings and TODO updated; the
    results branch gets a further commit. What is not done: no holdout
    look, no deployment change, no change to the candidate.
+
+### 82. E11 at three seeds and with the rank sell discipline
+
+*What happened (2026-11-27).* Carter read decision 81 and said to go
+ahead with its first next step. E11, the candidate's three-leg blend
+choosing the 50 highest-ranked top-decile large caps with an earnings
+yield of 5% or more, cap-weighted, was the closest portfolio to the goal
+at one seed: a time-weighted return of 12.08% a year against SPY's
+10.94% over 2005 to 2026, a drawdown of −36.7% against −52.9%, 1.0 point
+a year behind SPY in 2021 to 2026, and 3.9% less final money. It passed
+two clauses of the rule of 81.2 and failed the final-value clause.
+
+*Decided:*
+
+1. **Five backtests on `dataset_v1.4.1`**, one at a time: E11 with the
+   forest refit at seeds 232 and 1776 (`bt_lc90_blend_mcap_top50_ey5_s232_v141`,
+   `…_s1776_v141`), and E11 with the candidate's rank sell discipline at
+   seeds 23, 232 and 1776 (`bt_lc90_blend_mcap_top50_ey5_sell20_s23_v141`,
+   `…_s232_v141`, `…_s1776_v141`). The sell discipline is the one
+   decision 24 adopted: a holding is sold once it is no longer among the
+   top 20% of the month's candidates by the blend's combined rank, and
+   the proceeds fund that month's buys. The seed-232 and seed-1776
+   forest bundles are those of decision 57.
+2. **The judging rule is 81.2, read on three-seed means**: final value
+   above SPY's over the whole window, no more than 2 points a year
+   behind SPY in 2021 to 2026, drawdown no deeper than SPY's. The
+   hold-to-horizon and sell-discipline books are read separately.
+3. **Predictions, written before the runs.** (a) At seeds 232 and 1776
+   the time-weighted return is within 0.5 points a year of seed 23's,
+   the drawdown between −35% and −39%, and the final value within 5% of
+   1,274,597; the three-seed mean final value stays below SPY's, so E11
+   held to the horizon fails the final-value clause at three seeds as
+   it did at one. Rival: a seed lands above SPY on final value, and the
+   one-seed shortfall was noise. (b) The sell discipline adds 0.3 to 0.9
+   points a year, as it added to the candidate at three seeds, at 4 to
+   10 times the costs; the three-seed mean final value is above SPY's,
+   and the book passes all three clauses. Rival: in a cap-weighted book
+   the rule sells the large growth names as their rank slips out of the
+   safe top fifth, the names that carried 2021 to 2026, and the final
+   value falls below E11's; then the sell discipline belongs to
+   equal-weighted books only.
+4. **If the sell-discipline book passes**, it is proposed to Carter
+   beside the candidate, not in its place: a cap-weighted book of 50
+   large caps is a different portfolio from an equal-weighted one of
+   about 360 holdings, and the choice between them is the choice of
+   goal that decision 81 asks Carter to make. If it fails, the next
+   step is Carter's answer on the goal, then the upstream market-state
+   columns.
+5. **Records.** The five configs carry the predictions; section 12 of
+   the note holds the tables; one logbook entry; findings and TODO
+   updated; the results branch gets a further commit. What is not done:
+   no holdout look, no deployment change, no change to the candidate.
