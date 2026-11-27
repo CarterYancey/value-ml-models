@@ -26,21 +26,18 @@ exists and is context only.
 
 ## Next session: start here
 
-1. The latest session ran 2026-11-26 into 2026-11-27 and wrote
-   [the rare-region program](notes/2026-11-26-rare-region.md)
-   (decisions 78 to 80 of [the decision log](notes/2026-11-26-decisions.md)):
-   Carter's run-up labels, feature sets that lean on fundamentals and
-   their own history, and five ways of making a model attend to the
-   rare region of fallen stocks with a strong record. Nothing passes
-   the screen rule; the region is the market's recovery, not a pool of
-   mispriced survivors. Earlier on 2026-11-26
-   [the v1.5.1 program](notes/2026-11-26-v151-program.md) (decisions
-   74 to 77) found that the new columns, labels and boosters add
-   nothing to the candidate. The sessions of 2026-11-25 wrote
+1. The latest session (2026-11-26 into 2026-11-27) wrote
+   [the rare-region program](notes/2026-11-26-rare-region.md), decisions
+   78 to 80 of [the decision log](notes/2026-11-26-decisions.md): Carter's
+   run-up labels, fundamentals-leaning feature sets and five ways of
+   making a model attend to fallen stocks with a strong record. Nothing
+   passes the screen rule. Earlier the same day
+   [the v1.5.1 program](notes/2026-11-26-v151-program.md) (decisions 74
+   to 77) found that the new columns, labels and boosters add nothing to
+   the candidate; 2026-11-25 wrote
    [the fallen-stock program](notes/2026-11-25-fallen-stocks.md)
    (decisions 61 to 72) and
-   [the training cutoff](notes/2026-11-25-training-cutoff.md)
-   (decision 60).
+   [the training cutoff](notes/2026-11-25-training-cutoff.md) (60).
 2. TODO.md says what to do next, under "Next, after 2026-11-27". The
    candidate's runbook is [paper-trading.md](paper-trading.md).
 3. The branch `claude/results-2026-11-26` carries this file, the
@@ -84,29 +81,25 @@ standard errors, ahead in 10 or more of 16 years, with no half worse
 than its noise, on both outcomes; then three seeds, then money.
 
 **The rare-region program is closed (decisions 78 to 80).** Carter
-asked whether a model can learn the rare case: a stock with a strong
-record that has fallen hard and recovers. The region was defined as
-liquid, 40% or more below its 5-year high and cash-flow positive in 18
-of 20 quarters (16% of liquid rows). Its rows earn a mean 3-year CAGR
-of 1.9% against 3.4% for all liquid rows, with 41% losers against 37%
-and 18.5% doublers against 15.9%: wider tails, a lower mean. It earns
-in 2009–2012 and 2020 and loses every year from 2013 to 2018. Across
-49 runs (training weights ×3 and ×10 on the region's rows, the region
-as its own universe, forests seeing 5% of the columns a split, LightGBM
-at a tenth of the columns, quantile regression for the upper tail) no
-arm passes the screen rule. The picks' share inside the region and
-their share of losers rise together in every sweep: 0.6% and 17% (the
-control), 5–7% and 19–21%, 27–34% and 36–41%, 47–86% and 44–61%. Given
-the region's columns and more of its weight, the forest learns to
-avoid it. Carter's labels: 'doubled without a crash' on the old ranks
-is a one-month-reversal forest, +0.081 a year over the control with
-38% losers and peers that lose money half the years after 2008; 'run-up
-of 75%' is learned as volatility; the union with SPY's drawdown is a
-calmer, poorer cell C. The feature sets: raw fundamentals without
-prices hold the control's lead at 6.7 points more losers; the ranks
+asked whether a model can learn the rare case: a strong record, a steep
+fall, a recovery. The region (liquid, 40% or more below the 5-year high,
+cash-flow positive in 18 of 20 quarters; 16% of liquid rows) earns a
+mean 3-year CAGR of 1.9% against 3.4% for all liquid rows, with 41%
+losers against 37% and 18.5% doublers against 15.9%; it earns in
+2009–2012 and 2020 and loses every year from 2013 to 2018. Across 49
+runs (training weights ×3 and ×10 inside it, the region as a universe,
+forests seeing 5% of the columns a split, LightGBM at a tenth of the
+columns, quantile regression for the upper tail) no arm passes the
+screen rule. The picks' share inside the region and their share of
+losers rise together in every sweep, from 0.6% and 17% (the control) to
+47–86% and 44–61%; given the region's columns and more of its weight,
+the forest learns to avoid it. Of Carter's labels, 'doubled without a
+crash' on the old ranks is a one-month-reversal forest (+0.081 a year
+over the control, 38% losers, peers losing money half the years after
+2008); 'run-up of 75%' is learned as volatility. Of the sets, the ranks
 without the technical family plus the unranked history columns (162)
-match the lead at 5.6 points more and lead the old ranks on the harder
-cells; the compact own-history sets are worst everywhere.
+match the control's lead at 5.6 points more losers; the compact
+own-history sets are worst everywhere.
 
 **`dataset_v1.5.1` adds nothing to the candidate (decisions 74 to
 77).** Every set with the new history, trend or event columns has the
@@ -128,13 +121,12 @@ three when valued at the end of 2023. Whether it runs beside the
 candidate is Carter's decision.
 
 **The candidate is not shown to beat SPY.** At the end of 2020 it was
-ahead by final value and TWR; in August 2026 it is 13% behind. Its
-yearly return minus SPY's, in points: 2021 −8.9, 2022 +2.3, 2023 −3.9,
-2024 −11.4, 2025 −14.5, 2026 to August −13.2. The buys of 2021 trailed
-SPY by 14.6 points a year over three years and 72% of them lost money;
-the buys of 2022 matched SPY, of 2023 trailed by 4.3. In all, 49
-backtest configurations have completed on 2005–2020 (38 on v1.4, 7 on
-v1.4.1, 4 on v1.5.1), plus seven failed runs of 2026-11-24.
+ahead by final value and TWR; in August 2026 it is 13% behind, trailing
+SPY in every year since 2021 but 2022 (by 3.9 to 14.5 points). The buys
+of 2021 trailed SPY by 14.6 points a year over three years and 72% of
+them lost money. In all, 49 backtest configurations have completed on
+2005–2020 (38 on v1.4, 7 on v1.4.1, 4 on v1.5.1), plus seven failed
+runs of 2026-11-24.
 
 | cell (3-year horizon, `dataset_v1.5.1` inside the 100k floor unless said) | trials | best result | status |
 |---|---|---|---|
