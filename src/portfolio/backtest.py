@@ -30,13 +30,14 @@ from harness.runner import (
 )
 from portfolio.config import BacktestConfig
 from portfolio.crosssection import CrossSectionBuilder
-from portfolio.engine import run_simulation
+from portfolio.engine import deposit_schedule, run_simulation
 from portfolio.prices import (
     PricePanel,
-    benchmark_price_source,
+    expensed_benchmark_source,
     stock_price_source,
 )
 from portfolio.report import (
+    deposit_schedule_table,
     BUY_OUTCOME_HORIZONS,
     SIZE_COLUMN,
     buy_outcome_table,
@@ -331,10 +332,14 @@ def run_backtest(
             stock_source,
             evaluate_sells=sells,
         )
+        deposit = deposit_schedule(
+            config.monthly_cash, config.deposit_growth_per_year,
+            pd.Timestamp(buy_dates[0]),
+        )
         strategy_result = run_simulation(
             dates=dates,
             buy_dates=set(buy_dates),
-            deposit=config.monthly_cash,
+            deposit=deposit,
             price_source=stock_source,
             strategy=strategy,
             candidates_fn=feed,
@@ -343,7 +348,9 @@ def run_backtest(
             fractional_shares=config.fractional_shares,
         )
 
-        bench_source = benchmark_price_source(panel)
+        bench_source = expensed_benchmark_source(
+            panel, config.benchmark_expense_bps_per_year
+        )
         bench_asset = panel.benchmark_name
 
         def bench_candidates(when: pd.Timestamp, held_assets: list):
@@ -362,7 +369,7 @@ def run_backtest(
         benchmark_result = run_simulation(
             dates=dates,
             buy_dates=set(buy_dates),
-            deposit=config.monthly_cash,
+            deposit=deposit,
             price_source=bench_source,
             strategy=BuyAndHoldTopK(top_k=1, weighting="equal"),
             candidates_fn=bench_candidates,
@@ -398,6 +405,9 @@ def run_backtest(
         configurations_tried = _backtest_configurations_tried(
             store, config.dataset_version, config.config_hash
         )
+        schedule_table = deposit_schedule_table(
+            strategy_result, benchmark_result
+        )
         report_path = write_backtest_report(
             path=out_dir / f"{stem}.md",
             config=config,
@@ -415,6 +425,7 @@ def run_backtest(
             artifacts=artifacts,
             buy_outcome_frame=buy_frame,
             candidate_outcome_frame=candidate_frame,
+            schedule_table=schedule_table,
         )
 
         headline = headline_table(strategy_result, benchmark_result)
@@ -435,6 +446,16 @@ def run_backtest(
             "benchmark_twr_cagr": twr_cagr(benchmark_result.monthly),
             "prices_version": panel.version,
             "buy_years": f"{buy_years[0]}-{buy_years[-1]}",
+            # decision 84: the final value under other deposit schedules,
+            # from the time-weighted path (no re-run)
+            **{
+                f"final_value_{row['key']}": row["strategy"]
+                for _, row in schedule_table.iterrows()
+            },
+            **{
+                f"benchmark_final_value_{row['key']}": row["benchmark"]
+                for _, row in schedule_table.iterrows()
+            },
             **_buy_outcome_metrics(buy_frame),
             **_reference_metrics(buy_frame, candidate_frame),
         }
