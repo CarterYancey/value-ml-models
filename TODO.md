@@ -684,55 +684,64 @@ in [PLAN.md](PLAN.md); check items off (and add new ones) as work proceeds.
 
 ### Next, after 2026-11-27 (decisions 78 to 80)
 
-Carter asked for his run-up/no-crash labels, feature sets that lean on
-fundamentals and their own history instead of ranks, volume and
-momentum, and a way to make a model attend to the rare region (a
-strong record, a steep temporary fall, a recovery). The program ran
-three sweeps on labels and sets (decision 78) and five pieces on the
-region (decision 79): training weights ×3 and ×10 inside it, the region
-as a universe, forests seeing 5% of the columns a split, LightGBM at a
-tenth of the columns, quantile regression for the upper tail. Across
-49 runs no arm passes the screen rule against the control. The region
-is the market's recovery, not mispriced survivors: its rows earn 1.9% a
-year against 3.4% with 41% losers, win 2009–2012 and 2020 and lose every
-year 2013–2018; every selection that buys it loses more often, and given
-its columns and weight the forest learns to avoid it (decision 80, note
+Carter asked for three things: his run-up labels (a large rise with no
+crash), feature sets built from fundamentals and the stock's own
+history rather than from ranks, volume and momentum, and a way to make
+a model attend to the rare region of stocks with a strong record that
+have fallen hard and then recover. The program ran three sweeps on the
+labels and sets (decision 78) and then five methods aimed at the region
+(decision 79): weighting the region's training rows three and ten
+times, training on the region alone, forests that see 5% of the
+columns at each split, LightGBM with a tenth of the columns per tree,
+and quantile regression for the upper tail of returns. Across 49 runs
+no arm passes the screen rule against the control. The region turned
+out to be the market's recovery rather than a pool of mispriced
+survivors. Its rows earn 1.9% a year against 3.4% for all liquid rows,
+with 41% losers; they win in 2009 to 2012 and 2020 and lose in every
+year from 2013 to 2018. Every selection that buys the region loses more
+often, and given the region's columns and more of its weight the forest
+scores its rows lower, not higher (decision 80; tables in
 docs/notes/2026-11-26-rare-region.md).
 
-- [ ] **Carter merges `claude/results-2026-11-26`** (now carrying the
-      v1.5.1 support code, the `[emphasis]` and `[pick_screen] region`
-      code with their tests, decisions 74 to 80, the two program notes,
-      the rewritten findings and eleven promoted records). After the
-      merge, from any other branch, run
+- [ ] **Carter merges `claude/results-2026-11-26`.** It now carries the
+      v1.5.1 support code, the emphasis and region features of the
+      harness with their tests, decisions 74 to 80, the two program
+      notes, the rewritten findings and eleven promoted records. After
+      the merge, from any other branch, run
       `uv run vml-queue archive-lab claude/lab-2026-11-26 --delete`.
-- [ ] **Upstream: a market-state column per snapshot date** is now the
-      rare region's open question as well as the plan's item 3: what
-      separates the region's good years from its bad ones is not in
-      the row. A recovery label measured inside a region (decision
-      63's question) stays upstream too.
-- [ ] The set to carry if fundamentals-leaning work resumes is the rank
-      group without `ranks/technical` plus the 28 unranked history
-      columns (162): it matches the control's lead at 5.6 points more
-      losers and leads the old ranks on the harder cells (decision 78).
-      Not a candidate; a starting point.
-- [ ] `[emphasis]` (decision 78.6) and `[pick_screen] region` (decision
-      79) are general harness features: a weight multiplier inside a
-      region of feature columns, and the share of a selection inside a
-      region as the pick outcome `in_region`. Documented in
-      docs/experiments.md. The 3.5 item "regime-emphasis training
-      weights" below is the same mechanism with a time region; a time
-      region needs a snapshot-date filter, which `FilterSpec` does not
-      take yet.
-- [ ] The reversal forest ('doubled without a crash' on the 112 old
-      ranks: +0.081 a year over the control, 38% losers, peers losing
-      money half the years after 2008) is recorded, not followed. If a
-      short-horizon reversal arm is ever wanted, it starts there, on
-      the screen, with the losers bar written first.
-- [ ] Three tracked configs of decisions 74 to 76 are neither promoted
-      nor in `experiments/KEEP` (`scripts/check_tracked_configs.py`):
-      `baseline_v151_labels_3y`, `lgbm_v151_features_nonloser_3y`,
-      `xgb_v151_features_nonloser_3y`. Left as the earlier session left
-      them, for Carter's call; the decision 78–80 companions are in KEEP.
+- [ ] **Upstream request: a market-state column per snapshot date.**
+      This was already item 3 of the findings plan. It is now also the
+      rare region's open question, because what separates the region's
+      good years from its bad ones is not in the row. A recovery label
+      measured inside a region (decision 63's open question) is also an
+      upstream matter.
+- [ ] If work on fundamentals-based feature sets resumes, start from
+      the rank columns without the technical family plus the 28
+      unranked history columns (162 columns). That set matched the
+      control's lead with 5.6 points more losers and led the old ranks
+      on the harder labels (decision 78). It is a starting point, not a
+      candidate.
+- [ ] Two new harness features are general and documented in
+      docs/experiments.md: `[emphasis]` (decision 78.6) multiplies the
+      training weight of rows inside a region of feature columns, and
+      `[pick_screen] region` (decision 79) reports the share of a
+      selection that falls inside such a region as the pick outcome
+      `in_region`. The item "regime-emphasis training weights" under
+      section 3.5 below is the same mechanism applied to a period of
+      time. A time region needs a filter on the snapshot date, which
+      `FilterSpec` does not accept yet.
+- [ ] The reversal forest is recorded and not followed. It is the
+      "doubled without a crash" label on the 112 old ranks: a lead of
+      +0.081 a year over the control, 38% losers, and peers that lost
+      money in half the years after 2008. If a short-horizon reversal
+      model is ever wanted, it starts there, judged on the screen, with
+      the losers threshold written before the run.
+- [ ] Three tracked configs from decisions 74 to 76 are neither promoted
+      nor listed in `experiments/KEEP`, as `scripts/check_tracked_configs.py`
+      reports: `baseline_v151_labels_3y`, `lgbm_v151_features_nonloser_3y`
+      and `xgb_v151_features_nonloser_3y`. They are left as the earlier
+      session left them, for Carter to decide. The companion configs of
+      decisions 78 to 80 are in KEEP.
 
 ### Next, after 2026-11-26 (decisions 74 to 77)
 
