@@ -1,0 +1,86 @@
+# Decision 78 of docs/notes/2026-11-26-decisions.md (2026-11-26), item 3:
+# the bars of the four label cells of forest_fund_labels_3y that have
+# none: ten single-factor rank bars (the eight of decision 74 plus the
+# least-fallen and the own-history return on equity), read inside the
+# 100k floor on the same-size screen. No prediction: these are the bars.
+#
+# Expanded: 4 cells x 1 feature set x 10 sets x 1 seed = 40 runs, under a minute each.
+# Run: .venv/bin/vml-sweep experiments/sweeps/baseline_fund_labels_3y.toml
+name = "baseline_fund_labels_3y"
+dataset_version = "dataset_v1.5.1"
+min_dataset_version = "1.5"
+scheme = "walkforward"
+folds = "all"
+seeds = [7]
+top_k = [20, 50]
+precision_targets = [0.75, 0.9]
+rank_metric = "precision_at_20"
+universe_scope = "test"
+pick_outcomes = [
+  "label_3y_beat_spy",
+  "fwd_3y_excess_cagr",
+  "fwd_3y_cagr",
+  "fwd_3y_max_drawdown_from_entry",
+  "fwd_3y_cagr < 0",
+  "fwd_3y_cagr < -0.1",
+  "fwd_3y_max_drawdown_from_entry >= 0.4",
+  "fwd_3y_max_drawdown_from_entry >= 0.5",
+  "fwd_3y_cagr >= 0.15",
+  "fwd_3y_cagr >= 0.26",
+  "fwd_3y_excess_cagr >= 0.05",
+  "fwd_3y_path_avg_return",
+  "fwd_3y_path_avg_return > fwd_3y_spy_path_avg_return",
+  "fwd_3y_max_runup",
+  "fwd_3y_max_runup >= 1.0",
+  "fwd_3y_realized_vol",
+  "fwd_3y_cagr >= 0 & fwd_3y_max_drawdown_from_entry < 0.3",
+  "fwd_3y_max_runup >= 0.5 & fwd_3y_max_drawdown_from_entry < 0.3",
+  "fwd_3y_max_runup >= 1.0 & fwd_3y_max_drawdown_from_entry < 0.4",
+  "fwd_3y_max_runup >= 0.75",
+  "fwd_3y_cagr >= 0.2 | fwd_3y_max_drawdown_from_entry <= fwd_3y_spy_max_drawdown_from_entry",
+  "fwd_3y_cagr >= 0.15 & fwd_3y_max_drawdown_from_entry < 0.3",
+]
+
+sets = [
+  {rank_column = "vol_36m_rank", higher_is_better = false},
+  {rank_column = "vol_12m_rank", higher_is_better = false},
+  {rank_column = "conservative_score_rank", higher_is_better = true},
+  {rank_column = "roc_greenblatt_rank", higher_is_better = true},
+  {rank_column = "mom_12_2_rank", higher_is_better = true},
+  {rank_column = "earnings_yield_rank", higher_is_better = true},
+  {rank_column = "earnings_yield_5y_avg_rank", higher_is_better = true},
+  {rank_column = "log_marketcap_rank", higher_is_better = true},
+  {rank_column = "dist_5y_high_rank", higher_is_better = true},
+  {rank_column = "roe_5y_z_rank", higher_is_better = true},
+]
+
+[pick_screen]
+per = "quarter"
+top_k = 10
+max_per_group = 2
+group_column = "sector"
+peer_column = "log_marketcap_rank"
+peer_bins = 20
+
+[[universe]]
+column = "dollar_volume_3m"
+op = ">="
+value = 100000
+
+[[cells]]
+label = "fwd_3y_max_runup >= 1.0 & fwd_3y_max_drawdown_from_entry < 0.4"
+
+[[cells]]
+label = "fwd_3y_max_runup >= 0.75"
+
+[[cells]]
+label = "fwd_3y_cagr >= 0.2 | fwd_3y_max_drawdown_from_entry <= fwd_3y_spy_max_drawdown_from_entry"
+
+[[cells]]
+label = "fwd_3y_cagr >= 0.15 & fwd_3y_max_drawdown_from_entry < 0.3"
+
+[[features]]
+groups = ["ranks"]
+
+[model]
+name = "rank_factor"

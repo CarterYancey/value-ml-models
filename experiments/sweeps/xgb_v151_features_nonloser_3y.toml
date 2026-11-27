@@ -1,0 +1,80 @@
+# Decision 74 of docs/notes/2026-11-26-decisions.md (2026-11-26), item 2:
+# XGBoost (CPU) on fs0 (the 112 old ranks) and fs1 (all 149 ranks),
+# cell C, set1 of xgb_candidate_sets_3y (the 2026-09 search), seed 23,
+# same screen inside the 100k floor.
+#
+# Prediction (decision 74.5c): below the forest and LightGBM in
+# 2013-20 as in 2026-09; fs1 within 0.02 of fs0.
+#
+# Expanded: 1 cell x 2 feature sets x 1 set x 1 seed = 2 runs.
+# Run: .venv/bin/vml-sweep experiments/sweeps/xgb_v151_features_nonloser_3y.toml
+name = "xgb_v151_features_nonloser_3y"
+dataset_version = "dataset_v1.5.1"
+min_dataset_version = "1.5"
+scheme = "walkforward"
+folds = "all"
+seeds = [23]
+top_k = [20, 50]
+precision_targets = [0.75, 0.9]
+rank_metric = "precision_at_20"
+universe_scope = "test"
+pick_outcomes = [
+  "label_3y_beat_spy",
+  "fwd_3y_excess_cagr",
+  "fwd_3y_cagr",
+  "fwd_3y_max_drawdown_from_entry",
+  "fwd_3y_cagr < 0",
+  "fwd_3y_cagr < -0.1",
+  "fwd_3y_max_drawdown_from_entry >= 0.4",
+  "fwd_3y_cagr >= 0.15",
+  "fwd_3y_excess_cagr >= 0.05",
+  "fwd_3y_path_avg_return",
+  "fwd_3y_path_avg_return > fwd_3y_spy_path_avg_return",
+  "fwd_3y_max_runup",
+  "fwd_3y_realized_vol",
+  "fwd_3y_cagr >= 0 & fwd_3y_max_drawdown_from_entry < 0.3",
+]
+
+sets = [
+  {class_weight = 0.5, colsample_bytree = 0.825382, gamma = 4.79144, learning_rate = 0.126577, max_depth = 6, min_child_weight = 5.09555, n_estimators = 274, reg_alpha = 4.30687, reg_lambda = 0.235585, subsample = 0.920096},  # set1
+]
+
+[pick_screen]
+per = "quarter"
+top_k = 10
+max_per_group = 2
+group_column = "sector"
+peer_column = "log_marketcap_rank"
+peer_bins = 20
+
+[[universe]]
+column = "dollar_volume_3m"
+op = ">="
+value = 100000
+
+
+[[cells]]
+label = "fwd_3y_cagr >= 0 & fwd_3y_max_drawdown_from_entry < 0.3"
+
+# fs0: the 112 rank columns of dataset_v1.4.1 — the control on this build
+[[features]]
+groups = ["ranks"]
+exclude_columns = [
+  "bvps_trend_4q_rank", "bvps_consistency_4q_rank", "bvps_trend_8q_rank", "bvps_consistency_8q_rank",
+  "bvps_trend_12q_rank", "bvps_consistency_12q_rank", "bvps_trend_20q_rank", "bvps_consistency_20q_rank",
+  "shares_trend_4q_rank", "shares_trend_8q_rank", "shares_trend_12q_rank", "shares_trend_20q_rank",
+  "roa_5y_median_rank", "roa_5y_std_rank", "roa_5y_z_rank", "roe_5y_median_rank", "roe_5y_std_rank", "roe_5y_z_rank",
+  "gross_margin_5y_median_rank", "gross_margin_5y_std_rank", "gross_margin_5y_z_rank",
+  "operating_margin_5y_median_rank", "operating_margin_5y_std_rank", "operating_margin_5y_z_rank",
+  "earnings_yield_5y_avg_rank", "ocf_yield_5y_avg_rank", "fcf_yield_5y_avg_rank", "earnings_yield_5y_peak_rank",
+  "earnings_yield_at_5y_median_margin_rank", "earnings_yield_10y_avg_rank", "netinc_vs_5y_peak_rank",
+  "bvps_vs_5y_peak_rank", "netinc_sue_8q_rank", "revenue_sue_8q_rank", "revenue_cagr_10y_rank",
+  "bvps_cagr_10y_rank", "shares_cagr_10y_rank",
+]
+
+# fs1: every rank column of dataset_v1.5.1, 149
+[[features]]
+groups = ["ranks"]
+[model]
+name = "xgboost"
+device = "cpu"
