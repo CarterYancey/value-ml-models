@@ -709,11 +709,45 @@ final money, one run at one seed.
       cap-weighted book of 50 names from 450 candidates the selling line
       sits just below the buying line. Not for this book. A looser band
       (selling below the top half) is a possible later test.
-- [ ] **Carter: what is the goal?** By final money against SPY on
-      2026-08-21, inside a mega-cap boom, no loser-avoiding book wins. By
-      drawdown, losers and return per unit of market risk, E11 wins on
-      every reading. The program needs to know which, and over what kind
-      of period it is judged.
+- [x] **Carter: what is the goal?** Answered 2026-11-27 (decision 83):
+      return per unit of risk for now (time-weighted return, worst
+      drawdown and the share of losing buys against SPY and same-size
+      peers), with more final money than SPY kept as the long-run goal.
+      His reasons: the present period looks like one in which value
+      underperforms and should correct, and a simulation's final value is
+      sensitive to deposits, fees and taxes. The rule of 83.1 replaces
+      81.2. He does not want to settle at 12% a year; the stretch target
+      is 20%, and the deep-value "cigar butt" is the direction to keep
+      working.
+- [x] **Backtest realism, first audit** (decision 84, note
+      docs/notes/2026-11-27-backtest-realism.md). Dividends are
+      symmetric; signals are up to seven months stale; costs are 35
+      basis points a side; no taxes; the flat 1,000-a-month deposit
+      moves the sign of the gap to SPY for the candidate and E11. Code
+      on `claude/backtest-realism` (merged into the lab and results
+      branches): every report shows the final value under five deposit
+      schedules; `[window] deposit_growth_per_year`; `[execution]
+      benchmark_expense_bps_per_year`.
+- [ ] **Backtest realism, what is left:** a cost model by size and era
+      (35 basis points is high for large caps after 2010 and low for
+      small caps before); taxes on dividends and realized gains, which
+      matter only for selling rules; a market-impact model for small
+      caps. None blocks the next step.
+- [ ] **E11 on `dataset_v1.5.1` at three seeds**, then a paper-trading
+      list for it beside the candidate's (decisions 82.4, 83.3). The
+      forest bundle at seed 23 exists on v1.5.1
+      (`forest_nonloser_dd30_3y_v151`); seeds 232 and 1776 need
+      `vml-run`; the factor legs exist. A v1.5.1 backtest peaks near 14
+      GB: one at a time, nothing else running.
+- [ ] **Deep-value experiments** (decision 83.5), each with a decision and
+      predictions first: net current asset value against market cap
+      (`ncav_to_marketcap`), tangible book against market cap and the
+      earnings yield as floors and as universes, with the forest's
+      loser-avoidance as the gate and the five-year horizon as the
+      outcome, judged under the rule of 83.1. What the record already
+      says: a deep fall alone is a bet on the market's recovery (80), the
+      earnings-yield ranking alone has 57% losers (sweep B), and a floor
+      inside the safe set helped (E11).
 - [ ] **Upstream: the market-state columns** (the calibration plan's
       request, decision 46) are now the one thing that would let a model
       learn when to buy less rather than have an earnings-yield floor
