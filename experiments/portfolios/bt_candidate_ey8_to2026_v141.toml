@@ -1,0 +1,63 @@
+# Decision 81 of docs/notes/2026-11-26-decisions.md (2026-11-27): why the
+# candidate has not beaten the market, and the experiments that separate
+# the explanations. Note: docs/notes/2026-11-27-why-not-the-market.md.
+#
+# E6, the same as E5 with the floor at 8%: the harsher end of the
+# valuation rule.
+#
+# Predictions (decision 81.4), written before the run:
+#   (f) At 8% the floor is too tight: fewer than 10 stocks qualify in
+#       many months (4% to 10% of liquid stocks clear it outside
+#       2008-2009), cash sits idle, and the value-trap effect dominates:
+#       the 2005-2020 time-weighted return is a point or more below the
+#       candidate's and losers are higher. The 5% floor (E5) is the one
+#       to read; this run bounds it.
+#
+# Same legs, costs, window and accounting as the candidate's record
+# (bt_nonloser_mom_roc_top10_cap2_rankfloor_to2026_v141), dataset_v1.4.1.
+# Run: .venv/bin/vml-backtest experiments/portfolios/bt_candidate_ey8_to2026_v141.toml
+
+name = "bt_candidate_ey8_to2026_v141"
+dataset_version = "dataset_v1.4.1"
+prices_version = "prices_v1.0"
+
+bundles = [
+    "experiments/models/forest_nonloser_dd30_3y_v141_f259c702a6a6",
+    "experiments/models/factor_mom_12_2_3y_v141_121349f6e682",
+    "experiments/models/factor_roc_greenblatt_3y_v141_4457ca01bcfb",
+]
+
+[signal]
+combine = "mean_rank"
+max_staleness_days = 200
+model_update = "refit"
+label_lag_days = 45
+
+[[investability]]
+column = "dollar_volume_3m_rank"
+op = ">="
+value = 0.2
+
+[[filters]]
+column = "earnings_yield"
+op = ">="
+value = 0.08
+
+[portfolio]
+strategy = "buy_and_hold"
+top_k = 10
+weighting = "equal"
+max_per_group = 2
+group_column = "sector"
+monthly_cash = 1000.0
+
+[execution]
+cost_bps = 35.0
+benchmark_cost_bps = 0.0
+max_quote_age_days = 3
+delist_after_days = 30
+
+[window]
+start = 2005-01-01
+end = 2026-08-21
+valuation_end = 2026-08-21

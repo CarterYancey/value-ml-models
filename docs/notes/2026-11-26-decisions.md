@@ -807,3 +807,170 @@ carrying the emphasis and region code from `claude/emphasis-weights`,
 decisions 78 to 80, the notes and the records, and Carter opens the
 pull request. What is not done: no holdout look, no deployment change,
 no edit to a config that has run.
+
+### 81. Why the candidate has not beaten the market, and what separates the explanations
+
+*What happened (2026-11-27).* Carter asked the project's central
+question. The goal is a model that beats the market over the long term
+by learning the relationship between fundamentals and long-term
+success, holding to the value investor's first rule, never lose money,
+and accepting low recall for high precision. The models predict their
+labels at precision well above the base rate, and the portfolios built
+from them have not beaten the market in the backtests. Why, and what
+has not been tried? The answer below rests on the candidate's own
+record (`bt_nonloser_mom_roc_top10_cap2_rankfloor_to2026_v141`), the
+control run of sweep A read against SPY by cohort year, and a survey of
+every portfolio-level idea in the decision logs. The tables are in
+[the note](2026-11-27-why-not-the-market.md).
+
+*What was measured.*
+
+1. **The candidate beat SPY for sixteen years and lost to it for six.**
+   Its time-weighted return was 12.4% a year against SPY's 9.4% over
+   2005 to 2020, and 7.1% against 15.3% over 2021 to 2026. It was ahead
+   in 10 of the 16 calendar years to 2020 and in all four of SPY's down
+   years, and behind in 5 of the 6 years since. Its money-weighted CAGR
+   over the whole window is 12.2% against 13.2%, because the deposits
+   make the account largest in the years it lost. The shortfall is a
+   six-year event, not a sixteen-year one.
+2. **The selection skill is real and it is a loser-avoidance skill.**
+   Over 1,951 buys with a full three-year window, the buys led stocks of
+   the same size by 4.5 points a year and 23% of them lost money against
+   33% of their peers. On the walk-forward screen the picks' realized
+   volatility was 0.25 against the peers' 0.36 and their drawdown 0.18
+   against 0.29. The portfolio's monthly beta to SPY is 0.86, its
+   correlation 0.93, and it captured 88% of SPY's up months and 80% of
+   its down months.
+3. **The skill only just covers a structural gap.** Equal-weighted
+   stocks of the picks' own size trailed cap-weighted SPY by 3.8 points
+   a year over the same buys, and the whole liquid universe by 10.3.
+   The picks' lead over same-size peers (4.5) minus the band's gap to
+   SPY (3.8) leaves 0.7 points a year over SPY before costs. On the
+   screen the picks' mean three-year CAGR over the sixteen cohort years
+   equals SPY's exactly (0.096 against 0.096): 3.3 points above SPY in
+   the four crash-era cohorts of 2005 to 2008 and 1.1 below in the
+   twelve cohorts of 2009 to 2020, in which SPY compounded at 10% to
+   17%.
+4. **In the 2019 to 2023 cohorts both terms failed at once.** The buys'
+   lead over same-size peers fell to 0.3, 0.3, −2.5, +1.6 and −6.0
+   points, and the band's gap to SPY widened to 5 to 12 points. Of the
+   2021 buys, 72% had lost money a year later and 47% after three years;
+   their peers did little better (45%). The model does not see the
+   market's level: every forest's scores are highest at market tops
+   (decision 46), its precision in cell C was 0.40 in 2006 and 0.25 in
+   2007, and nothing in a row says that 2021 is a year to buy less.
+5. **Precision on "not a loser" compresses the return distribution from
+   both ends.** The label is met by 43% of liquid rows. The forest finds
+   the calmest of them: fewer losers and fewer large winners. A
+   portfolio of stocks that each earn 8% to 10% with few losses matches
+   a cap-weighted index that earns 13% only when the index crashes
+   often enough, which it did in 2005 to 2020 and not since.
+6. **The structure, not the model, is the part that cannot keep up in
+   2021 to 2026.** SPY beat the equal-weighted mean of its own thirty
+   largest members in those years (decision 32.3). No equal-weighted
+   selection from this universe could have kept pace. Three ideas that
+   address the structure directly were proposed and never run as
+   portfolios: a cap-weighted book of large caps with the forest's
+   worst excluded (decision 32.3), holding cash when little qualifies
+   (decisions 13.2, 43.3, 46), and a two-stage safety-then-return
+   selection (TODO). A market-cap-weighted top 10 was run once and
+   became a bet on one company (decision 26).
+
+*What this means (hypotheses).* The project has not failed to find
+skill. It has built a low-beta, equal-weighted portfolio of calm,
+profitable, mostly large stocks with 4 to 5 points a year of real
+selection skill against same-size peers, and asked it to beat a
+cap-weighted index. That works when the index falls often and fails
+when a few giants carry the index, and the model has no input that
+tells it which kind of period it is in. Three things could change the
+outcome, in order of how much evidence supports them: put the skill
+inside the index's own structure (cap weighting), so the band's gap
+disappears and the loser-avoidance is all that remains; give the
+portfolio a reason to buy less when the market is dear, which needs
+either a market-state column from upstream or a row-level valuation
+floor; and raise the picks' upside without raising their losers, which
+every attempt so far (regressions, run-up labels, the rare region) has
+failed to do and which is left for later.
+
+*Decided:*
+
+1. **Six backtests, on `dataset_v1.4.1`, the candidate's build**, each
+   with the candidate's costs, window (2005 to 2026-08-21) and
+   accounting, one at a time (a v1.4.1 backtest peaks near 10 GB):
+   - E1 `bt_lc90_mcap_all_v141`: the control. Every liquid stock in the
+     top decile of market cap, bought each month in proportion to market
+     cap, with a top-K larger than the universe so no model ranking
+     applies. The structure of SPY built from this dataset.
+   - E2 `bt_lc90_mcap_top50_v141`: the same universe, each month the 50
+     stocks the not-a-loser forest scores highest (about half), cap-
+     weighted. The index minus the predicted losers.
+   - E3 `bt_lc90_mcap_top25_v141`: the top 25 instead of 50.
+   - E4 `bt_lc90_equal_top50_v141`: E2's 50 names with equal weights,
+     to separate the weighting from the selection.
+   - E5 `bt_candidate_ey5_to2026_v141`: the candidate with a filter
+     admitting only stocks whose earnings yield at the snapshot is 5% or
+     more. The share of liquid stocks clearing that floor was 10% in
+     2021 and 17% in 2018 against 35% to 48% in 2008 to 2009, so the
+     filter buys less when the market is dear and leaves the rest in
+     cash. It reads one row-level column, no market state.
+   - E6 `bt_candidate_ey8_to2026_v141`: the same floor at 8%, to bound
+     E5.
+2. **The judging rule.** A portfolio is read against SPY on the
+   time-weighted return in 2005 to 2020 and in 2021 to 2026 separately,
+   on the money-weighted CAGR and final value over the whole window, on
+   the worst drawdown, and on its buys' three-year lead over same-size
+   peers and share of losers. An arm is carried to three seeds and
+   proposed to Carter only if it is ahead of SPY on final value over the
+   whole window, no more than 2 points a year behind SPY in 2021 to
+   2026, and no deeper than SPY in drawdown. The cap-weighted arms are
+   also read against E1, their own control, because E1 and not SPY is
+   what the forest's exclusion is measured against.
+3. **What is not run here.** A quarterly or horizon-matched selling
+   rule, a top-20 book and a two-stage portfolio need engine code and
+   are listed in TODO.md with the rest of the plan. Holding cash by a
+   score threshold is not run: decision 46 showed the scores are
+   highest at tops, so a score floor would buy most when it should buy
+   least. The market-state columns stay the upstream request they are.
+4. **Predictions, written before the runs.**
+   (a) E1 tracks SPY: time-weighted return within 1.5 points a year of
+   SPY's over 2005 to 2026 and within 2 points over 2021 to 2026. If E1
+   trails SPY by 3 or more in 2021 to 2026, the gap is not the band's
+   weighting but the particular giants SPY held, and cap weighting this
+   universe cannot close it.
+   (b) E2 beats E1 by 0.5 to 1.5 points a year over the whole window
+   with a drawdown at least 3 points shallower, ahead of E1 in both
+   periods and by less in the second. Against SPY, E2 ends within 1.5
+   points a year over the whole window: ahead in 2005 to 2020, behind by
+   2 to 4 in 2021 to 2026 rather than the candidate's 8. The rival, and
+   the hope: E2 is ahead of SPY by a point or more a year over the whole
+   window, 2021 to 2026 included. Then loser-avoidance inside a
+   cap-weighted book is the thesis realized and three seeds follow.
+   (c) E3 is not better than E2 by more than 0.5 points a year and its
+   drawdown is not shallower: concentration adds variance, not return.
+   (d) E4 is 2 or more points a year behind E2 in 2021 to 2026 and
+   within a point in 2005 to 2020: the weighting is where the recent gap
+   comes from.
+   (e) E5 buys 15% to 25% fewer stocks, fewest in 2018 and 2021 and
+   most in 2008 to 2009. Its 2021 to 2023 buys lose at least 5 points
+   less often over three years than the candidate's, its drawdown is
+   shallower, and its final value is within 5% of the candidate's. The
+   rival: the floor removes the calm, fully priced, profitable stocks
+   the forest likes and leaves cheaper and worse ones, so the 2005 to
+   2020 return falls a point or more below the candidate's and losers
+   rise, as the earnings-yield ranking's 57% losers (sweep B) warn.
+   (f) E6 is too tight: cash sits idle in many months and the value-trap
+   effect dominates, so its 2005 to 2020 return is a point or more below
+   the candidate's with more losers.
+   (g) Over the six: at most one arm passes the rule of 81.2, and if one
+   does it is E2. If none passes, the finding is that the structure can
+   be fixed (E1 tracks SPY, E2 beats E1) and the skill is too small to
+   beat the index after the structure is fixed, which points the next
+   work at the size of the skill (upside without losers) and at the
+   market-state input, not at more feature sets.
+5. **Records.** The six configs carry their predictions. Runs go on the
+   lab branch `claude/lab-2026-11-26`; the note holds the tables; the
+   logbook gets one entry for the six; findings, TODO and the results
+   branch follow. What is not done: no holdout look, no deployment
+   change, no edit to a config that has run, no local feature
+   derivation (the valuation floor is a declared filter on a manifest
+   column, like the liquidity floor).
