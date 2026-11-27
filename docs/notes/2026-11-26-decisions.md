@@ -1209,3 +1209,43 @@ direction to keep working.
    of record and the order of work; the results branch gets a further
    commit; the memory of the direction is kept. What is not done: no
    change to the candidate, no deployment change, no holdout look.
+
+### 84. The backtest's realism: a first audit, and three changes
+
+*What happened (2026-11-27).* Decision 83 put a realism audit of the
+backtest ahead of further work. The engine's code and documentation
+were read and the one assumption that can be measured from the records
+on disk, the deposit schedule, was measured. The findings are in
+[the realism note](2026-11-27-backtest-realism.md).
+
+*What was found.* Prices and dividends are handled symmetrically for the
+strategy and SPY (both use the dividend-adjusted close). Signals are
+between one day and seven months stale, which is conservative. Costs
+are 35 basis points a side with no impact model; SPY pays nothing and
+carries no expense ratio. There are no taxes. Delistings pay the final
+print. The deposit schedule is a flat 1,000 a month for 21 years, and
+the final value against SPY depends on it: with all the money invested
+in January 2005 the candidate ends 1% ahead of SPY and E11 25% ahead;
+with contributions growing 6% a year they end 16% and 5% behind; the
+flat schedule sits between (13% and 4% behind). The ranking of the
+portfolios does not change with the schedule; the sign of the gap to
+SPY does for two of them.
+
+*Decided:*
+
+1. **Every backtest report shows the final value under five deposit
+   schedules** (flat; growing 3% and 6% a year; all at the start; flat
+   to the end of the walk-forward folds and nothing after), for the
+   strategy and the benchmark, computed from the time-weighted path, so
+   that one schedule's final value is never read as the result.
+2. **The engine takes `deposit_growth_per_year`** in `[window]`, default
+   0, so a growing schedule can be a run's own schedule.
+3. **The benchmark can carry `benchmark_expense_bps_per_year`** in
+   `[execution]`, default 0, so the comparison can be with an index fund.
+4. **Taxes and a size-and-era cost model stay out** of the engine for
+   now and in the report's caveats. The report's assumptions section
+   says so.
+5. **The code goes on `claude/backtest-realism`** off `Claude`, with
+   tests, then into the lab and results branches. Reports already on
+   record are not regenerated; the realism note's table stands for the
+   portfolios of decisions 81 and 82.
