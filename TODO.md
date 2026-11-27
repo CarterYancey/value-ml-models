@@ -682,6 +682,266 @@ in [PLAN.md](PLAN.md); check items off (and add new ones) as work proceeds.
       `n_estimators`) at full budget via a follow-up sweep file — no
       harness change needed, just two sweep configs.
 
+### Next, after 2026-11-27, third part (decision 85: Carter's review)
+
+Carter read the records of decisions 78 to 84 and set the order of work.
+The three remedies of decision 81 lead. The judging rule is now read
+through 2020 (85.1). The rare-region search is open again (85.3).
+`vml-predict --weighting` writes the weight of each pick (85.4).
+
+- [ ] **The first remedy: the skill inside the cap-weighted structure.**
+      Run E11 on `dataset_v1.5.1` at the forest's three seeds. E11 is
+      the candidate's ranking choosing the top 50 large caps with an
+      earnings yield of 5% or more, weighted by market capitalization.
+      The forest bundles at seeds 232 and 1776 must be trained on v1.5.1
+      first with `vml-run`; the seed-23 bundle and the two factor legs
+      exist. A v1.5.1 backtest needs about 14 GB, so only one runs at a
+      time. Then produce the paper-trading list for E11 beside the
+      candidate's (83.3). A dry run of that list exists on the lab
+      branch, in `predictions/inference_2026-11-20__e11_blend_mcap_top50_ey5.csv`
+      and its sidecar. It chose 50 of the 120 large caps with an earnings
+      yield of 5% or more. Energy holds 39% of the weight and technology
+      26%; MU and XOM hold about 12.5% each. Before anything is traded on
+      it, compare that list with what the backtest held in 2025 and 2026.
+- [ ] **The second remedy: a reason to buy less when the market is
+      dear.** The market-state columns requested from upstream (decision
+      46) would let a model learn when to buy less. Until they arrive, try
+      a valuation floor on the equal-weighted candidate that is tight
+      enough to hold cash. The floors of 5% and 8% held no cash (81). The
+      8% floor earned 12.6% a year in 2021 to 2026, which is the reason
+      to look, and ended with 8% less money, which is the reason for
+      caution. Write the decision and the predictions first.
+- [ ] **The third remedy: upside without losers, by searching for a
+      region.** A new decision writes down the regions and the
+      predictions before any run. Carter's first region is stocks 30% or
+      more below their one-year high (`dist_52w_high <= -0.3`), inside
+      the liquidity floor. For each region, train the candidate's forest
+      inside it in two ways. As a `[[universe]]`, the model is trained
+      and evaluated on the region's rows only; this is its own cell, read
+      against in-region peers, and its early folds are small. As an
+      `[emphasis]`, every row stays in the fit and the region's training
+      weight is multiplied by a factor; the factor is a parameter to
+      sweep, one file per factor. The question is whether a model trained
+      inside the region separates the big winners better than the same
+      model does across the universe. So read its picks on the control's
+      outcomes, which are the lead over same-size peers, the share that
+      lost money and the share that doubled, both inside the region and
+      against the control's own picks. The one region measured so far,
+      40% below the five-year high with a strong cash-flow record, was
+      the market's recovery (80). A steep recent fall is a different
+      population, and its measurement starts from nothing.
+- [ ] **Deep value** (83.5), after or beside the third remedy. Use
+      `ncav_to_marketcap`, tangible book value against market
+      capitalization and the earnings yield, each as a floor and as a
+      universe. The forest is the gate and the five-year horizon is the
+      outcome.
+- [x] **`vml-predict --weighting equal|marketcap`** adds a `weight`
+      column over the picks, computed as the backtest's portfolio
+      computes it (85.4). The code is on the branch
+      `claude/predict-weights`, merged into the lab and results branches.
+      docs/deployment.md says how to use it.
+- [x] **Records corrected** (85.5). The sentence "28% of the top 20 lost
+      money" meant 17 of 60 picks over the three holdout years.
+      `dist_5y_high` is the price divided by the five-year high, minus
+      one, so `<= -0.4` means 40% or more below the high. The findings
+      now open with the answer of decision 81.
+
+### Next, after 2026-11-27, second part (decision 81: why not the market)
+
+Carter asked why models with precision far above the base rate have not
+beaten the market in backtests, and what is left to try. The answer, with
+twelve backtests, is in docs/notes/2026-11-27-why-not-the-market.md and
+decision 81. In short: the candidate beat SPY by 3 points a year for
+sixteen years and trailed by 8 for six; the equal-weighted, size-broad
+structure explains the whole recent gap (a cap-weighted book of the
+top-decile large caps with no model keeps pace with SPY and beats it over
+the window); the model's skill is loser-avoidance, which leaves out the
+volatile winners, so inside the cap-weighted book every cut trades recent
+return for safety; the model has no input about the market's level; and
+the deposits weight the years it trailed. The closest book to the goal is
+the blend's top 50 large caps with an earnings yield of 5% or more,
+cap-weighted (E11): 12.1% a year against SPY's 10.9%, drawdown −37%
+against −53%, one point a year behind SPY in 2021 to 2026, 3.9% less
+final money, one run at one seed.
+
+- [x] **E11 at seeds 232 and 1776, and E11 with the rank sell
+      discipline** (decision 82). The seeds hold: 12.25% and 12.16% a
+      year against seed 23's 12.08%, drawdown −36.7% and −36.8%, final
+      value within 0.7%; the three-seed mean is 4.2% below SPY's final
+      money. The sell discipline sold about 5,800 times, paid half the
+      deposits in costs and ended with 60% to 63% of SPY's money: in a
+      cap-weighted book of 50 names from 450 candidates the selling line
+      sits just below the buying line. Not for this book. A looser band
+      (selling below the top half) is a possible later test.
+- [x] **Carter: what is the goal?** Answered 2026-11-27 (decision 83):
+      return per unit of risk for now (time-weighted return, worst
+      drawdown and the share of losing buys against SPY and same-size
+      peers), with more final money than SPY kept as the long-run goal.
+      His reasons: the present period looks like one in which value
+      underperforms and should correct, and a simulation's final value is
+      sensitive to deposits, fees and taxes. The rule of 83.1 replaces
+      81.2. He does not want to settle at 12% a year; the stretch target
+      is 20%, and the deep-value "cigar butt" is the direction to keep
+      working.
+- [x] **Backtest realism, first audit** (decision 84, note
+      docs/notes/2026-11-27-backtest-realism.md). Dividends are
+      symmetric; signals are up to seven months stale; costs are 35
+      basis points a side; no taxes; the flat 1,000-a-month deposit
+      moves the sign of the gap to SPY for the candidate and E11. Code
+      on `claude/backtest-realism` (merged into the lab and results
+      branches): every report shows the final value under five deposit
+      schedules; `[window] deposit_growth_per_year`; `[execution]
+      benchmark_expense_bps_per_year`.
+- [ ] **Backtest realism, what is left:** a cost model by size and era
+      (35 basis points is high for large caps after 2010 and low for
+      small caps before); taxes on dividends and realized gains, which
+      matter only for selling rules; a market-impact model for small
+      caps. None blocks the next step.
+- [ ] **E11 on `dataset_v1.5.1` at three seeds**, then a paper-trading
+      list for it beside the candidate's (decisions 82.4, 83.3). This is
+      now the first item of the third part, and a dry run of the list
+      exists. The
+      forest bundle at seed 23 exists on v1.5.1
+      (`forest_nonloser_dd30_3y_v151`); seeds 232 and 1776 need
+      `vml-run`; the factor legs exist. A v1.5.1 backtest peaks near 14
+      GB: one at a time, nothing else running.
+- [ ] **Deep-value experiments** (decision 83.5), each with a decision and
+      predictions first: net current asset value against market cap
+      (`ncav_to_marketcap`), tangible book against market cap and the
+      earnings yield as floors and as universes, with the forest's
+      loser-avoidance as the gate and the five-year horizon as the
+      outcome, judged under the rule of 83.1. What the record already
+      says: a deep fall alone is a bet on the market's recovery (80), the
+      earnings-yield ranking alone has 57% losers (sweep B), and a floor
+      inside the safe set helped (E11).
+- [ ] **Upstream: the market-state columns** (the calibration plan's
+      request, decision 46) are now the one thing that would let a model
+      learn when to buy less rather than have an earnings-yield floor
+      impose it. The floor worked as a stand-in: it recovered 1.6 of the
+      2.6 points E10 lacked in 2021 to 2026.
+- [ ] The valuation floor on the equal-weighted candidate (E5 at 5%, E6
+      at 8%) held no cash, because ten stocks always cleared it. A floor
+      that is meant to hold cash needs a tighter threshold than 8% or a
+      smaller candidate pool; E6's 2021 to 2026 return of 12.6% against
+      the candidate's 7.1% is the reason to look, its 8% less final money
+      and deeper drawdown the reason for caution.
+- [ ] The backtest engine cannot yet: sell at the label's horizon, buy
+      quarterly, or gate one model's candidates by another's rank. Each
+      is a `Strategy` or signal change with tests. None is urgent after
+      decision 81; the structure and the valuation floor mattered more
+      than any of them was predicted to.
+- [ ] Not to pursue: cuts deeper than the top 50 (E3's drawdown was
+      −60%), the forest alone in a cap-weighted book (E2, E7, E8, which
+      buy utilities, REITs and staples), fundamentals-only feature sets
+      (decisions 78 to 80), score-threshold cash rules (decision 46).
+
+### Next, after 2026-11-27 (decisions 78 to 80)
+
+Carter asked for three things: his run-up labels (a large rise with no
+crash), feature sets built from fundamentals and the stock's own
+history rather than from ranks, volume and momentum, and a way to make
+a model attend to the rare region of stocks with a strong record that
+have fallen hard and then recover. The program ran three sweeps on the
+labels and sets (decision 78) and then five methods aimed at the region
+(decision 79): weighting the region's training rows three and ten
+times, training on the region alone, forests that see 5% of the
+columns at each split, LightGBM with a tenth of the columns per tree,
+and quantile regression for the upper tail of returns. Across 49 runs
+no arm passes the screen rule against the control. The region turned
+out to be the market's recovery rather than a pool of mispriced
+survivors. Its rows earn 1.9% a year against 3.4% for all liquid rows,
+with 41% losers; they win in 2009 to 2012 and 2020 and lose in every
+year from 2013 to 2018. Every selection that buys the region loses more
+often, and given the region's columns and more of its weight the forest
+scores its rows lower, not higher (decision 80; tables in
+docs/notes/2026-11-26-rare-region.md).
+
+- [ ] **Carter merges `claude/results-2026-11-26`.** It now carries the
+      v1.5.1 support code, the emphasis and region features of the
+      harness with their tests, decisions 74 to 80, the two program
+      notes, the rewritten findings and eleven promoted records. After
+      the merge, from any other branch, run
+      `uv run vml-queue archive-lab claude/lab-2026-11-26 --delete`.
+- [ ] **Upstream request: a market-state column per snapshot date.**
+      This was already item 3 of the findings plan. It is now also the
+      rare region's open question, because what separates the region's
+      good years from its bad ones is not in the row. A recovery label
+      measured inside a region (decision 63's open question) is also an
+      upstream matter.
+- [ ] If work on fundamentals-based feature sets resumes, start from
+      the rank columns without the technical family plus the 28
+      unranked history columns (162 columns). That set matched the
+      control's lead with 5.6 points more losers and led the old ranks
+      on the harder labels (decision 78). It is a starting point, not a
+      candidate.
+- [ ] Two new harness features are general and documented in
+      docs/experiments.md: `[emphasis]` (decision 78.6) multiplies the
+      training weight of rows inside a region of feature columns, and
+      `[pick_screen] region` (decision 79) reports the share of a
+      selection that falls inside such a region as the pick outcome
+      `in_region`. The item "regime-emphasis training weights" under
+      section 3.5 below is the same mechanism applied to a period of
+      time. A time region needs a filter on the snapshot date, which
+      `FilterSpec` does not accept yet.
+- [ ] The reversal forest is recorded and not followed. It is the
+      "doubled without a crash" label on the 112 old ranks: a lead of
+      +0.081 a year over the control, 38% losers, and peers that lost
+      money in half the years after 2008. If a short-horizon reversal
+      model is ever wanted, it starts there, judged on the screen, with
+      the losers threshold written before the run.
+- [ ] Three tracked configs from decisions 74 to 76 are neither promoted
+      nor listed in `experiments/KEEP`, as `scripts/check_tracked_configs.py`
+      reports: `baseline_v151_labels_3y`, `lgbm_v151_features_nonloser_3y`
+      and `xgb_v151_features_nonloser_3y`. They are left as the earlier
+      session left them, for Carter to decide. The companion configs of
+      decisions 78 to 80 are in KEEP.
+
+### Next, after 2026-11-26 (decisions 74 to 77)
+
+Upstream shipped `dataset_v1.5.1` (the fundamental-history family, a
+wider trend family, fourteen 8-K event counts, full-path labels). The
+program of decision 74 ran it through cell C with the candidate's
+forest, LightGBM and XGBoost, and through five new label cells, inside
+the 100k floor on the same-size screen (note
+docs/notes/2026-11-26-v151-program.md). No new column set, label or
+booster improves on the candidate's forest on the 112 old ranks. The
+one screen gain beyond noise, the 8-K counts (+0.011 a year over
+same-size peers at three seeds), ended with 5.1% less money alone and
+8.6% less in the candidate's blend (decision 77). The program is
+closed with no change to the candidate.
+
+- [ ] **Carter merges `claude/results-2026-11-26`.** It carries the
+      v1.5.1 support code (`claude/v151-support`: the `fundhist` and
+      `events` families, label expressions comparing two label columns,
+      the versions row), decisions 74 to 77, the program note and the
+      promoted records. After the merge, from any other branch, run
+      `uv run vml-queue archive-lab claude/lab-2026-11-26 --delete`.
+- [ ] **A backtest on `dataset_v1.5.1` peaks at 12.4 to 13.8 GB of the
+      sandbox's 14** (decision 77.4; 9.7 GB on v1.4.1). Before any
+      backtest chain runs unattended on this build, cut the backtest's
+      memory: it loads every feature column of the dataset where the
+      bundles' own columns would do. Until then, one backtest at a
+      time with nothing else in memory.
+- [ ] **The dataset of record for new work is `dataset_v1.5.1`.** The
+      candidate's blend on it reproduces the v1.4.1 record to the
+      dollar (932,471 on 192,000 to 2023-12-29), so the candidate's
+      legs are not refit and paper trading continues from the v1.4.1
+      bundles. A refit on v1.5.1 is due when upstream changes a column
+      the candidate reads.
+- [ ] Upstream observation (for the watch list): of the fourteen 8-K
+      counts, the forest used two (earnings releases and officer
+      changes in the trailing year); the other twelve had an importance
+      under 1e-3, and nine under 1e-4. The counts are an era marker
+      before 2005 (data/versions.md), which did not show in the screen.
+- [ ] The market-relative labels (beating SPY's path, a drawdown no
+      deeper than SPY's) are below a single-factor bar on precision
+      and behind cell C on losers. The peer-relative label stays an
+      upstream request (decision 73's list); nothing here is learnable
+      against SPY with these columns.
+- [ ] Carter's open decisions of 2026-11-25 stand unchanged (the
+      larger-half filter, the training cutoff, the F50 portfolio, the
+      price floor, the Foamex request).
+
 ### Next, after 2026-11-25, second session (decisions 61 to 73)
 
 The fallen-stock program (decisions 61 to 73, note
@@ -1324,7 +1584,11 @@ slice. All within the invariants: no local splits, no derived features.
 - [ ] Regime-emphasis training weights: config-declared multiplier on
       `sample_weight_{H}y` for training rows whose label windows overlap
       drawdown eras (disclosed, hashed, reported); report the effective
-      sample size under emphasis so the shrinkage is visible.
+      sample size under emphasis so the shrinkage is visible. (Half
+      built: `[emphasis] factor, region` of decision 78.6 does this for
+      a region of feature columns, hashed, with the region's share of
+      the training weight reported per fold; a drawdown-era region
+      needs a snapshot-date filter.)
 - [ ] Crash-aware `rank_metric` for sweeps: rank candidates by
       precision/recall-at-precision restricted to crash-era test years
       (with the Wilson-interval caveat stated in the summary).

@@ -218,3 +218,20 @@ def stock_price_source(panel: PricePanel) -> SeriesPriceSource:
 
 def benchmark_price_source(panel: PricePanel) -> SeriesPriceSource:
     return SeriesPriceSource({panel.benchmark_name: panel.benchmark})
+
+
+def expensed_benchmark_source(
+    panel: PricePanel, expense_bps_per_year: float
+) -> SeriesPriceSource:
+    """The benchmark's series net of a yearly expense ratio: the price
+    at each date is scaled by (1 - bps/10,000) to the power of the years
+    since the series' first date, which is what a fund tracking the
+    index would be worth after fees (decision 84). At 0 it is the panel's
+    benchmark unchanged."""
+    series = panel.benchmark
+    rate = float(expense_bps_per_year) / 10_000.0
+    if rate <= 0:
+        return SeriesPriceSource({panel.benchmark_name: series})
+    years = (series.index - series.index[0]).days / 365.25
+    net = series * (1.0 - rate) ** years.to_numpy()
+    return SeriesPriceSource({panel.benchmark_name: net})

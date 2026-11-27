@@ -27,9 +27,11 @@ from eval.era import (
 )
 from eval.metrics import compute_all, regression_diagnostics
 from eval.picks import (
+    REGION_OUTCOME,
     has_pick_outcomes,
     has_screen_columns,
     peer_bands,
+    outcome_column,
     pick_outcome_metrics,
     pick_outcome_table,
     screen_group_table,
@@ -44,7 +46,7 @@ from harness.calibration import PrequentialCalibration
 from harness.config import ExperimentConfig
 from harness.dataset import Dataset, SplitAccess, model_input_columns
 from harness.errors import ConfigError, DatasetValidationError
-from harness.filters import FILTERABLE_GROUPS
+from harness.filters import FILTERABLE_GROUPS, filter_mask, validate_filter_columns
 from harness.model_store import ModelBundle
 from harness.report import write_report
 from harness.results import (
@@ -119,6 +121,7 @@ def run_experiment(
         # indicator columns (harness.dataset.feature_matrix)
         input_cols = model_input_columns(feature_cols)
         dataset.check_universe(config.universe)
+        dataset.check_emphasis(config.emphasis)
         check_pick_screen(dataset, config.pick_screen)
         folds = (
             dataset.folds(config.scheme, config.horizon_years)
@@ -177,6 +180,7 @@ def run_experiment(
             fit = dataset.fit_data(
                 train_rows, config.label, feature_cols, config.horizon_years,
                 target=target, year_balance=config.year_balance,
+                emphasis=config.emphasis,
             )
             model = build_model(config.model_name, config.model_params, config.seed)
             model.fit(fit.X, fit.y, sample_weight=fit.sample_weight)
@@ -229,6 +233,10 @@ def run_experiment(
                 # what the universe left out, for the report's appendix
                 fr["n_train_rows_all"] = len(split.train)
                 fr["n_test_rows_all"] = len(split.test)
+            if fit.emphasis_share is not None:
+                # the region's share of the training weight before the
+                # factor, for the report's disclosure
+                fr["emphasis_train_share"] = fit.emphasis_share
             fold_results.append(fr)
             probabilistic = model.probabilistic
             fold_models[fold] = model
@@ -371,11 +379,16 @@ def selection_columns(config) -> list[str]:
     """Columns a run reads besides its features, label and weight: the
     universe's filter columns and the portfolio screen's group column."""
     cols = [f.column for f in config.universe]
+    emphasis = getattr(config, "emphasis", None)
+    if emphasis is not None:
+        cols += [f.column for f in emphasis.region]
     screen = config.pick_screen
     if screen is not None and screen.max_per_group is not None:
         cols.append(screen.group_column)
     if screen is not None and screen.peer_column is not None:
         cols.append(screen.peer_column)
+    if screen is not None:
+        cols += [f.column for f in screen.region]
     return cols
 
 
@@ -385,6 +398,8 @@ def check_pick_screen(dataset: Dataset, screen) -> None:
     snapshot, never on an outcome."""
     if screen is None:
         return
+    if screen.region:
+        validate_filter_columns(screen.region, dataset, "[pick_screen] region")
     if screen.peer_column is not None:
         # a rank (0..1) known at the snapshot: the bands are cut on it
         ranks = {
@@ -462,6 +477,14 @@ def _pick_outcome_columns(dataset: Dataset, config, test, test_fit) -> dict:
                 rows[screen.peer_column].to_numpy(dtype=float),
                 screen.peer_bins,
             )
+        if screen.region:
+            # the region as a binary pick outcome: its share among the
+            # picks, their peers and the top K comes out of the same
+            # statistics as every other outcome; NULL counts as outside
+            inside = filter_mask(rows, screen.region).to_numpy(dtype=float)
+            out.setdefault("pick_outcomes", {})[
+                outcome_column(REGION_OUTCOME, True)
+            ] = inside
     return out
 
 

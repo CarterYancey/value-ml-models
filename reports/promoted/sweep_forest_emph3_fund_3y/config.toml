@@ -1,0 +1,136 @@
+# Decision 79 of docs/notes/2026-11-26-decisions.md (2026-11-26): the
+# rare-region program, piece (i) — emphasis weights. The candidate's
+# forest, seed 23, trained on every row with the training rows inside
+# the region (liquid, 40% or more below the 5-year high, operating cash
+# flow positive in 18 of the last 20 quarters) carrying 3x their
+# sample weight; read inside the 100k floor on the same-size screen.
+# Cells: C (control cell), 'doubled without a crash', 'a real gain
+# without a crash'. Feature sets fs0 (112 old ranks), fs1 (162: the ranks
+# without the technical family plus the unranked history columns), fs2 here = fs4 of forest_fund_labels_3y (77: the
+# compact own-history set plus the price against its own past).
+# Control: cell C x fs0 of forest_fund_labels_3y (no emphasis), paired
+# by year; and the same arm of this file's twin at the other factor.
+# Predictions: see decision 79.
+#
+# Expanded: 3 cells x 3 feature sets x 1 set x 1 seed = 9 runs.
+# Run (needs claude/emphasis-weights merged into the lab branch):
+#   .venv/bin/vml-sweep experiments/sweeps/forest_emph3_fund_3y.toml
+name = "forest_emph3_fund_3y"
+note = "Training rows inside the rare region at 3x their sample weight (decision 79a, 80): the cell-C forest on the old ranks is the control to the third digit and its picks' share inside the region stays 0.006; 16 of 18 arms within 2 se of their unemphasized twins; the reversal forest loses 0.046/yr; arms with 60-85% of picks inside the region lose. Emphasis is not a lever"
+dataset_version = "dataset_v1.5.1"
+min_dataset_version = "1.5"
+scheme = "walkforward"
+folds = "all"
+seeds = [23]
+top_k = [20, 50]
+precision_targets = [0.75, 0.9]
+rank_metric = "precision_at_20"
+universe_scope = "test"
+pick_outcomes = [
+  "label_3y_beat_spy",
+  "fwd_3y_excess_cagr",
+  "fwd_3y_cagr",
+  "fwd_3y_max_drawdown_from_entry",
+  "fwd_3y_cagr < 0",
+  "fwd_3y_cagr < -0.1",
+  "fwd_3y_max_drawdown_from_entry >= 0.4",
+  "fwd_3y_max_drawdown_from_entry >= 0.5",
+  "fwd_3y_cagr >= 0.15",
+  "fwd_3y_cagr >= 0.26",
+  "fwd_3y_excess_cagr >= 0.05",
+  "fwd_3y_path_avg_return",
+  "fwd_3y_path_avg_return > fwd_3y_spy_path_avg_return",
+  "fwd_3y_max_runup",
+  "fwd_3y_max_runup >= 1.0",
+  "fwd_3y_realized_vol",
+  "fwd_3y_cagr >= 0 & fwd_3y_max_drawdown_from_entry < 0.3",
+  "fwd_3y_max_runup >= 0.5 & fwd_3y_max_drawdown_from_entry < 0.3",
+  "fwd_3y_max_runup >= 1.0 & fwd_3y_max_drawdown_from_entry < 0.4",
+  "fwd_3y_max_runup >= 0.75",
+  "fwd_3y_cagr >= 0.2 | fwd_3y_max_drawdown_from_entry <= fwd_3y_spy_max_drawdown_from_entry",
+  "fwd_3y_cagr >= 0.15 & fwd_3y_max_drawdown_from_entry < 0.3",
+]
+
+sets = [
+  {criterion = "entropy", max_depth = 4, max_features = 0.205191, max_samples = 0.663781, min_samples_leaf = 72, n_estimators = 490},  # the candidate's forest
+]
+
+[emphasis]
+factor = 3.0
+region = ["dollar_volume_3m >= 100000", "dist_5y_high <= -0.4", "ocf_positive_frac_20q >= 0.9"]
+
+[pick_screen]
+per = "quarter"
+top_k = 10
+max_per_group = 2
+group_column = "sector"
+peer_column = "log_marketcap_rank"
+peer_bins = 20
+region = ["dist_5y_high <= -0.4", "ocf_positive_frac_20q >= 0.9"]  # report-only: the picks' share inside the region
+
+[[universe]]
+column = "dollar_volume_3m"
+op = ">="
+value = 100000
+
+[[cells]]
+label = "fwd_3y_cagr >= 0 & fwd_3y_max_drawdown_from_entry < 0.3"
+
+[[cells]]
+label = "fwd_3y_max_runup >= 1.0 & fwd_3y_max_drawdown_from_entry < 0.4"
+
+[[cells]]
+label = "fwd_3y_cagr >= 0.15 & fwd_3y_max_drawdown_from_entry < 0.3"
+
+# fs0: the 112 rank columns of dataset_v1.4.1 — the control set
+[[features]]
+groups = ["ranks"]
+exclude_columns = [
+  "bvps_trend_4q_rank", "bvps_consistency_4q_rank", "bvps_trend_8q_rank",
+  "bvps_consistency_8q_rank", "bvps_trend_12q_rank", "bvps_consistency_12q_rank",
+  "bvps_trend_20q_rank", "bvps_consistency_20q_rank", "shares_trend_4q_rank",
+  "shares_trend_8q_rank", "shares_trend_12q_rank", "shares_trend_20q_rank",
+  "roa_5y_median_rank", "roa_5y_std_rank", "roa_5y_z_rank", "roe_5y_median_rank",
+  "roe_5y_std_rank", "roe_5y_z_rank", "gross_margin_5y_median_rank",
+  "gross_margin_5y_std_rank", "gross_margin_5y_z_rank", "operating_margin_5y_median_rank",
+  "operating_margin_5y_std_rank", "operating_margin_5y_z_rank", "earnings_yield_5y_avg_rank",
+  "ocf_yield_5y_avg_rank", "fcf_yield_5y_avg_rank", "earnings_yield_5y_peak_rank",
+  "earnings_yield_at_5y_median_margin_rank", "earnings_yield_10y_avg_rank",
+  "netinc_vs_5y_peak_rank", "bvps_vs_5y_peak_rank", "netinc_sue_8q_rank",
+  "revenue_sue_8q_rank", "revenue_cagr_10y_rank", "bvps_cagr_10y_rank", "shares_cagr_10y_rank",
+]
+
+# fs1 here (fs2 of forest_fund_labels_3y): the rank group without the 15 technical ranks, plus the 28 unranked history columns, 162
+[[features]]
+groups = ["ranks"]
+exclude_families = ["ranks/technical"]
+columns = [
+  "revenue_vs_5y_peak", "revenue_quarters_since_5y_peak", "netinc_quarters_since_5y_peak",
+  "bvps_quarters_since_5y_peak", "ni_positive_years_10y", "ni_history_years_10y",
+  "bvps_up_frac_4q", "bvps_up_frac_8q", "bvps_up_frac_12q", "bvps_up_frac_20q",
+  "shares_up_frac_4q", "shares_up_frac_8q", "shares_up_frac_12q", "shares_up_frac_20q",
+  "ni_positive_frac_4q", "ni_positive_frac_8q", "ni_positive_frac_12q", "ni_positive_frac_20q",
+  "div_years_paid_10y", "div_streak_10y", "div_cuts_10y", "div_history_years_10y",
+  "fund_history_quarters", "ocf_positive_frac_20q", "earnings_yield_5y_pctile",
+  "ocf_yield_5y_pctile", "fcf_yield_5y_pctile", "book_to_market_5y_pctile",
+]
+
+# fs2 here (fs4 of forest_fund_labels_3y): fs3 plus the price against its own past (dist_5y_high, dist_52w_high, price_vs_5y_avg), 77
+[[features]]
+families = ["features/fundhist", "features/relvalue"]
+columns = [
+  "div_years_paid_10y", "div_streak_10y", "div_cuts_10y", "div_history_years_10y",
+  "fund_history_quarters", "ni_positive_frac_20q", "ocf_positive_frac_20q", "earnings_yield",
+  "fcf_yield", "ocf_yield", "book_to_market", "ebit_to_ev", "dividend_yield",
+  "net_payout_yield", "roa", "roe", "gross_margin", "operating_margin", "roc_greenblatt",
+  "cfo_to_assets", "altman_z", "debt_to_equity", "liabilities_to_assets", "interest_coverage",
+  "current_ratio", "log_assets", "accruals_to_assets", "piotroski_f", "asset_growth_1y",
+  "share_count_growth_1y", "revenue_growth_3y", "dist_5y_high", "dist_52w_high",
+  "price_vs_5y_avg",
+]
+
+[model]
+name = "random_forest"
+bootstrap = true
+class_weight = 1.0
+n_jobs = 8

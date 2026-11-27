@@ -69,9 +69,20 @@ uv run vml-predict <forest> <momentum> <return-on-capital> \
   NULL group counts as one group), the walk of
   `portfolio.strategy.capped_top_k`. Fewer than K picks come back when
   the groups run out. The group column is carried into the CSV.
+- `--weighting equal|marketcap` (with `--pick`) adds a `weight` column
+  over the picks. The weight is the share of one month's cash that each
+  pick would get under the backtest's `[portfolio] weighting`. With
+  `equal`, every pick gets the same share. With `marketcap`, each pick
+  gets its share of the picks' total market capitalization, taken as
+  `exp(log_marketcap)` exactly as `portfolio.strategy.BuyAndHoldTopK`
+  takes it, so a pick without a market cap gets 0. This is how a
+  cap-weighted book is read off the list. For E11 of decision 81, the
+  flags are `--filter "dollar_volume_3m_rank >= 0.2" --filter
+  "log_marketcap_rank >= 0.9" --filter "earnings_yield >= 0.05" --pick
+  50 --weighting marketcap`.
 - The sidecar records the filters, the rows they left out and the
-  selection rule. The full ranking is still written: the picks are a
-  marked subset of it.
+  selection rule, weighting included. The full ranking is still
+  written: the picks are a marked subset of it.
 
 The list is what a backtest with the same rule would have bought on
 that cross-section, not a result: a deployment fit has no test set.

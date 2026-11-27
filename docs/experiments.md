@@ -73,6 +73,16 @@ label = "(fwd_3y_cagr >= 0.15 | fwd_3y_excess_cagr >= 0.05) & fwd_3y_max_drawdow
   joined by `&` and `|` (`&` binds tighter; parentheses group);
   literals are numbers, or `true`/`false` for boolean columns. Parsed,
   never `eval`'d.
+- **A column may be compared with a second label column** (from
+  `dataset_v1.5`, whose full-path labels carry SPY's own path):
+  `fwd_3y_path_avg_return > fwd_3y_spy_path_avg_return` is the
+  endpoint-free "beat SPY" of data/labels.md, and
+  `fwd_3y_max_drawdown_from_entry <= fwd_3y_spy_max_drawdown_from_entry`
+  "fell no further than the market". Both columns must be numeric
+  label columns; a NULL on either side is unobservable; the two
+  spellings of one comparison (`a > b`, `b < a`) normalize to one
+  cell. Arithmetic between columns (a ratio, a difference) is not
+  offered: that target is an upstream label.
 - Columns must be in the manifest `labels` group (outcomes, never
   features). **Mixed horizons are allowed and the longest governs**:
   every window starts at the snapshot, so a `1y & 3y` label's window
@@ -185,6 +195,33 @@ Report-only and part of the config hash when set, like
 `pick_outcomes`; an eval config may set it for a saved bundle. Still a
 screen: equal weights, no costs, entry at the snapshot, held to the
 horizon.
+
+**Where the picks come from.** A screen may declare a region: a list
+of filters on feature columns, written the same way as a `[[universe]]`
+filter. The report then carries a binary pick outcome called
+`in_region`, which is the share of the picks, of their peers and of the
+top K that fall inside the region. For example, the stocks 40% or more
+below their five-year high with a long record of positive operating
+cash flow:
+
+```toml
+[pick_screen]
+per = "quarter"
+top_k = 10
+max_per_group = 2
+peer_column = "log_marketcap_rank"
+region = ["dist_5y_high <= -0.4", "ocf_positive_frac_20q >= 0.9"]
+```
+
+The shares are logged as `screen_mean_in_region`,
+`screen_peer_mean_in_region` and the top-K `mean_in_region` columns. A
+row is inside the region only if it passes every filter. A NULL in a
+region column counts as outside. The columns must be feature columns of
+the manifest, so a label can never define a region. The region is part
+of the config hash, like the rest of the screen. The outcome says where
+a selection comes from, not what it earned. Its main use is beside
+`[emphasis]`: a model asked to weight a region more heavily is read on
+whether its picks moved into that region.
 
 **Same-size peers.** The all-rows reference beside every pick outcome
 is the average test row, and the average test row is a small company.
@@ -346,6 +383,56 @@ What it is and is not:
   recomputed for the rows left out.
 - One universe per sweep file (top-level `[[universe]]`), so a sweep's
   runs are compared inside one population.
+
+## Emphasis: a region of the training rows counted more
+
+```toml
+[emphasis]
+factor = 3.0
+region = ["dist_5y_high <= -0.4", "ocf_positive_frac_20q >= 0.9"]
+```
+
+An `[emphasis]` table multiplies the sample weights of the training
+rows inside a region by `factor`. The region is a list of filters on
+feature columns, written as a universe filter is written: either one
+string of the form `column op value`, or a table with `column`, `op` and
+`value` keys. A row is inside the region only if it passes every
+filter. A NULL fails a filter, so a row with a NULL in a region column
+is not emphasized.
+
+The feature was introduced in decision 78.6 for the rare region Carter
+described: stocks with a strong record that have fallen hard. The
+problem it addresses is this. A forest given every row chooses each
+split where the gain is largest over the whole population, so a column
+that only separates a small region never wins a split. Restricting the
+universe to the region solves that but starves the fit in the early
+folds (fold 2006 of the fallen universe has an effective sample size of
+20). Emphasis keeps every row and the common structure, and lets the
+region decide more of the splits.
+
+What it is and is not:
+
+- **A weight, not a filter.** Every training row stays in the fit, and
+  no row's label or features change. The uniqueness weights keep their
+  ratios inside and outside the region, and `year_balance` is applied
+  first. The effective sample size in the report is the sum of the
+  mandatory weights before the factor, so it is unchanged. The report
+  also states the region's share of each fold's training weight before
+  the factor, as `emphasis_train_share`.
+- **Training only.** Test rows are never reweighted, so every metric is
+  measured exactly as it would be without emphasis. A region may read
+  feature columns the manifest declares, never a label or a weight. The
+  rule is the same as for a universe: the weight a row gets depends on
+  what was known at the snapshot, never on its outcome.
+- **Part of the model.** The emphasis is in the config hash and in the
+  bundle, so `vml-train-deploy` and the backtest's year-end refits apply
+  it. A factor of 1 is refused; drop the table instead.
+- **Not a universe and not a cell.** The run is counted in its label's
+  cell like any run over all rows, and its numbers can be compared with
+  such a run. The same label with `universe_scope = "all"` on the region
+  is the starved version of the same idea.
+- **One emphasis per sweep file**, declared at the top level like the
+  universe. To sweep over factors, use one file per factor.
 
 ## Boolean feature columns
 

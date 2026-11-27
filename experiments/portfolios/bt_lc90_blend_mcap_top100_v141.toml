@@ -1,0 +1,60 @@
+# Decision 81 of docs/notes/2026-11-26-decisions.md (2026-11-27), third
+# round (81.7). After E10 (the candidate's three-leg blend, top 50 of the
+# top-decile large caps, cap-weighted) matched E1's time-weighted return
+# with a drawdown 8.5 points shallower and 12% less final money.
+#
+# # E12: E10 with the top 100 names a month instead of 50, between E9 (top
+# 225) and E10 (top 50): how the trade of return for drawdown moves with
+# the depth of the cut.
+#
+# Predictions (decision 81.7), written before the run:
+#   (m) E12 lies between E9 and E10 on every figure: time-weighted
+#       return 11.6% to 11.9%, drawdown between -37% and -43%, final
+#       value 0.95 to 1.00 of SPY's, 2021-2026 return between 12.7% and
+#       13.9%.
+#
+# Run: .venv/bin/vml-backtest experiments/portfolios/bt_lc90_blend_mcap_top100_v141.toml
+
+name = "bt_lc90_blend_mcap_top100_v141"
+dataset_version = "dataset_v1.4.1"
+prices_version = "prices_v1.0"
+
+bundles = [
+    "experiments/models/forest_nonloser_dd30_3y_v141_f259c702a6a6",
+    "experiments/models/factor_mom_12_2_3y_v141_121349f6e682",
+    "experiments/models/factor_roc_greenblatt_3y_v141_4457ca01bcfb",
+]
+
+[signal]
+combine = "mean_rank"
+max_staleness_days = 200
+model_update = "refit"
+label_lag_days = 45
+
+[[investability]]
+column = "dollar_volume_3m_rank"
+op = ">="
+value = 0.2
+
+[[investability]]
+column = "log_marketcap_rank"
+op = ">="
+value = 0.9
+
+[portfolio]
+strategy = "buy_and_hold"
+top_k = 100
+weighting = "marketcap"
+monthly_cash = 1000.0
+
+[execution]
+cost_bps = 35.0
+benchmark_cost_bps = 0.0
+max_quote_age_days = 3
+delist_after_days = 30
+fractional_shares = true
+
+[window]
+start = 2005-01-01
+end = 2026-08-21
+valuation_end = 2026-08-21

@@ -1,0 +1,59 @@
+# Decision 76 (2026-11-26, docs/notes/2026-11-26-decisions.md): the
+# candidate's forest on dataset_v1.5.1 with the 112 old rank columns
+# plus the fourteen 8-K counts (fs5 of forest_v151_features_nonloser_3y),
+# seed 23, run once for its bundle: the arm of the four backtests of
+# decision 76.2. Expected: the fold rows of that sweep's fs5 run
+# (p@20 0.762; screen lead +0.039 a year inside the 100k floor).
+name = "forest_nonloser_dd30_3y_events_v151"
+dataset_version = "dataset_v1.5.1"
+min_dataset_version = "1.5"
+scheme = "walkforward"
+folds = "all"
+horizon_years = 3
+label = "fwd_3y_cagr >= 0 & fwd_3y_max_drawdown_from_entry < 0.3"
+seed = 23
+top_k = [20, 10, 5, 50, 100]
+score_thresholds = [0.6, 0.7, 0.75, 0.8]
+precision_targets = [0.75, 0.9]
+pick_outcomes = [
+  "label_3y_beat_spy",
+  "fwd_3y_excess_cagr",
+  "fwd_3y_cagr",
+  "fwd_3y_max_drawdown_from_entry",
+  "fwd_3y_cagr < 0",
+  "fwd_3y_cagr < -0.1",
+  "fwd_3y_max_drawdown_from_entry >= 0.4",
+  "fwd_3y_cagr >= 0.15",
+  "fwd_3y_excess_cagr >= 0.05",
+  "fwd_3y_path_avg_return",
+  "fwd_3y_path_avg_return > fwd_3y_spy_path_avg_return",
+  "fwd_3y_realized_vol",
+]
+
+[features]
+groups = ["ranks"]
+families = ["features/events"]
+exclude_columns = [
+  "bvps_trend_4q_rank", "bvps_consistency_4q_rank", "bvps_trend_8q_rank", "bvps_consistency_8q_rank",
+  "bvps_trend_12q_rank", "bvps_consistency_12q_rank", "bvps_trend_20q_rank", "bvps_consistency_20q_rank",
+  "shares_trend_4q_rank", "shares_trend_8q_rank", "shares_trend_12q_rank", "shares_trend_20q_rank",
+  "roa_5y_median_rank", "roa_5y_std_rank", "roa_5y_z_rank", "roe_5y_median_rank", "roe_5y_std_rank", "roe_5y_z_rank",
+  "gross_margin_5y_median_rank", "gross_margin_5y_std_rank", "gross_margin_5y_z_rank",
+  "operating_margin_5y_median_rank", "operating_margin_5y_std_rank", "operating_margin_5y_z_rank",
+  "earnings_yield_5y_avg_rank", "ocf_yield_5y_avg_rank", "fcf_yield_5y_avg_rank", "earnings_yield_5y_peak_rank",
+  "earnings_yield_at_5y_median_margin_rank", "earnings_yield_10y_avg_rank", "netinc_vs_5y_peak_rank",
+  "bvps_vs_5y_peak_rank", "netinc_sue_8q_rank", "revenue_sue_8q_rank", "revenue_cagr_10y_rank",
+  "bvps_cagr_10y_rank", "shares_cagr_10y_rank",
+]
+
+[model]
+name = "random_forest"
+bootstrap = true
+class_weight = 1.0
+n_jobs = 8
+criterion = "entropy"
+max_depth = 4
+max_features = 0.205191
+max_samples = 0.663781
+min_samples_leaf = 72
+n_estimators = 490

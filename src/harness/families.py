@@ -81,6 +81,20 @@ FEATURE_FAMILIES: dict[str, tuple[str, ...]] = {
         for w in (4, 8, 12, 20)
     )
     + tuple(f"ocf_positive_frac_{w}q" for w in (4, 8, 12, 20))
+    # v1.5, ADR 0023: book value per share (trend/consistency/up_frac),
+    # the share count (trend/up_frac — no consistency column) and the
+    # loss history `ni_positive_frac_{w}q`
+    + tuple(
+        f"bvps_{stat}_{w}q"
+        for stat in ("trend", "consistency", "up_frac")
+        for w in (4, 8, 12, 20)
+    )
+    + tuple(
+        f"shares_{stat}_{w}q"
+        for stat in ("trend", "up_frac")
+        for w in (4, 8, 12, 20)
+    )
+    + tuple(f"ni_positive_frac_{w}q" for w in (4, 8, 12, 20))
     + (
         "fund_history_quarters",
         "div_years_paid_10y",
@@ -101,6 +115,43 @@ FEATURE_FAMILIES: dict[str, tuple[str, ...]] = {
             "tangible_book_to_market",
         )
         for stat in ("vs_5y_median", "5y_pctile")
+    ),
+    # v1.5, ADR 0023: today's fundamentals against the stock's own
+    # 20-quarter and 10-year record (data/features.md "Fundamental
+    # history"). Ranked where continuous; the counts, shares and
+    # `revenue_vs_5y_peak` ship raw only.
+    "fundhist": (
+        "roa_5y_median",
+        "roa_5y_std",
+        "roa_5y_z",
+        "roe_5y_median",
+        "roe_5y_std",
+        "roe_5y_z",
+        "gross_margin_5y_median",
+        "gross_margin_5y_std",
+        "gross_margin_5y_z",
+        "operating_margin_5y_median",
+        "operating_margin_5y_std",
+        "operating_margin_5y_z",
+        "earnings_yield_5y_avg",
+        "ocf_yield_5y_avg",
+        "fcf_yield_5y_avg",
+        "earnings_yield_5y_peak",
+        "earnings_yield_at_5y_median_margin",
+        "earnings_yield_10y_avg",
+        "revenue_vs_5y_peak",
+        "revenue_quarters_since_5y_peak",
+        "netinc_vs_5y_peak",
+        "netinc_quarters_since_5y_peak",
+        "bvps_vs_5y_peak",
+        "bvps_quarters_since_5y_peak",
+        "netinc_sue_8q",
+        "revenue_sue_8q",
+        "ni_positive_years_10y",
+        "ni_history_years_10y",
+        "revenue_cagr_10y",
+        "bvps_cagr_10y",
+        "shares_cagr_10y",
     ),
     "solvency": (
         "wc_to_assets",
@@ -176,6 +227,27 @@ FEATURE_FAMILIES: dict[str, tuple[str, ...]] = {
         "dollar_volume_3m",
         "amihud_12m",
         "conservative_score",
+    ),
+    # v1.5, ADR 0024: trailing-year 8-K item counts from Sharadar EVENTS
+    # (data/features.md "Corporate events"). Counts, never ranked; NULL
+    # before the EVENTS export starts, 0 for "no such 8-K". Item
+    # numbering changed in August 2004, so the counts are near zero
+    # before 2005 and partly an era marker (data/manual.md).
+    "events": (
+        "events_8k_days_12m",
+        "events_earnings_release_12m",
+        "events_bankruptcy_12m",
+        "events_acquisition_12m",
+        "events_new_obligation_12m",
+        "events_obligation_trigger_12m",
+        "events_exit_costs_12m",
+        "events_impairment_12m",
+        "events_delisting_notice_12m",
+        "events_unregistered_sales_12m",
+        "events_auditor_change_12m",
+        "events_non_reliance_12m",
+        "events_control_change_12m",
+        "events_officer_change_12m",
     ),
     "classification": (
         "sector",

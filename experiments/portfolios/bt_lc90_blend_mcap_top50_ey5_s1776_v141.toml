@@ -1,0 +1,68 @@
+# Decision 82 of docs/notes/2026-11-26-decisions.md (2026-11-27): E11 of
+# decision 81 (the candidate's three-leg blend choosing the top 50
+# top-decile large caps with an earnings yield of 5% or more, cap-
+# weighted) at the forest's other seeds and with the rank sell discipline.
+# Note: docs/notes/2026-11-27-why-not-the-market.md, section 12.
+#
+# # E11 with the forest refit at seed 1776 in place of seed 23; everything
+# else unchanged.
+#
+# Predictions (decision 82.3), written before the run:
+#   (a) At seeds 232 and 1776 the time-weighted return is within 0.5
+#       points a year of seed 23's 12.08%, the drawdown between -35% and
+#       -39%, and the final value within 5% of 1,274,597. The three-seed
+#       mean final value stays below SPY's 1,326,614, so E11 held to the
+#       horizon fails the final-value clause of 81.2 at three seeds as
+#       it did at one. Rival: a seed lands above SPY on final value;
+#       then the one-seed shortfall was seed noise.
+#
+# Run: .venv/bin/vml-backtest experiments/portfolios/bt_lc90_blend_mcap_top50_ey5_s1776_v141.toml
+
+name = "bt_lc90_blend_mcap_top50_ey5_s1776_v141"
+dataset_version = "dataset_v1.4.1"
+prices_version = "prices_v1.0"
+
+bundles = [
+    "experiments/models/forest_nonloser_dd30_3y_s1776_v141_8f3eb8f1d305",
+    "experiments/models/factor_mom_12_2_3y_v141_121349f6e682",
+    "experiments/models/factor_roc_greenblatt_3y_v141_4457ca01bcfb",
+]
+
+[signal]
+combine = "mean_rank"
+max_staleness_days = 200
+model_update = "refit"
+label_lag_days = 45
+
+[[investability]]
+column = "dollar_volume_3m_rank"
+op = ">="
+value = 0.2
+
+[[investability]]
+column = "log_marketcap_rank"
+op = ">="
+value = 0.9
+
+[[filters]]
+column = "earnings_yield"
+op = ">="
+value = 0.05
+
+[portfolio]
+strategy = "buy_and_hold"
+top_k = 50
+weighting = "marketcap"
+monthly_cash = 1000.0
+
+[execution]
+cost_bps = 35.0
+benchmark_cost_bps = 0.0
+max_quote_age_days = 3
+delist_after_days = 30
+fractional_shares = true
+
+[window]
+start = 2005-01-01
+end = 2026-08-21
+valuation_end = 2026-08-21

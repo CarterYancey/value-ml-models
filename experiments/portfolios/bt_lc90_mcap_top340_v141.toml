@@ -1,0 +1,63 @@
+# Decision 81 of docs/notes/2026-11-26-decisions.md (2026-11-27), second
+# round (81.6). The first round's E2 and E3 kept the top 50 and 25 of a
+# monthly cross-section of about 450 large caps, not half of it as the
+# decision said (the universe was counted from January snapshots alone,
+# about 100 names, where the backtest's monthly cross-section holds every
+# stock with a snapshot inside 200 days). This run corrects the design.
+#
+# # E7: the cap-weighted top-decile large caps minus the quarter the not-
+# a-loser forest scores lowest (the 340 highest of about 450 each
+# month). The index minus the predicted losers, as decision 32.3 meant
+# it.
+#
+# Predictions (decision 81.6), written before the run:
+#   (h) E7 is within 0.5 points a year of E1 on the time-weighted return
+#       over 2005-2026 and within 2 points of E1 on drawdown; its buys
+#       lose money 2 to 4 points less often than E1's (E1: 29.9%).
+#       Rival: leaving out the forest's worst quarter adds 0.5 points a
+#       year or more over E1 in both periods; then the exclusion is
+#       worth carrying.
+#
+# Run: .venv/bin/vml-backtest experiments/portfolios/bt_lc90_mcap_top340_v141.toml
+
+name = "bt_lc90_mcap_top340_v141"
+dataset_version = "dataset_v1.4.1"
+prices_version = "prices_v1.0"
+
+bundles = [
+    "experiments/models/forest_nonloser_dd30_3y_v141_f259c702a6a6",
+]
+
+[signal]
+combine = "mean_rank"
+max_staleness_days = 200
+model_update = "refit"
+label_lag_days = 45
+
+[[investability]]
+column = "dollar_volume_3m_rank"
+op = ">="
+value = 0.2
+
+[[investability]]
+column = "log_marketcap_rank"
+op = ">="
+value = 0.9
+
+[portfolio]
+strategy = "buy_and_hold"
+top_k = 340
+weighting = "marketcap"
+monthly_cash = 1000.0
+
+[execution]
+cost_bps = 35.0
+benchmark_cost_bps = 0.0
+max_quote_age_days = 3
+delist_after_days = 30
+fractional_shares = true
+
+[window]
+start = 2005-01-01
+end = 2026-08-21
+valuation_end = 2026-08-21

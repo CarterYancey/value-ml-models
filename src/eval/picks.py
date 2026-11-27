@@ -73,6 +73,10 @@ UNKNOWN_GROUP = "unknown"
 #: integer; -1 for a row with no value in the screen's `peer_column`).
 PEER_COLUMN = "peer"
 
+#: Slug of the binary pick outcome a screen with a `region` adds: 1 for
+#: a test row inside the region's filters, 0 outside (NULL fails).
+REGION_OUTCOME = "in_region"
+
 
 def peer_bands(values: np.ndarray, bins: int) -> np.ndarray:
     """The band of each value of a 0..1 rank column: `bins` equal-width

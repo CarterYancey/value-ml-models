@@ -40,7 +40,7 @@ from harness.families import (
     family_group_columns,
     parse_family_ref,
 )
-from harness.filters import apply_filters, validate_filter_columns
+from harness.filters import apply_filters, filter_mask, validate_filter_columns
 
 SNAPSHOT_KEY = ["permaticker", "snapshot_date", "snapshot_kind"]
 
@@ -129,6 +129,19 @@ def year_balanced_weights(weights, y, years) -> np.ndarray:
     return out
 
 
+def emphasized_weights(weights, inside, factor: float) -> np.ndarray:
+    """The fit's weights with the rows inside the emphasis region
+    multiplied by `factor` (harness.config.EmphasisSpec). The uniqueness
+    weights keep their ratios inside and outside the region; the
+    region's share of the total weight changes from s to
+    s·f / (s·f + 1 − s)."""
+    w = np.asarray(weights, dtype=float)
+    m = np.asarray(inside, dtype=bool)
+    out = w.copy()
+    out[m] *= float(factor)
+    return out
+
+
 @dataclass(frozen=True)
 class FitData:
     """Arrays ready for a weighted fit on one labeled cell."""
@@ -138,6 +151,9 @@ class FitData:
     sample_weight: np.ndarray
     #: Σ sample_weight — the honest sample size to report.
     effective_size: float
+    #: share of the mandatory training weight inside the emphasis region
+    #: before the factor was applied (None when no emphasis)
+    emphasis_share: float | None = None
 
 
 def _is_boolean_values(vals: pd.Series) -> bool:
@@ -357,6 +373,24 @@ def evaluate_derived_label(label: DerivedLabel, data: pd.DataFrame) -> pd.Series
         col = data[cond.column]
         unobservable |= col.isna()
         observed = col.dropna()
+        if cond.other_column is not None:
+            other = data[cond.other_column]
+            unobservable |= other.isna()
+            for name, series in ((cond.column, observed),
+                                 (cond.other_column, other.dropna())):
+                if len(series) and _is_boolean_values(series):
+                    raise DatasetValidationError(
+                        f"label expression {label.name!r}: {name!r} is a "
+                        "boolean column; a column is compared with another "
+                        "column only when both are numeric"
+                    )
+            vals = pd.to_numeric(col, errors="raise").astype(float)
+            rhs = pd.to_numeric(other, errors="raise").astype(float)
+            hit = _COMPARE[cond.op](vals, rhs)
+            hits[cond.canonical()] = (
+                pd.Series(hit, index=data.index).fillna(False).astype(bool)
+            )
+            continue
         if isinstance(cond.value, bool):
             if not _is_boolean_values(observed):
                 raise DatasetValidationError(
@@ -767,6 +801,14 @@ class Dataset:
         weight: a universe is what was known at the snapshot)."""
         validate_filter_columns(universe, self, "[[universe]]")
 
+    def check_emphasis(self, emphasis) -> None:
+        """Refuse an `[emphasis]` whose region reads anything but a
+        feature column the manifest declares: the weight a training row
+        gets may depend on what was known at the snapshot, never on its
+        outcome."""
+        if emphasis is not None:
+            validate_filter_columns(emphasis.region, self, "[emphasis] region")
+
     def apply_universe(self, frame: pd.DataFrame, universe) -> pd.DataFrame:
         """The rows of `frame` inside a config's universe (every filter
         passed; NULL fails). A row filter on feature columns: it builds
@@ -930,12 +972,19 @@ class Dataset:
         horizon_years: int,
         target: str = "binary",
         year_balance: bool = False,
+        emphasis=None,
     ) -> FitData:
         """Assemble (X, y, w) for a weighted fit.
 
         `year_balance` rescales the mandatory weights so that every
         snapshot year carries the pooled positive share
         (`year_balanced_weights`); `effective_size` is unchanged by it.
+        `emphasis` (harness.config.EmphasisSpec) multiplies the weights
+        of the rows inside its region by its factor (`emphasized_weights`),
+        after the year balance; `effective_size` is unchanged by it too,
+        and `emphasis_share` records the region's share of the mandatory
+        weight. Both are training-time schemes: a caller assembling test
+        rows passes neither.
 
         Rows whose label is NULL (horizon unobservable) carry no target and
         are excluded from the fit — note this is *not* a delisting filter;
@@ -970,11 +1019,28 @@ class Dataset:
                 )
             years = pd.to_datetime(labeled["snapshot_date"]).dt.year.to_numpy()
             w = year_balanced_weights(w, y, years)
+        emphasis_share = None
+        if emphasis is not None:
+            missing = [
+                f.column for f in emphasis.region
+                if f.column not in labeled.columns
+            ]
+            if missing:
+                raise DatasetValidationError(
+                    f"emphasis region columns {missing} are not columns of "
+                    "the frame; project them with apply_split(columns=...)"
+                )
+            inside = filter_mask(labeled, tuple(emphasis.region)).to_numpy()
+            emphasis_share = (
+                float(w[inside].sum() / w.sum()) if w.sum() > 0 else 0.0
+            )
+            w = emphasized_weights(w, inside, emphasis.factor)
         return FitData(
             X=feature_matrix(labeled, feature_cols),
             y=y,
             sample_weight=w,
             effective_size=effective,
+            emphasis_share=emphasis_share,
         )
 
     def observable_fit_rows(

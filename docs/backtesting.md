@@ -73,7 +73,22 @@ five-model AllProb screen):
   context, never a selection signal;
 - the simulation window (defaults: buys start at the latest first-fold
   year across the bundles and continue, deposits included, to the price
-  panel's end; `[window] start` trims the early thin years).
+  panel's end; `[window] start` trims the early thin years);
+- the deposit schedule: `monthly_cash` on the first trading day of each
+  month, flat by default, or growing at `[window]
+  deposit_growth_per_year` (a yearly rate, compounded by elapsed years
+  from the first buy date) when a schedule closer to a household's is
+  wanted; both legs receive the same deposits. Every report also shows
+  the final value of both legs under five schedules with the same total
+  (flat; growing 3% and 6% a year; all of it on the first buy date; flat
+  over the first three quarters of the buy dates), read off each leg's
+  time-weighted path, because the ranking against the benchmark can
+  depend on when the money arrives (decision 84);
+- an optional expense ratio on the benchmark, `[execution]
+  benchmark_expense_bps_per_year` (default 0): the benchmark's price
+  series is scaled down by that yearly rate, so the comparison is with
+  an index fund rather than the bare index. Taxes are not modeled on
+  either leg; the report's assumptions say so.
 
 Monthly point-in-time cross-sections come from `dataset.parquet` itself
 (latest completed-quarter median-kind snapshot per stock, staleness-

@@ -1,0 +1,14 @@
+{
+  "name": "sweep_forest_region_universe_3y",
+  "promoted_utc": "2026-11-27T00:53:10+00:00",
+  "source_report": "reports/sweeps/forest_region_universe_3y/forest_region_universe_3y_summary.md",
+  "run_id": "",
+  "config_hash": "",
+  "git_sha": "",
+  "dataset_version": "dataset_v1.5.1",
+  "config_path": "experiments/sweeps/forest_region_universe_3y.toml",
+  "note": "The rare region (liquid, 40%+ below the 5y high, OCF positive 18/20 quarters) as a universe, folds 2008-20 (decision 79c, 80): its rows earn 0.019/yr vs 0.034 for all liquid rows with 41% losers, win 2009-12 and 2020 and lose every year 2013-18; inside it the forest finds the stocks that fall least (lead over in-region peers +0.040, 10/13 years) and its picks earn half the control's return with three times the losers",
+  "files": [
+    "forest_region_universe_3y_summary.md"
+  ]
+}

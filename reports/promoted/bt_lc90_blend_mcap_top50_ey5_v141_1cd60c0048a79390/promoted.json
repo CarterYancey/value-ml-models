@@ -1,0 +1,14 @@
+{
+  "name": "bt_lc90_blend_mcap_top50_ey5_v141_1cd60c0048a79390",
+  "promoted_utc": "2026-11-27T04:26:11+00:00",
+  "source_report": "reports/backtest/bt_lc90_blend_mcap_top50_ey5_v141_1cd60c0048a79390.md",
+  "run_id": "",
+  "config_hash": "",
+  "git_sha": "",
+  "dataset_version": "",
+  "config_path": "",
+  "note": "Decision 81 E11: the candidate's blend choosing the top 50 top-decile large caps with an earnings yield of 5% or more, cap-weighted: TWR 12.08% against SPY's 10.94% over 2005-2026, drawdown -36.7% against -52.9%, beta 0.77, 1.0 point a year behind SPY in 2021-2026, 3.9% less final money (4.2% at three seeds, decision 82); re-run on 2026-11-27 with decision 84's deposit-schedule table",
+  "files": [
+    "bt_lc90_blend_mcap_top50_ey5_v141_1cd60c0048a79390.md"
+  ]
+}

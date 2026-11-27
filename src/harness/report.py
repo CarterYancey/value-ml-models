@@ -276,6 +276,30 @@ def write_report(
             "derives no column. `sample_weight` is the upstream "
             "uniqueness weight, not recomputed for the rows left out."
         )
+    emphasis = getattr(config, "emphasis", None)
+    if emphasis is not None:
+        shares = [
+            fr["emphasis_train_share"]
+            for fr in fold_results
+            if fr.get("emphasis_train_share") is not None
+        ]
+        share_text = (
+            f"{min(shares):.1%} to {max(shares):.1%} of each fold's "
+            "training weight before the factor"
+            if shares
+            else "share not recorded"
+        )
+        lines.append(
+            f"- **emphasis: training rows with "
+            f"`{describe_filters(emphasis.region)}` carry "
+            f"{emphasis.factor:g}x their sample weight** — the region is "
+            f"{share_text} (per fold in the effective-size table). Every "
+            "row stays in the fit and no row's label or features change; "
+            "the splits are chosen as if the region were a larger share "
+            "of the data. Test rows are untouched, so every number below "
+            "is measured as without emphasis. The region reads feature "
+            "columns as of the snapshot (a NULL fails), never an outcome."
+        )
     resolver = getattr(config, "resolve_feature_columns", None)
     categorical = (
         [c for c in resolver(dataset) if c in CATEGORICAL_FEATURES]
@@ -442,6 +466,15 @@ def write_report(
                 "of the pick-outcome tables flatters any ranking that "
                 "prefers large companies."
                 if getattr(screen, "peer_column", None) is not None
+                else ""
+            )
+            + (
+                " `in_region` is the share of rows inside the screen's "
+                f"region (`{describe_filters(screen.region)}`), read from "
+                "the test rows as of the snapshot like the peer column; a "
+                "NULL in a region column counts as outside. It says where "
+                "a selection comes from, not what it earned."
+                if getattr(screen, "region", ())
                 else ""
             )
         )
@@ -630,6 +663,7 @@ def write_report(
                     for name, key in (
                         ("train_rows_before_universe", "n_train_rows_all"),
                         ("test_rows_before_universe", "n_test_rows_all"),
+                        ("emphasis_train_share", "emphasis_train_share"),
                     )
                     if key in fr
                 },

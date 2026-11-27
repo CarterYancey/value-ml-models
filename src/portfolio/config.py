@@ -119,11 +119,17 @@ class BacktestConfig:
     #: whole shares by default (buy budgets round down; the remainder
     #: stays in cash); True restores exact fractional spending
     fractional_shares: bool = False
+    #: a yearly drag on the benchmark's price series, in basis points
+    #: (an index fund's expense ratio); 0 compares with the bare index
+    benchmark_expense_bps_per_year: float = 0.0
 
     # --- window (optional; defaults derived from folds and the panel) ----
     start: date | None = None
     end: date | None = None
     valuation_end: date | None = None
+    #: the monthly deposit grows at this yearly rate from the first buy
+    #: date (0 = the flat schedule); decision 84
+    deposit_growth_per_year: float = 0.0
 
     @classmethod
     def from_file(cls, path: str | Path) -> "BacktestConfig":
@@ -342,10 +348,26 @@ class BacktestConfig:
             max_quote_age_days=int(ex.get("max_quote_age_days", 0)),
             delist_after_days=int(ex.get("delist_after_days", 30)),
             fractional_shares=bool(ex.get("fractional_shares", False)),
+            benchmark_expense_bps_per_year=float(
+                ex.get("benchmark_expense_bps_per_year", 0.0)
+            ),
             start=_date("start"),
             end=_date("end"),
             valuation_end=_date("valuation_end"),
+            deposit_growth_per_year=float(
+                window.get("deposit_growth_per_year", 0.0)
+            ),
         )
+        if config.benchmark_expense_bps_per_year < 0:
+            raise ConfigError(
+                f"backtest config {source}: benchmark_expense_bps_per_year "
+                "must be >= 0"
+            )
+        if config.deposit_growth_per_year <= -1.0:
+            raise ConfigError(
+                f"backtest config {source}: deposit_growth_per_year must be "
+                "greater than -1"
+            )
         if config.max_staleness_days < 1:
             raise ConfigError(
                 f"backtest config {source}: max_staleness_days must be >= 1"
@@ -373,6 +395,14 @@ class BacktestConfig:
             added["label_lag_days"] = self.label_lag_days
         if self.fractional_shares:
             added["fractional_shares"] = True
+        # decision 84: both default to 0 and hash only when set, so every
+        # earlier config keeps its hash
+        if self.deposit_growth_per_year:
+            added["deposit_growth_per_year"] = self.deposit_growth_per_year
+        if self.benchmark_expense_bps_per_year:
+            added["benchmark_expense_bps_per_year"] = (
+                self.benchmark_expense_bps_per_year
+            )
         if self.max_per_group is not None:
             added["max_per_group"] = self.max_per_group
             added["group_column"] = self.group_column

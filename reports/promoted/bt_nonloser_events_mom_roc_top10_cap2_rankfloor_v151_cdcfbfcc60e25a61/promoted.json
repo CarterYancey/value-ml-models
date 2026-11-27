@@ -1,0 +1,14 @@
+{
+  "name": "bt_nonloser_events_mom_roc_top10_cap2_rankfloor_v151_cdcfbfcc60e25a61",
+  "promoted_utc": "2026-11-26T09:26:26+00:00",
+  "source_report": "reports/backtest/bt_nonloser_events_mom_roc_top10_cap2_rankfloor_v151_cdcfbfcc60e25a61.md",
+  "run_id": "",
+  "config_hash": "",
+  "git_sha": "",
+  "dataset_version": "",
+  "config_path": "",
+  "note": "the candidate's blend with the 8-K counts in the forest leg: 851,928, 8.6% less money than the candidate, behind from 2015 on, the same lead over same-size peers; the counts are not carried (decision 77)",
+  "files": [
+    "bt_nonloser_events_mom_roc_top10_cap2_rankfloor_v151_cdcfbfcc60e25a61.md"
+  ]
+}

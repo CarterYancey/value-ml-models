@@ -1,0 +1,90 @@
+# Decision 75 of docs/notes/2026-11-26-decisions.md (2026-11-26), item 2b:
+# LightGBM on dataset_v1.5.1 with the two best draws of the 2026-09
+# random search in cell C (r13 and r19: about 60 leaves, class_weight
+# 0.25) instead of the two F50 sets of lgbm_v151_features_nonloser_3y,
+# which came out 0.09-0.11 below the forest on p@20 against prediction
+# 74.5(c). fs0 (the 112 old ranks) and fs1 (all 149 ranks), seed 23,
+# the same cell, screen and floor as the forest sweeps.
+#
+# Predictions (decision 75.2b), written before the run: p@20 within 0.02
+# of the forest's (0.747 / 0.753), as the draws were in 2026-09; the
+# screen lead 0.01 or more below the forest's and the share of losers
+# above it, as the 2026-09 note found for the draws' picks on every
+# outcome. Rival: a booster of this size matches the forest on the
+# screen too; then the model family is not what sets the picks.
+#
+# Expanded: 1 cell x 2 feature sets x 2 sets x 1 seed = 4 runs.
+# Run: .venv/bin/vml-sweep experiments/sweeps/lgbm_v151_tuned_nonloser_3y.toml
+name = "lgbm_v151_tuned_nonloser_3y"
+note = "LightGBM with the best draws of the 2026-09 search on v1.5.1: the forest's p@20 (0.72-0.75) and PR-AUC, and a screen lead of -0.003 to +0.006 a year against the forest's +0.029; the model family sets the picks, not the top-20 precision (decision 76)"
+dataset_version = "dataset_v1.5.1"
+min_dataset_version = "1.5"
+scheme = "walkforward"
+folds = "all"
+seeds = [23]
+top_k = [20, 50]
+precision_targets = [0.75, 0.9]
+rank_metric = "precision_at_20"
+universe_scope = "test"
+pick_outcomes = [
+  "label_3y_beat_spy",
+  "fwd_3y_excess_cagr",
+  "fwd_3y_cagr",
+  "fwd_3y_max_drawdown_from_entry",
+  "fwd_3y_cagr < 0",
+  "fwd_3y_cagr < -0.1",
+  "fwd_3y_max_drawdown_from_entry >= 0.4",
+  "fwd_3y_cagr >= 0.15",
+  "fwd_3y_excess_cagr >= 0.05",
+  "fwd_3y_path_avg_return",
+  "fwd_3y_path_avg_return > fwd_3y_spy_path_avg_return",
+  "fwd_3y_max_runup",
+  "fwd_3y_realized_vol",
+  "fwd_3y_cagr >= 0 & fwd_3y_max_drawdown_from_entry < 0.3",
+]
+
+sets = [
+  # r13 and r19 of lgbm_random_search_nonloser_3y (2026-09, dataset_v1.4): the two draws with the highest p@20 (0.747)
+  {n_estimators = 373, num_leaves = 60, learning_rate = 0.0876934, subsample = 0.803891, subsample_freq = 1, colsample_bytree = 0.805684, reg_alpha = 0.0582723, reg_lambda = 0.00260769, min_child_samples = 92, min_child_weight = 0.00131567, class_weight = 0.25},
+  {n_estimators = 934, num_leaves = 59, learning_rate = 0.0437511, subsample = 0.977514, subsample_freq = 1, colsample_bytree = 0.773615, reg_alpha = 0.304252, reg_lambda = 0.00784381, min_child_samples = 45, min_child_weight = 1.27947, class_weight = 0.25},
+]
+
+[pick_screen]
+per = "quarter"
+top_k = 10
+max_per_group = 2
+group_column = "sector"
+peer_column = "log_marketcap_rank"
+peer_bins = 20
+
+[[universe]]
+column = "dollar_volume_3m"
+op = ">="
+value = 100000
+
+
+[[cells]]
+label = "fwd_3y_cagr >= 0 & fwd_3y_max_drawdown_from_entry < 0.3"
+
+# fs0: the 112 rank columns of dataset_v1.4.1 — the control on this build
+[[features]]
+groups = ["ranks"]
+exclude_columns = [
+  "bvps_trend_4q_rank", "bvps_consistency_4q_rank", "bvps_trend_8q_rank", "bvps_consistency_8q_rank",
+  "bvps_trend_12q_rank", "bvps_consistency_12q_rank", "bvps_trend_20q_rank", "bvps_consistency_20q_rank",
+  "shares_trend_4q_rank", "shares_trend_8q_rank", "shares_trend_12q_rank", "shares_trend_20q_rank",
+  "roa_5y_median_rank", "roa_5y_std_rank", "roa_5y_z_rank", "roe_5y_median_rank", "roe_5y_std_rank", "roe_5y_z_rank",
+  "gross_margin_5y_median_rank", "gross_margin_5y_std_rank", "gross_margin_5y_z_rank",
+  "operating_margin_5y_median_rank", "operating_margin_5y_std_rank", "operating_margin_5y_z_rank",
+  "earnings_yield_5y_avg_rank", "ocf_yield_5y_avg_rank", "fcf_yield_5y_avg_rank", "earnings_yield_5y_peak_rank",
+  "earnings_yield_at_5y_median_margin_rank", "earnings_yield_10y_avg_rank", "netinc_vs_5y_peak_rank",
+  "bvps_vs_5y_peak_rank", "netinc_sue_8q_rank", "revenue_sue_8q_rank", "revenue_cagr_10y_rank",
+  "bvps_cagr_10y_rank", "shares_cagr_10y_rank",
+]
+
+# fs1: every rank column of dataset_v1.5.1, 149
+[[features]]
+groups = ["ranks"]
+
+[model]
+name = "lightgbm"

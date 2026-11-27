@@ -157,3 +157,27 @@ def test_sweep_top_level_exclude_flows_into_every_run():
         r.config.exclude_feature_columns == ("earnings_yield",)
         for r in sweep.expand()
     )
+
+
+def test_v15_families_are_registered():
+    """data/features.md v1.5 (upstream decisions 0023, 0024): the
+    fundamental-history and corporate-events families and the trend
+    additions resolve by family name; the raw-only counts have no rank
+    variant to select."""
+    from harness.families import FEATURE_FAMILIES, family_group_columns
+
+    assert "fundhist" in FEATURE_FAMILIES and "events" in FEATURE_FAMILIES
+    assert "earnings_yield_10y_avg" in FEATURE_FAMILIES["fundhist"]
+    assert "events_non_reliance_12m" in FEATURE_FAMILIES["events"]
+    for name in ("bvps_trend_20q", "shares_up_frac_4q", "ni_positive_frac_8q"):
+        assert name in FEATURE_FAMILIES["trend"]
+    assert "shares_consistency_4q" not in FEATURE_FAMILIES["trend"]
+    assert family_group_columns("events", "ranks") == [
+        f"{c}_rank" for c in FEATURE_FAMILIES["events"]
+    ]  # candidates only: the manifest intersection drops them
+    # no base name is in two families
+    seen: dict[str, str] = {}
+    for fam, names in FEATURE_FAMILIES.items():
+        for n in names:
+            assert n not in seen, (n, fam, seen[n])
+            seen[n] = fam
