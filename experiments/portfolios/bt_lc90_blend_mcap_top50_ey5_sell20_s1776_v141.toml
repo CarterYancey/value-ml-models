@@ -1,0 +1,80 @@
+# Decision 82 of docs/notes/2026-11-26-decisions.md (2026-11-27): E11 of
+# decision 81 (the candidate's three-leg blend choosing the top 50
+# top-decile large caps with an earnings yield of 5% or more, cap-
+# weighted) at the forest's other seeds and with the rank sell discipline.
+# Note: docs/notes/2026-11-27-why-not-the-market.md, section 12.
+#
+# # E11 with the candidate's rank sell discipline ([sell] max_rank_pct =
+# 0.2) at seed 1776: a holding is sold when it is no longer among the
+# top 20% of the month's candidates by the blend's combined rank, the
+# proceeds funding that month's buys.
+#
+# Predictions (decision 82.3), written before the run:
+#   (b) The rank sell discipline (a holding is sold once it leaves the
+#       top 20% of the month's candidates by the blend's rank) adds 0.3
+#       to 0.9 points a year of time-weighted return over holding to the
+#       horizon, as it added to the candidate at three seeds (decision
+#       24), at 4 to 10 times the costs. The three-seed mean final value
+#       is above SPY's 1,326,614, and the book then passes the rule of
+#       81.2 on all three clauses (final value above SPY's; within 2
+#       points a year of SPY in 2021-2026; drawdown no deeper than
+#       SPY's). Rival: in a cap-weighted book the rule sells the large
+#       growth names as their rank slips out of the safe top fifth, the
+#       names that carried 2021-2026, and the final value falls below
+#       the hold-to-horizon E11's; then the sell discipline is for
+#       equal-weighted books only.
+#
+# Run: .venv/bin/vml-backtest experiments/portfolios/bt_lc90_blend_mcap_top50_ey5_sell20_s1776_v141.toml
+
+name = "bt_lc90_blend_mcap_top50_ey5_sell20_s1776_v141"
+dataset_version = "dataset_v1.4.1"
+prices_version = "prices_v1.0"
+
+bundles = [
+    "experiments/models/forest_nonloser_dd30_3y_s1776_v141_8f3eb8f1d305",
+    "experiments/models/factor_mom_12_2_3y_v141_121349f6e682",
+    "experiments/models/factor_roc_greenblatt_3y_v141_4457ca01bcfb",
+]
+
+[signal]
+combine = "mean_rank"
+max_staleness_days = 200
+model_update = "refit"
+label_lag_days = 45
+
+[[investability]]
+column = "dollar_volume_3m_rank"
+op = ">="
+value = 0.2
+
+[[investability]]
+column = "log_marketcap_rank"
+op = ">="
+value = 0.9
+
+[[filters]]
+column = "earnings_yield"
+op = ">="
+value = 0.05
+
+[portfolio]
+strategy = "sell_below_criteria"
+top_k = 50
+weighting = "marketcap"
+monthly_cash = 1000.0
+
+[sell]
+max_rank_pct = 0.2
+filters = []
+
+[execution]
+cost_bps = 35.0
+benchmark_cost_bps = 0.0
+max_quote_age_days = 3
+delist_after_days = 30
+fractional_shares = true
+
+[window]
+start = 2005-01-01
+end = 2026-08-21
+valuation_end = 2026-08-21

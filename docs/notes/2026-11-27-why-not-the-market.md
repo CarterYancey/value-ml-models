@@ -459,3 +459,58 @@ dear names out.
    book (E2, E7, E8), fundamentals-only feature sets (decisions 78 to
    80), and threshold-based cash rules on the model's own scores
    (decision 46).
+
+## 12. E11 at three seeds and with the rank sell discipline (decision 82)
+
+Carter approved the first next step. Five more backtests: E11 with the
+forest refit at seeds 232 and 1776, and E11 with the candidate's rank
+sell discipline (a holding is sold once it leaves the top 20% of the
+month's candidates by the blend's combined rank) at seeds 23, 232 and
+1776.
+
+| portfolio | final value | ratio to SPY | money-weighted CAGR | TWR | TWR 2005 to 2020 | TWR 2021 to 2026 | beta 2021 to 2026 | worst drawdown | sales | costs paid |
+|---|---|---|---|---|---|---|---|---|---|---|
+| E11, seed 23 (section 10) | 1,274,597 | 0.961 | 12.91% | 12.08% | 11.3% | 14.3% | 0.74 | −36.7% | 0 | 1,110 |
+| E11, seed 232 | 1,273,831 | 0.960 | 12.90% | 12.25% | 11.5% | 14.3% | 0.74 | −36.7% | 0 | 1,120 |
+| E11, seed 1776 | 1,265,868 | 0.954 | 12.86% | 12.16% | 11.4% | 14.2% | 0.74 | −36.8% | 0 | 1,111 |
+| E11 with the sell discipline, seed 23 | 839,402 | 0.633 | 9.74% | 9.43% | 9.3% | 9.6% | 0.47 | −37.7% | 5,803 | 133,994 |
+| E11 with the sell discipline, seed 232 | 839,598 | 0.633 | 9.75% | 9.57% | 9.9% | 8.7% | 0.49 | −38.2% | 5,804 | 135,918 |
+| E11 with the sell discipline, seed 1776 | 796,760 | 0.601 | 9.34% | 9.25% | 9.6% | 8.2% | 0.50 | −38.2% | 5,784 | 130,140 |
+| SPY | 1,326,614 | 1.000 | 13.20% | 10.94% | 9.4% | 15.3% | 1.00 | −52.9% | | 0 |
+
+The "sales" column counts sales under the rule; each book also had
+about 105 delisting exits. The deposits total 260,000.
+
+### What decision 82's runs showed, against its predictions
+
+- **(a) held, and its rival failed.** The seed hardly matters to this
+  book. At seeds 232 and 1776 the time-weighted return is 12.25% and
+  12.16% against 12.08%, the drawdown is −36.7% and −36.8%, and the
+  final value is within 0.7% of seed 23's. The three-seed mean final
+  value is 1,271,432, which is 4.2% below SPY's. E11 held to the horizon
+  fails the final-value clause of the rule at every seed and passes the
+  other two at every seed. The forest is one of three legs and the cap
+  weighting concentrates the book in a few large names, so the forest's
+  seed moves little.
+- **(b) failed, and its rival was right about the direction and wrong
+  about the size.** The sell discipline destroyed the book. It sold
+  about 5,800 times in 21 years, paid 130,000 to 136,000 in costs on
+  260,000 of deposits (E11 paid 1,110), and ended with 60% to 63% of
+  SPY's money. In the candidate the rule sells a few times a month from
+  a book of a few hundred equal-weighted holdings chosen from about
+  1,100 candidates. Here the book holds 50 cap-weighted names chosen
+  from about 450, so the threshold (the top 90 of 450) sits just below
+  the buying line and holdings cross it constantly. The rule also sold
+  the large growth names as their rank slipped: the 2021 to 2026 beta
+  fell from 0.74 to about 0.48 and the return in those years from 14.3%
+  to 8% to 10%. The rank sell discipline belongs to equal-weighted
+  books with many holdings and a wide gap between the buying line and
+  the selling line. A looser band for this book (selling below the top
+  half, say) was not run; it is recorded as a possible later test, not
+  a next step.
+- **No book passes the rule of 81.2.** E11 held to the horizon is the
+  program's best portfolio and it is 4.2% short of SPY's final money at
+  three seeds, with a drawdown 16 points shallower, a beta of 0.77 and
+  a time-weighted return 1.2 points a year higher. Whether that is
+  success is the question of the goal, which decision 81 leaves to
+  Carter.

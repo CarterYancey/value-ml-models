@@ -110,8 +110,10 @@ Fourth, the deposits. The closest portfolio to the goal is the
 candidate's blend choosing the top 50 large caps with an earnings yield
 of 5% or more, cap-weighted: 12.1% a year against SPY's 10.9% over
 2005 to 2026, drawdown −37% against −53%, beta 0.77, one point a year
-behind SPY in 2021 to 2026, and 3.9% less final money. It is one run at
-one seed and goes to three seeds and the sell discipline next. The
+behind SPY in 2021 to 2026, and 3.9% less final money. At three seeds
+it holds (decision 82): 12.1% to 12.3% against 10.9%, drawdown −37%,
+4.2% less final money; the rank sell discipline destroys it through
+turnover. The
 thesis held for sixteen years that held two crashes and failed in a
 six-year stretch carried by the stocks a loser-avoiding model declines
 to hold.
@@ -310,12 +312,12 @@ candidate is paper-traded as it is, and the search continues.
    SPY by a date, or return per unit of risk; decision 81), the
    larger-half filter (58), the training cutoff (60), the F50 portfolio
    (71), the price floor (71.3) and the Foamex request (73).
-2a. **The next backtests** are the cap-weighted large-cap book with the
-   earnings-yield floor (decision 81's E11) at the forest's other two
-   seeds and with the rank sell discipline: four runs, a new decision
-   with predictions. If the seeds hold within half a point and the sell
-   discipline adds what it added to the candidate, that book passes the
-   rule of decision 81.2 on all three clauses.
+2a. **The best portfolio on record is not yet proposed.** Decision 82
+   ran E11 at three seeds: 12.1% to 12.3% a year time-weighted against
+   SPY's 10.9%, drawdown −37% against −53%, beta 0.77, and 4.2% less
+   final money at the three-seed mean. The rank sell discipline destroys
+   it (5,800 sales, costs of half the deposits), so it is held to the
+   horizon. What happens to it depends on item 2's first question.
 3. **Upstream requests:** market-state columns per snapshot date (now
    also the rare region's open question), a peer-relative label, a
    recovery label measured inside a region, and the Foamex price check.

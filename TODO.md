@@ -700,15 +700,15 @@ cap-weighted (E11): 12.1% a year against SPY's 10.9%, drawdown −37%
 against −53%, one point a year behind SPY in 2021 to 2026, 3.9% less
 final money, one run at one seed.
 
-- [ ] **E11 at seeds 232 and 1776, and E11 with the rank sell
-      discipline** (`[sell] max_rank_pct = 0.2`, which added 12% of final
-      value to the candidate). Four backtests, about 2.5 minutes each at
-      9.4 GB, one at a time. Write the decision and its predictions
-      first. If the seeds hold within half a point and the sell
-      discipline adds what it did before, E11 with the sell discipline
-      passes the rule of 81.2 on all three clauses (final value above
-      SPY's, within 2 points a year of SPY in 2021 to 2026, drawdown no
-      deeper than SPY's).
+- [x] **E11 at seeds 232 and 1776, and E11 with the rank sell
+      discipline** (decision 82). The seeds hold: 12.25% and 12.16% a
+      year against seed 23's 12.08%, drawdown −36.7% and −36.8%, final
+      value within 0.7%; the three-seed mean is 4.2% below SPY's final
+      money. The sell discipline sold about 5,800 times, paid half the
+      deposits in costs and ended with 60% to 63% of SPY's money: in a
+      cap-weighted book of 50 names from 450 candidates the selling line
+      sits just below the buying line. Not for this book. A looser band
+      (selling below the top half) is a possible later test.
 - [ ] **Carter: what is the goal?** By final money against SPY on
       2026-08-21, inside a mega-cap boom, no loser-avoiding book wins. By
       drawdown, losers and return per unit of market risk, E11 wins on
