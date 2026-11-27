@@ -997,3 +997,29 @@ failed to do and which is left for later.
    with a sector mix close to E1's; rival: 0.5 or more above E1 in both
    periods at a shallower drawdown. (k) E10 at least 2 points a year
    above E2 and still below E1. The rule of 81.2 applies unchanged.
+
+7. **Third round (2026-11-27, after the second round was read).** The
+   second round's reading, in brief (tables in the note): E7 (the
+   forest's worst quarter left out) was 0.55 points a year below E1 with
+   2.8 points fewer losers among its buys, so prediction (h) missed its
+   0.5 bound narrowly and its rival failed; E8 (the worst half) was 0.75
+   below with beta 0.84, as (i) said; E9 (the worst half by the blend)
+   ended with SPY's final value to within 0.1%, 0.28 below E1 on the
+   time-weighted return and 0.47 above E8, with E1's sector mix, so (j)
+   held and its rival failed; E10 (the blend's top 50, cap-weighted)
+   matched E1's time-weighted return exactly (11.88% against 11.87%),
+   beat it by 1.1 points a year in 2005 to 2020 and trailed by 2.9 in
+   2021 to 2026, with a drawdown of −37.4% against E1's −45.9% and SPY's
+   −52.9%, 20% of buys losing against 30%, and 12% less final money
+   than E1 because the shortfall fell in the years the account was
+   largest. (k) held. No arm with a model passes the rule of 81.2; E1,
+   with no model, passes it. Two more runs close the round: E12
+   `bt_lc90_blend_mcap_top100_v141` (the blend's top 100, between E9 and
+   E10) and E11 `bt_lc90_blend_mcap_top50_ey5_v141` (E10 with an
+   earnings-yield floor of 5%, since the equal-weighted 8% floor of E6
+   earned 12.6% a year in 2021 to 2026). Predictions: (l) E11's 2021 to
+   2026 return is a point or more above E10's and its 2005 to 2020
+   return within a point of E10's, at a deeper drawdown and a final
+   value within 5% of E10's; rival: the floor removes the large growth
+   names and 2021 to 2026 falls below E10's. (m) E12 lies between E9
+   and E10 on every figure.
