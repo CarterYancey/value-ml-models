@@ -1,7 +1,8 @@
 # CLAUDE.md — value-ml-models
 
-Guidance for AI-assisted development. Read [PLAN.md](PLAN.md) for the design,
-[TODO.md](TODO.md) for what to work on next, and
+Guidance for AI-assisted development. Read
+[docs/agents.md](docs/agents.md) for how a session runs and what to read
+first, [PLAN.md](PLAN.md) for the design, and
 [data/manual.md](data/manual.md) — the dataset contract — before touching any
 modeling code. Upstream data rules live in `sharadar-dataset/CLAUDE.md`; the
 invariants below are this repo's equivalents.
@@ -11,19 +12,30 @@ invariants below are this repo's equivalents.
 - **GLOSSARY.md** — the shared vocabulary, one term per concept. Use
   its terms; add to it when a concept is new.
 - **README.md** — overview + setup/usage only; extended explanations go
-  in `docs/` (experiments, workflow, deployment, backtesting, diagnostics).
+  in `docs/` (experiments, deployment, backtesting, diagnostics).
 - **PLAN.md** — architecture, design principles, phase roadmap.
-- **TODO.md** — the live task list; update it as tasks complete or appear.
+- **docs/agents.md** — the agent's manual: what to read at the start of
+  a session, the two ways of working, where each record is written, the
+  run queue, stop rules, promotion, lab branches and the end of a
+  session. **docs/setup.md** is Carter's side (machine user, branch
+  rules, starting a session, merging results).
+- **docs/next-steps.md** — what to work on now, and what is waiting on
+  Carter. Rewritten at the end of every session.
+- **docs/decisions.md** — every decision still in force, grouped by
+  subject, with links to the numbered decision log
+  (`docs/notes/*-decisions.md`). Updated in the commit that logs a
+  decision.
+- **TODO.md** — the backlog of code and tooling still to build, and the
+  outstanding upstream requests. Not a research plan.
 - **docs/logbook.md** — what was done, newest first, one short entry
   per sweep (did / got / concluded / next). Read it at the start of a
   session; add an entry with `vml-logbook add` for every sweep read,
   failures included, before starting the next thing.
-- **docs/findings.md** — what is known now, by cell, the holdout
-  record and the plan. Rewritten, not appended to, and kept under
-  about 250 lines: tables and reasoning go in a note under
-  `docs/notes/` that the logbook entry links to.
-- **docs/agents.md** — how an unattended session works (the run queue,
-  checkpoints, stop rules, lab branches) and what it needs set up.
+- **docs/findings.md** — what is known now and where the project
+  stands: conclusions, the portfolios of record, the lines of research
+  and the holdout record. No plans. Rewritten, not appended to; its
+  opening section states what belongs in it. Tables and reasoning go
+  in a note under `docs/notes/`.
 - **data/*.md** — the dataset docs, from upstream:
   [manual.md](data/manual.md) (how to consume the dataset — start here),
   [dataset.md](data/dataset.md) (directory layout, column groups),
@@ -209,7 +221,8 @@ invariants below are this repo's equivalents.
 
 ## Before writing a conclusion
 
-A conclusion in `docs/findings.md`, a promoted note or a TODO outlives
+A conclusion in `docs/findings.md`, `docs/decisions.md`, a promoted
+note or `docs/next-steps.md` outlives
 the session that wrote it and steers the next one. On 2026-09-27 a
 comparison of v1.4 runs with v1.1 runs was written up as "did not
 replicate" and the v1.1 findings were marked superseded. The runs

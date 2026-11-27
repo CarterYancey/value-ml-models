@@ -1,102 +1,189 @@
-# Unattended sessions
+# How an agent works in this repository
 
-How an agent runs experiments on its own in a sandbox, and what Carter
-sets up once so that it can. The rules in CLAUDE.md all apply; this file
-adds the ones that only matter when nobody is watching.
+This file is the agent's manual for a session. It says what to read
+first, how a session runs, where each kind of record is written, and how
+work leaves the sandbox. Everything in CLAUDE.md applies without
+exception: the hard invariants, the branch workflow and the rules under
+"Before writing a conclusion". This file adds what CLAUDE.md does not
+cover. Carter's one-time setup and his side of a session are in
+[setup.md](setup.md).
+
+## Start of a session
+
+Read these, in this order:
+
+1. [next-steps.md](next-steps.md): what to work on now, and what is
+   waiting on Carter.
+2. [decisions.md](decisions.md): the decisions that are still in force.
+   Work that contradicts one of them needs a new decision first.
+3. [findings.md](findings.md): what the project knows and where it
+   stands.
+4. [logbook.md](logbook.md): the newest entries. Run `vml-logbook
+   unread` to list sweeps that finished with nobody reading them. Those
+   come first.
+5. [GLOSSARY.md](../GLOSSARY.md) for any term you do not know.
+
+Then check the branch. A session can start with `Claude` checked out.
+Create the lab branch with `uv run vml-queue new-lab` (see "Git"
+below). If the previous session's results branch has merged and its lab
+branch still exists, archive the lab branch first.
 
 ## Two ways of working
 
-Which one a session is in depends on what Carter asked for.
+Carter's opening message says which one applies. If it does not say,
+use the second: it has been the standing arrangement since 2026-10-01.
 
-- **"Work the queue."** The loop and the stop rules below, as written.
-  The agent runs what the queue holds, extends it only with items the
-  plan in findings.md already names, and stops at the first surprise.
-- **"Do whatever is best to reach the goal."** A goal-directed
-  session (the sessions of 2026-09-29 to 2026-10-01 worked this way;
-  Carter made it the standing arrangement on 2026-10-01). The agent
-  may open a new direction, write and run new configs, build code and
-  continue experiments off it, and is not stopped by a contradicted
-  prediction. What it owes in return is under "A goal-directed
-  session".
+- **"Work the queue."** Run the loop and obey the stop rules below as
+  written. Run what the queue holds, extend it only with items that
+  next-steps.md already names, and stop at the first surprise.
+- **"Do whatever is best to reach the goal."** A goal-directed session.
+  You may open a new direction, write and run new configs, build code
+  and continue experiments with it, and keep going after a prediction
+  fails. In return you owe the record described in the next section.
 
-In both, the hard invariants of CLAUDE.md, its branch workflow and
-its rules under "Before writing a conclusion" hold without exception,
-and these stay Carter's: **a holdout look or re-look, deployment, and
-the merge into `Claude`**.
+In both, these stay Carter's: **a look at the sealed holdout, a
+deployment, and any merge into `Claude` or `main`.**
 
-## A goal-directed session
+## What a goal-directed session owes
 
-The goal is in findings.md ("State") and in the decision log
-([notes/2026-11-26-decisions.md](notes/2026-11-26-decisions.md),
-which continues [the log of 2026-09-29](notes/2026-09-29-decisions.md);
-that file is closed at decision 72 and is not edited again).
-The freedom is conditional on the record:
+The freedom depends on the record being complete.
 
-1. **Every decision is logged before it is acted on**: a numbered
-   entry in the decision log saying what was decided, why, and what
-   it rests on. A decision is anything a later session would
-   otherwise have to guess: a new direction, a new cell or universe,
-   a criterion, a candidate carried forward or dropped, a rule about
-   what will not be run.
-2. **Every run carries its prediction**, written in the config before
-   the run, with the rival explanation where there is one. The
-   logbook entry says which predictions held.
-3. **A contradicted prediction is read, not skipped.** It gets a note
-   with the rival explanations and what would separate them; the
-   session may then run the experiment that separates them. A result
-   far above its baseline (leakage first) or far below an earlier one
-   (a changed input first) is checked as a bug before anything is
-   built on it.
-4. **Code goes on a feature branch**, `claude/<topic>`, off `Claude`,
-   with tests, pushed; it is merged into the lab branch between runs
-   and experiments continue off the lab branch. Develop in a separate
-   worktree while a run is going: each step of a chain is a new
-   process and would pick up a half-edited `src/`.
-5. **Criteria before results.** What would send a candidate to a
-   backtest, or carry it forward, is written in the decision log
-   before the runs that are judged on it.
-6. **Evidence is spent once.** Years a candidate was not chosen on
-   (the holdout window; trading past the last fold) are read for the
-   fixed candidate and never used to choose between variants. A
-   further portfolio or model run on those years needs a decision
-   that says why it is not a selection. The number of configurations
-   tried on a set of years is stated with every figure from them.
-7. **The session ends with the record in order**: logbook entries for
-   every run, findings.md rewritten, TODO.md's next steps for a
-   reader with no context, results worth keeping promoted
-   (`vml-promote`), and a `claude/results-<date>` branch that passes
-   `scripts/check_tracked_configs.py` for Carter to open the pull
-   request from.
+1. **Log every decision before acting on it.** A decision is anything a
+   later session would otherwise have to guess: a new direction, a new
+   cell or universe, a criterion, a candidate carried forward or
+   dropped, a rule about what will not be run. Write it as a numbered
+   entry in the decision log (see "The records" below), saying what was
+   decided, why, and what evidence it rests on. Then update
+   decisions.md in the same commit.
+2. **Write each run's prediction before the run**, in the config, with
+   the rival explanation if there is one. The logbook entry says which
+   predictions held.
+3. **Read a failed prediction; do not skip it.** Write a note that
+   lists the rival explanations and what would tell them apart. You may
+   then run the experiment that tells them apart. A result far above
+   its baseline may be leakage, and a result far below an earlier one
+   may come from a changed input. Check either for a bug before
+   building on it.
+4. **Put code on a feature branch** named `claude/<topic>`, created
+   from `Claude`, with tests, and push it. Merge it into the lab branch
+   between runs and continue experiments from the lab branch. While a
+   run is going, develop in a separate git worktree: each step of a
+   chain is a new process and would pick up a half-edited `src/`.
+5. **Write the criteria before the results.** What would send a
+   candidate to a backtest, or carry it forward, goes in the decision
+   log before the runs that are judged on it.
+6. **Use each body of evidence once.** Years that a candidate was not
+   chosen on, such as the holdout window or trading after the last
+   fold, are read for that fixed candidate and never used to choose
+   between variants. Any further portfolio or model run on those years
+   needs a decision that explains why it is not a selection. State the
+   number of configurations tried on a set of years with every figure
+   taken from those years.
+7. **Leave the record in order at the end** (see "End of a session").
 
-What a goal-directed session may do that the queue loop may not:
-open a new direction, extend the queue or run configs outside it,
-promote results, and build the results branch. What it still may not
-do is listed above.
+Only a goal-directed session may open a new direction, extend the
+queue beyond next-steps.md, promote results, or build the results
+branch.
+
+## The records
+
+Each kind of record has one place. Write a thing in its place and link
+to it from elsewhere; do not copy it.
+
+| record | file | how it changes |
+|---|---|---|
+| what was done, run by run | `docs/logbook.md`, newest first | one entry per sweep or run, added with `vml-logbook add`; never edited afterwards |
+| each decision in full | the decision log, `docs/notes/<date>-decisions.md` | numbered entries appended; never edited afterwards |
+| decisions still in force | `docs/decisions.md` | updated in the commit that adds a decision |
+| what is known, and where the project stands | `docs/findings.md` | rewritten when a conclusion changes |
+| what to do next | `docs/next-steps.md` | rewritten at the end of every session |
+| code still to be built | `TODO.md` | items added when found, removed when built |
+| tables, checks, reasoning | `docs/notes/<date>-<topic>.md` | as long as needed; linked from the logbook, the decision log or findings |
+| every run | the ledger, `experiments/ledger/<sandbox>.csv` | written by the harness |
+| what exactly ran | the run's report directory: the config copy, `*_config.json`, `*_result.json` | written by the harness |
+
+### The logbook
+
+An entry has four parts, **Did / Got / Concluded / Next**, one or two
+sentences each, with the numbers. It says whether the result matched
+the prediction. A failed or pointless experiment gets an entry like any
+other. If an entry needs a table, put the table in a note and link it.
+
+### The decision log
+
+Decisions are numbered in one sequence across files. Append each new
+decision to the newest `docs/notes/*-decisions.md` file. When that file
+passes about 1,500 lines, start a new one named after the day it
+starts, add a closing line to the old one that names the new file, and
+continue the numbering. A closed log file is never edited again; a
+correction is a new decision that names the old one.
+
+### decisions.md
+
+decisions.md lists every decision that will affect future work, grouped
+by subject. Each line says what is in force, why, and which numbered
+decisions and notes hold the full reasoning. Keep it current in the
+same commit as the decision log:
+
+- A new standing decision (a rule, criterion, definition, working
+  assumption or setting) gets a line in its group.
+- When a decision changes or replaces an earlier one, rewrite the
+  earlier line so that it states the current rule, and cite both
+  numbers.
+- A one-time decision ("run X", "build Y") goes under "Open actions"
+  until the action is done, and is then removed. The logbook records
+  that it was done.
+- When a line of research is closed, add one line under "Closed lines
+  of research" saying what was closed and why, so that no session
+  repeats it without a new reason.
+- A question put to Carter goes under "Waiting on Carter" until he
+  answers. His answer becomes a decision like any other.
+
+### findings.md
+
+findings.md says what the project knows and where it stands. It holds
+conclusions, not plans. Its own opening section states the rules for
+what belongs in it.
+
+### next-steps.md
+
+next-steps.md is the plan for the next session. A reader with no
+context should be able to start work from it. Rewrite it at the end of
+every session: remove what was done, reorder what is left, and put each
+item's first concrete action in the item. Long-term plans and the
+reasons behind them belong in decisions.md; next-steps.md links there.
+
+### TODO.md
+
+TODO.md is the backlog of code and tooling still to be built: harness
+features, engine gaps, catalog fixes, tests, and the upstream requests
+that are outstanding. It is not a research plan. Remove an item when it
+is built, and mention the change in the logbook entry of the run that
+first uses it.
 
 ## The loop
 
-One turn per finished sweep. Nothing in between.
+One turn per finished sweep, and nothing in between.
 
-1. **Start of session.** Read [logbook.md](logbook.md), then
-   [findings.md](findings.md). `vml-logbook unread` lists sweeps that
-   ended with nobody reading them: those come first. `vml-queue status`
-   says what is next.
-2. **Launch** the next sweep as a background command and end the turn:
+1. **Find the next item.** `vml-queue status` says what is next.
+2. **Launch it** as a background command, and end the turn:
 
    ```sh
    vml-queue run-next --push
    ```
 
-   It runs the first queue item that is not done (resuming it if it was
-   interrupted), writes a **not yet read** logbook entry from the facts,
-   commits a checkpoint, pushes, and exits. The exit wakes the agent.
+   This runs the first queue item that is not done (resuming it if it
+   was interrupted), writes a logbook entry marked **not yet read**
+   from the facts alone, commits a checkpoint, pushes, and exits. The
+   exit wakes the agent.
 3. **Do not poll.** No progress checks, no sleeping loops, no "still
-   running" turns. If a fallback wake-up is set, one per sweep, at
-   least twice the sweep's expected duration, and its only job is to
-   notice a hung process.
-4. **Read** the summary when woken. Era table before the pooled
-   number. Compare with the predictions written in the config.
-5. **Write the entry** that replaces the stub, then the note if the
+   running" turns. A fallback wake-up, if you set one, is one per sweep
+   at no less than twice the sweep's expected duration, and its only job
+   is to notice a process that has hung.
+4. **Read the summary** when woken. Read the per-year table before the
+   pooled number, and compare both with the predictions written in the
+   config.
+5. **Write the entry** that replaces the stub, and the note if the
    result needs tables:
 
    ```sh
@@ -106,89 +193,191 @@ One turn per finished sweep. Nothing in between.
    ```
 
 6. **Checkpoint:** `vml-queue checkpoint --push -m "lab: <name> read"`.
-7. **Decide**, by the stop rules below, whether to launch the next
+7. **Decide**, using the stop rules below, whether to launch the next
    item or stop.
 
 ## Stop rules
 
-These bind a session working the queue. A goal-directed session
-treats the second and third as "read it and log a decision" (above),
-and keeps the rest.
+These bind a session that is working the queue. A goal-directed
+session treats the second and third rules as "read the result and log
+a decision" (see above) and keeps the rest.
 
-Stop and leave a logbook entry saying why, instead of launching the
+Stop, and leave a logbook entry saying why, instead of launching the
 next item, when:
 
-- the queue is empty. An agent extends the queue only with items the
-  plan in findings.md already names; a new direction is Carter's;
-- a result contradicts the prediction written in its config. The
-  surprise gets a note with rival explanations, and the next
-  experiment is the one that separates them, proposed, not run;
-- a result is far above its baseline (leakage first) or far below an
-  earlier one (a changed input first);
-- a run failed for a reason that is not understood;
-- a checkpoint could not be pushed twice in a row: work that cannot
-  leave the sandbox is work that can be lost;
+- the queue is empty. You may extend the queue only with items that
+  next-steps.md already names; a new direction is Carter's to choose;
+- a result contradicts the prediction written in its config. Write a
+  note with the rival explanations, and propose (do not run) the
+  experiment that would tell them apart;
+- a result is far above its baseline (suspect leakage first) or far
+  below an earlier one (suspect a changed input first);
+- a run failed for a reason you do not understand;
+- a checkpoint could not be pushed twice in a row. Work that cannot
+  leave the sandbox can be lost;
 - the next step would touch the holdout, promote a result, open a pull
   request into `Claude`, or deploy. Those are Carter's.
 
-## Where things are written
+## Running jobs in the sandbox
 
-| what | where | size | who reads it |
-|---|---|---|---|
-| what was done, in order | `docs/logbook.md`, newest first | 4–5 lines per sweep | Carter, first; an agent at start of session |
-| what is known now, and the plan | `docs/findings.md`, rewritten not appended | under ~150 lines | both |
-| tables, checks, reasoning | `docs/notes/<date>-<topic>.md` | as long as needed | whoever follows a link |
-| every run | the ledger (`experiments/ledger/<sandbox>.csv`) | one row per fold | the harness |
-| what ran, exactly | the sweep's report directory (config copy, `*_config.json`, `*_result.json`) | | the harness, and anyone checking a claim |
+The sandbox has 24 cores, 14 GB of memory and no swap. These limits
+shape how work is run.
 
-A logbook entry is **Did / Got / Concluded / Next**, one sentence or
-two each, numbers included, and says whether the result matched the
-prediction. A failed or pointless experiment gets an entry like any
-other. If an entry needs a table it needs a note.
+- **One heavy job at a time.** About 5 GB is the dataset frame, loaded
+  before any model is fitted. A 16-fold forest run takes about 4.5
+  minutes and peaks at about 6.5 GB. A LightGBM regressor on all rows
+  peaks near 8 GB. A backtest peaks at about 9.7 GB on
+  `dataset_v1.4.1` and at 12.4 to 13.8 GB on `dataset_v1.5.1`, so
+  nothing else may run beside a v1.5.1 backtest. On 2026-11-25 the
+  sandbox died under an 11.6 GB backtest (decision 68). Measure a new
+  kind of run on its own before putting it in a chain.
+- **Keep `n_jobs` at or below the real core count.**
+- **Launch long jobs with `run_in_background`.** The harness wakes the
+  session when the process exits. Launch a chain script directly, not
+  with `nohup ... &`, or the harness wakes on the launcher instead of
+  the chain. Foreground `sleep` is blocked. Never wait with
+  `while pgrep -f <name>`, and never `pkill -f` with a pattern that
+  appears in your own command line: both match the calling shell.
+- **A killed sweep is resumed by running it again** (`vml-queue
+  run-next`, or `vml-sweep --resume`). Completed runs are read back
+  from their result records and only the rest run.
+- **Check paths and names before a chain runs.** Build config paths
+  from the real file names and `test -f` each one. When copying a
+  config under a new name, replace the exact old `name` line: a
+  multi-line regular expression on `name = ".*"` also rewrites
+  `[model] name`. Every failed run is a trial in its cell's count.
+- **Count a new universe's training rows per fold before the sweep.**
+  A column that needs history, such as `dist_5y_high`, leaves the
+  early folds empty, and every run of the sweep then fails. Restrict
+  `folds` in a copy of the file, because `vml-sweep` refuses a report
+  directory whose config copy differs from the file.
+- **Commands are in `.venv/bin`.** Call `.venv/bin/vml-...` directly
+  if `vml-...` is not on the path. Read parquet with pandas or
+  pyarrow; duckdb is not in the environment.
 
-findings.md changes when a conclusion changes, not when a sweep ends.
-Most sweeps change the state table and nothing else.
+## Outputs, promotion and the catalog
+
+### What is tracked
+
+Everything a run generates is working output and is ignored by git:
+reports and figures under `reports/`, model bundles under
+`experiments/models/`, predictions under `predictions/`, the local
+ledger `experiments/results.csv`, and every new config under
+`experiments/`. Most configs are written, run once and forgotten, so an
+untracked config is never a decision.
+
+Two kinds of evaluation output are tracked:
+
+- **Promoted results**, meaning results worth review or good examples.
+  `uv run vml-promote <name> --note "one-line conclusion"` copies the
+  report and its artifacts (rules, figures) into
+  `reports/promoted/<name>/`, with a `config.toml` snapshot and a
+  `promoted.json` provenance record (run id, config hash, cell, headline
+  against the best baseline). It writes the note into the config, as
+  `note = "..."` outside the config hash, stages the config and the
+  promoted directory, and rebuilds the index
+  `reports/promoted/README.md`. A sweep is promoted by name and brings
+  its summary and CSVs, not its per-run reports. A single run of a sweep
+  is promoted by its report path,
+  `vml-promote reports/sweeps/<sweep>/<run>.md`. `vml-promote --list`
+  shows what could be promoted, and `--index` rebuilds the index.
+  Promoting a backtest or evaluation report by its path does not mark
+  the config as promoted: add the config to `experiments/KEEP` so that
+  `scripts/check_tracked_configs.py` passes.
+- **The sealed final-eval record**, `reports/final_evals.csv` and
+  `reports/final_eval/`. Always tracked.
+
+A config becomes tracked when its result is promoted, or when it is
+listed in `experiments/KEEP`. Never edit a config that has run: copy it
+under a new `name`.
+
+### Finding past work
+
+Before writing a new config, check whether it, or something close, has
+already run:
+
+```sh
+uv run vml-experiments                     # every config, grouped by cell, ranked by lift
+uv run vml-experiments list --grep <text>  # searches names and notes
+uv run vml-experiments list --model lightgbm --label beat_spy
+uv run vml-experiments runs                # everything ever run, from the ledger
+uv run vml-experiments show <config-or-name>
+uv run vml-experiments sweeps --out reports/sweep_digest.md
+```
+
+The listing groups configs by cell (label, horizon, scheme, dataset
+version), because numbers from different cells cannot be compared.
+Inside a cell it ranks configs by **lift**: the headline metric of the
+latest completed run minus the best baseline on the same metric in the
+same cell (`scripts/run_baselines.py` produces the baselines; a cell
+without them reads `none run`). Each row also shows the config's note,
+whether the holdout has been looked at for it, and a star if it was
+promoted.
+
+`sweeps` reads every sweep summary and writes one markdown digest: per
+cell, the top runs across all sweeps, and the mean metric for each
+feature set, model and swept parameter. It is pooled and
+selection-biased. Use it to rank candidates and settle parameters,
+never to report a result.
+
+Search the ledger by `config_path` as well as by name: runs with a
+derived name do not carry the config's file name.
+
+### The sealed holdout
+
+An agent never runs `scripts/run_final_eval.py`. Carter takes each
+look. How a look works, and how further looks are counted, is in
+[experiments.md](experiments.md), "The sealed holdout".
 
 ## Git
 
-- Work on a lab branch named `claude/lab-<date>`. Create it with
-  `vml-queue new-lab`, which branches from `origin/Claude`. Never commit
-  to `Claude` or `main`. Never create a lab branch from another lab
-  branch, and never merge one lab branch into another. A lab branch is
-  never merged into `Claude`, so an older lab branch in its history
-  stays there for good, and the branch's distance from `Claude` grows
-  with every session (decision 68). `vml-queue checkpoint` checks for
-  this and refuses to run on a lab branch whose history contains the
-  last commit of another lab branch, whether that branch still exists
-  or was archived as a tag.
-- `vml-queue checkpoint` force-adds what a crash would take with it:
-  the ledger shard, sweep summaries, config copies, result records,
-  queued configs, the logbook, findings and notes. It refuses to run
-  off a `claude/` branch.
+- **Lab branches.** Work on a lab branch named `claude/lab-<date>`,
+  created with `vml-queue new-lab`, which branches from `origin/Claude`.
+  Never commit to `Claude` or `main`. Never create a lab branch from
+  another lab branch, and never merge one lab branch into another
+  (decision 68). `vml-queue checkpoint` refuses to run on a lab branch
+  whose history holds the last commit of another lab branch, live or
+  archived.
+- **Checkpoints.** `vml-queue checkpoint` force-adds what a crash would
+  take with it: the ledger shard, sweep summaries, config copies,
+  result records, queued configs, the logbook, the decision records,
+  findings, next steps and notes. Backtest reports and their CSVs must
+  be added with `git add -f` first. It refuses to run off a `claude/`
+  branch. Push after every checkpoint; if a push fails, say so and try
+  again after the next sweep.
 - **Lab branches are not merged.** They hold working material. What
-  reaches `Claude` goes on a separate `claude/<topic>` branch: code
-  and tests, docs, promoted results. `scripts/check_tracked_configs.py`
-  names anything else, `--fix` untracks it, and the `pr-hygiene`
-  workflow runs the same check on every pull request into `Claude` or
-  `main`.
-- **A finished lab branch is archived, not kept.** Once the session's
-  results branch has merged into `Claude`, run
-  `vml-queue archive-lab <branch> --delete`. It tags the branch's last
-  commit `archive/lab-<date>` and deletes the branch. The configs and
-  reports remain reachable through the tag, and the branch list stays
-  short.
-- Push after every checkpoint. If a push fails, say so in the turn's
-  output and try once more after the next sweep.
+  reaches `Claude` goes on a results branch, `claude/results-<date>`:
+  code and tests, docs, promoted results and the ledger shard.
+  `scripts/check_tracked_configs.py` names anything else, `--fix`
+  untracks it, and the `pr-hygiene` workflow runs the same check on
+  every pull request into `Claude` or `main`.
+- **Building the results branch.** Create it from the code branch or
+  `Claude`, then bring over the session's records:
+  `git checkout <lab> -- docs TODO.md experiments/ledger
+  experiments/queue.toml experiments/KEEP reports/promoted`, plus the
+  configs named in each `promoted.json` and in `KEEP`. Run `vml-promote`
+  in the main checkout on the lab branch first, because it needs the
+  reports on disk. `scripts/check_tracked_configs.py` must print
+  "nothing added". Push it. Carter opens the pull request.
+- **Archive a finished lab branch.** Once the session's results branch
+  has merged into `Claude`, run
+  `uv run vml-queue archive-lab claude/lab-<date> --delete` from any
+  other branch. It tags the branch's last commit `archive/lab-<date>`
+  and deletes the branch. The configs and reports stay reachable
+  through the tag.
+- **Switching branches removes the lab's tracked files from disk.** To
+  get a config back as an ignored file:
+  `git checkout origin/claude/lab-<date> -- <config>`, then
+  `git reset -q -- <config>`.
 
 ## The ledger
 
-Runs append to the file named by `VML_RESULTS`, in a sandbox a shard
-under `experiments/ledger/`, tracked and pushed with the checkpoint.
-Every reader of the ledger reads the local `experiments/results.csv`,
-every shard beside it, and the files named in `VML_LEDGER_READ`, each
-row once. So trial counts are complete wherever the shards have been
-fetched, and nothing has to be merged by hand.
-
+Runs append to the file named by `VML_RESULTS`. In a sandbox this is a
+shard under `experiments/ledger/`, tracked and pushed with each
+checkpoint. Every reader of the ledger reads the local
+`experiments/results.csv`, every shard beside it, and the files named in
+`VML_LEDGER_READ`, each row once. Trial counts are therefore complete
+wherever the shards have been fetched, and nothing is merged by hand.
 In a clone-mode sandbox the host's ledger is mounted read-only:
 
 ```sh
@@ -196,133 +385,21 @@ export VML_RESULTS="experiments/ledger/$SANDBOX_VM_ID.csv"
 export VML_LEDGER_READ="/run/sandbox/source/experiments/results.csv"
 ```
 
-## Memory
+If the sandbox dies while a run writes its row, the shard ends in a
+partial row and the reader raises `LedgerError` naming the file. Delete
+the fragment and run that config again.
 
-A 16-fold forest run used to need about 18 GB: every fitted fold model
-kept its whole training frame alive through the sample weights it
-stored. Fixed 2026-09-28 (weights and targets are copied): a full
-16-fold forest run now peaks at 6.4–6.7 GB, measured in a 14 GB
-sandbox, with identical fold metrics. A sweep that is killed is
-resumed by running it again (`vml-queue run-next`, or
-`vml-sweep --resume`): completed runs are read back from their result
-records and only the rest is run.
+## End of a session
 
-## Setting up (Carter, once)
+Before the session ends:
 
-### 1. A machine user for agents
-
-1. Create a second GitHub account for agents (GitHub allows one
-   machine account per person). Give it its own email address.
-2. In the repository: Settings → Collaborators → add the account with
-   the **Write** role. Accept the invitation from the machine account.
-3. Signed in as the machine account, create a token. Which kind
-   depends on who owns the repository (check GitHub's current
-   documentation; this is as understood in September 2026):
-   - **The repository is under your personal account** (today): a
-     fine-grained token cannot reach a repository owned by another
-     user, so use Settings → Developer settings → Personal access
-     tokens → **Tokens (classic)** with the `repo` scope only. The
-     scope is broad, but a token can do no more than its account can,
-     and the machine account has been invited to this one repository
-     with the Write role. Do not tick `workflow`, `admin:*` or
-     `delete_repo`.
-   - **If you move the repository into an organization** (free): use a
-     **fine-grained token**, resource owner the organization,
-     repository access only `value-ml-models`, permissions
-     **Contents: Read and write** and **Pull requests: Read and
-     write**, nothing else. This is the tighter setup.
-   - Either way: an expiry of 90 days, and a reminder to rotate it.
-4. On the host, give the sandbox that token instead of yours:
-
-   ```sh
-   sbx secret set github --sandbox <sandbox-name> -t "<the token>"
-   ```
-
-   `<sandbox-name>` is `$SANDBOX_VM_ID` inside the sandbox.
-5. Inside the sandbox, so commits carry the agent's name and not yours:
-
-   ```sh
-   git config user.name  "<machine account name>"
-   git config user.email "<machine account email>"
-   ```
-
-6. The sandbox proxy injects credentials for HTTPS remotes. `origin`
-   is an SSH URL today; inside the sandbox, if a push fails:
-
-   ```sh
-   git remote set-url origin https://github.com/CarterYancey/value-ml-models.git
-   ```
-
-### 2. Branch rules
-
-Settings → Rules → Rulesets → New branch ruleset, twice.
-
-Rulesets on a private repository need a paid plan on a personal
-account (public repositories and organizations on a paid plan have
-them); if Rulesets is not offered, the older Settings → Branches →
-branch protection rules cover the first of the two below.
-
-**Protect the integration branches.** Target: `main` and `Claude`.
-Rules: Restrict deletions; Block force pushes; Require a pull request
-before merging (required approvals: 1); Require status checks to pass
-→ add `tracked-configs` once the `pr-hygiene` workflow has run once.
-Bypass list: yourself, since nobody else can approve your own pull
-requests. The machine account is not on it, so its pull requests wait
-for you.
-
-**Keep agents in their namespace.** Target: all branches, *excluding*
-`claude/**`. Rules: Restrict creations, Restrict updates, Restrict
-deletions. Bypass list: yourself (Repository admin). The machine
-account then can create and push `claude/**` branches and nothing
-else, and cannot merge its own pull request because it cannot approve
-it.
-
-With both in place the worst an agent can do is make a mess under
-`claude/`, which deleting the branches undoes.
-
-### 3. Sandbox resources
-
-The sandbox this was written in has 24 cores, 14 GB of memory, no swap
-and a 20 GB disk. After the memory fix a 16-fold forest run peaks at
-6.4–6.7 GB there, so 14 GB is enough for one sweep at a time; about
-5 GB of that is the dataset frame, resident before any model is
-fitted. LightGBM and XGBoost have not been measured. Two sweeps at
-once need twice the memory: the queue runs one. Keep `n_jobs` at or
-below the cores the sandbox really has.
-
-### 4. Starting a session
-
-In the sandbox, from the repository root:
-
-```sh
-uv sync    # or: uv pip install -e .
-uv run vml-queue new-lab      # claude/lab-<today>, created off origin/Claude
-cat >> /etc/sandbox-persistent.sh <<'EOF'
-export VML_RESULTS="experiments/ledger/$SANDBOX_VM_ID.csv"
-export VML_LEDGER_READ="/run/sandbox/source/experiments/results.csv"
-EOF
-vml-queue status
-```
-
-Then tell the agent: "Work the queue, following docs/agents.md."
-What to read when you come back: `docs/logbook.md`, top down, until
-you reach an entry you have seen.
-
-### 5. Bringing results into `Claude`
-
-```sh
-git fetch origin
-git checkout -b claude/results-<date> origin/Claude
-git checkout origin/claude/lab-<date> -- docs/ experiments/ledger/
-vml-promote <name> --note "..."        # for each result worth keeping
-python scripts/check_tracked_configs.py   # must print "nothing added"
-git commit -m "..." && git push -u origin claude/results-<date>
-gh pr create --base Claude --fill
-```
-
-When the pull request has merged, close the lab branch:
-
-```sh
-git checkout claude/results-<date>
-uv run vml-queue archive-lab claude/lab-<date> --delete   # tag archive/lab-<date>, delete the branch
-```
+1. Every run has a logbook entry. No **not yet read** stub is left.
+2. Every decision is in the decision log, and decisions.md matches it.
+3. findings.md is rewritten if a conclusion changed.
+4. next-steps.md is rewritten for a reader with no context, including
+   what is waiting on Carter.
+5. TODO.md has the code items the session found or finished.
+6. Results worth keeping are promoted.
+7. A `claude/results-<date>` branch that passes
+   `scripts/check_tracked_configs.py` is pushed for Carter to open the
+   pull request from.

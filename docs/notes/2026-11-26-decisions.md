@@ -1353,3 +1353,46 @@ the holdout report. The forest's top 20 picks in each of 2021, 2022 and
    "closed". The TODO lists the three remedies first. Not done: no
    holdout look, no change to the candidate's deployment or its list,
    and no new backtest.
+
+### 86. The records are reorganized: a file of decisions in force, a file of next steps, and an agent manual without Carter's setup
+
+*Asked by Carter, 2026-11-27.* The findings had become the entry point
+for next steps, the TODO had grown to 1,783 lines of session-by-session
+plans, the decisions in force were spread over two logs of 4,500 lines,
+and docs/agents.md mixed the agent's rules with Carter's one-time setup.
+
+*Decided:*
+
+1. **docs/decisions.md** lists every decision that still affects future
+   work, grouped by subject, with why it was made and the numbers of the
+   decisions that hold the reasoning. It also lists the one-time actions
+   not yet done, the questions waiting on Carter, and the closed lines of
+   research. It was built from a review of decisions 1 to 85. Decisions
+   are still logged here, in full, and decisions.md is updated in the
+   same commit. When this file passes about 1,500 lines, the log
+   continues in a new dated file and the numbering continues.
+2. **docs/findings.md** says what is known and where the project stands.
+   It holds conclusions, not plans, and its opening section states the
+   rules for what belongs in it. The size limit is replaced by those
+   rules.
+3. **docs/next-steps.md** is the plan for the next session, rewritten at
+   the end of every session. It replaces the findings' "Next session"
+   and "Plan" sections and the TODO's "Next, after ..." sections.
+4. **TODO.md** is the backlog of code and tooling still to build, plus
+   the outstanding upstream requests. Completed items were removed; the
+   old file is in git history.
+5. **docs/agents.md** is the agent's manual. Carter's setup moved to
+   **docs/setup.md**. docs/workflow.md was removed: promotion and the
+   catalog moved into agents.md, and the sealed holdout's procedure into
+   docs/experiments.md.
+
+*Found in the review, and put to Carter:* the portfolio rule (85.1)
+judges on time-weighted return while decision 72 made the CAGR the
+metric of record; decision 70.1's caveat about the 2020 window is not
+repeated in 85.1; and the region of 85.3 (30% below the one-year high)
+is the universe W30 of round 6 (decisions 70 and 71), whose forest was
+already trained and backtested inside it, ending within 2% of SPY
+before 2021. The region search starts from that run.
+
+*Not changed:* no rule, criterion or result. Every entry in decisions.md
+restates a numbered decision.

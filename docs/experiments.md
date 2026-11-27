@@ -41,7 +41,7 @@ How to write what the harness runs. For the commands see the
   calibration; `split_folds.parquet` citation and effective sample sizes
   in the appendix) are written to `reports/`. Generated reports are
   **git-ignored working output** — promote the ones worth keeping (see
-  [workflow.md](workflow.md)).
+  [agents.md](agents.md), "Outputs, promotion and the catalog").
 
 - Training and evaluation are distinct tasks: `vml-run` saves the fitted
   per-fold models as a bundle under `experiments/models/` (git-ignored),
@@ -578,3 +578,45 @@ still lists every run), and the per-seed run reports move to
 `reports/sweeps/<name>/seeds/`. A candidate is only as good as its
 worst seed — read `_min` before `_mean`; with two or three seeds the
 interval is wide by construction, which is the honest width.
+
+## The sealed holdout
+
+The runner refuses the sealed `holdout` scheme and the diagnostic
+schemes (`entity_holdout`, `random_kfold`). Each has one entry point:
+`scripts/run_final_eval.py` for the holdout, one look per cell, and
+`scripts/run_diagnostic.py` for the registered diagnostics (see
+[diagnostics.md](diagnostics.md)). Looks at the holdout are Carter's to
+take.
+
+The final eval takes the config selected on walk-forward as it is, with
+no copied `*_holdout.toml`:
+
+```sh
+uv run python scripts/run_final_eval.py experiments/<selected>.toml
+```
+
+The scheme is switched to `holdout` in memory. The run keeps the
+experiment's name: the report goes to `reports/final_eval/`, the row to
+`reports/final_evals.csv`, and `vml-experiments` shows `✓ look 1/1`
+next to the config.
+
+The holdout is the one number nobody selected on, and it stays that way
+only while it is looked at **once per cell**. A cell is the label, the
+horizon and the holdout window (the fold's test years from
+`split_folds.parquet`). A dataset version that changes only features
+reuses the same rows and does not re-seal them. Run a look when you
+would act on the model; choosing between candidates is walk-forward's
+job. A second look in a cell that has been looked at is refused unless
+a reason is given:
+
+```sh
+uv run python scripts/run_final_eval.py experiments/<other>.toml \
+    --reopen "new model family after the v1.4 relvalue features"
+```
+
+It then runs as look 2. The reason is logged, and the report, the
+ledger and the catalog (`✓ look 2/2`) all carry the count. With N looks,
+the best number is inflated by about the top order statistic of N
+draws, so the count is part of the result and is never hidden. Ledgers
+written under the older `phase` column are migrated in place, and their
+rows count as looks in their cell.
