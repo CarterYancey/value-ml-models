@@ -682,6 +682,59 @@ in [PLAN.md](PLAN.md); check items off (and add new ones) as work proceeds.
       `n_estimators`) at full budget via a follow-up sweep file — no
       harness change needed, just two sweep configs.
 
+### Next, after 2026-11-27, second part (decision 81: why not the market)
+
+Carter asked why models with precision far above the base rate have not
+beaten the market in backtests, and what is left to try. The answer, with
+twelve backtests, is in docs/notes/2026-11-27-why-not-the-market.md and
+decision 81. In short: the candidate beat SPY by 3 points a year for
+sixteen years and trailed by 8 for six; the equal-weighted, size-broad
+structure explains the whole recent gap (a cap-weighted book of the
+top-decile large caps with no model keeps pace with SPY and beats it over
+the window); the model's skill is loser-avoidance, which leaves out the
+volatile winners, so inside the cap-weighted book every cut trades recent
+return for safety; the model has no input about the market's level; and
+the deposits weight the years it trailed. The closest book to the goal is
+the blend's top 50 large caps with an earnings yield of 5% or more,
+cap-weighted (E11): 12.1% a year against SPY's 10.9%, drawdown −37%
+against −53%, one point a year behind SPY in 2021 to 2026, 3.9% less
+final money, one run at one seed.
+
+- [ ] **E11 at seeds 232 and 1776, and E11 with the rank sell
+      discipline** (`[sell] max_rank_pct = 0.2`, which added 12% of final
+      value to the candidate). Four backtests, about 2.5 minutes each at
+      9.4 GB, one at a time. Write the decision and its predictions
+      first. If the seeds hold within half a point and the sell
+      discipline adds what it did before, E11 with the sell discipline
+      passes the rule of 81.2 on all three clauses (final value above
+      SPY's, within 2 points a year of SPY in 2021 to 2026, drawdown no
+      deeper than SPY's).
+- [ ] **Carter: what is the goal?** By final money against SPY on
+      2026-08-21, inside a mega-cap boom, no loser-avoiding book wins. By
+      drawdown, losers and return per unit of market risk, E11 wins on
+      every reading. The program needs to know which, and over what kind
+      of period it is judged.
+- [ ] **Upstream: the market-state columns** (the calibration plan's
+      request, decision 46) are now the one thing that would let a model
+      learn when to buy less rather than have an earnings-yield floor
+      impose it. The floor worked as a stand-in: it recovered 1.6 of the
+      2.6 points E10 lacked in 2021 to 2026.
+- [ ] The valuation floor on the equal-weighted candidate (E5 at 5%, E6
+      at 8%) held no cash, because ten stocks always cleared it. A floor
+      that is meant to hold cash needs a tighter threshold than 8% or a
+      smaller candidate pool; E6's 2021 to 2026 return of 12.6% against
+      the candidate's 7.1% is the reason to look, its 8% less final money
+      and deeper drawdown the reason for caution.
+- [ ] The backtest engine cannot yet: sell at the label's horizon, buy
+      quarterly, or gate one model's candidates by another's rank. Each
+      is a `Strategy` or signal change with tests. None is urgent after
+      decision 81; the structure and the valuation floor mattered more
+      than any of them was predicted to.
+- [ ] Not to pursue: cuts deeper than the top 50 (E3's drawdown was
+      −60%), the forest alone in a cap-weighted book (E2, E7, E8, which
+      buy utilities, REITs and staples), fundamentals-only feature sets
+      (decisions 78 to 80), score-threshold cash rules (decision 46).
+
 ### Next, after 2026-11-27 (decisions 78 to 80)
 
 Carter asked for three things: his run-up labels (a large rise with no

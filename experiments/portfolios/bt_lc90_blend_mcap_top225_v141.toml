@@ -1,0 +1,64 @@
+# Decision 81 of docs/notes/2026-11-26-decisions.md (2026-11-27), second
+# round (81.6). The first round's E2 and E3 kept the top 50 and 25 of a
+# monthly cross-section of about 450 large caps, not half of it as the
+# decision said (the universe was counted from January snapshots alone,
+# about 100 names, where the backtest's monthly cross-section holds every
+# stock with a snapshot inside 200 days). This run corrects the design.
+#
+# # E9: E8 with the candidate's three-leg mean rank (forest, 12-month
+# momentum, return on capital) in place of the forest alone, cap-
+# weighted. Return on capital removed the forest's utilities and REITs
+# in the candidate (findings conclusion 4); this asks whether it does so
+# inside a cap-weighted large-cap book.
+#
+# Predictions (decision 81.6), written before the run:
+#   (j) E9 is within 0.5 points a year of E1 over 2005-2026 and ahead of
+#       E8 by 0.5 or more; its sector mix is close to E1's. Rival: E9 is
+#       ahead of E1 by 0.5 or more a year in both periods at a shallower
+#       drawdown; then the blend's exclusion is the arm to carry.
+#
+# Run: .venv/bin/vml-backtest experiments/portfolios/bt_lc90_blend_mcap_top225_v141.toml
+
+name = "bt_lc90_blend_mcap_top225_v141"
+dataset_version = "dataset_v1.4.1"
+prices_version = "prices_v1.0"
+
+bundles = [
+    "experiments/models/forest_nonloser_dd30_3y_v141_f259c702a6a6",
+    "experiments/models/factor_mom_12_2_3y_v141_121349f6e682",
+    "experiments/models/factor_roc_greenblatt_3y_v141_4457ca01bcfb",
+]
+
+[signal]
+combine = "mean_rank"
+max_staleness_days = 200
+model_update = "refit"
+label_lag_days = 45
+
+[[investability]]
+column = "dollar_volume_3m_rank"
+op = ">="
+value = 0.2
+
+[[investability]]
+column = "log_marketcap_rank"
+op = ">="
+value = 0.9
+
+[portfolio]
+strategy = "buy_and_hold"
+top_k = 225
+weighting = "marketcap"
+monthly_cash = 1000.0
+
+[execution]
+cost_bps = 35.0
+benchmark_cost_bps = 0.0
+max_quote_age_days = 3
+delist_after_days = 30
+fractional_shares = true
+
+[window]
+start = 2005-01-01
+end = 2026-08-21
+valuation_end = 2026-08-21

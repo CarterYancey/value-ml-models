@@ -1,0 +1,14 @@
+{
+  "name": "bt_lc90_blend_mcap_top50_v141_37db1919b8fe6caf",
+  "promoted_utc": "2026-11-27T02:54:24+00:00",
+  "source_report": "reports/backtest/bt_lc90_blend_mcap_top50_v141_37db1919b8fe6caf.md",
+  "run_id": "",
+  "config_hash": "",
+  "git_sha": "",
+  "dataset_version": "",
+  "config_path": "",
+  "note": "Decision 81 E10: the candidate's blend choosing the top 50 top-decile large caps, cap-weighted: matches the no-model book's TWR (11.88%) with a drawdown of -37.4%, beats SPY by 2.2 points a year in 2005-2020 and trails by 2.6 in 2021-2026, ending with 5% less money; every cut by the model inside the cap-weighted book trades recent return for fewer losers and a shallower drawdown",
+  "files": [
+    "bt_lc90_blend_mcap_top50_v141_37db1919b8fe6caf.md"
+  ]
+}

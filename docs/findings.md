@@ -25,13 +25,18 @@ to a build that no longer exists and is context only.
 
 ## Next session: start here
 
-1. The latest session (2026-11-26 into 2026-11-27) wrote
-   [the rare-region program](notes/2026-11-26-rare-region.md), decisions
-   78 to 80 of [the decision log](notes/2026-11-26-decisions.md). It
-   tried Carter's run-up labels, feature sets built from fundamentals,
-   and five ways of making a model attend to stocks with a strong record
-   that have fallen hard. Nothing passes the screen rule. Earlier the
-   same day, [the v1.5.1 program](notes/2026-11-26-v151-program.md)
+1. The latest session (2026-11-26 into 2026-11-27) ended with Carter's
+   question, why the models have not beaten the market, answered in
+   [why not the market](notes/2026-11-27-why-not-the-market.md)
+   (decision 81 of [the decision log](notes/2026-11-26-decisions.md)):
+   the structure, the loser-avoidance trade, the missing market-level
+   input and the timing of the deposits, with twelve backtests. Before
+   that it wrote [the rare-region program](notes/2026-11-26-rare-region.md),
+   decisions 78 to 80: Carter's run-up labels, feature sets built from
+   fundamentals, and five ways of making a model attend to stocks with a
+   strong record that have fallen hard. Nothing there passes the screen
+   rule. Earlier the same day,
+   [the v1.5.1 program](notes/2026-11-26-v151-program.md)
    (decisions 74 to 77) found that the new columns, labels and boosted
    models add nothing to the candidate. The sessions of 2026-11-25 wrote
    [the fallen-stock program](notes/2026-11-25-fallen-stocks.md)
@@ -84,6 +89,32 @@ control must be positive at about two standard errors, ahead in ten or
 more of the sixteen years, no worse than noise in either half of the
 period, and this must hold for both outcomes. A model that passes goes
 on to three seeds and then a backtest.
+
+**Why the candidate has not beaten the market (decision 81).** Carter
+asked why models that predict their labels far above the base rate have
+not beaten the market. The candidate beat SPY by 3 points a year over
+2005 to 2020 (time-weighted 12.4% against 9.4%) and trailed by 8 over
+2021 to 2026 (7.1% against 15.3%); the money-weighted CAGR counts the
+six years most, because the deposits made the account largest then.
+Four causes were measured. First, the structure: a cap-weighted book of
+this dataset's top-decile large caps with no model at all ended with 7%
+more money than SPY, a drawdown of −46% against −53%, and kept pace in
+2021 to 2026 (15.6% against 15.3%), where the equal-weighted candidate
+earned 7.1%. Second, the skill is loser-avoidance, and loser-avoidance
+leaves out the volatile winners: inside that cap-weighted book every
+cut by the model lowered the 2021 to 2026 return while it lowered the
+drawdown and the losers, the deeper the cut the more of both. Third, the
+model has no input about the market's level; an absolute earnings-yield
+floor of 5%, a row-level stand-in, recovered most of the recent gap.
+Fourth, the deposits. The closest portfolio to the goal is the
+candidate's blend choosing the top 50 large caps with an earnings yield
+of 5% or more, cap-weighted: 12.1% a year against SPY's 10.9% over
+2005 to 2026, drawdown −37% against −53%, beta 0.77, one point a year
+behind SPY in 2021 to 2026, and 3.9% less final money. It is one run at
+one seed and goes to three seeds and the sell discipline next. The
+thesis held for sixteen years that held two crashes and failed in a
+six-year stretch carried by the stocks a loser-avoiding model declines
+to hold.
 
 **The rare-region program is closed (decisions 78 to 80).** Carter
 asked whether a model can learn the rare case: a stock with a strong
@@ -220,6 +251,20 @@ seven failed runs of 2026-11-24.
     emphasized arms and every subspace arm sit within two standard
     errors of their unemphasized counterparts, and the same columns lead
     at a third of the weight.
+14. **The structure explains the recent gap to SPY; the model explains
+    none of it** (decision 81). A cap-weighted book of the top-decile
+    large caps with no model kept pace with SPY in 2021 to 2026 and beat
+    it over the whole window with a shallower drawdown. An
+    equal-weighted book of the same names cost 2.9 points a year in 2021
+    to 2026 and gained 1.5 in 2005 to 2020.
+15. **Inside the index's own structure, avoiding the predicted losers
+    trades return for safety** (decision 81). Every cut by the model
+    lowered the 2021 to 2026 return and the drawdown together, the
+    deeper the cut the more of both; the forest alone pays more for the
+    same safety than the blend, because it buys utilities, REITs and
+    staples. Over 2005 to 2020 the blend's top 50 beat SPY by 2.2 points
+    a year with 15 points less drawdown. An absolute earnings-yield floor
+    inside the safe set recovered most of the 2021 to 2026 shortfall.
 
 ## The thesis, and the working assumption
 
@@ -239,6 +284,11 @@ yet show whether the buys of 2021 to 2023 recover.
 
 - Is 2021 to 2026 a bubble, and does the candidate lead again when it
   deflates? Only paper trading and time can answer.
+- What is the goal, exactly? By final money against SPY on a date
+  inside a mega-cap boom, no loser-avoiding book in the record wins, and
+  the best comes within 4%. By drawdown, losers and return per unit of
+  market risk, that book wins on every reading. Carter's call (decision
+  81).
 - What separates the rare region's good years (2009 to 2012, 2020) from
   its bad ones (2013 to 2018)? Nothing in the row. The state of the
   market at the snapshot date would, and that is an upstream column.
@@ -256,9 +306,16 @@ candidate is paper-traded as it is, and the search continues.
 1. **Paper trading** follows [paper-trading.md](paper-trading.md). The
    November 2026 list came from the v1.4.1 bundles on 2026-11-24. The
    v1.5.1 build gives the same forest, so nothing is refit.
-2. **Carter's open decisions:** the larger-half filter (58), the
-   training cutoff (60), the F50 portfolio (71), the price floor (71.3)
-   and the Foamex request (73).
+2. **Carter's open decisions:** the goal itself (final money against
+   SPY by a date, or return per unit of risk; decision 81), the
+   larger-half filter (58), the training cutoff (60), the F50 portfolio
+   (71), the price floor (71.3) and the Foamex request (73).
+2a. **The next backtests** are the cap-weighted large-cap book with the
+   earnings-yield floor (decision 81's E11) at the forest's other two
+   seeds and with the rank sell discipline: four runs, a new decision
+   with predictions. If the seeds hold within half a point and the sell
+   discipline adds what it added to the candidate, that book passes the
+   rule of decision 81.2 on all three clauses.
 3. **Upstream requests:** market-state columns per snapshot date (now
    also the rare region's open question), a peer-relative label, a
    recovery label measured inside a region, and the Foamex price check.

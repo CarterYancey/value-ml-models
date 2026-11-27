@@ -86,3 +86,16 @@ experiments/sweeps/forest_emph10_fund_3y.toml
 experiments/sweeps/forest_subspace_fund_3y.toml
 experiments/sweeps/lgbm_colsample_fund_3y.toml
 experiments/sweeps/lgbm_quantile_fund_3y.toml
+# Decision 81 (2026-11-27): why the candidate has not beaten the market. E1, E10 and E11 are promoted; these nine are their companions (docs/notes/2026-11-27-why-not-the-market.md).
+experiments/portfolios/bt_lc90_mcap_top50_v141.toml
+experiments/portfolios/bt_lc90_mcap_top25_v141.toml
+experiments/portfolios/bt_lc90_equal_top50_v141.toml
+experiments/portfolios/bt_candidate_ey5_to2026_v141.toml
+experiments/portfolios/bt_candidate_ey8_to2026_v141.toml
+experiments/portfolios/bt_lc90_mcap_top340_v141.toml
+experiments/portfolios/bt_lc90_mcap_top225_v141.toml
+experiments/portfolios/bt_lc90_blend_mcap_top225_v141.toml
+experiments/portfolios/bt_lc90_blend_mcap_top100_v141.toml
+experiments/portfolios/bt_lc90_mcap_all_v141.toml
+experiments/portfolios/bt_lc90_blend_mcap_top50_v141.toml
+experiments/portfolios/bt_lc90_blend_mcap_top50_ey5_v141.toml
