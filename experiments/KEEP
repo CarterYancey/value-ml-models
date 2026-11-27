@@ -67,6 +67,17 @@ experiments/portfolios/bt_nonloser_mom_roc_top10_cap2_rankfloor_s232_v141.toml
 experiments/portfolios/bt_nonloser_mom_roc_top10_cap2_rankfloor_s1776_v141.toml
 experiments/portfolios/bt_nonloser_mom_roc_top10_cap2_rankfloor_largehalf_s232_v141.toml
 experiments/portfolios/bt_nonloser_mom_roc_top10_cap2_rankfloor_largehalf_s1776_v141.toml
+# The dataset_v1.5.1 program of 2026-11-26 (docs/notes/2026-11-26-v151-program.md,
+# decisions 76 and 77): the four promoted backtests' portfolio configs and
+# the four bundle configs their legs were trained from.
+experiments/forest_nonloser_dd30_3y_v151.toml
+experiments/forest_nonloser_dd30_3y_events_v151.toml
+experiments/factor_mom_12_2_3y_v151.toml
+experiments/factor_roc_greenblatt_3y_v151.toml
+experiments/portfolios/bt_nonloser_forestC_top10_cap2_rankfloor_v151.toml
+experiments/portfolios/bt_nonloser_events_forestC_top10_cap2_rankfloor_v151.toml
+experiments/portfolios/bt_nonloser_mom_roc_top10_cap2_rankfloor_v151.toml
+experiments/portfolios/bt_nonloser_events_mom_roc_top10_cap2_rankfloor_v151.toml
 # Decisions 78-80 (2026-11-26/27): the run-up labels, the fundamentals-only sets and the rare-region program. Read in docs/notes/2026-11-26-rare-region.md; the three promoted sweeps carry the records, these are their companions.
 experiments/sweeps/baseline_fund_labels_3y.toml
 experiments/sweeps/forest_fund_labels_5y.toml

@@ -728,11 +728,11 @@ docs/notes/2026-11-26-rare-region.md).
       money half the years after 2008) is recorded, not followed. If a
       short-horizon reversal arm is ever wanted, it starts there, on
       the screen, with the losers bar written first.
-- [ ] The eleven unpromoted configs of decisions 74 to 77 that
-      `scripts/check_tracked_configs.py` lists (the v1.5.1 bars,
-      backtests and the LightGBM/XGBoost feature sweeps) are left as
-      they were for Carter's call; the decision 78–80 companions are in
-      `experiments/KEEP`.
+- [ ] Three tracked configs of decisions 74 to 76 are neither promoted
+      nor in `experiments/KEEP` (`scripts/check_tracked_configs.py`):
+      `baseline_v151_labels_3y`, `lgbm_v151_features_nonloser_3y`,
+      `xgb_v151_features_nonloser_3y`. Left as the earlier session left
+      them, for Carter's call; the decision 78–80 companions are in KEEP.
 
 ### Next, after 2026-11-26 (decisions 74 to 77)
 
