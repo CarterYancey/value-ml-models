@@ -1,6 +1,6 @@
 # Portfolio backtest — bt_lc90_blend_mcap_top50_ey5_v141
 
-- run `bfa63bccabb4`, git `844d3cc7d9d90b38701e6a2c0e0b6ff147cf90c2`, backtest config `1cd60c0048a79390`
+- run `b6aa97837417`, git `2838ed2271dccc24aa41e0a00c823e9f9c7a3a5d`, backtest config `1cd60c0048a79390`
 - dataset `1.4.1` (sha256 `be2b664c6739b93d5b5a7df1d085c09f09575071dd02d1f1426ed1586e052085`), price panel `prices_v1.0` (benchmark `SPY`)
 - buy window: 2005–2026 (last buy 2026-08-21), valuation through 2026-08-21; trade years past a bundle's walk-forward folds are served by `model_update = "refit"` (see the bundle list below)
 - deposits: 1,000.00 on the first trading day of each month, identically into both legs
@@ -15,6 +15,18 @@
 | benchmark | 260,000.00 | 1,326,613.94 | 1,066,613.94 | 13.21% | -52.91%      | 10.94% | 0.00       |
 
 `cagr` is the money-weighted annual growth rate of the deposits into the final value (XIRR), the metric of record: both legs get identical deposit dates and accounting, so it ranks them as the final value does. `twr` is the time-weighted return, the compounding of one unit held from the first day to the last; it gives a month on a tiny early account the weight of a month on a full one, so it is read only beside the final value, the CAGR and the per-year table (decision 72).
+
+## Final value under other deposit schedules
+
+| schedule                                                           | strategy     | benchmark    | ratio |
+| ------------------------------------------------------------------ | ------------ | ------------ | ----- |
+| flat, the run's own schedule                                       | 1,274,597.37 | 1,326,613.94 | 0.961 |
+| growing 3% a year                                                  | 1,133,786.83 | 1,189,988.97 | 0.953 |
+| growing 6% a year                                                  | 1,006,475.52 | 1,063,802.12 | 0.946 |
+| all of it on the first buy date                                    | 3,066,122.43 | 2,454,109.76 | 1.249 |
+| flat over the first three quarters of the buy dates, nothing after | 1,569,380.27 | 1,629,251.71 | 0.963 |
+
+Each schedule deposits the same total as the run, on the same buy dates, and each leg's final value is read off its own time-weighted path (a deposit grows by the ratio of the final index to the index on its date). The flat row reproduces the headline up to the whole-share cash remainder. The ranking of the legs can depend on when the money arrives: the headline's final value is one schedule's answer, not the portfolio's (decision 84).
 
 ## Per-year results (era slice)
 
@@ -201,6 +213,8 @@ Over 1 year:
 ## Assumptions (all of them)
 
 - Execution at the trade date's total-return adjusted close (dividends implicitly reinvested), fractional shares, no market impact beyond the flat per-side cost.
+- No taxes on dividends, sales or delistings, for either leg: a book held to the horizon and the benchmark are taxed alike in practice, a selling rule is not (decision 84).
+- The benchmark is the bare index: no expense ratio is charged, which flatters it against a fund by roughly its expense ratio compounded over the window.
 - Candidates need a print within 3 day(s) of the trade date; positions silent for 30+ days are liquidated at their final print (the upstream delisting convention).
 - Signals use each stock's latest completed-quarter median-kind snapshot, at most 200 days old — up to a quarter-plus staler than a live inference run, and ranked within the snapshot's own quarter rather than the trade date's cross-section.
 - Trade years inside a bundle's walk-forward folds use that year's fold model (trained purged/embargoed on years before it). Years past the last fold are served by **simulated year-end deployment refits**: the same config refit on every row whose label window was fully observable by Jan 1 of the trade year (+45d settlement lag) — data/manual.md §4 rule 7 applied point-in-time; no split tags are read and no test set exists (see the refit appendix).
@@ -208,7 +222,7 @@ Over 1 year:
 
 ## Provenance
 
-- backtest configurations tried against dataset `1.4.1`: 44 (this one included; every run is logged, failures too)
+- backtest configurations tried against dataset `1.4.1`: 49 (this one included; every run is logged, failures too)
 - fold definitions: `data/datasets/dataset_v1.4.1/split_folds.parquet` (frozen upstream; the buy window is the intersection of every bundle's fold years)
 - model bundles:
 - `forest_nonloser_dd30_3y_v141` — label `fwd_3y_cagr >= 0.0 & fwd_3y_max_drawdown_from_entry < 0.3` (3y), model `random_forest`, config `0aeea637e84c41d9`, train run `f259c702a6a6`, folds 2005–2020; 2021–2026 served by year-end refits (from `experiments/models/forest_nonloser_dd30_3y_v141_f259c702a6a6`)
