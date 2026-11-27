@@ -179,3 +179,103 @@ liquid stocks clearing the 5% floor was 10% in 2021 and 17% in 2018,
 against 35% to 48% in 2008 and 2009, so the floor acts as a valve on
 buying without any market-state input. The predictions are in decision
 81.4 and in each config.
+
+## 8. The first round of backtests (E1 to E6)
+
+All six ran on `dataset_v1.4.1` with the candidate's costs, window and
+accounting. The candidate's own record is the first row.
+
+| portfolio | final value on 260,000 | SPY | ratio | money-weighted CAGR | TWR | TWR 2005 to 2020 (SPY 9.4%) | TWR 2021 to 2026 (SPY 15.3%) | beta | worst drawdown | buys that lost over 3 years | buys' lead over same-size peers |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| the candidate | 1,159,740 | 1,326,084 | 0.875 | 12.20% | 10.99% | 12.4% | 7.1% | 0.86 | −41.0% | 23.4% | +4.5 |
+| E1: large caps, cap-weighted, no selection | 1,421,189 | 1,326,614 | 1.071 | 13.72% | 11.87% | 10.5% | 15.6% | 0.93 | −45.9% | 29.9% | 0.0 |
+| E2: E1 minus all but the forest's top 50 | 892,693 | 1,326,614 | 0.673 | 10.22% | 9.25% | 8.7% | 10.6% | 0.73 | −45.0% | 19.9% | +0.4 |
+| E3: the forest's top 25 | 811,528 | 1,326,614 | 0.612 | 9.48% | 7.41% | 6.2% | 10.7% | 0.84 | −59.8% | 20.2% | 0.0 |
+| E4: E2's names, equal weights | 859,492 | 1,326,614 | 0.648 | 9.93% | 9.57% | 10.2% | 7.7% | 0.73 | −44.1% | 19.9% | +0.4 |
+| E5: the candidate, earnings yield ≥ 5% | 1,154,700 | 1,326,084 | 0.871 | 12.17% | 11.16% | 11.6% | 9.8% | 0.84 | −39.9% | 24.5% | +2.8 |
+| E6: the candidate, earnings yield ≥ 8% | 1,068,807 | 1,326,084 | 0.806 | 11.59% | 11.81% | 11.5% | 12.6% | 0.96 | −46.9% | 26.9% | +4.6 |
+
+Two things about the design came out in the reading. First, the
+large-cap universe was mis-sized. Decision 81 counted it from January
+snapshots alone, about 100 names, but the backtest's monthly
+cross-section holds every stock with a snapshot inside 200 days, about
+450 names in the top decile (E1 made 4,400 to 5,400 buys a year). So E2
+kept the top 11% of the large caps, not half, and E3 the top 5%. Second,
+E2 and E3 used the forest alone, and the forest alone prefers defensive
+sectors: E2's buys were 24% consumer staples, 23% utilities and 8% real
+estate, where E1's largest sectors were consumer cyclicals, technology,
+energy and healthcare at 14% to 16% each. In the candidate, the
+return-on-capital leg removes that tilt. Decision 81.6 ordered a second
+round with the cut at a quarter and a half of the universe, with and
+without the blend.
+
+Third, the valuation floors did not hold cash. The candidate buys ten
+stocks a month from about 1,100 liquid names, and at least 10% of them
+cleared the 5% floor in every year, so E5 and E6 always found ten. The
+floors changed which stocks were bought, not how many. (A separate
+check: the candidate's own buys fell from 120 a year to 51 to 85 in 2021
+to 2026, because whole shares of expensive stocks do not fit a $100
+slot. A fractional-share run on the earlier build ended within 2% of
+the whole-share run, so this is not where the shortfall is.)
+
+What the buys of 2017 to 2023 went on to do over three years (return
+minus SPY's, in points a year; and the share that lost money):
+
+| cohort | candidate | E1 | E2 | E5 | E6 |
+|---|---|---|---|---|---|
+| 2017 | +2.2 (19%) | −4.3 (31%) | −2.3 (21%) | −4.1 (36%) | −11.3 (47%) |
+| 2018 | +4.4 (4%) | −3.6 (18%) | −3.9 (5%) | +0.1 (10%) | −5.8 (16%) |
+| 2019 | −4.8 (13%) | −2.9 (18%) | −5.8 (12%) | −0.1 (9%) | −5.8 (21%) |
+| 2020 | −2.5 (24%) | −2.6 (24%) | −5.6 (24%) | −6.3 (28%) | −1.3 (27%) |
+| 2021 | −13.5 (47%) | −7.6 (39%) | −3.7 (23%) | −7.0 (48%) | −9.1 (43%) |
+| 2022 | −8.9 (29%) | −8.7 (35%) | −11.0 (30%) | −7.3 (29%) | −2.4 (24%) |
+| 2023 (partial) | −18.1 (40%) | −10.3 (29%) | −14.0 (24%) | −9.2 (23%) | +0.2 (10%) |
+
+### What the first round showed, against the predictions of 81.4
+
+- **(a) held, and then some.** The cap-weighted large-cap book with no
+  model (E1) did not merely track SPY. It beat it: 7% more money, a
+  time-weighted return 0.9 points a year higher, 1.1 points higher in
+  2005 to 2020 and 0.3 higher in 2021 to 2026, with a drawdown 7 points
+  shallower. The structure explains the candidate's recent shortfall in
+  full: a cap-weighted book of this dataset's large caps kept pace with
+  SPY in 2021 to 2026 (15.6% against 15.3%), where the equal-weighted
+  candidate earned 7.1%.
+- **(b) failed, in the direction opposite to the hope.** Keeping only
+  the forest's favourites inside that book cost 2.6 points a year
+  against E1 and 1.7 against SPY, in both periods, with the same
+  drawdown. The forest's picks did lose less often (20% of buys against
+  30%) and led same-size peers by 0.4 points, but the stocks it left
+  out, the volatile large growth names, earned far more than the calm
+  defensives it kept. Among large caps, "will not lose money" selects
+  the low-return half. The design was also mis-sized and confounded by
+  the forest's sector taste; the second round separates those.
+- **(c) held.** The top 25 was worse than the top 50 by 1.8 points a
+  year and its drawdown was 15 points deeper. Concentration added
+  variance and lost return.
+- **(d) held.** Equal-weighting E2's names cost 2.9 points a year in
+  2021 to 2026 (7.7% against 10.6%) and gained 1.5 in 2005 to 2020. The
+  weighting is where the recent gap comes from; the selection is where
+  the earlier edge came from.
+- **(e) failed on its mechanism and was a draw on its outcome.** The 5%
+  floor bought slightly more stocks, not fewer, and held no cash, so it
+  did not act as a valve. It did change the picks: the 2021 to 2026
+  return rose by 2.7 points a year (9.8% against 7.1%), the drawdown was
+  a point shallower, and the 2005 to 2020 return fell 0.8 points. The
+  final value is the candidate's to within 0.4%. The buys' lead over
+  same-size peers fell from 4.5 to 2.8 points, which is the rival's
+  value-trap effect, offset by a better 2021 to 2026. Not a candidate.
+- **(f) failed as a prediction and is the most interesting of the six.**
+  The 8% floor did not sit in cash either. It earned 12.6% a year in
+  2021 to 2026 against the candidate's 7.1%, and 11.5% against 12.4% in
+  2005 to 2020. Its buys of 2022 and 2023 lost money 24% and 10% of the
+  time, the lowest of any portfolio here. Its final value is 8% below
+  the candidate's because its drawdown was 6 points deeper and its path
+  through 2008 to 2012 was worse. Its beta is 0.96, so the floor
+  replaced calm with cheap. This is one run, on one build, and the rule
+  of 81.2 is not met (final value below SPY). It says that a valuation
+  floor inside the forest's safe set is a direction, not a result.
+- **(g) held: no arm of the six passes the rule of 81.2.** E1 passes it
+  without a model, which is the point. The structure can be fixed. What
+  the forest adds inside the fixed structure is the second round's
+  question.
