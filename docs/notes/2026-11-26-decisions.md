@@ -1023,3 +1023,32 @@ failed to do and which is left for later.
    value within 5% of E10's; rival: the floor removes the large growth
    names and 2021 to 2026 falls below E10's. (m) E12 lies between E9
    and E10 on every figure.
+
+8. **Verdict (2026-11-27, after the third round).** Twelve backtests in
+   three rounds, all on `dataset_v1.4.1`, the candidate's build. Section
+   11 of the note gives the answer to Carter's question in full. In
+   brief: the candidate has not beaten the market because its structure
+   (equal weights, a broad size band) cannot keep pace with a
+   cap-weighted index carried by a few giants, because its skill is
+   loser-avoidance and loser-avoidance leaves out the volatile winners,
+   because it has no input about the market's level, and because the
+   deposits weight the six years it trailed. The cap-weighted book of
+   top-decile large caps with no model (E1) beats SPY; every cut by the
+   model inside that book trades 2021 to 2026 return for fewer losers
+   and a shallower drawdown. The closest portfolio to the goal is E11,
+   the candidate's blend choosing the top 50 large caps with an earnings
+   yield of 5% or more, cap-weighted: a time-weighted return of 12.08% a
+   year against SPY's 10.94% over 2005 to 2026, a drawdown of −36.7%
+   against −52.9%, beta 0.77, 1.0 point a year behind SPY in 2021 to
+   2026 and 3.9% less final money. It passes two clauses of the rule of
+   81.2 and fails the final-value clause. It is one run at one seed,
+   chosen after E6 and E10 were read. Predictions (l) held on return and
+   failed on drawdown; (m) failed (the depth of the cut is not a smooth
+   lever). Next: E11 at seeds 232 and 1776 and with the rank sell
+   discipline (four backtests, a new decision with predictions); Carter's
+   decision on whether the goal is final money against SPY by a date or
+   return per unit of risk; the upstream market-state columns. Records:
+   E1, E10 and E11 promoted; the other nine configs in `experiments/KEEP`;
+   one logbook entry for the twelve; findings and TODO updated; the
+   results branch gets a further commit. What is not done: no holdout
+   look, no deployment change, no change to the candidate.

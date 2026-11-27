@@ -352,3 +352,110 @@ year, and the share of buys that lost money):
   growth names, were the ones that carried the index.
 - No arm with a model passes the rule of 81.2. E1, with no model,
   passes it.
+
+## 10. The third round: the blend's top 100, and the top 50 with a valuation floor (E11, E12)
+
+| portfolio | final value | ratio to SPY | money-weighted CAGR | TWR | TWR 2005 to 2020 (SPY 9.4%) | TWR 2021 to 2026 (SPY 15.3%) | beta | worst drawdown | buys that lost | buys' lead over same-size peers |
+|---|---|---|---|---|---|---|---|---|---|---|
+| E10: the blend's top 50, cap-weighted | 1,255,864 | 0.947 | 12.80% | 11.88% | 11.6% | 12.7% | 0.79 | −37.4% | 19.9% | +2.6 |
+| E12: the blend's top 100 | 1,227,896 | 0.926 | 12.63% | 11.54% | 11.2% | 12.5% | 0.80 | −39.1% | 21.1% | +2.2 |
+| E11: the blend's top 50 among stocks with an earnings yield of 5% or more | 1,274,597 | 0.961 | 12.91% | 12.08% | 11.3% | 14.3% | 0.77 | −36.7% | 21.1% | +1.6 |
+| SPY | 1,326,614 | 1.000 | 13.20% | 10.94% | 9.4% | 15.3% | 1.00 | −52.9% | | |
+
+E11's largest sectors were industrials 20%, consumer staples 18%,
+healthcare 12% and technology 12%. Its buys of 2021, 2022 and 2023
+trailed SPY over three years by 4.7, 11.6 and 9.7 points a year and
+lost money 32%, 35% and 22% of the time (E10: 4.5, 7.9 and 12.3 points;
+29%, 31% and 27%).
+
+### What the third round showed, against the predictions of 81.7
+
+- **(l) held on return and failed on drawdown, and its rival failed.**
+  The valuation floor raised the 2021 to 2026 return by 1.6 points a
+  year (14.3% against 12.7%), cost 0.3 points in 2005 to 2020, and made
+  the drawdown shallower rather than deeper (−36.7% against −37.4%). The
+  final value is 1.5% above E10's. The floor did not remove the names
+  that keep pace with SPY; it removed the dear ones among the safe ones,
+  and that was where the recent shortfall sat.
+- **(m) failed.** The top 100 was below both the top 50 and the top 225
+  on final value and return. The depth of the cut is not a smooth
+  lever; one run per depth cannot tell order from noise, and the three
+  depths sit within 0.35 points a year of one another.
+- **E11 is the closest any portfolio has come to the goal.** Over the
+  whole window its time-weighted return is 12.08% a year against SPY's
+  10.94%, its worst drawdown −36.7% against −52.9%, its beta 0.77, and
+  one buy in five lost money against one in three in the cap-weighted
+  book without a model. In 2021 to 2026 it trailed SPY by 1.0 point a
+  year, against the candidate's 8.2. It ends with 3.9% less money than
+  SPY because the deposits make the account largest in the years it
+  trailed. Under the rule of 81.2 it passes the 2021 to 2026 clause and
+  the drawdown clause and fails the final-value clause. It is one run,
+  at one seed, chosen after E6 and E10 had been read, so its number is
+  selection-biased, and it goes to three seeds before anything else is
+  said about it.
+
+## 11. The answer
+
+**Why the candidate has not beaten the market.** Four reasons, each
+measured above, in the order of their weight.
+
+1. **Its structure cannot keep pace with a cap-weighted index when a
+   few giants carry it.** A cap-weighted book of this dataset's
+   top-decile large caps with no model at all (E1) ended with 7% more
+   money than SPY, a drawdown 7 points shallower, and 15.6% a year in
+   2021 to 2026 against SPY's 15.3%. The candidate's equal-weighted,
+   size-broad book earned 7.1% in those years. The structure, not the
+   model, is the first four points of the recent gap.
+2. **Its skill is loser-avoidance, and loser-avoidance leaves out the
+   volatile winners.** The buys lose money a third less often than their
+   peers, and inside the cap-weighted book every cut by the model lowers
+   the 2021 to 2026 return while it lowers the drawdown and the losers,
+   the deeper the cut the more of both. The stocks the model scores
+   lowest among large caps are the ones that carried the index.
+3. **It has no input about the market's level.** Its scores are highest
+   at tops (decision 46), and its 2021 buys lost money 47% of the time
+   over three years. A row describes a company, not the market. An
+   absolute earnings-yield floor, a row-level stand-in for "the market
+   is dear", recovered 1.6 of the 2.6 points E10 lacked in 2021 to 2026.
+4. **The deposits weight the end of the window.** The candidate beat SPY
+   by 3 points a year for sixteen years and trailed by 8 for six; the
+   money-weighted CAGR counts the six most, because that is when the
+   account was largest.
+
+**What the thesis looks like after this.** High precision on a modest
+target did beat the market by avoiding losers, for sixteen years that
+held two crashes: the candidate by 3 points a year, the cap-weighted
+blend's top 50 (E10) by 2.2 points a year with 15 points less drawdown.
+It did not beat the market in a six-year stretch in which the index was
+carried by the stocks a loser-avoiding model declines to hold. Whether
+that stretch is the exception Carter's working assumption says it is
+(decision 36) or the new normal, the data cannot say. What the data do
+say is that the trade on offer is return in that kind of stretch
+against drawdown and losers in every other, and that the terms of the
+trade improve when the book is cap-weighted, when the blend rather than
+the forest alone makes the cut, and when a valuation floor keeps the
+dear names out.
+
+**What to try next, in order.**
+
+1. E11 at the forest's other two seeds (232 and 1776), and E11 with the
+   candidate's rank sell discipline, which added 12% of final value to
+   the candidate. If the seeds hold within half a point and the sell
+   discipline adds what it did before, E11 with the sell discipline
+   passes the rule of 81.2 on all three clauses. These are four
+   backtests.
+2. Carter's decision on the objective. By final money against SPY on
+   2026-08-21, inside a mega-cap boom, no loser-avoiding book in this
+   program wins, and E11 comes within 4%. By drawdown, losers and
+   return per unit of market risk, E11 wins on every reading. The
+   program needs to know which of these is the goal, and over what kind
+   of period the goal is judged.
+3. The upstream market-state columns (the trailing return, volatility
+   and drawdown of the market; the cross-sectional median earnings yield
+   and book to market; breadth; spreads). The earnings-yield floor is a
+   stand-in for them, and it worked; the real columns would let the
+   model learn when to buy less rather than have the rule imposed.
+4. Not to pursue: deeper cuts (E3), the forest alone in a cap-weighted
+   book (E2, E7, E8), fundamentals-only feature sets (decisions 78 to
+   80), and threshold-based cash rules on the model's own scores
+   (decision 46).

@@ -1,0 +1,14 @@
+{
+  "name": "bt_lc90_mcap_all_v141_6c79822d076add76",
+  "promoted_utc": "2026-11-27T02:54:22+00:00",
+  "source_report": "reports/backtest/bt_lc90_mcap_all_v141_6c79822d076add76.md",
+  "run_id": "",
+  "config_hash": "",
+  "git_sha": "",
+  "dataset_version": "",
+  "config_path": "",
+  "note": "Decision 81 E1: the cap-weighted book of the top-decile large caps with no model ends with 7% more money than SPY (TWR 11.87% against 10.94%, drawdown -45.9% against -52.9%, 15.6% a year in 2021-2026); the structure, not the model, is where the candidate's recent gap to SPY comes from",
+  "files": [
+    "bt_lc90_mcap_all_v141_6c79822d076add76.md"
+  ]
+}
