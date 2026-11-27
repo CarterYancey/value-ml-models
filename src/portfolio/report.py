@@ -602,6 +602,7 @@ def write_backtest_report(
     artifacts: dict,
     buy_outcome_frame: pd.DataFrame | None = None,
     candidate_outcome_frame: pd.DataFrame | None = None,
+    schedule_table: pd.DataFrame | None = None,
 ) -> Path:
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -864,7 +865,14 @@ def write_backtest_report(
         f"`model_update = \"{config.model_update}\"` (see the bundle "
         "list below)",
         f"- deposits: {_money(config.monthly_cash)} on the first trading "
-        "day of each month, identically into both legs",
+        "day of each month"
+        + (
+            f", growing {getattr(config, 'deposit_growth_per_year', 0.0):.1%}"
+            " a year from the first buy date"
+            if getattr(config, "deposit_growth_per_year", 0.0)
+            else ""
+        )
+        + ", identically into both legs",
         "",
         "**These are simulated, cost-adjusted paper results under the "
         "assumptions below — not live performance.** Scores come from "
@@ -885,6 +893,7 @@ def write_backtest_report(
         "full one, so it is read only beside the final value, the CAGR "
         "and the per-year table (decision 72).",
         "",
+        *_schedule_lines(schedule_table),
         "## Per-year results (era slice)",
         "",
         _table(yearly_view),
@@ -937,6 +946,17 @@ def write_backtest_report(
             "cash for the next month)"
         )
         + ", no market impact beyond the flat per-side cost.",
+        "- No taxes on dividends, sales or delistings, for either leg: a "
+        "book held to the horizon and the benchmark are taxed alike in "
+        "practice, a selling rule is not (decision 84).",
+        (
+            f"- The benchmark's series is net of an expense ratio of "
+            f"{config.benchmark_expense_bps_per_year:g} basis points a year."
+            if getattr(config, "benchmark_expense_bps_per_year", 0.0)
+            else "- The benchmark is the bare index: no expense ratio is "
+            "charged, which flatters it against a fund by roughly its "
+            "expense ratio compounded over the window."
+        ),
         f"- Candidates need a print within {config.max_quote_age_days} "
         "day(s) of the trade date; positions silent for "
         f"{config.delist_after_days}+ days are liquidated at their final "
@@ -1004,3 +1024,100 @@ def write_backtest_report(
     ]
     path.write_text("\n".join(line for line in lines if line is not None))
     return path
+
+
+# ------------------------------------------------- deposit schedules (84)
+
+DEPOSIT_SCHEDULES = (
+    ("flat", "flat, the run's own schedule"),
+    ("growing_3pct", "growing 3% a year"),
+    ("growing_6pct", "growing 6% a year"),
+    ("lump_sum", "all of it on the first buy date"),
+    ("front_three_quarters", "flat over the first three quarters of the buy dates, nothing after"),
+)
+
+
+def _schedule_weights(key: str, buy_dates: pd.DatetimeIndex) -> np.ndarray:
+    n = len(buy_dates)
+    years = (buy_dates - buy_dates[0]).days.to_numpy() / 365.25
+    if key == "flat":
+        return np.ones(n)
+    if key == "growing_3pct":
+        return 1.03 ** years
+    if key == "growing_6pct":
+        return 1.06 ** years
+    if key == "lump_sum":
+        w = np.zeros(n)
+        w[0] = 1.0
+        return w
+    if key == "front_three_quarters":
+        w = np.zeros(n)
+        w[: max(1, int(round(0.75 * n)))] = 1.0
+        return w
+    raise KeyError(key)
+
+
+def schedule_final_value(result: SimulationResult, key: str) -> float:
+    """The final value the leg would have reached under another deposit
+    schedule with the same total, from its time-weighted path: a deposit
+    made on a buy date grows by the ratio of the final index to the index
+    on that date. Exact when trades scale with the account (fractional
+    shares, proportional costs) except for the cost of a buy made on the
+    last valuation date, which the index has not yet absorbed; within the
+    cash remainder as well for whole-share runs."""
+    m = result.monthly
+    buys = m[m["deposit"] > 0]
+    if buys.empty:
+        return float(result.final_value)
+    dates = pd.DatetimeIndex(pd.to_datetime(buys["date"]))
+    w = _schedule_weights(key, dates)
+    deposits = w * float(result.total_deposits) / w.sum()
+    idx = buys["twr_index"].to_numpy(dtype=float)
+    final_idx = float(m["twr_index"].iloc[-1])
+    return float(np.sum(deposits * final_idx / idx))
+
+
+def deposit_schedule_table(
+    strategy: SimulationResult, benchmark: SimulationResult
+) -> pd.DataFrame:
+    """Final values of both legs under the schedules of
+    `DEPOSIT_SCHEDULES`, each totalling the run's deposits (decision 84):
+    one schedule's final value is never the result on its own."""
+    rows = []
+    for key, label in DEPOSIT_SCHEDULES:
+        s_val = schedule_final_value(strategy, key)
+        b_val = schedule_final_value(benchmark, key)
+        rows.append(
+            {
+                "key": key,
+                "schedule": label,
+                "strategy": s_val,
+                "benchmark": b_val,
+                "ratio": (s_val / b_val) if b_val else float("nan"),
+            }
+        )
+    return pd.DataFrame(rows)
+
+
+def _schedule_lines(table: pd.DataFrame | None) -> list[str]:
+    if table is None or table.empty:
+        return []
+    view = table.drop(columns=["key"]).copy()
+    view["strategy"] = view["strategy"].map(_money)
+    view["benchmark"] = view["benchmark"].map(_money)
+    view["ratio"] = view["ratio"].map(lambda v: f"{v:.3f}")
+    return [
+        "## Final value under other deposit schedules",
+        "",
+        _table(view),
+        "",
+        "Each schedule deposits the same total as the run, on the same "
+        "buy dates, and each leg's final value is read off its own "
+        "time-weighted path (a deposit grows by the ratio of the final "
+        "index to the index on its date). The flat row reproduces the "
+        "headline up to the whole-share cash remainder. The ranking of "
+        "the legs can depend on when the money arrives: the headline's "
+        "final value is one schedule's answer, not the portfolio's "
+        "(decision 84).",
+        "",
+    ]

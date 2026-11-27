@@ -36,6 +36,7 @@ from dataclasses import dataclass, field
 import math
 
 import pandas as pd
+from collections.abc import Callable
 
 from portfolio.prices import SeriesPriceSource
 from portfolio.strategy import Order
@@ -75,7 +76,7 @@ def run_simulation(
     *,
     dates: list[pd.Timestamp],
     buy_dates: set[pd.Timestamp],
-    deposit: float,
+    deposit: float | Callable[[pd.Timestamp], float],
     price_source: SeriesPriceSource,
     strategy,
     candidates_fn,
@@ -85,6 +86,8 @@ def run_simulation(
 ) -> SimulationResult:
     """Run one portfolio leg over `dates` (ascending valuation dates;
     those in `buy_dates` also receive the deposit and a rebalance).
+    `deposit` is a flat amount, or a callable of the date (see
+    `deposit_schedule`), so a growing contribution can be simulated.
     `candidates_fn(date, held_assets) -> (candidates, held_review,
     diagnostics)` supplies the scored, filtered, priced candidate frame
     (columns at least `asset`, `combined_score`, `price`; `ticker` and
@@ -159,7 +162,7 @@ def run_simulation(
         # 4. deposit + rebalance
         flow = 0.0
         if when in buy_dates:
-            flow = float(deposit)
+            flow = float(deposit(when)) if callable(deposit) else float(deposit)
             cash += flow
             total_deposits += flow
             cashflows.append((when, -flow))
@@ -363,3 +366,20 @@ def _execute(
         return cash, holdings_value
 
     raise ValueError(f"unknown order side {order.side!r}")
+
+
+def deposit_schedule(
+    monthly_cash: float, growth_per_year: float, origin: pd.Timestamp
+) -> float | Callable[[pd.Timestamp], float]:
+    """The deposit for a buy date: `monthly_cash` grown at
+    `growth_per_year` since `origin` (compounded continuously by elapsed
+    years), or the flat amount when the growth is zero (decision 84)."""
+    if not growth_per_year:
+        return float(monthly_cash)
+    origin = pd.Timestamp(origin)
+
+    def deposit(when: pd.Timestamp) -> float:
+        years = (pd.Timestamp(when) - origin) / pd.Timedelta(days=365.25)
+        return float(monthly_cash) * (1.0 + float(growth_per_year)) ** years
+
+    return deposit
