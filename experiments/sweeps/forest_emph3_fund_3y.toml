@@ -16,6 +16,7 @@
 # Run (needs claude/emphasis-weights merged into the lab branch):
 #   .venv/bin/vml-sweep experiments/sweeps/forest_emph3_fund_3y.toml
 name = "forest_emph3_fund_3y"
+note = "Training rows inside the rare region at 3x their sample weight (decision 79a, 80): the cell-C forest on the old ranks is the control to the third digit and its picks' share inside the region stays 0.006; 16 of 18 arms within 2 se of their unemphasized twins; the reversal forest loses 0.046/yr; arms with 60-85% of picks inside the region lose. Emphasis is not a lever"
 dataset_version = "dataset_v1.5.1"
 min_dataset_version = "1.5"
 scheme = "walkforward"

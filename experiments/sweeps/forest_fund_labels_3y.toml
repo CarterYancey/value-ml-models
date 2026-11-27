@@ -33,6 +33,7 @@
 # Expanded: 6 cells x 5 feature sets x 1 set x 1 seed = 30 runs.
 # Run: .venv/bin/vml-sweep experiments/sweeps/forest_fund_labels_3y.toml
 name = "forest_fund_labels_3y"
+note = "Carter's run-up/no-crash labels and the fundamentals-leaning sets in cell C and five new cells (decision 78): no fundamentals-only set passes 74.4 against the 112 old ranks (lead +0.029/yr, losers 0.17); the ranks minus the technical family plus the unranked history columns match the lead at +5.6 pts losers; 'doubled without a crash' on the old ranks is a one-month-reversal forest (+0.081/yr, 38% losers)"
 dataset_version = "dataset_v1.5.1"
 min_dataset_version = "1.5"
 scheme = "walkforward"

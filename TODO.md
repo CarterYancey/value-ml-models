@@ -682,6 +682,58 @@ in [PLAN.md](PLAN.md); check items off (and add new ones) as work proceeds.
       `n_estimators`) at full budget via a follow-up sweep file — no
       harness change needed, just two sweep configs.
 
+### Next, after 2026-11-27 (decisions 78 to 80)
+
+Carter asked for his run-up/no-crash labels, feature sets that lean on
+fundamentals and their own history instead of ranks, volume and
+momentum, and a way to make a model attend to the rare region (a
+strong record, a steep temporary fall, a recovery). The program ran
+three sweeps on labels and sets (decision 78) and five pieces on the
+region (decision 79): training weights ×3 and ×10 inside it, the region
+as a universe, forests seeing 5% of the columns a split, LightGBM at a
+tenth of the columns, quantile regression for the upper tail. Across
+49 runs no arm passes the screen rule against the control. The region
+is the market's recovery, not mispriced survivors: its rows earn 1.9% a
+year against 3.4% with 41% losers, win 2009–2012 and 2020 and lose every
+year 2013–2018; every selection that buys it loses more often, and given
+its columns and weight the forest learns to avoid it (decision 80, note
+docs/notes/2026-11-26-rare-region.md).
+
+- [ ] **Carter merges `claude/results-2026-11-26`** (now carrying the
+      v1.5.1 support code, the `[emphasis]` and `[pick_screen] region`
+      code with their tests, decisions 74 to 80, the two program notes,
+      the rewritten findings and eleven promoted records). After the
+      merge, from any other branch, run
+      `uv run vml-queue archive-lab claude/lab-2026-11-26 --delete`.
+- [ ] **Upstream: a market-state column per snapshot date** is now the
+      rare region's open question as well as the plan's item 3: what
+      separates the region's good years from its bad ones is not in
+      the row. A recovery label measured inside a region (decision
+      63's question) stays upstream too.
+- [ ] The set to carry if fundamentals-leaning work resumes is the rank
+      group without `ranks/technical` plus the 28 unranked history
+      columns (162): it matches the control's lead at 5.6 points more
+      losers and leads the old ranks on the harder cells (decision 78).
+      Not a candidate; a starting point.
+- [ ] `[emphasis]` (decision 78.6) and `[pick_screen] region` (decision
+      79) are general harness features: a weight multiplier inside a
+      region of feature columns, and the share of a selection inside a
+      region as the pick outcome `in_region`. Documented in
+      docs/experiments.md. The 3.5 item "regime-emphasis training
+      weights" below is the same mechanism with a time region; a time
+      region needs a snapshot-date filter, which `FilterSpec` does not
+      take yet.
+- [ ] The reversal forest ('doubled without a crash' on the 112 old
+      ranks: +0.081 a year over the control, 38% losers, peers losing
+      money half the years after 2008) is recorded, not followed. If a
+      short-horizon reversal arm is ever wanted, it starts there, on
+      the screen, with the losers bar written first.
+- [ ] The eleven unpromoted configs of decisions 74 to 77 that
+      `scripts/check_tracked_configs.py` lists (the v1.5.1 bars,
+      backtests and the LightGBM/XGBoost feature sweeps) are left as
+      they were for Carter's call; the decision 78–80 companions are in
+      `experiments/KEEP`.
+
 ### Next, after 2026-11-26 (decisions 74 to 77)
 
 Upstream shipped `dataset_v1.5.1` (the fundamental-history family, a
@@ -1370,7 +1422,11 @@ slice. All within the invariants: no local splits, no derived features.
 - [ ] Regime-emphasis training weights: config-declared multiplier on
       `sample_weight_{H}y` for training rows whose label windows overlap
       drawdown eras (disclosed, hashed, reported); report the effective
-      sample size under emphasis so the shrinkage is visible.
+      sample size under emphasis so the shrinkage is visible. (Half
+      built: `[emphasis] factor, region` of decision 78.6 does this for
+      a region of feature columns, hashed, with the region's share of
+      the training weight reported per fold; a drawdown-era region
+      needs a snapshot-date filter.)
 - [ ] Crash-aware `rank_metric` for sweeps: rank candidates by
       precision/recall-at-precision restricted to crash-era test years
       (with the Wilson-interval caveat stated in the summary).

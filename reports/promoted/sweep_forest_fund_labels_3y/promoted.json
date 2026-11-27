@@ -1,0 +1,14 @@
+{
+  "name": "sweep_forest_fund_labels_3y",
+  "promoted_utc": "2026-11-27T00:53:08+00:00",
+  "source_report": "reports/sweeps/forest_fund_labels_3y/forest_fund_labels_3y_summary.md",
+  "run_id": "",
+  "config_hash": "",
+  "git_sha": "",
+  "dataset_version": "dataset_v1.5.1",
+  "config_path": "experiments/sweeps/forest_fund_labels_3y.toml",
+  "note": "Carter's run-up/no-crash labels and the fundamentals-leaning sets in cell C and five new cells (decision 78): no fundamentals-only set passes 74.4 against the 112 old ranks (lead +0.029/yr, losers 0.17); the ranks minus the technical family plus the unranked history columns match the lead at +5.6 pts losers; 'doubled without a crash' on the old ranks is a one-month-reversal forest (+0.081/yr, 38% losers)",
+  "files": [
+    "forest_fund_labels_3y_summary.md"
+  ]
+}

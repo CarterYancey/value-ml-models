@@ -1,0 +1,14 @@
+{
+  "name": "sweep_forest_emph3_fund_3y",
+  "promoted_utc": "2026-11-27T00:53:12+00:00",
+  "source_report": "reports/sweeps/forest_emph3_fund_3y/forest_emph3_fund_3y_summary.md",
+  "run_id": "",
+  "config_hash": "",
+  "git_sha": "",
+  "dataset_version": "dataset_v1.5.1",
+  "config_path": "experiments/sweeps/forest_emph3_fund_3y.toml",
+  "note": "Training rows inside the rare region at 3x their sample weight (decision 79a, 80): the cell-C forest on the old ranks is the control to the third digit and its picks' share inside the region stays 0.006; 16 of 18 arms within 2 se of their unemphasized twins; the reversal forest loses 0.046/yr; arms with 60-85% of picks inside the region lose. Emphasis is not a lever",
+  "files": [
+    "forest_emph3_fund_3y_summary.md"
+  ]
+}

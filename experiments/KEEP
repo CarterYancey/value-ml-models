@@ -67,3 +67,11 @@ experiments/portfolios/bt_nonloser_mom_roc_top10_cap2_rankfloor_s232_v141.toml
 experiments/portfolios/bt_nonloser_mom_roc_top10_cap2_rankfloor_s1776_v141.toml
 experiments/portfolios/bt_nonloser_mom_roc_top10_cap2_rankfloor_largehalf_s232_v141.toml
 experiments/portfolios/bt_nonloser_mom_roc_top10_cap2_rankfloor_largehalf_s1776_v141.toml
+# Decisions 78-80 (2026-11-26/27): the run-up labels, the fundamentals-only sets and the rare-region program. Read in docs/notes/2026-11-26-rare-region.md; the three promoted sweeps carry the records, these are their companions.
+experiments/sweeps/baseline_fund_labels_3y.toml
+experiments/sweeps/forest_fund_labels_5y.toml
+experiments/sweeps/forest_fund_control_region_3y.toml
+experiments/sweeps/forest_emph10_fund_3y.toml
+experiments/sweeps/forest_subspace_fund_3y.toml
+experiments/sweeps/lgbm_colsample_fund_3y.toml
+experiments/sweeps/lgbm_quantile_fund_3y.toml
