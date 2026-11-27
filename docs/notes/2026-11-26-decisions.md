@@ -1249,3 +1249,89 @@ SPY does for two of them.
    tests, then into the lab and results branches. Reports already on
    record are not regenerated; the realism note's table stands for the
    portfolios of decisions 81 and 82.
+
+### 85. Carter's review of the records: the rule is judged through 2020, the rare-region search reopens, the three remedies lead the plan, and a pick list needs weights
+
+*What happened (2026-11-27).* Carter read the records of decisions 78
+to 84 and answered with questions and five directions. The questions
+are answered in the findings and in the session's reply; the
+directions are decided here. Two checks were made first. The column
+`dist_5y_high` is the closing price divided by the five-year high,
+minus one, so it is zero at the high and negative below it, and
+`dist_5y_high <= -0.4` does mean 40% or more below the high
+(data/features.md). The finding "28% of the top 20 lost money" came
+from the holdout report's pooled row: 17 of the 60 picks, 20 a year
+for 2021, 2022 and 2023, lost money over three years, against 54% of
+all rows. The sentence has been corrected.
+
+*Decided:*
+
+1. **The judging rule is amended: a portfolio is judged against SPY
+   through 2020.** Carter has accepted that the strategies this
+   project looks for are expected to trail in 2021 to 2026, so those
+   years are no longer a clause of the rule. The rule of 83.1 now
+   reads: an arm is carried to three seeds and proposed when, over
+   2005 to 2020, it beats SPY on the time-weighted return and on the
+   worst drawdown, and its buys pass the screen rule of 74.4 against
+   the control. Its return in 2021 to 2026 and its final value under
+   the five deposit schedules are reported beside the rule, as
+   context. Beating SPY over the whole window stays the ideal and is
+   said when it happens. Under the amended rule the candidate passes
+   (12.4% a year against SPY's 9.4% over 2005 to 2020, drawdown −41%
+   against −53%), and so do E10 and E11. Any model that passes is
+   worth considering.
+2. **The three remedies of decision 81 lead the plan.** In the order
+   of the evidence behind them: put the model's loser-avoidance inside
+   the index's own cap-weighted structure (E11 is the first instance;
+   next are its three seeds on `dataset_v1.5.1` and its pick list);
+   give the portfolio a reason to buy less when the market is dear
+   (the market-state columns from upstream, or a row-level valuation
+   floor tight enough to hold cash); and raise the picks' upside
+   without raising their losers (item 3). Findings opens with the
+   paragraph that states them, and TODO lists them first.
+3. **The rare-region program reopens as a search for a better region,
+   with a model trained inside it.** Decision 80 measured one region,
+   stocks 40% or more below their five-year high with positive
+   operating cash flow in 18 of 20 quarters, and found that buying all
+   of it is a bet on the market's recovery. That measurement stands.
+   Carter's point is that it argues for a better region, not for
+   closing the search, and that the aim was never to buy the whole
+   region: it is to see whether a model separates the big winners
+   inside a region better than it does across the whole universe. His
+   first proposal is a steep, recent fall, 30% or more below the
+   one-year high (`dist_52w_high <= -0.3`), on the hypothesis that it
+   marks the market's over-reaction to news, with a model trained
+   inside that region to tell over-reactions from justified sell-offs.
+   The harness has two ways to train inside a region. A `[[universe]]`
+   trains and reads the model on the region's rows only; the result is
+   its own cell, read against in-region peers of the same size, and
+   the early folds are small. An `[emphasis]` keeps every row and
+   multiplies the region's training weight by a factor, which is one
+   more parameter to choose. The next decision writes the regions and
+   the predictions before anything runs, and the picks of an in-region
+   model are read on the same outcomes as the control's (lead over
+   peers, losers, doublers) so that the question "better inside than
+   across" has an answer.
+4. **A pick list for a portfolio needs the weight of each pick.**
+   `vml-predict` already does what the backtest's portfolio does up to
+   the weights: repeated `--filter` entries are the investability and
+   filter tables, `--pick K` is `top_k`, and `--max-per-group` is the
+   sector cap. That is how the candidate's monthly list is made
+   (docs/paper-trading.md). It writes no weights, so a cap-weighted
+   book such as E11 cannot be read off it. A `--weighting` option
+   (`equal` or `marketcap`) adds a `weight` column over the picks,
+   computed as the backtest computes it: equal shares, or market
+   capitalization taken as the exponential of `log_marketcap`,
+   normalized over the picks. The code goes on `claude/predict-weights`
+   off `Claude`, with tests, and the deployment and paper-trading docs
+   say how to use it. With it, E11's list on the current inference set
+   is one command over the candidate's existing deployment bundles,
+   because E11 ranks on the same three legs. That list is produced as
+   a dry run and recorded; it is not yet a paper-trading commitment,
+   which waits for the three seeds on `dataset_v1.5.1` (83.3).
+5. **Records.** This decision; findings reopened with the answer of
+   decision 81 at the front, the goal paragraph rewritten, the rule
+   amended, the lost-money sentence corrected, the rare-region
+   conclusion reworded from "closed" to "one region measured"; TODO
+   with the three remedies first. Not done: no holdout look, no change
+   to the candidate's deployment or its list, no new backtest.
