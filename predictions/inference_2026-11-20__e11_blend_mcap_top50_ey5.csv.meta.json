@@ -1,0 +1,55 @@
+{
+  "filters": "dollar_volume_3m_rank >= 0.2 & earnings_yield >= 0.05 & log_marketcap_rank >= 0.9",
+  "git_sha": "aaead742d70a12e571c157f151041eeff55b82c5",
+  "inference_sha256": "",
+  "inference_source": "data/datasets/inference_2026-11-20",
+  "models": [
+    {
+      "bundle_dir": "experiments/models/forest_nonloser_dd30_3y_v141_deployment_1f8d8f9061c7",
+      "bundle_run_id": "1f8d8f9061c7",
+      "column_suffix": "forest_nonloser_dd30_3y_v141",
+      "config_hash": "0aeea637e84c41d9",
+      "horizon_years": 3,
+      "label": "fwd_3y_cagr >= 0.0 & fwd_3y_max_drawdown_from_entry < 0.3",
+      "model": "random_forest",
+      "probabilistic": true,
+      "run_id": "d6dc48a41c1d",
+      "trained_on": "dataset_v1.4.1"
+    },
+    {
+      "bundle_dir": "experiments/models/factor_mom_12_2_3y_v141_deployment_a91bf597bad3",
+      "bundle_run_id": "a91bf597bad3",
+      "column_suffix": "factor_mom_12_2_3y_v141",
+      "config_hash": "d74f9884a6361e2a",
+      "horizon_years": 3,
+      "label": "fwd_3y_cagr >= 0.0 & fwd_3y_max_drawdown_from_entry < 0.3",
+      "model": "rank_factor",
+      "probabilistic": false,
+      "run_id": "ac18daddbb88",
+      "trained_on": "dataset_v1.4.1"
+    },
+    {
+      "bundle_dir": "experiments/models/factor_roc_greenblatt_3y_v141_deployment_d181b5262ffe",
+      "bundle_run_id": "d181b5262ffe",
+      "column_suffix": "factor_roc_greenblatt_3y_v141",
+      "config_hash": "90bce6a3aa84aacf",
+      "horizon_years": 3,
+      "label": "fwd_3y_cagr >= 0.0 & fwd_3y_max_drawdown_from_entry < 0.3",
+      "model": "rank_factor",
+      "probabilistic": false,
+      "run_id": "3fb9753a1090",
+      "trained_on": "dataset_v1.4.1"
+    }
+  ],
+  "n_rows_filtered_out": 3596,
+  "n_rows_scored": 120,
+  "note": "Deployment scores: ranked by models refit on all labeled data (data/manual.md \u00a74 rule 7). No test set exists for these fits \u2014 never report these as performance. Scores are per-model scales; compare models via the rank_* columns.",
+  "scored_utc": "2026-11-27T07:47:46+00:00",
+  "selection": {
+    "group_column": null,
+    "max_per_group": null,
+    "n_picked": 50,
+    "pick": 50,
+    "weighting": "marketcap"
+  }
+}
